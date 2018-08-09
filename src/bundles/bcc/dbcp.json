@@ -1,0 +1,31 @@
+{
+  "public": {
+    "author": "contractus",
+    "dapp": {
+      "dependencies": {
+        "smartcontracts": "^1.0.2"
+      },
+      "entrypoint": "bcc.js",
+      "files": [
+        "bcc.js"
+      ],
+      "origin": "QmeQP32Xdm5BxMTzH1SuN3qGdnLYNRLhS7jQmyUDqvcUqa",
+      "type": "library"
+    },
+    "description": "Contractus for loading ens entries and it's data...",
+    "name": "bcc",
+    "tags": [
+      "dapp",
+      "contractus",
+      "library"
+    ],
+    "version": "1.0.2",
+    "versions": {
+      "0.1.0": "QmTsY7ASbvxATLnEemHZQ8oQha64ujYe9VXbDCouDk7Xtp",
+      "0.9.0": "Qmbw3yX82TVN9WhsRyeaRpd89M9XXL1pds9GgqJL29ohar",
+      "1.0.0": "QmcECAYTqmKP5AQwkKaCiov77KhgpNLTawAN3tmBCHQeTi",
+      "1.0.1": "QmQNVUFewk95FFkuA62E2TVZNV9w3L6ybMK3b82wyJpg25",
+      "1.0.2": "QmdC3NTNRPCs2VTrEQx1RNL6LoaDzhQLpa4nsAMA61sM7i"
+    }
+  }
+}
