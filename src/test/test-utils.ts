@@ -48,6 +48,7 @@ import { accounts } from './accounts';
 import { Aes } from '../encryption/aes';
 import { AesEcb } from '../encryption/aes-ecb';
 import { BaseContract } from '../contracts/base-contract/base-contract';
+import { Claims } from '../claims/claims';
 import { config } from './../config';
 import { CryptoProvider } from '../encryption/crypto-provider';
 import { DataContract } from '../contracts/data-contract/data-contract';
@@ -116,6 +117,15 @@ export class TestUtils {
       nameResolver: await TestUtils.getNameResolver(web3),
     });
   };
+
+  static async getClaims(web3): Promise<Claims> {
+    const executor = await TestUtils.getExecutor(web3);
+    return new Claims({
+      contractLoader: await TestUtils.getContractLoader(web3),
+      executor,
+      nameResolver: await this.getNameResolver(web3),
+    });
+  }
 
   static getConfig(): any {
     return config;
