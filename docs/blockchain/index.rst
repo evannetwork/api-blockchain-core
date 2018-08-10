@@ -7,11 +7,14 @@ Blockchain
     :maxdepth: 1
 
     executor
+    executor-agent
+    executor-wallet
     signer
     account-store
     event-hub
     name-resolver
     description
+    wallet
 
 This section contains modules, that deal with basic blockchain interactions, like
 

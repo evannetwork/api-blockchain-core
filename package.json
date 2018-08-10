@@ -3,8 +3,7 @@
   "author": "contractus",
   "dependencies": {
     "@evan.network/dbcp": "^1.0.3",
-    "@evan.network/smart-contracts-admin": "^1.0.0",
-    "@evan.network/smart-contracts-core": "git@github.com:evannetwork/smart-contracts-core.git#develop",
+    "@evan.network/smart-contracts-core": "^0.9.0",
     "@types/node": "8.0.53",
     "ajv": "^5.5.1",
     "babel-plugin-transform-es3-property-literals": "^6.22.0",

@@ -1,28 +1,28 @@
 /*
-  Copyright (C) 2018-present evan GmbH. 
-  
+  Copyright (C) 2018-present evan GmbH.
+
   This program is free software: you can redistribute it and/or modify it
-  under the terms of the GNU Affero General Public License, version 3, 
-  as published by the Free Software Foundation. 
-  
-  This program is distributed in the hope that it will be useful, 
-  but WITHOUT ANY WARRANTY; without even the implied warranty of 
+  under the terms of the GNU Affero General Public License, version 3,
+  as published by the Free Software Foundation.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-  See the GNU Affero General Public License for more details. 
-  
+  See the GNU Affero General Public License for more details.
+
   You should have received a copy of the GNU Affero General Public License along with this program.
   If not, see http://www.gnu.org/licenses/ or write to the
-  
+
   Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301 USA,
-  
-  or download the license from the following URL: https://evan.network/license/ 
-  
+
+  or download the license from the following URL: https://evan.network/license/
+
   You can be released from the requirements of the GNU Affero General Public License
   by purchasing a commercial license.
   Buying such a license is mandatory as soon as you use this software or parts of it
-  on other blockchains than evan.network. 
-  
-  For more information, please contact evan GmbH at this address: https://evan.network/license/ 
+  on other blockchains than evan.network.
+
+  For more information, please contact evan GmbH at this address: https://evan.network/license/
 */
 
 import 'mocha';
@@ -61,107 +61,113 @@ describe('ServiceContract', function() {
   let web3;
   const sampleService1 = {
     serviceName: 'serviceContractService1',
-    endPoint: 'serviceContractService1',
     requestParameters: {
-      required: [
-        'callName',
-      ],
+      type: 'object',
+      additionalProperties: false,
       properties: {
-        callName: {
-          type: 'string',
+        metadata: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            author: { type: 'string', },
+            privateData: { type: 'object', },
+          },
         },
-        tags: {
-          type: 'string',
-        },
-        endDate: {
-          type: 'integer',
-        },
-        allowMultipleAnswers: {
-          type: 'boolean',
-        },
-        amount: {
-          type: 'integer',
-        },
-        articleNumber: {
-          type: 'string',
-        },
-        possibleWeek: {
-          type: 'integer',
-        },
-        note: {
-          type: 'string',
+        payload: {
+          type: 'object',
+          additionalProperties: false,
+          required: [ 'callName', ],
+          properties: {
+            callName: { type: 'string', },
+            tags: { type: 'string', },
+            endDate: { type: 'integer', },
+            allowMultipleAnswers: { type: 'boolean', },
+            amount: { type: 'integer', },
+            articleNumber: { type: 'string', },
+            possibleWeek: { type: 'integer', },
+            note: { type: 'string', },
+            privateData: { type: 'object', },
+          },
         },
       },
     },
     responseParameters: {
+      type: 'object',
+      additionalProperties: false,
       properties: {
-        possibleAmount: {
-          type: 'integer',
+        metadata: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            author: { type: 'string', },
+          },
         },
-        price: {
-          type: 'integer',
-        },
-        possibleDeliveryWeek: {
-          type: 'integer',
-        },
-        note: {
-          type: 'string',
+        payload: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            possibleAmount: { type: 'integer', },
+            price: { type: 'integer', },
+            possibleDeliveryWeek: { type: 'integer', },
+            note: { type: 'string', },
+          },
         },
       },
     },
-    updateService: true,
   };
   const sampleService2 = {
     serviceName: 'serviceContractService2',
-    endPoint: 'serviceContractService2',
     requestParameters: {
-      required: [
-        'callName',
-      ],
+      type: 'object',
+      additionalProperties: false,
       properties: {
-        callName: {
-          type: 'string',
+        metadata: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            author: { type: 'string', },
+          },
         },
-        tags: {
-          type: 'string',
-        },
-        endDate: {
-          type: 'integer',
-        },
-        allowMultipleAnswers: {
-          type: 'boolean',
-        },
-        amount: {
-          type: 'integer',
-        },
-        articleNumber: {
-          type: 'string',
-        },
-        possibleWeek: {
-          type: 'integer',
-        },
-        note: {
-          type: 'string',
-        },
+        payload: {
+          type: 'object',
+          additionalProperties: false,
+          required: [ 'callName', ],
+          properties: {
+            callName: { type: 'string', },
+            tags: { type: 'string', },
+            endDate: { type: 'integer', },
+            allowMultipleAnswers: { type: 'boolean', },
+            amount: { type: 'integer', },
+            articleNumber: { type: 'string', },
+            possibleWeek: { type: 'integer', },
+            note: { type: 'string', },
+          },
+        }
       },
     },
     responseParameters: {
+      type: 'object',
+      additionalProperties: false,
       properties: {
-        possibleAmount: {
-          type: 'integer',
+        metadata: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            author: { type: 'string', },
+          },
         },
-        price: {
-          type: 'integer',
-        },
-        possibleDeliveryWeek: {
-          type: 'integer',
-        },
-        note: {
-          type: 'string',
+        payload: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            possibleAmount: { type: 'integer', },
+            price: { type: 'integer', },
+            possibleDeliveryWeek: { type: 'integer', },
+            note: { type: 'string', },
+          },
         },
       },
     },
-    updateService: true,
   }
   const sampleCall = {
     metadata: {
@@ -289,6 +295,14 @@ describe('ServiceContract', function() {
     expect(call).to.deep.eq(sampleCall);
   });
 
+  it('cannot send a service message, that doesn\'t match the definition', async() => {
+    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+    const brokenCall = JSON.parse(JSON.stringify(sampleCall));
+    brokenCall.payload.someBogus = 123;
+    const sendCallPromise = sc0.sendCall(contract, accounts[0], brokenCall);
+    await expect(sendCallPromise).to.be.rejected;
+  });
+
   it('can send an answer to a service message', async() => {
     const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
     await sc0.inviteToContract(businessCenterDomain, contract.options.address, accounts[0], accounts[2]);
@@ -299,6 +313,19 @@ describe('ServiceContract', function() {
     const answerId = await sc2.sendAnswer(contract, accounts[2], sampleAnswer, callId, call.metadata.author);
     const answer = await sc2.getAnswer(contract, accounts[2], callId, answerId);
     expect(answer).to.deep.eq(sampleAnswer);
+  });
+
+  it('cannot send an answer to a service message, that doesn\'t match the definition', async() => {
+    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+    await sc0.inviteToContract(businessCenterDomain, contract.options.address, accounts[0], accounts[2]);
+    const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', 0);
+    await sharing.addSharing(contract.options.address, accounts[0], accounts[2], '*', 0, contentKey);
+    const callId = await sc0.sendCall(contract, accounts[0], sampleCall, [accounts[2]]);
+    const call = await sc2.getCall(contract, accounts[0], callId);
+    const brokenAnswer = JSON.parse(JSON.stringify(sampleAnswer));
+    brokenAnswer.payload.someBogus = 123;
+    const sendAnswerPromise = sc2.sendAnswer(contract, accounts[2], brokenAnswer, callId, call.metadata.author);
+    await expect(sendAnswerPromise).to.be.rejected;
   });
 
   it('can hold multiple calls', async() => {

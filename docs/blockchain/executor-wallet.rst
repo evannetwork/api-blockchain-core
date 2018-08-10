@@ -1,5 +1,5 @@
 ================================================================================
-Executor
+ExecutorWallet
 ================================================================================
 
 .. list-table:: 
@@ -7,52 +7,52 @@ Executor
    :stub-columns: 1
 
    * - Class Name
-     - Executor
+     - ExecutorWallet
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Executor </blockchain/executor.html>`_
    * - Source
-     - `executor.ts <https://github.com/evannetwork/dbcp/tree/master/src/contracts/executor.ts>`_
+     - `executor-wallet.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/executor-wallet.ts>`_
    * - Tests
-     - `executor.spec.ts <https://github.com/evannetwork/dbcp/tree/master/src/contracts/executor.spec.ts>`_
+     - `executor-wallet.spec.ts <https://github.com/evannetwork/dbcp/tree/master/src/contracts/executor-wallet.spec.ts>`_
 
-The executor is used for
+The ``ExecutorWallet`` module is designed to cover basically the same tasks as the |source executor|_ module. While the last one performs the transactions directly with an account, that is given as inputOptions, the ``ExecutorWallet`` module wraps those transactions by sumitting them to a configured wallet contract.
 
-- making contract calls
-- executing contract transactions
-- creating contracts
-- send EVEs to another account or contract
+.. figure::  ../_static/wallet_tx_transparent.png
+   :align:   center
+   :alt: transaction flow in wallet based transactions
 
-The signer requires you to have a contract instance, either by
+   transaction flow in wallet based transactions
 
-- loading the contract via `Description </blockchain/description.html>`_ helper (if the contract has an abi at its description)
-- loading the contract via `ContractLoader </contracts/contract-loader.html>`_ helper (if the contract has not abi at its description)
-- directly via `web3.js <https://github.com/ethereum/web3.js>`_.
+The wallet is a smart contract and the account, that performs the transactions against the target contracts on the blockchain. Transactions are wrapped by using the |source wallet|_ module, see details on how to transactions are performed internally at the documentation page of the |source wallet|_ module.
 
+Because transactions are performed via the |source wallet|_ module, they have the same limitations in regards to en- and decryption as described in the introduction section of the |source wallet|_. 
 
 
-.. _executor_constructor:
+
+.. _executor_wallet_constructor:
 
 constructor
 ================================================================================
 
 .. code-block:: typescript
 
-  new Executor(options);
+  new ExecutorWallet(options);
 
-Creates a new Executor instance.
+Creates a new ``ExecutorWallet`` instance.
 
-The Executor allows to pass the ``defaultOptions`` property to its constructor. This property contains options for transactions and calls, that will be used if no other properties are provided in calls/transactions. Explicitly passed options always overwrite default options.
+The ExecutorWallet allows to pass the ``defaultOptions`` property to its constructor. This property contains options for transactions and calls, that will be used if no other properties are provided in calls/transactions. Explicitly passed options always overwrite default options.
 
 ----------
 Parameters
 ----------
 
-#. ``options`` - ``ExecutorOptions``: options for ServiceContract constructor.
+#. ``options`` - ``ExecutorWalletOptions``: options for ServiceContract constructor.
     * ``config`` - ``any``: configuration object for the executor instance
-    * ``defaultOptions`` - ``any`` (optional): default options for web3 transactions/calls
     * ``eventHub`` - |source eventHub|_: |source eventHub|_ instance
     * ``signer`` - |source signerInterface|_: |source signerInterface|_ instance
+    * ``wallet`` - |source wallet|_: |source wallet|_ instance with a loaded wallet contract
     * ``web3`` - |source web3|_: |source web3|_ instance
+    * ``defaultOptions`` - ``any`` (optional): default options for web3 transactions/calls
     * ``log`` - ``Function`` (optional): function to use for logging: ``(message, level) => {...}``
     * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
@@ -62,7 +62,7 @@ Parameters
 Returns
 -------
 
-``Executor`` instance
+``ExecutorWallet`` instance
 
 -------
 Example
@@ -70,10 +70,11 @@ Example
 
 .. code-block:: typescript
   
-  const executor = new Executor({
+  const executor = new ExecutorWallet({
       config,
       eventHub,
       signer,
+      wallet,
       web3
     });
 
@@ -81,7 +82,7 @@ Example
 
 --------------------------------------------------------------------------------
 
-.. _executor_init:
+.. _executor_wallet_init:
 
 init
 ===================
@@ -115,7 +116,7 @@ Example
 
 ------------------------------------------------------------------------------
 
-.. _executor_executeContractCall:
+.. _executor_wallet_executeContractCall:
 
 executeContractCall
 ===================
@@ -125,6 +126,8 @@ executeContractCall
     executor.executeContractCall(contract, functionName, ...args);
 
 run the given call from contract
+
+note, that if a from is used, this from is replaced with the wallets address
 
 ----------
 Parameters
@@ -153,7 +156,9 @@ Example
 
 ------------------------------------------------------------------------------
 
-.. _executor_executeContractTransaction:
+
+
+.. _executor_wallet_executeContractTransaction:
 
 executeContractTransaction
 ==========================
@@ -162,7 +167,9 @@ executeContractTransaction
 
     executor.executeContractTransaction(contract, functionName, inputOptions, ...functionArguments);
 
-execute a transaction against the blockchain, handle gas exceeded and return values from contract function
+execute a transaction against the blockchain, handle gas exceeded and return values from contract function,
+
+note, that a from passed to this function will be replaced with the wallets address and that transactions, that transfer EVEs to a target account, will be rejected
 
 ----------
 Parameters
@@ -246,7 +253,7 @@ Using events for getting return values:
 
 
 
-.. _executor_executeSend:
+.. _executor_wallet_executeSend:
 
 executeSend
 ===================
@@ -255,39 +262,14 @@ executeSend
 
     executor.executeSend(options);
 
-send EVEs to target account
+**sending funds is not supported by the walled based executor, use a regular Executor for such tasks**
 
-----------
-Parameters
-----------
-
-#. ``options`` - ``any``: the target contract
-    * ``from`` - ``string``: The address the call "transaction" should be made from.
-    * ``to`` - ``string``: The address where the eve's should be send to.
-    * ``value`` - ``number``: Amount to send in Wei
-
--------
-Returns
--------
-
-``Promise`` resolves to ``void``: resolved when done.
-
--------
-Example
--------
-
-.. code-block:: javascript
-
-    await runtime.executor.executeSend({
-      from: '0x...',                          // send from this account
-      to: '0x...',                            // receiving account
-      value: web3.utils.toWei('1'),           // amount to send in Wei
-    });
 
 ------------------------------------------------------------------------------
 
 
-.. _executor_createContract:
+
+.. _executor_wallet_createContract:
 
 createContract
 ===================
@@ -296,52 +278,28 @@ createContract
 
     executor.createContract(contractName, functionArguments, options);
 
-creates a contract by contstructing creation transaction and signing it with private key of options.from
-
-----------
-Parameters
-----------
-
-#. ``contractName`` - ``string``: contract name (must be available withing contract loader module)
-#. ``functionArguments`` - ``any[]``: arguments for contract creation, pass empty Array if no arguments
-#. ``options`` - ``any``: options object
-    * ``from`` - ``string``: The address the call "transaction" should be made from.
-    * ``gas`` - ``number``: Provided gas amout for contract creation.
-
--------
-Returns
--------
-
-``Promise`` resolves to ``any``: new contract.
-
--------
-Example
--------
-
-.. code-block:: javascript
-
-    const newContractAddress = await runtime.executor.createContract(
-      'Greeter',                              // contract name
-      ['I am a demo greeter! :3'],            // constructor arguments
-      { from: '0x...', gas: 100000, },        // gas has to be provided with a fixed value
-    );
+**creating contracts directly is not supported by the walled based executor, use a regular Executor for such tasks**
 
 
 
 .. required for building markup
-
-
 .. |source signerInterface| replace:: ``SignerInterface``
 .. _source signerInterface: /blockchain/signer.html
 
 .. |source eventHub| replace:: ``EventHub``
 .. _source eventHub: /blockchain/event-hub.html
 
+.. |source executor| replace:: ``Executor``
+.. _source executor: /blockchain/executor.html
+
 .. |source logLevel| replace:: ``LogLevel``
 .. _source logLevel: /common/logger.html#loglevel
 
 .. |source logLogInterface| replace:: ``LogLogInterface``
 .. _source logLogInterface: /common/logger.html#logloginterface
+
+.. |source wallet| replace:: ``Wallet``
+.. _source wallet: /blockchain/wallet.html
 
 .. |source web3| replace:: ``Web3``
 .. _source web3: https://github.com/ethereum/web3.js/

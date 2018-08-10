@@ -1,28 +1,28 @@
 /*
-  Copyright (C) 2018-present evan GmbH. 
-  
+  Copyright (C) 2018-present evan GmbH.
+
   This program is free software: you can redistribute it and/or modify it
-  under the terms of the GNU Affero General Public License, version 3, 
-  as published by the Free Software Foundation. 
-  
-  This program is distributed in the hope that it will be useful, 
-  but WITHOUT ANY WARRANTY; without even the implied warranty of 
+  under the terms of the GNU Affero General Public License, version 3,
+  as published by the Free Software Foundation.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-  See the GNU Affero General Public License for more details. 
-  
+  See the GNU Affero General Public License for more details.
+
   You should have received a copy of the GNU Affero General Public License along with this program.
   If not, see http://www.gnu.org/licenses/ or write to the
-  
+
   Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301 USA,
-  
-  or download the license from the following URL: https://evan.network/license/ 
-  
+
+  or download the license from the following URL: https://evan.network/license/
+
   You can be released from the requirements of the GNU Affero General Public License
   by purchasing a commercial license.
   Buying such a license is mandatory as soon as you use this software or parts of it
-  on other blockchains than evan.network. 
-  
-  For more information, please contact evan GmbH at this address: https://evan.network/license/ 
+  on other blockchains than evan.network.
+
+  For more information, please contact evan GmbH at this address: https://evan.network/license/
 */
 
 import crypto = require('crypto');
@@ -34,6 +34,7 @@ import {
   Envelope,
   KeyProviderInterface,
   Logger,
+  Validator,
 } from '@evan.network/dbcp';
 
 import { BaseContract, BaseContractOptions, } from '../base-contract/base-contract';
@@ -41,6 +42,16 @@ import { CryptoProvider } from '../../encryption/crypto-provider';
 import { Sharing } from '../sharing';
 
 const requestWindowSize = 10;
+
+const serviceSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    serviceName: { type: 'string', },
+    requestParameters: { type: 'object', },
+    responseParameters: { type: 'object', },
+  },
+};
 
 
 /**
@@ -65,7 +76,8 @@ export class ServiceContract extends BaseContract {
   private readonly encodingUnencrypted = 'utf-8';
   private readonly encodingEncrypted = 'hex';
   private readonly encodingUnencryptedHash = 'hex';
-  private readonly cryptoAlgorithHashes = 'aesEcb'
+  private readonly cryptoAlgorithHashes = 'aesEcb';
+  private serviceDefinition;
 
   constructor(optionsInput: ServiceContractOptions) {
     super(optionsInput as BaseContractOptions);
@@ -125,9 +137,16 @@ export class ServiceContract extends BaseContract {
       service: any,
       descriptionDfsHash = '0x0000000000000000000000000000000000000000000000000000000000000000',
       ): Promise<any> {
+    // validate service definition
+    const validator = new Validator({ schema: serviceSchema, });
+    const checkFails = validator.validate(service);
+    if (checkFails !== true) {
+      throw new Error(`validation of service values failed with: ${JSON.stringify(checkFails)}`);
+    }
+
     const contractP = (async () => {
       const contractId = await super.createUninitialized(
-        'servizz', accountId, businessCenterDomain, descriptionDfsHash);
+        'service', accountId, businessCenterDomain, descriptionDfsHash);
       return this.options.loader.loadContract('ServiceContractInterface', contractId);
     })();
 
@@ -140,7 +159,7 @@ export class ServiceContract extends BaseContract {
     await this.options.sharing.ensureHashKey(contract.options.address, accountId, accountId, hashKey);
 
     // add service after sharing has been added
-    await this.setService(contract, accountId, service, businessCenterDomain);
+    await this.setService(contract, accountId, service, businessCenterDomain, true);
     return contract;
   }
 
@@ -327,6 +346,7 @@ export class ServiceContract extends BaseContract {
       accountId,
       '*'
     );
+    this.serviceDefinition = decrypted;
     return decrypted;
   }
 
@@ -348,6 +368,18 @@ export class ServiceContract extends BaseContract {
       callAuthor: string): Promise<number> {
     const serviceContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+
+    // validate call
+    if (!this.serviceDefinition) {
+      // this.serviceDefinition is set and updated via side effects in getService and setService
+      await this.getService(contract, accountId);
+    }
+    const validator = new Validator({ schema: this.serviceDefinition.responseParameters, });
+    const checkFails = validator.validate(answer);
+    if (checkFails !== true) {
+      throw new Error(`validation of input values failed with: ${JSON.stringify(checkFails)}`);
+    }
+
     const blockNr = 0;  // will be ignored as callAuthor is set
     const encrypted = await this.encrypt(answer, serviceContract, accountId, '*', blockNr, callAuthor);
     const stateMd5 = crypto.createHash('md5').update(encrypted).digest('hex');
@@ -386,6 +418,17 @@ export class ServiceContract extends BaseContract {
       to: string[] = []): Promise<number> {
     const serviceContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+
+    // validate call
+    if (!this.serviceDefinition) {
+      // this.serviceDefinition is set and updated via side effects in getService and setService
+      await this.getService(contract, accountId);
+    }
+    const validator = new Validator({ schema: this.serviceDefinition.requestParameters, });
+    const checkFails = validator.validate(call);
+    if (checkFails !== true) {
+      throw new Error(`validation of input values failed with: ${JSON.stringify(checkFails)}`);
+    }
 
     // create local copy of call for encryption
     const callCopy = JSON.parse(JSON.stringify(call));
@@ -490,15 +533,26 @@ export class ServiceContract extends BaseContract {
    * @param      {any}            service               service to set
    * @param      {string}         businessCenterDomain  domain of the business the service contract
    *                                                    belongs to
+   * @param      {bool}           skipValidation        (optional) skip validation of service
+   *                                                    definition, validation is enabled by default
    * @return     {Promise<void>}  resolved when done
    */
   public async setService(
       contract: any|string,
       accountId: string,
       service: any,
-      businessCenterDomain: string): Promise<void> {
+      businessCenterDomain: string,
+      skipValidation?): Promise<void> {
     const serviceContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+    if (!skipValidation) {
+      // validate service definition
+      const validator = new Validator({ schema: serviceSchema, });
+      const checkFails = validator.validate(service);
+      if (checkFails !== true) {
+        throw new Error(`validation of service definition failed with: ${JSON.stringify(checkFails)}`);
+      }
+    }
     const blockNr = await this.options.web3.eth.getBlockNumber();
     const serviceHashP = (async () => {
       const encrypted = await this.encrypt(service, serviceContract, accountId, '*', blockNr);
@@ -516,6 +570,7 @@ export class ServiceContract extends BaseContract {
       businessCenterAddress,
       encryptdHash,
     );
+    this.serviceDefinition = service;
   }
 
   /**

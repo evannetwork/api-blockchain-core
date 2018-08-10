@@ -129,7 +129,7 @@ setService
 
 .. code-block:: typescript
 
-  serviceContract.setService(contract, accountId, service, businessCenterDomain);
+  serviceContract.setService(contract, accountId, service, businessCenterDomain[, skipValidation]);
 
 Set service description.
 
@@ -141,6 +141,7 @@ Parameters
 #. ``accountId`` - ``string``: Ethereum account ID
 #. ``service`` - ``any``: service to set
 #. ``businessCenterDomain`` - ``string``: domain of the business the service contract belongs to
+#. ``skipValidation`` - ``bool`` (optional): skip validation of service definition, validation is enabled by default
 
 -------
 Returns
