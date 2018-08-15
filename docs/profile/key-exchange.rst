@@ -9,10 +9,10 @@ Key Exchange
    * - Class Name
      - KeyExchange
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `keyExchange.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/keyExchange.ts>`_
-   * - Tests
+   * - Examples
      - `keyExchange.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/keyExchange.spec.ts>`_
 
 The ``KeyExchange`` module is used to exchange communication keys between two parties, assuming that both have created a profile and have a public facing partial Diffie Hellman key part (the combination of their own secret and the shared secret). The key exchange consists of three steps:

@@ -11,13 +11,13 @@ Signer
    * - Implements
      - `SignerInterface <https://github.com/evannetwork/dbcp/tree/master/src/contracts/signer-interface.ts>`_
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `signer-internal.ts <https://github.com/evannetwork/dbcp/tree/master/src/contracts/signer-internal.ts>`_
 
-The signers are used to create contract transactions and are used internally by the `Executor </blockchain/executor.html>`_. The default runtime uses the `SignerInternal <https://github.com/evannetwork/dbcp/blob/master/src/contracts/signer-internal.ts>`_ helper to sign transaction.
+The signers are used to create contract transactions and are used internally by the `Executor <../blockchain/executor.html>`_. The default runtime uses the `SignerInternal <https://github.com/evannetwork/dbcp/blob/master/src/contracts/signer-internal.ts>`_ helper to sign transaction.
 
-In most cases, you won't have to use the Signer objects directly yourself, as the `Executor </blockchain/executor.html>`_ is your entry point for performing contract transactions.
+In most cases, you won't have to use the Signer objects directly yourself, as the `Executor <../blockchain/executor.html>`_ is your entry point for performing contract transactions.
 
 ------------------------------------------------------------------------------
 
@@ -205,7 +205,7 @@ signAndExecuteSend
 
     signer.signAndExecuteSend(options, handleTxResult);
 
-signs the transaction from  `executor.executeSend </blockchain/executor.html#executesend>`_ and publishes to the network
+signs the transaction from  `executor.executeSend <../blockchain/executor.html#executesend>`_ and publishes to the network
 
 ----------
 Parameters
@@ -242,7 +242,7 @@ signAndExecuteTransaction
 
     signer.signAndExecuteTransaction(contract, functionName, functionArguments, options, handleTxResult);
 
-signs the transaction from `executor.executeContractTransaction </blockchain/executor.html#executecontracttransaction>`_ and publishes to the network
+signs the transaction from `executor.executeContractTransaction <../blockchain/executor.html#executecontracttransaction>`_ and publishes to the network
 
 ----------
 Parameters
@@ -270,7 +270,7 @@ createContract
 
     signer.createContract(contractName, functionArguments, options);
 
-signs the transaction from `executor.createContract </blockchain/executor.html#createcontract>`_ and publishes to the network
+signs the transaction from `executor.createContract <../blockchain/executor.html#createcontract>`_ and publishes to the network
 
 ----------
 Parameters

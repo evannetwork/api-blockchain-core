@@ -11,7 +11,7 @@ Cryptor - Unencrypted
    * - Implements
      - `Cryptor <https://github.com/evannetwork/dbcp/tree/master/src/encryption/cryptor.ts>`_
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `unencrypted.ts <https://github.com/evannetwork/dbcp/tree/master/src/encryption/unencrypted.ts>`_
 

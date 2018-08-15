@@ -24,9 +24,3 @@ Welcome to blockchain-core's documentation!
   encryption/index
   profile/index
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`

@@ -9,10 +9,10 @@ Name Resolver
    * - Class Name
      - NameResolver
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `name-resolver.ts <https://github.com/evannetwork/dbcp/tree/master/src/name-resolver.ts>`_
-   * - Tests
+   * - Examples
      - `name-resolver.spec.ts <https://github.com/evannetwork/dbcp/tree/master/src/name-resolver.spec.ts>`_
 
 The `NameResolver <https://github.com/evannetwork/dbcp/tree/master/src/name-resolver.ts>`_ is a collection of helper functions, that can be used for ENS interaction. These include: 

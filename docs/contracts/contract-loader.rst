@@ -9,10 +9,10 @@ Contract Loader
    * - Class Name
      - ContractLoader
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `contract-loader.ts <https://github.com/evannetwork/dbcp/tree/master/src/contracts/contract-loader.ts>`_
-   * - Tests
+   * - Examples
      - `contract-loader.spec.ts <https://github.com/evannetwork/dbcp/tree/master/src/contracts/contract-loader.spec.ts>`_
 
 The `ContractLoader <https://github.com/evannetwork/dbcp/blob/master/src/contracts/contract-loader.ts>`_ is used when loading contracts without a DBCP description or when creating new contracts via bytecode. In both cases additional information has to be passed to the `ContractLoader <https://github.com/evannetwork/dbcp/blob/master/src/contracts/contract-loader.ts>`_ constructor.

@@ -12,7 +12,7 @@ Description
      - `Description <https://github.com/evannetwork/dbcp/tree/master/src/description.ts>`_
    * - Source
      - `description.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/shared-description.ts>`_
-   * - Tests
+   * - Examples
      - `description.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/shared-description.spec.ts>`_
 
 The Description module is the main entry point for interacting with contract descriptions. It allows you to:

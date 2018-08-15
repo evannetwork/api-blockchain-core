@@ -11,10 +11,10 @@ IPFS
    * - Implements
      - `DfsInterface <dfs-interface.html>`_
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `ipfs.ts <https://github.com/evannetwork/dbcp/tree/master/src/dfs/ipfs.ts>`_
-   * - Tests
+   * - Examples
      - `ipfs.spec.ts <https://github.com/evannetwork/dbcp/tree/master/src/dfs/ipfs.spec.ts>`_
 
 

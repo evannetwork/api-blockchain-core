@@ -11,10 +11,10 @@ Wallet
    * - Implements
      - `Logger <https://github.com/evannetwork/dbcp/tree/master/src/account-store.ts>`__
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `wallet.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/wallet.ts>`_
-   * - Tests
+   * - Examples
      - `wallet.spec.ts <https://github.com/evannetwork/dbcp/tree/master/src/contracts/wallet.spec.ts>`_
 
 The ``Wallet`` module is a wrapper for the `MultiSigWallet <https://github.com/evannetwork/MultiSigWallet/blob/master/contracts/MultiSigWallet.sol>`_ and allows to create wallets, manage owners and execte transactions with it.

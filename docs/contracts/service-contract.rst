@@ -9,10 +9,10 @@ Service Contract
    * - Class Name
      - ServiceContract
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `service-contract.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/service-contract/service-contract.ts>`_
-   * - Tests
+   * - Examples
      - `service-contract.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/service-contract/service-contract.spec.ts>`_
 
 

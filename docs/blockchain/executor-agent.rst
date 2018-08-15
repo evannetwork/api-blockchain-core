@@ -9,14 +9,14 @@ ExecutorAgent
    * - Class Name
      - ExecutorAgent
    * - Extends
-     - `Executor </blockchain/executor.html>`_
+     - `Executor <../blockchain/executor.html>`_
    * - Source
      - `executor-agent.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/executor-agent.ts>`_
-   * - Tests
+   * - Examples
      - `executor-agent.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/executor-agent.spec.ts>`_
 
 
-The ``ExecutorAgent`` module is designed to cover basically the same tasks as the `Executor </blockchain/executor.html>`_ module. While the last one performs the transactions directly with an account, that is given as inputOptions, the ``ExecutorAgent`` module wraps those transactions by submitting them to a smart agent.
+The ``ExecutorAgent`` module is designed to cover basically the same tasks as the `Executor <../blockchain/executor.html>`_ module. While the last one performs the transactions directly with an account, that is given as inputOptions, the ``ExecutorAgent`` module wraps those transactions by submitting them to a smart agent.
 
 The smart agent receives those transactions and performs them with its own account, if a valid tokens has been passed to it alongside the transaction data. Tokens for transactions can be issued at the smart agent as well (a password is required for this).
 

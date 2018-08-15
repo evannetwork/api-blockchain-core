@@ -9,10 +9,10 @@ Validator
    * - Class Name
      - Validator
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `validator.ts <https://github.com/evannetwork/dbcp/tree/master/src/validator.ts>`_
-   * - Tests
+   * - Examples
      - `validator.spec.ts <https://github.com/evannetwork/dbcp/tree/master/src/validator.spec.ts>`_
 
 The Validator module can be used to verfiy given JSON schemas.

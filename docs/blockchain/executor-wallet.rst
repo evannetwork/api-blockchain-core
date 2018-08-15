@@ -9,10 +9,10 @@ ExecutorWallet
    * - Class Name
      - ExecutorWallet
    * - Extends
-     - `Executor </blockchain/executor.html>`_
+     - `Executor <../blockchain/executor.html>`_
    * - Source
      - `executor-wallet.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/executor-wallet.ts>`_
-   * - Tests
+   * - Examples
      - `executor-wallet.spec.ts <https://github.com/evannetwork/dbcp/tree/master/src/contracts/executor-wallet.spec.ts>`_
 
 The ``ExecutorWallet`` module is designed to cover basically the same tasks as the |source executor|_ module. While the last one performs the transactions directly with an account, that is given as inputOptions, the ``ExecutorWallet`` module wraps those transactions by sumitting them to a configured wallet contract.

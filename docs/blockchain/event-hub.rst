@@ -9,7 +9,7 @@ Event Hub
    * - Class Name
      - EventHub
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `event-hub.ts <https://github.com/evannetwork/dbcp/tree/master/src/event-hub.ts>`_
 

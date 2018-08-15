@@ -11,11 +11,11 @@ Account Store
    * - Implements
      - `KeyStoreInterface <https://github.com/evannetwork/dbcp/tree/master/src/account-store.ts>`__
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `account-store.ts <https://github.com/evannetwork/dbcp/tree/master/src/account-store.ts>`__
 
-The `AccountStore <https://github.com/evannetwork/dbcp/tree/master/src/account-store.ts>`_ implements the `KeyStoreInterface <https://github.com/evannetwork/dbcp/tree/master/src/account-store.ts>`_ and is a wrapper for a storage, where evan.network account ids are stored. The default `AccountStore <https://github.com/evannetwork/dbcp/tree/master/src/account-store.ts>`_ takes an account --> private key mapping as a pojo as its arguments and uses this to perform lookups, when the :ref:`getPrivateKey <accountstore_getPrivateKey>` function is called. This lookup needs to be done, when transactions are signed by the `InternalSigner <https://github.com/evannetwork/dbcp/tree/master/src/contracts/signer-internal.ts>`_ (see `Signer </blockchain/signer.html>`_).
+The `AccountStore <https://github.com/evannetwork/dbcp/tree/master/src/account-store.ts>`_ implements the `KeyStoreInterface <https://github.com/evannetwork/dbcp/tree/master/src/account-store.ts>`_ and is a wrapper for a storage, where evan.network account ids are stored. The default `AccountStore <https://github.com/evannetwork/dbcp/tree/master/src/account-store.ts>`_ takes an account --> private key mapping as a pojo as its arguments and uses this to perform lookups, when the :ref:`getPrivateKey <accountstore_getPrivateKey>` function is called. This lookup needs to be done, when transactions are signed by the `InternalSigner <https://github.com/evannetwork/dbcp/tree/master/src/contracts/signer-internal.ts>`_ (see `Signer <../blockchain/signer.html>`_).
 
 Note that the return value of the :ref:`getPrivateKey <accountstore_getPrivateKey>` function is a promise. This may not be required in the default `AccountStore <https://github.com/evannetwork/dbcp/tree/master/src/account-store.ts>`_, but this allows you to implement own implementations of the `KeyStoreInterface <https://github.com/evannetwork/dbcp/tree/master/src/account-store.ts>`_, which may enforce a more strict security behavior or are able to access other sources for private keys.
 

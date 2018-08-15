@@ -9,10 +9,10 @@ Executor
    * - Class Name
      - Executor
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `executor.ts <https://github.com/evannetwork/dbcp/tree/master/src/contracts/executor.ts>`_
-   * - Tests
+   * - Examples
      - `executor.spec.ts <https://github.com/evannetwork/dbcp/tree/master/src/contracts/executor.spec.ts>`_
 
 The executor is used for
@@ -24,8 +24,8 @@ The executor is used for
 
 The signer requires you to have a contract instance, either by
 
-- loading the contract via `Description </blockchain/description.html>`_ helper (if the contract has an abi at its description)
-- loading the contract via `ContractLoader </contracts/contract-loader.html>`_ helper (if the contract has not abi at its description)
+- loading the contract via `Description <../blockchain/description.html>`_ helper (if the contract has an abi at its description)
+- loading the contract via `ContractLoader <../contracts/contract-loader.html>`_ helper (if the contract has not abi at its description)
 - directly via `web3.js <https://github.com/ethereum/web3.js>`_.
 
 

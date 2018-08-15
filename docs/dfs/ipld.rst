@@ -9,10 +9,10 @@ IPLD
    * - Class Name
      - Ipld
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `ipld.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/dfs/ipld.ts>`_
-   * - Tests
+   * - Examples
      - `ipld.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/dfs/ipld.spec.ts>`_
 
 
@@ -176,7 +176,7 @@ To retrieve data from IPLD trees, use the `bytes32` hash from storing the data:
   // Output:
   // { personalInfo: { firstName: 'eris' } }
 
-For info about the ``Ipld.purgeCryptoInfo`` part see :doc:`Encryption </encryption/index>`.
+For info about the ``Ipld.purgeCryptoInfo`` part see :doc:`Encryption <../encryption/index>`.
 
 The second argument is the path inside the tree. Passing '' means "retrieve data from root level". To get more specifc data, provide a path:
 

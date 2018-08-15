@@ -9,10 +9,10 @@ Rights and Roles
    * - Class Name
      - RightsAndRoles
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `rights-and-roles.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/rights-and-roles.ts>`_
-   * - Tests
+   * - Examples
      - `rights-and-roles.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/rights-and-roles.spec.ts>`_
 
 The `RightsAndRoles <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/rights-and-roles.ts>`_ module follows the approach described in the evan.network wik at:
