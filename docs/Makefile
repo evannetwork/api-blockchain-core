@@ -8,7 +8,7 @@ SPHINXPROJ    = blockchain-core
 SOURCEDIR     = .
 BUILDDIR      = _build
 
-dbcpDocsUrl = "https://raw.githubusercontent.com/evannetwork/dbcp/master/"
+dbcpDocsUrl = "https://raw.githubusercontent.com/evannetwork/dbcp/develop/docs/"
 
 # Put it first so that "make" without argument is like "make help".
 help:
