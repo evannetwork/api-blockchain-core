@@ -73,6 +73,8 @@ export interface ClaimsOptions extends LoggerOptions {
   contractLoader: ContractLoader;
   executor: Executor;
   nameResolver: NameResolver;
+  registry?: string;
+  resolver?: string;
 }
 
 /**
@@ -87,8 +89,19 @@ export class Claims extends Logger {
   constructor(options: ClaimsOptions) {
     super(options);
     this.options = options;
+    if (options.registry && options.resolver) {
+      this.loadContracts(options.registry, options.resolver);
+    }
   }
 
+  /**
+   * create a new claims structure; this includes a new registry and a default resolver for it
+   *
+   * @param      {string}        accountId  account, that execute the transaction and owner of the
+   *                                        new registry
+   * @return     {Promise<any>}  object with properties 'registry' and 'resolver', that are web3js
+   *                             contract instances
+   */
   public async createStructure(accountId: string): Promise<any> {
     // create ens / claims registry
     const registry = await this.options.executor.createContract(
@@ -98,10 +111,6 @@ export class Claims extends Logger {
     const resolver = await this.options.executor.createContract(
       'ClaimsPublicResolver', [ registry.options.address ], { from: accountId, gas: 2000000, });
 
-    // should be done in constructor
-    // await this.options.executor.executeContractTransaction(
-    //   registry, 'setOwner', { from: accountId, }, '0x0000000000000000000000000000000000000000000000000000000000000000', accountId);
-
     // register resolver as accepted in ens
     await this.options.executor.executeContractTransaction(
       registry, 'setAcceptedResolverState', { from: accountId, }, resolver.options.address, true);
@@ -110,12 +119,30 @@ export class Claims extends Logger {
     return this.contracts;
   }
 
+  /**
+   * confirms a claim; this can be done, it a claim has been issued for a subject and the subject
+   * wants to confirms it
+   *
+   * @param      {string}         subject     account, that approves the claim
+   * @param      {string}         claimName   name of the claim (full path)
+   * @param      {string}         claimValue  bytes32 hash of the claim value; this is the subjects
+   *                                          value for the claim and has to be the as the issuers
+   *                                          value for the claim
+   * @return     {Promise<void>}  resolved when done
+   */
   public async confirmClaim(
       subject: string, claimName: string, claimValue?: string): Promise<void> {
     return this.respondToClaim(subject, claimName, 2, claimValue);
   }
 
-  public async deleteClaim(issuer, claimName): Promise<void> {
+  /**
+   * delete a claim
+   *
+   * @param      {string}         issuer     issuer of the claim; only the issuer can delete a claim
+   * @param      {string}         claimName  name of the claim (full path)
+   * @return     {Promise<void>}  resolved when done
+   */
+  public async deleteClaim(issuer: string, claimName: string): Promise<void> {
     // create required hashes, etc
     const [ ensPath, nodeHash ] = this.getClaimProperties(claimName);
     const [_, node, parent] = /([^.]+)\.?(.*)/.exec(ensPath);
@@ -169,11 +196,17 @@ export class Claims extends Logger {
           nullBytes32,
         ) : null
       ),
-    ])
-
+    ]);
   }
 
-  public async getClaim(claimName): Promise<any> {
+  /**
+   * gets claim information for a claim name
+   *
+   * @param      {string}        claimName  name (/path) of a claim
+   * @return     {Promise<any>}  claim info, contains: issuer, name, selfIssuedState, selfIssuedValue,
+   *                             status, subject, value
+   */
+  public async getClaim(claimName: string): Promise<any> {
     const [ ensPath, nodeHash ] = this.getClaimProperties(claimName);
     const resolverAddress = await this.options.executor.executeContractCall(
       this.contracts.registry, 'resolver', nodeHash);
@@ -182,8 +215,9 @@ export class Claims extends Logger {
     }
     const resolver = this.options.contractLoader.loadContract(
       'ClaimsPublicResolver', resolverAddress);
-    const [ value, [ subject, selfIssuedState, selfIssuedValue ]] = await Promise.all([
+    const [ value, issuer, [ subject, selfIssuedState, selfIssuedValue ]] = await Promise.all([
       this.options.executor.executeContractCall(resolver, 'content', nodeHash),
+      this.options.executor.executeContractCall(this.contracts.registry, 'owner', nodeHash),
       (async() => {
         const addr = await this.options.executor.executeContractCall(resolver, 'addr', nodeHash);
         return await Promise.all([
@@ -193,7 +227,15 @@ export class Claims extends Logger {
         ]);
       })(),
     ]);
-    const claim = { value, subject, selfIssuedState, selfIssuedValue, status: ClaimsStatus.Unknown, };
+    const claim = {
+      issuer,
+      name: claimName,
+      selfIssuedState,
+      selfIssuedValue,
+      status: ClaimsStatus.Unknown,
+      subject,
+      value,
+    };
     if (subject === nullAddress) {
       claim.status = ClaimsStatus.None;
     } else if (selfIssuedState === '1') {
@@ -208,13 +250,16 @@ export class Claims extends Logger {
     return claim;
   }
 
-  public loadContracts(registry, resolver) {
-    this.contracts = {
-      registry: this.options.contractLoader.loadContract('ENS', registry),
-      resolver: this.options.contractLoader.loadContract('ClaimsPublicResolver', resolver),
-    };
-  }
-
+  /**
+   * sets or creates a claim; this requires the issuer to have permissions for the parent claim (if
+   * claim name seen as a path, the parent 'folder')
+   *
+   * @param      {string}         issuer      issuer of the claim
+   * @param      {string}         subject     subject of the claim and the owner of the claim node
+   * @param      {string}         claimName   name of the claim (full path)
+   * @param      {string}         claimValue  bytes32 hash of the claim value
+   * @return     {Promise<void>}  resolved when done
+   */
   public async setClaim(
       issuer: string, subject: string, claimName: string, claimValue?: string): Promise<void> {
     // transform to ens like path (use dots, remove leading '/')
@@ -269,6 +314,17 @@ export class Claims extends Logger {
     ]);
   }
 
+  /**
+   * reject a claim; this can be done, it a claim has been issued for a subject and the subject
+   * wants to reject it
+   *
+   * @param      {string}         subject     account, that approves the claim
+   * @param      {string}         claimName   name of the claim (full path)
+   * @param      {string}         claimValue  bytes32 hash of the claim value; this is the subjects
+   *                                          value for the claim and may differ from the issuers
+   *                                          value for the claim
+   * @return     {Promise<void>}  resolved when done
+   */
   public async rejectClaim(subject: string, claimName: string, claimValue?: string): Promise<void> {
     return this.respondToClaim(subject, claimName, 1, claimValue);
   }
@@ -276,6 +332,13 @@ export class Claims extends Logger {
   private getClaimProperties(claimName: string): string[] {
     const ensPath = claimName.split('/').slice(1).reverse().join('.');
     return [ensPath, this.options.nameResolver.namehash(ensPath)];
+  }
+
+  private loadContracts(registry, resolver) {
+    this.contracts = {
+      registry: this.options.contractLoader.loadContract('ENS', registry),
+      resolver: this.options.contractLoader.loadContract('ClaimsPublicResolver', resolver),
+    };
   }
 
   private async respondToClaim(

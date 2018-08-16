@@ -32,4 +32,4 @@ help:
 	wget  -P dfs -N "$(dbcpDocsUrl)dfs/ipfs.rst"
 	wget  -P encryption -N "$(dbcpDocsUrl)encryption/cryptor-unencrypted.rst"
 
-	#@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
