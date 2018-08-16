@@ -136,7 +136,9 @@ export class Claims extends Logger {
   }
 
   /**
-   * delete a claim
+   * delete a claim. This requires the issuer to have permissions for the parent claim (if claim
+   * name seen as a path, the parent 'folder'). Subjects of a claim may only delete it, if they are
+   * the issuer as well. If not, they can only react to it by confirming or rejecting the claim.
    *
    * @param      {string}         issuer     issuer of the claim; only the issuer can delete a claim
    * @param      {string}         claimName  name of the claim (full path)
