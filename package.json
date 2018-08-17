@@ -1,5 +1,5 @@
 {
-  "author": "contractus",
+  "author": "evan GmbH",
   "dependencies": {
     "@evan.network/dbcp": "^1.2.0",
     "@evan.network/smart-contracts-core": "^1.0.3",

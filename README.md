@@ -272,7 +272,7 @@ const definition: Envelope = {
     "name": "Data Contract Sample",
     "description": "reiterance oxynitrate sat alternize acurative",
     "version": "0.1.0",
-    "author": "contractus",
+    "author": "evan GmbH",
     "dataSchema": {
       "list_settable_by_member": {
         "$id": "list_settable_by_member_schema",

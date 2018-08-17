@@ -1,15 +1,15 @@
 {
   "public": {
-    "author": "contractus",
+    "author": "evan GmbH",
     "dapp": {
       "dependencies": {
-        "smartcontracts": "^1.0.0"
+        "smartcontracts": "^1.0.3"
       },
       "entrypoint": "bcc.js",
       "files": [
         "bcc.js"
       ],
-      "origin": "QmeQP32Xdm5BxMTzH1SuN3qGdnLYNRLhS7jQmyUDqvcUqa",
+      "origin": "QmZx1nM2Z8PUMQkAhDYu6jUiXuf3t5E9oUB8sdkHymTHTB",
       "type": "library"
     },
     "description": "Contractus for loading ens entries and it's data...",
@@ -26,7 +26,7 @@
       "1.0.0": "QmcECAYTqmKP5AQwkKaCiov77KhgpNLTawAN3tmBCHQeTi",
       "1.0.1": "QmQNVUFewk95FFkuA62E2TVZNV9w3L6ybMK3b82wyJpg25",
       "1.0.2": "QmdC3NTNRPCs2VTrEQx1RNL6LoaDzhQLpa4nsAMA61sM7i",
-      "1.1.0": "QmQNVUFewk95FFkuA62E2TVZNV9w3L6ybMK3b82wyJpg25"
+      "1.1.0": "QmRNmLB6FnTqFXRY9kA3SKJRvFg8avHw5u6pAwcKT6TX9M"
     }
   }
 }
