@@ -367,6 +367,44 @@ Example
 
 --------------------------------------------------------------------------------
 
+.. _service-contract_getCallOwner:
+
+getCallOwner
+================================================================================
+
+.. code-block:: typescript
+
+  serviceContract.getCallOwner(contract, callId);
+
+Gets the owner/creator of a call.
+
+----------
+Parameters
+----------
+
+#. ``contract`` - ``any|string``: smart contract instance or contract ID
+#. ``callId`` - ``number``: index of the call to retrieve owner for
+
+-------
+Returns
+-------
+
+``Promise`` returns ``string``: account id of call owner
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  console.log(await serviceContract.getCallOwner(contract, 2));
+  // Output:
+  0x0000000000000000000000000000000000000001
+
+
+
+--------------------------------------------------------------------------------
+
 .. _servicecontract_addToCallSharing:
 
 addToCallSharing
