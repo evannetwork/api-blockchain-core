@@ -270,14 +270,17 @@ export class ServiceContract extends BaseContract {
     return decrypted;
   }
 
-  /**
+ /**
    * get all calls from a contract
    *
-   * @param      {any|string}      contract   smart contract instance or contract ID
+   * @param      {any|string}      contract   smart contract instance
+or contract ID
    * @param      {string}          accountId  Ethereum account ID
-   * @param      {number}          count      number of elements to retrieve
+   * @param      {number}          count      number of elements to
+retrieve
    * @param      {number}          offset     skip this many elements
-   * @param      {boolean}         reverse    retrieve last elements first
+   * @param      {boolean}         reverse    retrieve last elements
+first
    * @return     {Promise<any[]>}  the calls
    */
   public async getCalls(
@@ -285,23 +288,28 @@ export class ServiceContract extends BaseContract {
       accountId: string,
       count = 10,
       offset = 0,
-      reverse = false): Promise<any[]> {
+      reverse = false): Promise<any> {
     const serviceContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+      contract: this.options.loader.loadContract('ServiceContractInterface', contract);
 
     // get entries
-    const { entries, indices } = await this.getEntries(serviceContract, 'calls', null, count, offset, reverse);
+    const { entries, indices } = await this.getEntries(serviceContract,
+      'calls', null, count, offset, reverse);
 
     // add sharings hashes to sharing module cache
     indices.forEach((index) => {
-      this.options.sharing.addHashToCache(contract.options.address, entries[index].sharing, this.numberToBytes32(index));
+      this.options.sharing.addHashToCache(serviceContract.options.address,
+        entries[index].sharing, this.numberToBytes32(index));
     });
 
     // decrypt contents
+    const result = {};
     const tasks = indices.map((index) => async () => {
       const callIdString = this.numberToBytes32(index);
-      const decryptedHash = await this.decryptHash(entries[index].encryptedHash, serviceContract, accountId, callIdString);
-      return this.decrypt(
+      const decryptedHash = await this.decryptHash(entries[index].encryptedHash, serviceContract,
+        accountId, callIdString);
+
+      result[index] = await this.decrypt(
         (await this.options.dfs.get(decryptedHash)).toString('utf-8'),
         serviceContract,
         accountId,
@@ -310,11 +318,13 @@ export class ServiceContract extends BaseContract {
       );
     });
 
-    const decrypted = tasks.length ? await prottle(requestWindowSize, tasks) : [];
+    if (tasks.length) {
+      await prottle(requestWindowSize, tasks);
+    }
 
-    return decrypted;
+    return result;
   }
-
+  
   /**
    * get number of calls of a contract
    *
@@ -372,7 +382,7 @@ export class ServiceContract extends BaseContract {
     // validate call
     if (!this.serviceDefinition) {
       // this.serviceDefinition is set and updated via side effects in getService and setService
-      await this.getService(contract, accountId);
+      await this.getService(serviceContract, accountId);
     }
     const validator = new Validator({ schema: this.serviceDefinition.responseParameters, });
     const checkFails = validator.validate(answer);
@@ -384,10 +394,10 @@ export class ServiceContract extends BaseContract {
     const encrypted = await this.encrypt(answer, serviceContract, accountId, '*', blockNr, callAuthor);
     const stateMd5 = crypto.createHash('md5').update(encrypted).digest('hex');
     const answerHash = await this.options.dfs.add(stateMd5, Buffer.from(encrypted));
-    const hashKey = await this.options.sharing.getHashKey(contract.options.address, accountId, this.numberToBytes32(callId));
+    const hashKey = await this.options.sharing.getHashKey(serviceContract.options.address, accountId, this.numberToBytes32(callId));
     const encryptdHash = await this.encryptHash(answerHash, serviceContract, accountId, hashKey);
     const answerId = await this.options.executor.executeContractTransaction(
-      contract,
+      serviceContract,
       'sendAnswer', {
         from: accountId,
         autoGas: 1.1,
@@ -422,7 +432,7 @@ export class ServiceContract extends BaseContract {
     // validate call
     if (!this.serviceDefinition) {
       // this.serviceDefinition is set and updated via side effects in getService and setService
-      await this.getService(contract, accountId);
+      await this.getService(serviceContract, accountId);
     }
     const validator = new Validator({ schema: this.serviceDefinition.requestParameters, });
     const checkFails = validator.validate(call);
@@ -483,7 +493,7 @@ export class ServiceContract extends BaseContract {
     const serviceHash = await this.options.dfs.add(stateMd5, Buffer.from(encrypted));
     const encryptdHash = await this.encryptHash(serviceHash, serviceContract, accountId, hashKey);
     const callIdUint256 = parseInt(await this.options.executor.executeContractTransaction(
-      contract,
+      serviceContract,
       'sendCall', {
         from: accountId,
         autoGas: 1.1,
@@ -501,13 +511,13 @@ export class ServiceContract extends BaseContract {
     const callId = this.numberToBytes32(callIdUint256);
     // keep keys for owner
     await this.options.sharing.ensureHashKey(
-      contract.options.address, accountId, accountId, hashKey, null, callId);
+      serviceContract.options.address, accountId, accountId, hashKey, null, callId);
     await this.options.sharing.addSharing(
-      contract.options.address, accountId, accountId, '*', 0, contentKey, null, false, callId);
+      serviceContract.options.address, accountId, accountId, '*', 0, contentKey, null, false, callId);
     // if subproperties were encryted, keep them for owner as well
     for (let propertyName of Object.keys(innerEncryptionData)) {
       await this.options.sharing.addSharing(
-        contract.options.address,
+        serviceContract.options.address,
         accountId,
         accountId,
         propertyName,
@@ -519,7 +529,7 @@ export class ServiceContract extends BaseContract {
       );
     }
     // for each to, add sharing keys
-    await this.addToCallSharing(contract, accountId, callIdUint256, to, hashKey, contentKey);
+    await this.addToCallSharing(serviceContract, accountId, callIdUint256, to, hashKey, contentKey);
 
     // return id of new call
     return parseInt(callId, 16);
@@ -565,7 +575,7 @@ export class ServiceContract extends BaseContract {
       serviceHashP,
     ]);
     await this.options.executor.executeContractTransaction(
-      contract,
+      serviceContract,
       'setService', {from: accountId, autoGas: 1.1, },
       businessCenterAddress,
       encryptdHash,
@@ -635,7 +645,7 @@ export class ServiceContract extends BaseContract {
   private async decryptHash(
       toDecrypt: string, contract: any, accountId: string, callId?: string): Promise<string> {
     const dataContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('DataContractInterface', contract);
+      contract : this.options.loader.loadContract('ServiceContractInterface', contract);
     // decode hash
     const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(this.cryptoAlgorithHashes);
     const hashKey = await this.options.sharing.getHashKey(dataContract.options.address, accountId, callId);

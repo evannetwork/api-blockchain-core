@@ -180,13 +180,14 @@ export interface ProfileBundleOptions {
 
 export interface ProfileInstance {
   // profile exports
+  dataContract: DataContract,
   ipldInstance: Ipld,
   keyExchange: KeyExchange,
+  keyProvider: KeyProvider,
   mailbox: Mailbox,
   profile: Profile,
+  serviceContract: ServiceContract,
   sharing: Sharing,
-  dataContract: DataContract,
-  keyProvider: KeyProvider,
 
   // core exports
   coreInstance: CoreInstance,
@@ -198,14 +199,15 @@ export interface BCBundleOptions {
 }
 
 export interface BCInstance {
-  ensDomain: string,
   bcAddress: string,
-  businessCenter: any,
-  bcRoles: RightsAndRoles,
-  ipld: Ipld,
   bcProfiles: BusinessCenterProfile,
+  bcRoles: RightsAndRoles,
+  businessCenter: any,
+  dataContract: DataContract,
   description: any,
-  dataContract: DataContract
+  ensDomain: string,
+  ipld: Ipld,
+  serviceContract: ServiceContract,
 }
 
 /**************************************************************************************************/
@@ -448,6 +450,8 @@ const create = function(options: ProfileBundleOptions): ProfileInstance {
     nameResolver: coreInstance.nameResolver,
     sharing: sharing,
     web3: coreInstance.web3,
+    logLog,
+    logLogLevel
   });
 
   const profile = new Profile({
@@ -468,13 +472,14 @@ const create = function(options: ProfileBundleOptions): ProfileInstance {
 
   return {
     // profile exports
+    dataContract,
     ipldInstance,
     keyExchange,
+    keyProvider: options.keyProvider,
     mailbox,
     profile,
+    serviceContract,
     sharing,
-    keyProvider: options.keyProvider,
-    dataContract,
     // core exports
     coreInstance: coreInstance
   };
@@ -568,6 +573,19 @@ async function createBC(options: BCBundleOptions) {
     logLogLevel
   });
 
+  const serviceContract = new ServiceContract({
+    cryptoProvider: CoreRuntime.description.cryptoProvider,
+    dfs: CoreRuntime.dfs,
+    executor: CoreRuntime.executor,
+    keyProvider: ProfileRuntime.keyProvider,
+    loader: CoreRuntime.contractLoader,
+    nameResolver: nameResolver,
+    sharing: ProfileRuntime.sharing,
+    web3: CoreRuntime.web3,
+    logLog,
+    logLogLevel
+  });
+
   const description = await CoreRuntime.description.getDescriptionFromEns(ensDomain);
 
   return {
@@ -578,7 +596,8 @@ async function createBC(options: BCBundleOptions) {
     ipld,
     bcProfiles,
     description: (<any>description),
-    dataContract
+    dataContract,
+    serviceContract,
   };
 }
 
