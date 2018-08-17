@@ -1,33 +1,32 @@
 /*
-  Copyright (C) 2018-present evan GmbH. 
-  
+  Copyright (C) 2018-present evan GmbH.
+
   This program is free software: you can redistribute it and/or modify it
-  under the terms of the GNU Affero General Public License, version 3, 
-  as published by the Free Software Foundation. 
-  
-  This program is distributed in the hope that it will be useful, 
-  but WITHOUT ANY WARRANTY; without even the implied warranty of 
+  under the terms of the GNU Affero General Public License, version 3,
+  as published by the Free Software Foundation.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-  See the GNU Affero General Public License for more details. 
-  
-  You should have received a copy of the GNU Affero General Public License along with this program.
-  If not, see http://www.gnu.org/licenses/ or write to the
-  
-  Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301 USA,
-  
-  or download the license from the following URL: https://evan.network/license/ 
-  
-  You can be released from the requirements of the GNU Affero General Public License
-  by purchasing a commercial license.
-  Buying such a license is mandatory as soon as you use this software or parts of it
-  on other blockchains than evan.network. 
-  
-  For more information, please contact evan GmbH at this address: https://evan.network/license/ 
+  See the GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program. If not, see http://www.gnu.org/licenses/ or
+  write to the Free Software Foundation, Inc., 51 Franklin Street,
+  Fifth Floor, Boston, MA, 02110-1301 USA, or download the license from
+  the following URL: https://evan.network/license/
+
+  You can be released from the requirements of the GNU Affero General Public
+  License by purchasing a commercial license.
+  Buying such a license is mandatory as soon as you use this software or parts
+  of it on other blockchains than evan.network.
+
+  For more information, please contact evan GmbH at this address:
+  https://evan.network/license/
 */
 
 import IpfsApi = require('ipfs-api');
 import smartContract = require('@evan.network/smart-contracts-core');
-import smartContractsAdmin = require('@evan.network/smart-contracts-admin');
 import Web3 = require('web3');
 
 import {
@@ -49,9 +48,11 @@ import { accounts } from './accounts';
 import { Aes } from '../encryption/aes';
 import { AesEcb } from '../encryption/aes-ecb';
 import { BaseContract } from '../contracts/base-contract/base-contract';
+import { Claims } from '../claims/claims';
 import { config } from './../config';
 import { CryptoProvider } from '../encryption/crypto-provider';
 import { DataContract } from '../contracts/data-contract/data-contract';
+import { ExecutorWallet } from '../contracts/executor-wallet';
 import { Ipld } from '../dfs/ipld';
 import { Profile } from '../profile/profile';
 import { RightsAndRoles } from '../contracts/rights-and-roles';
@@ -59,6 +60,7 @@ import { ServiceContract } from '../contracts/service-contract/service-contract'
 import { setTimeout } from 'timers';
 import { Description } from '../shared-description';
 import { Sharing } from '../contracts/sharing';
+import { Wallet } from '../contracts/wallet';
 
 
 export const publicMailBoxExchange = 'mailboxKeyExchange';
@@ -116,6 +118,15 @@ export class TestUtils {
     });
   };
 
+  static async getClaims(web3): Promise<Claims> {
+    const executor = await TestUtils.getExecutor(web3);
+    return new Claims({
+      contractLoader: await TestUtils.getContractLoader(web3),
+      executor,
+      nameResolver: await this.getNameResolver(web3),
+    });
+  }
+
   static getConfig(): any {
     return config;
   }
@@ -133,7 +144,7 @@ export class TestUtils {
       log: Logger.getDefaultLog(),
       config: { compileContracts: false, },
     });
-    await solc.ensureCompiled([smartContractsAdmin.getContractsPath()]);
+    await solc.ensureCompiled();
     return solc.getContracts();
   }
 
@@ -217,6 +228,25 @@ export class TestUtils {
 
       return executor;
     }
+  }
+
+  static async getExecutorWallet(web3, wallet, dfsParam?: DfsInterface): Promise<ExecutorWallet> {
+    const contracts = await this.getContracts();
+    const contractLoader =  new ContractLoader({
+      contracts,
+      web3,
+    });
+    const accountStore = this.getAccountStore({});
+    const signer = new SignerInternal({
+      accountStore,
+      contractLoader,
+      config: {},
+      web3,
+    });
+    const executor = new ExecutorWallet({ config, signer, wallet, web3, });
+    await executor.init({});
+
+    return executor;
   }
 
   static async getIpld(_ipfs?: Ipfs, _keyProvider?: KeyProvider): Promise<Ipld> {
@@ -340,6 +370,19 @@ export class TestUtils {
       keyProvider: TestUtils.getKeyProvider(),
       nameResolver: await TestUtils.getNameResolver(web3),
       defaultCryptoAlgo: 'aes',
+    });
+  }
+
+  static async getWallet(web3, dfsParam?: DfsInterface): Promise<Wallet> {
+    const dfs = dfsParam ? dfsParam : await TestUtils.getIpfs();
+    const executor = await TestUtils.getExecutor(web3);
+    executor.eventHub = await TestUtils.getEventHub(web3);
+    return new Wallet({
+      contractLoader: await TestUtils.getContractLoader(web3),
+      description: await TestUtils.getDescription(web3, dfs),
+      eventHub: executor.eventHub,
+      executor,
+      nameResolver: await TestUtils.getNameResolver(web3),
     });
   }
 

@@ -9,10 +9,10 @@ Service Contract
    * - Class Name
      - ServiceContract
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `service-contract.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/service-contract/service-contract.ts>`_
-   * - Tests
+   * - Examples
      - `service-contract.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/service-contract/service-contract.spec.ts>`_
 
 
@@ -129,7 +129,7 @@ setService
 
 .. code-block:: typescript
 
-  serviceContract.setService(contract, accountId, service, businessCenterDomain);
+  serviceContract.setService(contract, accountId, service, businessCenterDomain[, skipValidation]);
 
 Set service description.
 
@@ -141,6 +141,7 @@ Parameters
 #. ``accountId`` - ``string``: Ethereum account ID
 #. ``service`` - ``any``: service to set
 #. ``businessCenterDomain`` - ``string``: domain of the business the service contract belongs to
+#. ``skipValidation`` - ``bool`` (optional): skip validation of service definition, validation is enabled by default
 
 -------
 Returns
@@ -361,6 +362,44 @@ Example
   console.log(callCount);
   // Output:
   // 3
+
+
+
+--------------------------------------------------------------------------------
+
+.. _service-contract_getCallOwner:
+
+getCallOwner
+================================================================================
+
+.. code-block:: typescript
+
+  serviceContract.getCallOwner(contract, callId);
+
+Gets the owner/creator of a call.
+
+----------
+Parameters
+----------
+
+#. ``contract`` - ``any|string``: smart contract instance or contract ID
+#. ``callId`` - ``number``: index of the call to retrieve owner for
+
+-------
+Returns
+-------
+
+``Promise`` returns ``string``: account id of call owner
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  console.log(await serviceContract.getCallOwner(contract, 2));
+  // Output:
+  0x0000000000000000000000000000000000000001
 
 
 

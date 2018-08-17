@@ -11,7 +11,7 @@ Key Provider
    * - Implements
      - `KeyProviderInterface <https://github.com/evannetwork/dbcp/tree/master/src/encryption/key-provider-interface.ts>`_
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `key-provider.ts <https://github.com/evannetwork/dbcp/tree/master/src/encryption/key-provider.ts>`_
 

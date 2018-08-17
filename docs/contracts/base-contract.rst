@@ -9,10 +9,10 @@ Base Contract
    * - Class Name
      - BaseContract
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `base-contract.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/base-contract/base-contract.ts>`_
-   * - Tests
+   * - Examples
      - `base-contract.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/base-contract/base-contract.spec.ts>`_
 
 The `BaseContract <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/base-contract/base-contract.ts>`_ is the base contract class used for

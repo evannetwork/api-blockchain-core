@@ -23,9 +23,9 @@
   on other blockchains than evan.network. 
   
   For more information, please contact evan GmbH at this address: https://evan.network/license/ 
+  
 */
 
-const smartContractsAdmin = require('@evan.network/smart-contracts-admin');
 const smartContractsCore = require('@evan.network/smart-contracts-core');
 
 
@@ -35,7 +35,7 @@ const solc = new smartContractsCore.Solc({
 });
 
 try {
-  solc.ensureCompiled([smartContractsAdmin.getContractsPath()]);
+  solc.ensureCompiled();
 } catch(ex) {
   console.error(`building contracts failed with: ${ex.msg || ex}${ex.stack ? '; ' + ex.stack : ''}`);
 }

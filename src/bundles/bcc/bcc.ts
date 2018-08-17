@@ -1,28 +1,28 @@
 /*
-  Copyright (C) 2018-present evan GmbH. 
-  
+  Copyright (C) 2018-present evan GmbH.
+
   This program is free software: you can redistribute it and/or modify it
-  under the terms of the GNU Affero General Public License, version 3, 
-  as published by the Free Software Foundation. 
-  
-  This program is distributed in the hope that it will be useful, 
-  but WITHOUT ANY WARRANTY; without even the implied warranty of 
+  under the terms of the GNU Affero General Public License, version 3,
+  as published by the Free Software Foundation.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-  See the GNU Affero General Public License for more details. 
-  
-  You should have received a copy of the GNU Affero General Public License along with this program.
-  If not, see http://www.gnu.org/licenses/ or write to the
-  
-  Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301 USA,
-  
-  or download the license from the following URL: https://evan.network/license/ 
-  
-  You can be released from the requirements of the GNU Affero General Public License
-  by purchasing a commercial license.
-  Buying such a license is mandatory as soon as you use this software or parts of it
-  on other blockchains than evan.network. 
-  
-  For more information, please contact evan GmbH at this address: https://evan.network/license/ 
+  See the GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program. If not, see http://www.gnu.org/licenses/ or
+  write to the Free Software Foundation, Inc., 51 Franklin Street,
+  Fifth Floor, Boston, MA, 02110-1301 USA, or download the license from
+  the following URL: https://evan.network/license/
+
+  You can be released from the requirements of the GNU Affero General Public
+  License by purchasing a commercial license.
+  Buying such a license is mandatory as soon as you use this software or parts
+  of it on other blockchains than evan.network.
+
+  For more information, please contact evan GmbH at this address:
+  https://evan.network/license/
 */
 
 require('babel-polyfill');
@@ -68,6 +68,7 @@ import { Onboarding } from '../../onboarding';
 import { Profile } from '../../profile/profile';
 import { RightsAndRoles } from '../../contracts/rights-and-roles';
 import { Sharing } from '../../contracts/sharing';
+import { ServiceContract } from '../../contracts/service-contract/service-contract';
 
 /**************************************************************************************************/
 
@@ -179,13 +180,14 @@ export interface ProfileBundleOptions {
 
 export interface ProfileInstance {
   // profile exports
+  dataContract: DataContract,
   ipldInstance: Ipld,
   keyExchange: KeyExchange,
+  keyProvider: KeyProvider,
   mailbox: Mailbox,
   profile: Profile,
+  serviceContract: ServiceContract,
   sharing: Sharing,
-  dataContract: DataContract,
-  keyProvider: KeyProvider,
 
   // core exports
   coreInstance: CoreInstance,
@@ -197,14 +199,15 @@ export interface BCBundleOptions {
 }
 
 export interface BCInstance {
-  ensDomain: string,
   bcAddress: string,
-  businessCenter: any,
-  bcRoles: RightsAndRoles,
-  ipld: Ipld,
   bcProfiles: BusinessCenterProfile,
+  bcRoles: RightsAndRoles,
+  businessCenter: any,
+  dataContract: DataContract,
   description: any,
-  dataContract: DataContract
+  ensDomain: string,
+  ipld: Ipld,
+  serviceContract: ServiceContract,
 }
 
 /**************************************************************************************************/
@@ -438,6 +441,19 @@ const create = function(options: ProfileBundleOptions): ProfileInstance {
     logLogLevel
   });
 
+  const serviceContract = new ServiceContract({
+    cryptoProvider: coreInstance.description.cryptoProvider,
+    dfs: coreInstance.dfs,
+    executor,
+    keyProvider: (<any>options.keyProvider),
+    loader: coreInstance.contractLoader,
+    nameResolver: coreInstance.nameResolver,
+    sharing: sharing,
+    web3: coreInstance.web3,
+    logLog,
+    logLogLevel
+  });
+
   const profile = new Profile({
     ipld: ipldInstance,
     nameResolver: coreInstance.nameResolver,
@@ -456,13 +472,14 @@ const create = function(options: ProfileBundleOptions): ProfileInstance {
 
   return {
     // profile exports
+    dataContract,
     ipldInstance,
     keyExchange,
+    keyProvider: options.keyProvider,
     mailbox,
     profile,
+    serviceContract,
     sharing,
-    keyProvider: options.keyProvider,
-    dataContract,
     // core exports
     coreInstance: coreInstance
   };
@@ -556,6 +573,19 @@ async function createBC(options: BCBundleOptions) {
     logLogLevel
   });
 
+  const serviceContract = new ServiceContract({
+    cryptoProvider: CoreRuntime.description.cryptoProvider,
+    dfs: CoreRuntime.dfs,
+    executor: CoreRuntime.executor,
+    keyProvider: ProfileRuntime.keyProvider,
+    loader: CoreRuntime.contractLoader,
+    nameResolver: nameResolver,
+    sharing: ProfileRuntime.sharing,
+    web3: CoreRuntime.web3,
+    logLog,
+    logLogLevel
+  });
+
   const description = await CoreRuntime.description.getDescriptionFromEns(ensDomain);
 
   return {
@@ -566,7 +596,8 @@ async function createBC(options: BCBundleOptions) {
     ipld,
     bcProfiles,
     description: (<any>description),
-    dataContract
+    dataContract,
+    serviceContract,
   };
 }
 
@@ -592,7 +623,7 @@ const isAccountOnboarded = async function(account: string): Promise<boolean> {
   try {
     const ensName = CoreRuntime.nameResolver.getDomainName(CoreRuntime.nameResolver.config.domains.profile);
     const address = await CoreRuntime.nameResolver.getAddress(ensName);
-    const contract = CoreRuntime.nameResolver.contractLoader.loadContract('ProfileIndex', address);
+    const contract = CoreRuntime.nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
     const hash = await CoreRuntime.nameResolver.executor.executeContractCall(contract, 'getProfile', account, { from: account, });
 
     if (hash === '0x0000000000000000000000000000000000000000') {

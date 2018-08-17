@@ -1,28 +1,28 @@
 /*
-  Copyright (C) 2018-present evan GmbH. 
-  
+  Copyright (C) 2018-present evan GmbH.
+
   This program is free software: you can redistribute it and/or modify it
-  under the terms of the GNU Affero General Public License, version 3, 
-  as published by the Free Software Foundation. 
-  
-  This program is distributed in the hope that it will be useful, 
-  but WITHOUT ANY WARRANTY; without even the implied warranty of 
+  under the terms of the GNU Affero General Public License, version 3,
+  as published by the Free Software Foundation.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-  See the GNU Affero General Public License for more details. 
-  
-  You should have received a copy of the GNU Affero General Public License along with this program.
-  If not, see http://www.gnu.org/licenses/ or write to the
-  
-  Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301 USA,
-  
-  or download the license from the following URL: https://evan.network/license/ 
-  
-  You can be released from the requirements of the GNU Affero General Public License
-  by purchasing a commercial license.
-  Buying such a license is mandatory as soon as you use this software or parts of it
-  on other blockchains than evan.network. 
-  
-  For more information, please contact evan GmbH at this address: https://evan.network/license/ 
+  See the GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program. If not, see http://www.gnu.org/licenses/ or
+  write to the Free Software Foundation, Inc., 51 Franklin Street,
+  Fifth Floor, Boston, MA, 02110-1301 USA, or download the license from
+  the following URL: https://evan.network/license/
+
+  You can be released from the requirements of the GNU Affero General Public
+  License by purchasing a commercial license.
+  Buying such a license is mandatory as soon as you use this software or parts
+  of it on other blockchains than evan.network.
+
+  For more information, please contact evan GmbH at this address:
+  https://evan.network/license/
 */
 
 import crypto = require('crypto');
@@ -34,6 +34,7 @@ import {
   Envelope,
   KeyProviderInterface,
   Logger,
+  Validator,
 } from '@evan.network/dbcp';
 
 import { BaseContract, BaseContractOptions, } from '../base-contract/base-contract';
@@ -41,6 +42,16 @@ import { CryptoProvider } from '../../encryption/crypto-provider';
 import { Sharing } from '../sharing';
 
 const requestWindowSize = 10;
+
+const serviceSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    serviceName: { type: 'string', },
+    requestParameters: { type: 'object', },
+    responseParameters: { type: 'object', },
+  },
+};
 
 
 /**
@@ -65,7 +76,8 @@ export class ServiceContract extends BaseContract {
   private readonly encodingUnencrypted = 'utf-8';
   private readonly encodingEncrypted = 'hex';
   private readonly encodingUnencryptedHash = 'hex';
-  private readonly cryptoAlgorithHashes = 'aesEcb'
+  private readonly cryptoAlgorithHashes = 'aesEcb';
+  private serviceDefinition;
 
   constructor(optionsInput: ServiceContractOptions) {
     super(optionsInput as BaseContractOptions);
@@ -125,9 +137,16 @@ export class ServiceContract extends BaseContract {
       service: any,
       descriptionDfsHash = '0x0000000000000000000000000000000000000000000000000000000000000000',
       ): Promise<any> {
+    // validate service definition
+    const validator = new Validator({ schema: serviceSchema, });
+    const checkFails = validator.validate(service);
+    if (checkFails !== true) {
+      throw new Error(`validation of service values failed with: ${JSON.stringify(checkFails)}`);
+    }
+
     const contractP = (async () => {
       const contractId = await super.createUninitialized(
-        'servizz', accountId, businessCenterDomain, descriptionDfsHash);
+        'service', accountId, businessCenterDomain, descriptionDfsHash);
       return this.options.loader.loadContract('ServiceContractInterface', contractId);
     })();
 
@@ -140,7 +159,7 @@ export class ServiceContract extends BaseContract {
     await this.options.sharing.ensureHashKey(contract.options.address, accountId, accountId, hashKey);
 
     // add service after sharing has been added
-    await this.setService(contract, accountId, service, businessCenterDomain);
+    await this.setService(contract, accountId, service, businessCenterDomain, true);
     return contract;
   }
 
@@ -251,14 +270,17 @@ export class ServiceContract extends BaseContract {
     return decrypted;
   }
 
-  /**
+ /**
    * get all calls from a contract
    *
-   * @param      {any|string}      contract   smart contract instance or contract ID
+   * @param      {any|string}      contract   smart contract instance
+or contract ID
    * @param      {string}          accountId  Ethereum account ID
-   * @param      {number}          count      number of elements to retrieve
+   * @param      {number}          count      number of elements to
+retrieve
    * @param      {number}          offset     skip this many elements
-   * @param      {boolean}         reverse    retrieve last elements first
+   * @param      {boolean}         reverse    retrieve last elements
+first
    * @return     {Promise<any[]>}  the calls
    */
   public async getCalls(
@@ -266,23 +288,28 @@ export class ServiceContract extends BaseContract {
       accountId: string,
       count = 10,
       offset = 0,
-      reverse = false): Promise<any[]> {
+      reverse = false): Promise<any> {
     const serviceContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+      contract: this.options.loader.loadContract('ServiceContractInterface', contract);
 
     // get entries
-    const { entries, indices } = await this.getEntries(serviceContract, 'calls', null, count, offset, reverse);
+    const { entries, indices } = await this.getEntries(serviceContract,
+      'calls', null, count, offset, reverse);
 
     // add sharings hashes to sharing module cache
     indices.forEach((index) => {
-      this.options.sharing.addHashToCache(contract.options.address, entries[index].sharing, this.numberToBytes32(index));
+      this.options.sharing.addHashToCache(serviceContract.options.address,
+        entries[index].sharing, this.numberToBytes32(index));
     });
 
     // decrypt contents
+    const result = {};
     const tasks = indices.map((index) => async () => {
       const callIdString = this.numberToBytes32(index);
-      const decryptedHash = await this.decryptHash(entries[index].encryptedHash, serviceContract, accountId, callIdString);
-      return this.decrypt(
+      const decryptedHash = await this.decryptHash(entries[index].encryptedHash, serviceContract,
+        accountId, callIdString);
+
+      result[index] = await this.decrypt(
         (await this.options.dfs.get(decryptedHash)).toString('utf-8'),
         serviceContract,
         accountId,
@@ -291,11 +318,13 @@ export class ServiceContract extends BaseContract {
       );
     });
 
-    const decrypted = tasks.length ? await prottle(requestWindowSize, tasks) : [];
+    if (tasks.length) {
+      await prottle(requestWindowSize, tasks);
+    }
 
-    return decrypted;
+    return result;
   }
-
+  
   /**
    * get number of calls of a contract
    *
@@ -307,6 +336,23 @@ export class ServiceContract extends BaseContract {
       contract : this.options.loader.loadContract('ServiceContractInterface', contract);
     const count = await this.options.executor.executeContractCall(serviceContract, 'callCount');
     return parseInt(count, 10);
+  }
+
+  /**
+   * gets the owner/creator of a call
+   *
+   * @param      {any|string}       contract  contract instance or id
+   * @param      {number}           callId    id of a call
+   * @return     {Promise<string>}  account id of call owner
+   */
+  public async getCallOwner(contract: any|string, callId: number): Promise<string> {
+    const serviceContract = (typeof contract === 'object') ?
+      contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+    return this.options.executor.executeContractCall(
+      serviceContract,
+      'multiSharingsOwner',
+      `0x${(callId).toString(16).padStart(64, '0')}`,
+    )
   }
 
   /**
@@ -327,6 +373,7 @@ export class ServiceContract extends BaseContract {
       accountId,
       '*'
     );
+    this.serviceDefinition = decrypted;
     return decrypted;
   }
 
@@ -348,14 +395,26 @@ export class ServiceContract extends BaseContract {
       callAuthor: string): Promise<number> {
     const serviceContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+
+    // validate call
+    if (!this.serviceDefinition) {
+      // this.serviceDefinition is set and updated via side effects in getService and setService
+      await this.getService(serviceContract, accountId);
+    }
+    const validator = new Validator({ schema: this.serviceDefinition.responseParameters, });
+    const checkFails = validator.validate(answer);
+    if (checkFails !== true) {
+      throw new Error(`validation of input values failed with: ${JSON.stringify(checkFails)}`);
+    }
+
     const blockNr = 0;  // will be ignored as callAuthor is set
     const encrypted = await this.encrypt(answer, serviceContract, accountId, '*', blockNr, callAuthor);
     const stateMd5 = crypto.createHash('md5').update(encrypted).digest('hex');
     const answerHash = await this.options.dfs.add(stateMd5, Buffer.from(encrypted));
-    const hashKey = await this.options.sharing.getHashKey(contract.options.address, accountId, this.numberToBytes32(callId));
+    const hashKey = await this.options.sharing.getHashKey(serviceContract.options.address, accountId, this.numberToBytes32(callId));
     const encryptdHash = await this.encryptHash(answerHash, serviceContract, accountId, hashKey);
     const answerId = await this.options.executor.executeContractTransaction(
-      contract,
+      serviceContract,
       'sendAnswer', {
         from: accountId,
         autoGas: 1.1,
@@ -386,6 +445,17 @@ export class ServiceContract extends BaseContract {
       to: string[] = []): Promise<number> {
     const serviceContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+
+    // validate call
+    if (!this.serviceDefinition) {
+      // this.serviceDefinition is set and updated via side effects in getService and setService
+      await this.getService(serviceContract, accountId);
+    }
+    const validator = new Validator({ schema: this.serviceDefinition.requestParameters, });
+    const checkFails = validator.validate(call);
+    if (checkFails !== true) {
+      throw new Error(`validation of input values failed with: ${JSON.stringify(checkFails)}`);
+    }
 
     // create local copy of call for encryption
     const callCopy = JSON.parse(JSON.stringify(call));
@@ -440,7 +510,7 @@ export class ServiceContract extends BaseContract {
     const serviceHash = await this.options.dfs.add(stateMd5, Buffer.from(encrypted));
     const encryptdHash = await this.encryptHash(serviceHash, serviceContract, accountId, hashKey);
     const callIdUint256 = parseInt(await this.options.executor.executeContractTransaction(
-      contract,
+      serviceContract,
       'sendCall', {
         from: accountId,
         autoGas: 1.1,
@@ -458,13 +528,13 @@ export class ServiceContract extends BaseContract {
     const callId = this.numberToBytes32(callIdUint256);
     // keep keys for owner
     await this.options.sharing.ensureHashKey(
-      contract.options.address, accountId, accountId, hashKey, null, callId);
+      serviceContract.options.address, accountId, accountId, hashKey, null, callId);
     await this.options.sharing.addSharing(
-      contract.options.address, accountId, accountId, '*', 0, contentKey, null, false, callId);
+      serviceContract.options.address, accountId, accountId, '*', 0, contentKey, null, false, callId);
     // if subproperties were encryted, keep them for owner as well
     for (let propertyName of Object.keys(innerEncryptionData)) {
       await this.options.sharing.addSharing(
-        contract.options.address,
+        serviceContract.options.address,
         accountId,
         accountId,
         propertyName,
@@ -476,7 +546,7 @@ export class ServiceContract extends BaseContract {
       );
     }
     // for each to, add sharing keys
-    await this.addToCallSharing(contract, accountId, callIdUint256, to, hashKey, contentKey);
+    await this.addToCallSharing(serviceContract, accountId, callIdUint256, to, hashKey, contentKey);
 
     // return id of new call
     return parseInt(callId, 16);
@@ -490,15 +560,26 @@ export class ServiceContract extends BaseContract {
    * @param      {any}            service               service to set
    * @param      {string}         businessCenterDomain  domain of the business the service contract
    *                                                    belongs to
+   * @param      {bool}           skipValidation        (optional) skip validation of service
+   *                                                    definition, validation is enabled by default
    * @return     {Promise<void>}  resolved when done
    */
   public async setService(
       contract: any|string,
       accountId: string,
       service: any,
-      businessCenterDomain: string): Promise<void> {
+      businessCenterDomain: string,
+      skipValidation?): Promise<void> {
     const serviceContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+    if (!skipValidation) {
+      // validate service definition
+      const validator = new Validator({ schema: serviceSchema, });
+      const checkFails = validator.validate(service);
+      if (checkFails !== true) {
+        throw new Error(`validation of service definition failed with: ${JSON.stringify(checkFails)}`);
+      }
+    }
     const blockNr = await this.options.web3.eth.getBlockNumber();
     const serviceHashP = (async () => {
       const encrypted = await this.encrypt(service, serviceContract, accountId, '*', blockNr);
@@ -511,11 +592,12 @@ export class ServiceContract extends BaseContract {
       serviceHashP,
     ]);
     await this.options.executor.executeContractTransaction(
-      contract,
+      serviceContract,
       'setService', {from: accountId, autoGas: 1.1, },
       businessCenterAddress,
       encryptdHash,
     );
+    this.serviceDefinition = service;
   }
 
   /**
@@ -580,7 +662,7 @@ export class ServiceContract extends BaseContract {
   private async decryptHash(
       toDecrypt: string, contract: any, accountId: string, callId?: string): Promise<string> {
     const dataContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('DataContractInterface', contract);
+      contract : this.options.loader.loadContract('ServiceContractInterface', contract);
     // decode hash
     const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(this.cryptoAlgorithHashes);
     const hashKey = await this.options.sharing.getHashKey(dataContract.options.address, accountId, callId);

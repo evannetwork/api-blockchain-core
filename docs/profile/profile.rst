@@ -9,10 +9,10 @@ Profile
    * - Class Name
      - Profile
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `profile.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/profile/profile.ts>`_
-   * - Tests
+   * - Examples
      - `profile.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/profile/profile.spec.ts>`_
 
 A users profile is its personal storage for

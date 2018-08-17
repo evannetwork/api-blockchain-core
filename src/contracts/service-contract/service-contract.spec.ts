@@ -1,28 +1,28 @@
 /*
-  Copyright (C) 2018-present evan GmbH. 
-  
+  Copyright (C) 2018-present evan GmbH.
+
   This program is free software: you can redistribute it and/or modify it
-  under the terms of the GNU Affero General Public License, version 3, 
-  as published by the Free Software Foundation. 
-  
-  This program is distributed in the hope that it will be useful, 
-  but WITHOUT ANY WARRANTY; without even the implied warranty of 
+  under the terms of the GNU Affero General Public License, version 3,
+  as published by the Free Software Foundation.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-  See the GNU Affero General Public License for more details. 
-  
-  You should have received a copy of the GNU Affero General Public License along with this program.
-  If not, see http://www.gnu.org/licenses/ or write to the
-  
-  Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301 USA,
-  
-  or download the license from the following URL: https://evan.network/license/ 
-  
-  You can be released from the requirements of the GNU Affero General Public License
-  by purchasing a commercial license.
-  Buying such a license is mandatory as soon as you use this software or parts of it
-  on other blockchains than evan.network. 
-  
-  For more information, please contact evan GmbH at this address: https://evan.network/license/ 
+  See the GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program. If not, see http://www.gnu.org/licenses/ or
+  write to the Free Software Foundation, Inc., 51 Franklin Street,
+  Fifth Floor, Boston, MA, 02110-1301 USA, or download the license from
+  the following URL: https://evan.network/license/
+
+  You can be released from the requirements of the GNU Affero General Public
+  License by purchasing a commercial license.
+  Buying such a license is mandatory as soon as you use this software or parts
+  of it on other blockchains than evan.network.
+
+  For more information, please contact evan GmbH at this address:
+  https://evan.network/license/
 */
 
 import 'mocha';
@@ -61,107 +61,113 @@ describe('ServiceContract', function() {
   let web3;
   const sampleService1 = {
     serviceName: 'serviceContractService1',
-    endPoint: 'serviceContractService1',
     requestParameters: {
-      required: [
-        'callName',
-      ],
+      type: 'object',
+      additionalProperties: false,
       properties: {
-        callName: {
-          type: 'string',
+        metadata: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            author: { type: 'string', },
+            privateData: { type: 'object', },
+          },
         },
-        tags: {
-          type: 'string',
-        },
-        endDate: {
-          type: 'integer',
-        },
-        allowMultipleAnswers: {
-          type: 'boolean',
-        },
-        amount: {
-          type: 'integer',
-        },
-        articleNumber: {
-          type: 'string',
-        },
-        possibleWeek: {
-          type: 'integer',
-        },
-        note: {
-          type: 'string',
+        payload: {
+          type: 'object',
+          additionalProperties: false,
+          required: [ 'callName', ],
+          properties: {
+            callName: { type: 'string', },
+            tags: { type: 'string', },
+            endDate: { type: 'integer', },
+            allowMultipleAnswers: { type: 'boolean', },
+            amount: { type: 'integer', },
+            articleNumber: { type: 'string', },
+            possibleWeek: { type: 'integer', },
+            note: { type: 'string', },
+            privateData: { type: 'object', },
+          },
         },
       },
     },
     responseParameters: {
+      type: 'object',
+      additionalProperties: false,
       properties: {
-        possibleAmount: {
-          type: 'integer',
+        metadata: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            author: { type: 'string', },
+          },
         },
-        price: {
-          type: 'integer',
-        },
-        possibleDeliveryWeek: {
-          type: 'integer',
-        },
-        note: {
-          type: 'string',
+        payload: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            possibleAmount: { type: 'integer', },
+            price: { type: 'integer', },
+            possibleDeliveryWeek: { type: 'integer', },
+            note: { type: 'string', },
+          },
         },
       },
     },
-    updateService: true,
   };
   const sampleService2 = {
     serviceName: 'serviceContractService2',
-    endPoint: 'serviceContractService2',
     requestParameters: {
-      required: [
-        'callName',
-      ],
+      type: 'object',
+      additionalProperties: false,
       properties: {
-        callName: {
-          type: 'string',
+        metadata: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            author: { type: 'string', },
+          },
         },
-        tags: {
-          type: 'string',
-        },
-        endDate: {
-          type: 'integer',
-        },
-        allowMultipleAnswers: {
-          type: 'boolean',
-        },
-        amount: {
-          type: 'integer',
-        },
-        articleNumber: {
-          type: 'string',
-        },
-        possibleWeek: {
-          type: 'integer',
-        },
-        note: {
-          type: 'string',
-        },
+        payload: {
+          type: 'object',
+          additionalProperties: false,
+          required: [ 'callName', ],
+          properties: {
+            callName: { type: 'string', },
+            tags: { type: 'string', },
+            endDate: { type: 'integer', },
+            allowMultipleAnswers: { type: 'boolean', },
+            amount: { type: 'integer', },
+            articleNumber: { type: 'string', },
+            possibleWeek: { type: 'integer', },
+            note: { type: 'string', },
+          },
+        }
       },
     },
     responseParameters: {
+      type: 'object',
+      additionalProperties: false,
       properties: {
-        possibleAmount: {
-          type: 'integer',
+        metadata: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            author: { type: 'string', },
+          },
         },
-        price: {
-          type: 'integer',
-        },
-        possibleDeliveryWeek: {
-          type: 'integer',
-        },
-        note: {
-          type: 'string',
+        payload: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            possibleAmount: { type: 'integer', },
+            price: { type: 'integer', },
+            possibleDeliveryWeek: { type: 'integer', },
+            note: { type: 'string', },
+          },
         },
       },
     },
-    updateService: true,
   }
   const sampleCall = {
     metadata: {
@@ -289,6 +295,14 @@ describe('ServiceContract', function() {
     expect(call).to.deep.eq(sampleCall);
   });
 
+  it('cannot send a service message, that doesn\'t match the definition', async() => {
+    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+    const brokenCall = JSON.parse(JSON.stringify(sampleCall));
+    brokenCall.payload.someBogus = 123;
+    const sendCallPromise = sc0.sendCall(contract, accounts[0], brokenCall);
+    await expect(sendCallPromise).to.be.rejected;
+  });
+
   it('can send an answer to a service message', async() => {
     const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
     await sc0.inviteToContract(businessCenterDomain, contract.options.address, accounts[0], accounts[2]);
@@ -299,6 +313,19 @@ describe('ServiceContract', function() {
     const answerId = await sc2.sendAnswer(contract, accounts[2], sampleAnswer, callId, call.metadata.author);
     const answer = await sc2.getAnswer(contract, accounts[2], callId, answerId);
     expect(answer).to.deep.eq(sampleAnswer);
+  });
+
+  it('cannot send an answer to a service message, that doesn\'t match the definition', async() => {
+    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+    await sc0.inviteToContract(businessCenterDomain, contract.options.address, accounts[0], accounts[2]);
+    const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', 0);
+    await sharing.addSharing(contract.options.address, accounts[0], accounts[2], '*', 0, contentKey);
+    const callId = await sc0.sendCall(contract, accounts[0], sampleCall, [accounts[2]]);
+    const call = await sc2.getCall(contract, accounts[0], callId);
+    const brokenAnswer = JSON.parse(JSON.stringify(sampleAnswer));
+    brokenAnswer.payload.someBogus = 123;
+    const sendAnswerPromise = sc2.sendAnswer(contract, accounts[2], brokenAnswer, callId, call.metadata.author);
+    await expect(sendAnswerPromise).to.be.rejected;
   });
 
   it('can hold multiple calls', async() => {
@@ -314,6 +341,23 @@ describe('ServiceContract', function() {
     expect(await sc0.getCall(contract, accounts[0], 0)).to.deep.eq(sampleCalls[0]);
     expect(await sc0.getCall(contract, accounts[0], 1)).to.deep.eq(sampleCalls[1]);
     expect(await sc0.getCall(contract, accounts[0], 2)).to.deep.eq(sampleCalls[2]);
+  });
+
+  it('allows to retrieve the call owner', async () => {
+    const sampleCalls = [Math.random(), Math.random(), Math.random()].map((rand) => {
+      const currentSample = JSON.parse(JSON.stringify(sampleCall));
+      currentSample.payload.note += rand;
+      return currentSample;
+    });
+    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+    for (let currentSample of sampleCalls) {
+      await sc0.sendCall(contract, accounts[0], currentSample);
+    }
+    await sc0.sendCall(contract, accounts[1], sampleCalls[0]);
+    expect(await sc0.getCallOwner(contract, 0)).to.deep.eq(accounts[0]);
+    expect(await sc0.getCallOwner(contract, 1)).to.deep.eq(accounts[0]);
+    expect(await sc0.getCallOwner(contract, 2)).to.deep.eq(accounts[0]);
+    expect(await sc0.getCallOwner(contract, 3)).to.deep.eq(accounts[1]);
   });
 
   it('does not allow calls to be read by every contract member without extending the sharing', async() => {
@@ -453,25 +497,25 @@ describe('ServiceContract', function() {
          sampleAnswers.push(answer);
       }
 
-      // if using existing contract
-      contract = loader.loadContract('ServiceContractInterface', '0xdeDca22030f95488E7db80A3aF26A1C122aeCa17');
+      // // if using existing contract
+      // contract = loader.loadContract('ServiceContractInterface', '0xdeDca22030f95488E7db80A3aF26A1C122aeCa17');
 
-      // // if creating new contract
-      // contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
-      // await sc0.inviteToContract(businessCenterDomain, contract.options.address, accounts[0], accounts[2]);
-      // const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', 0);
-      // await sharing.addSharing(contract.options.address, accounts[0], accounts[2], '*', 0, contentKey);
-      // let callIndex = 0;
-      // for (let currentSample of sampleAnswers) {
-      //   console.log(`send test call ${callIndex++}`);
-      //   await sc0.sendCall(contract, accounts[0], currentSample, [accounts[2]]);
-      // }
-      // let answerIndex = 0;
-      // for (let answer of sampleAnswers) {
-      //   console.log(`send test answer ${answerIndex++}`);
-      //   await sc2.sendAnswer(contract, accounts[2], answer, anweredCallId, accounts[0])
-      // }
-      // console.log(contract.options.address);
+      // if creating new contract
+      contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+      await sc0.inviteToContract(businessCenterDomain, contract.options.address, accounts[0], accounts[2]);
+      const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', 0);
+      await sharing.addSharing(contract.options.address, accounts[0], accounts[2], '*', 0, contentKey);
+      let callIndex = 0;
+      for (let currentSample of sampleAnswers) {
+        console.log(`send test call ${callIndex++}`);
+        await sc0.sendCall(contract, accounts[0], currentSample, [accounts[2]]);
+      }
+      let answerIndex = 0;
+      for (let answer of sampleAnswers) {
+        console.log(`send test answer ${answerIndex++}`);
+        await sc2.sendAnswer(contract, accounts[2], answer, anweredCallId, accounts[0])
+      }
+      console.log(contract.options.address);
     });
 
     describe('when retrieving calls', () => {

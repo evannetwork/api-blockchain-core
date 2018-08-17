@@ -1,9 +1,10 @@
-.env
 bundles/bcc/bcc.js.map
 bundles/bcc/dbcpPath.json
 discify/
+docs/*
 docu/
 scripts/
 src/
+.env
 tsconfig.json
 tslint.json

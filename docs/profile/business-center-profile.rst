@@ -9,10 +9,10 @@ Business Center Profile
    * - Class Name
      - BusinessCenterProfile
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `business-center-profile.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/profile/business-center-profile.ts>`_
-   * - Tests
+   * - Examples
      - `business-center-profile.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/profile/business-center-profile.spec.ts>`_
 
 The ``BusinessCenterProfile`` module allows to create profiles in a business center.

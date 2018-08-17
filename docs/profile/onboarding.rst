@@ -9,10 +9,10 @@ Onboarding
    * - Class Name
      - Onboarding
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `onboarding.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/onboarding.ts>`_
-   * - Tests
+   * - Examples
      - `onboarding.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/onboarding.spec.ts>`_
 
 The onboarding process is used to enable users to invite other users, where no blockchain account id is known. It allows to send an email to such contacts, that contains a link. This link points to a evan.network ÐApp, that allows accept the invitation by either creating a new account or by accepting it with an existing account.

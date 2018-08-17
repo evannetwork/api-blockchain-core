@@ -11,10 +11,10 @@ Cryptor - AES CBC
    * - Implements
      - `Cryptor <https://github.com/evannetwork/dbcp/tree/master/src/encryption/cryptor.ts>`_
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `aes.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/encryption/aes.ts>`_
-   * - Tests
+   * - Examples
      - `aes.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/encryption/aes.spec.ts>`_
 
 The `AES <https://github.com/evannetwork/api-blockchain-core/tree/master/src/encryption/aes.ts>`_ cryptor encodes and decodes content with aes-cbc.

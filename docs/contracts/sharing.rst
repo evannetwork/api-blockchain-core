@@ -9,10 +9,10 @@ Sharing
    * - Class Name
      - Sharing
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `sharing.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/sharing.ts>`_
-   * - Tests
+   * - Examples
      - `sharing.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/sharing.spec.ts>`_
 
 For getting a better understanding about how Sharings and Multikeys work, have a look at `Security <https://evannetwork.github.io/dev/security#sharings>`_ in the evan.network wiki.

@@ -5,6 +5,23 @@
 ### Fixes
 ### Deprecations
 
+
+## Version 1.1.0
+### Features
+- add support for wallet/proxy contracts (current implementation allows n wallet owner with a required confirmation count of 1, to allow grouping of accounts)
+- add `ExecutorWallet`, that wraps calls to `Wallet`, but behaves like the normal `Executor`
+- add `ExecutorAgent`, that wraps contract creation and interaction to edge-server actions
+- add `Claims` module for issuing and managing claims about other parties
+- add `getCallOwner` to get a `ServiceContracts`s call creator
+
+### Fixes
+- add validation for service definitions, calls and answers to `ServiceContract`
+- remove `@evan.network/smart-contracts-admin` dependency
+
+### Deprecations
+- remove endpoint property from service contracts
+
+
 ## Version 1.0.2
 ### Features
 - add support for adding sharing file hashes to cache to avoid duplicate contract calls

@@ -9,10 +9,10 @@ Data Contract
    * - Class Name
      - DataContract
    * - Extends
-     - `BaseContract </contracts/base-contract.html>`_
+     - `BaseContract <../contracts/base-contract.html>`_
    * - Source
      - `data-contract.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/data-contract/data-contract.ts>`_
-   * - Tests
+   * - Examples
      - `data-contract.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/data-contract/data-contract.spec.ts>`_
 
 The `DataContract <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/data-contract/data-contract.ts>`_ is a secured data storage contract for single properties and lists. If created on its own, DataContracts cannot do very much. They rely on their authority to check which entries or lists can be used.
@@ -125,7 +125,7 @@ Now create a contract with:
 
   const contract = await dc.create(factoryName, accounts[0], businessCenterDomain);
 
-Okay, that does not provide a description for the contract. Let's add a description to the process. The definition is a `DBCP <https://github.com/evannetwork/dbcp/wiki)>`_ contract definition and is stored in an ``Envelope`` (see :doc:`Encryption </encryption/index>`):
+Okay, that does not provide a description for the contract. Let's add a description to the process. The definition is a `DBCP <https://github.com/evannetwork/dbcp/wiki)>`_ contract definition and is stored in an ``Envelope`` (see :doc:`Encryption <../encryption/index>`):
 
 .. code-block:: typescript
 
@@ -134,7 +134,7 @@ Okay, that does not provide a description for the contract. Let's add a descript
       "name": "Data Contract Sample",
       "description": "reiterance oxynitrate sat alternize acurative",
       "version": "0.1.0",
-      "author": "contractus",
+      "author": "evan GmbH",
       "dataSchema": {
         "list_settable_by_member": {
           "$id": "list_settable_by_member_schema",

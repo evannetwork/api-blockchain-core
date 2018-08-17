@@ -9,10 +9,10 @@ Rights and Roles
    * - Class Name
      - RightsAndRoles
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `rights-and-roles.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/rights-and-roles.ts>`_
-   * - Tests
+   * - Examples
      - `rights-and-roles.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/rights-and-roles.spec.ts>`_
 
 The `RightsAndRoles <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/rights-and-roles.ts>`_ module follows the approach described in the evan.network wik at:
@@ -374,26 +374,6 @@ Example
 
 
 
-.. required for building markup
-.. |source contractLoader| replace:: ``ContractLoader``
-.. _source contractLoader: /contracts/contract-loader.html
-
-.. |source executor| replace:: ``Executor``
-.. _source executor: /blockchain/executor.html
-
-.. |source logLevel| replace:: ``LogLevel``
-.. _source logLevel: /common/logger.html#loglevel
-
-.. |source logLogInterface| replace:: ``LogLogInterface``
-.. _source logLogInterface: /common/logger.html#logloginterface
-
-.. |source nameResolver| replace:: ``NameResolver``
-.. _source nameResolver: /blockchain/name-resolver.html
-
-.. |source web3| replace:: ``Web3``
-.. _source web3: https://github.com/ethereum/web3.js/
-
-
 --------------------------------------------------------------------------------
 
 .. _rights-and-roles_transferOwnership:
@@ -434,3 +414,24 @@ Example
     contractOwner,              // current owner
     newOwner,                   // this account becomes new owner
   );
+
+
+
+.. required for building markup
+.. |source contractLoader| replace:: ``ContractLoader``
+.. _source contractLoader: /contracts/contract-loader.html
+
+.. |source executor| replace:: ``Executor``
+.. _source executor: /blockchain/executor.html
+
+.. |source logLevel| replace:: ``LogLevel``
+.. _source logLevel: /common/logger.html#loglevel
+
+.. |source logLogInterface| replace:: ``LogLogInterface``
+.. _source logLogInterface: /common/logger.html#logloginterface
+
+.. |source nameResolver| replace:: ``NameResolver``
+.. _source nameResolver: /blockchain/name-resolver.html
+
+.. |source web3| replace:: ``Web3``
+.. _source web3: https://github.com/ethereum/web3.js/

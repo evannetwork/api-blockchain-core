@@ -1,28 +1,28 @@
 /*
-  Copyright (C) 2018-present evan GmbH. 
-  
+  Copyright (C) 2018-present evan GmbH.
+
   This program is free software: you can redistribute it and/or modify it
-  under the terms of the GNU Affero General Public License, version 3, 
-  as published by the Free Software Foundation. 
-  
-  This program is distributed in the hope that it will be useful, 
-  but WITHOUT ANY WARRANTY; without even the implied warranty of 
+  under the terms of the GNU Affero General Public License, version 3,
+  as published by the Free Software Foundation.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-  See the GNU Affero General Public License for more details. 
-  
-  You should have received a copy of the GNU Affero General Public License along with this program.
-  If not, see http://www.gnu.org/licenses/ or write to the
-  
-  Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA, 02110-1301 USA,
-  
-  or download the license from the following URL: https://evan.network/license/ 
-  
-  You can be released from the requirements of the GNU Affero General Public License
-  by purchasing a commercial license.
-  Buying such a license is mandatory as soon as you use this software or parts of it
-  on other blockchains than evan.network. 
-  
-  For more information, please contact evan GmbH at this address: https://evan.network/license/ 
+  See the GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program. If not, see http://www.gnu.org/licenses/ or
+  write to the Free Software Foundation, Inc., 51 Franklin Street,
+  Fifth Floor, Boston, MA, 02110-1301 USA, or download the license from
+  the following URL: https://evan.network/license/
+
+  You can be released from the requirements of the GNU Affero General Public
+  License by purchasing a commercial license.
+  Buying such a license is mandatory as soon as you use this software or parts
+  of it on other blockchains than evan.network.
+
+  For more information, please contact evan GmbH at this address:
+  https://evan.network/license/
 */
 
 import {
@@ -226,7 +226,7 @@ export class Profile extends Logger {
       (async () => {
         const ensName = this.nameResolver.getDomainName(this.nameResolver.config.domains.profile);
         const address = await this.nameResolver.getAddress(ensName);
-        const contract = this.nameResolver.contractLoader.loadContract('ProfileIndex', address);
+        const contract = this.nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
         await this.executor.executeContractTransaction(
           contract, 'setMyProfile', { from: this.activeAccount, autoGas: 1.1, }, this.profileContract.options.address);
       })(),
@@ -249,7 +249,7 @@ export class Profile extends Logger {
   async exists(): Promise<boolean> {
     const ensName = this.nameResolver.getDomainName(this.nameResolver.config.domains.profile);
     const address = await this.nameResolver.getAddress(ensName);
-    const indexContract = this.nameResolver.contractLoader.loadContract('ProfileIndex', address);
+    const indexContract = this.nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
     const profileContractAddress = await this.executor.executeContractCall(
       indexContract, 'getProfile', this.activeAccount, { from: this.activeAccount, });
     return profileContractAddress !== '0x0000000000000000000000000000000000000000';
@@ -437,7 +437,7 @@ export class Profile extends Logger {
     if (!this.profileContract) {
       const ensName = this.nameResolver.getDomainName(this.nameResolver.config.domains.profile);
       const address = await this.nameResolver.getAddress(ensName);
-      const indexContract = this.nameResolver.contractLoader.loadContract('ProfileIndex', address);
+      const indexContract = this.nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
       const profileContractAddress = await this.executor.executeContractCall(
         indexContract, 'getProfile', this.activeAccount, { from: this.activeAccount, });
       if (profileContractAddress === '0x0000000000000000000000000000000000000000') {
