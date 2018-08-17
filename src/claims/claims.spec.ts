@@ -52,8 +52,6 @@ describe('Claims handler', function() {
     executor = await TestUtils.getExecutor(web3);
     contractLoader = await TestUtils.getContractLoader(web3);
     claims = await TestUtils.getClaims(web3);
-    // claims.loadContracts(
-    //   '0xb09AD99908725A453508979D5007A958aB0C9EB3', '0xCc21A067D2bAEfD485ED063134F63EEF2C76d39f');
     await claims.createStructure(accounts[0]);
   });
 

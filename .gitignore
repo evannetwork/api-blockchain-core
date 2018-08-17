@@ -7,3 +7,16 @@ ipfs-contractus
 package-lock.json.*
 package-lock.json
 docs/_build/*
+
+# docu files from dbcp
+docs/blockchain/account-store.rst
+docs/blockchain/event-hub.rst
+docs/blockchain/executor.rst
+docs/blockchain/name-resolver.rst
+docs/blockchain/signer.rst
+docs/common/logger.rst
+docs/common/validator.rst
+docs/contracts/contract-loader.rst
+docs/dfs/dfs-interface.rst
+docs/dfs/ipfs.rst
+docs/encryption/cryptor-unencrypted.rst
