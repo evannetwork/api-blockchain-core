@@ -6,6 +6,7 @@
 - add `ExecutorWallet`, that wraps calls to `Wallet`, but behaves like the normal `Executor`
 - add `ExecutorAgent`, that wraps contract creation and interaction to edge-server actions
 - add `Claims` module for issuing and managing claims about other parties
+- add `getCallOwner` to get a `ServiceContracts`s call creator
 
 ### Fixes
 - add validation for service definitions, calls and answers to `ServiceContract`

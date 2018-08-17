@@ -339,6 +339,23 @@ first
   }
 
   /**
+   * gets the owner/creator of a call
+   *
+   * @param      {any|string}       contract  contract instance or id
+   * @param      {number}           callId    id of a call
+   * @return     {Promise<string>}  account id of call owner
+   */
+  public async getCallOwner(contract: any|string, callId: number): Promise<string> {
+    const serviceContract = (typeof contract === 'object') ?
+      contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+    return this.options.executor.executeContractCall(
+      serviceContract,
+      'multiSharingsOwner',
+      `0x${(callId).toString(16).padStart(64, '0')}`,
+    )
+  }
+
+  /**
    * gets the service of a service contract
    *
    * @param      {any|string}       contract   smart contract instance or contract ID
