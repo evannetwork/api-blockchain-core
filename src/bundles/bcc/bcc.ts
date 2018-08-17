@@ -68,6 +68,7 @@ import { Onboarding } from '../../onboarding';
 import { Profile } from '../../profile/profile';
 import { RightsAndRoles } from '../../contracts/rights-and-roles';
 import { Sharing } from '../../contracts/sharing';
+import { ServiceContract } from '../../contracts/service-contract/service-contract';
 
 /**************************************************************************************************/
 
@@ -436,6 +437,17 @@ const create = function(options: ProfileBundleOptions): ProfileInstance {
     description: coreInstance.description,
     logLog,
     logLogLevel
+  });
+
+  const serviceContract = new ServiceContract({
+    cryptoProvider: coreInstance.description.cryptoProvider,
+    dfs: coreInstance.dfs,
+    executor,
+    keyProvider: (<any>options.keyProvider),
+    loader: coreInstance.contractLoader,
+    nameResolver: coreInstance.nameResolver,
+    sharing: sharing,
+    web3: coreInstance.web3,
   });
 
   const profile = new Profile({
