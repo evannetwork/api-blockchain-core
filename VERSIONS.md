@@ -2,6 +2,12 @@
 
 ## Next Version
 ### Features
+### Fixes
+### Deprecations
+
+
+## Version 1.1.0
+### Features
 - add support for wallet/proxy contracts (current implementation allows n wallet owner with a required confirmation count of 1, to allow grouping of accounts)
 - add `ExecutorWallet`, that wraps calls to `Wallet`, but behaves like the normal `Executor`
 - add `ExecutorAgent`, that wraps contract creation and interaction to edge-server actions
