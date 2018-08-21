@@ -173,10 +173,10 @@ export class Profile extends Logger {
     if (!address || !description) {
       throw new Error('no valid description or address given!');
     }
-    await this.ipld.set(this.trees['bookmarkedDapps'], address, {}, true);
+    await this.ipld.set(this.trees['bookmarkedDapps'], `bookmarkedDapps/${address}`, {}, true);
     const descriptionKeys = Object.keys(description);
     for (let key of descriptionKeys) {
-      await this.ipld.set(this.trees['bookmarkedDapps'], `${address}/${key}`, description[key], true);
+      await this.ipld.set(this.trees['bookmarkedDapps'], `bookmarkedDapps/${address}/${key}`, description[key], true);
     }
   }
 
@@ -378,7 +378,7 @@ export class Profile extends Logger {
     if (!this.trees[this.treeLabels.bookmarkedDapps]) {
       await this.loadForAccount(this.treeLabels.bookmarkedDapps);
     }
-    return this.ipld.getLinkedGraph(this.trees[this.treeLabels.bookmarkedDapps], address);
+    return this.ipld.getLinkedGraph(this.trees[this.treeLabels.bookmarkedDapps], `bookmarkedDapps/${address}`);
   }
 
   /**
