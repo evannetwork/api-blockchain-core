@@ -27,6 +27,7 @@
 
 import crypto = require('crypto');
 import prottle = require('prottle');
+import _ = require('lodash');
 
 import {
   ContractLoader,
@@ -115,9 +116,9 @@ export class ServiceContract extends BaseContract {
       (await this.options.sharing.getKey(serviceContract.options.address, accountId, section, blockNr, callIdHash));
     for (let target of to) {
       await this.options.sharing.ensureHashKey(
-        contract.options.address, accountId, target, hashKeyToShare, null, callIdHash);
+        serviceContract.options.address, accountId, target, hashKeyToShare, null, callIdHash);
       await this.options.sharing.addSharing(
-        contract.options.address, accountId, target, section, 0, contentKeyToShare, null, false, callIdHash);
+        serviceContract.options.address, accountId, target, section, 0, contentKeyToShare, null, false, callIdHash);
     }
   }
 
@@ -458,7 +459,7 @@ first
     }
 
     // create local copy of call for encryption
-    const callCopy = JSON.parse(JSON.stringify(call));
+    const callCopy = _.clone(call);
 
     // get block number for cryptoInfos
     const blockNr = await this.options.web3.eth.getBlockNumber();
@@ -635,10 +636,11 @@ first
         if (decryptedObject[property][key].hasOwnProperty('private') &&
             decryptedObject[property][key].hasOwnProperty('cryptoInfo')) {
           try {
+            const innerCryptor = this.options.cryptoProvider.getCryptorByCryptoInfo(decryptedObject[property][key].cryptoInfo);
             const envelopeInner = decryptedObject[property][key];
             const contentKeyInner = await this.options.sharing.getKey(
               contract.options.address, accountId, key, envelopeInner.cryptoInfo.block, callId);
-            decryptedObject[property][key] = await cryptor.decrypt(
+            decryptedObject[property][key] = await innerCryptor.decrypt(
               Buffer.from(envelopeInner.private, this.encodingEncrypted), { key: contentKeyInner, });
           } catch (ex) {
             this.log(`could not decrypt inner service message part ${property}/${key}; ${ex.message || ex}`, 'info')
@@ -707,7 +709,7 @@ first
               toEncrypt[property][keyInner]) {
             // encrypt with content key
             const encryptedBufferInner = await innerEncryptionData[keyInner].cryptor.encrypt(
-              toEncrypt[property][keyInner], { key: innerEncryptionData[keyInner].key, });
+              toEncrypt[property][keyInner].private, { key: innerEncryptionData[keyInner].key, });
             const encryptedProperty = encryptedBufferInner.toString(this.encodingEncrypted);
             const envelopeInner: Envelope = {
               private: encryptedProperty,

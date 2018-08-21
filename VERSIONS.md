@@ -3,6 +3,9 @@
 ## Next Version
 ### Features
 ### Fixes
+- fix contract references in service contract calls
+- fix decryption issues in service contracts
+
 ### Deprecations
 
 
