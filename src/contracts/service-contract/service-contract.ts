@@ -220,7 +220,7 @@ export class ServiceContract extends BaseContract {
       callId: number,
       count = 10,
       offset = 0,
-      reverse = false): Promise<any[]> {
+      reverse = false): Promise<any> {
     const serviceContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('ServiceContractInterface', contract);
 
@@ -228,11 +228,12 @@ export class ServiceContract extends BaseContract {
     const { entries, indices } = await this.getEntries(serviceContract, 'answers', callId, count, offset, reverse);
 
     // decrypt contents
+    const result = {};
     // answer hashes are encrypted with calls hash key
     const callIdString = this.numberToBytes32(callId);
     const tasks = indices.map((index) => async () => {
       const decryptedHash = await this.decryptHash(entries[index].encryptedHash, serviceContract, accountId, callIdString);
-      return this.decrypt(
+      result[index] = await this.decrypt(
         (await this.options.dfs.get(decryptedHash)).toString('utf-8'),
         serviceContract,
         accountId,
@@ -241,9 +242,11 @@ export class ServiceContract extends BaseContract {
       );
     });
 
-    const decrypted = tasks.length ? await prottle(requestWindowSize, tasks) : [];
+    if (tasks.length) {
+      await prottle(requestWindowSize, tasks);
+    }
 
-    return decrypted;
+    return result;
   }
 
   /**
@@ -274,15 +277,12 @@ export class ServiceContract extends BaseContract {
  /**
    * get all calls from a contract
    *
-   * @param      {any|string}      contract   smart contract instance
-or contract ID
+   * @param      {any|string}      contract   smart contract instance or contract ID
    * @param      {string}          accountId  Ethereum account ID
-   * @param      {number}          count      number of elements to
-retrieve
+   * @param      {number}          count      number of elements to retrieve
    * @param      {number}          offset     skip this many elements
-   * @param      {boolean}         reverse    retrieve last elements
-first
-   * @return     {Promise<any[]>}  the calls
+   * @param      {boolean}         reverse    retrieve last elements first
+   * @return     {Promise<any>}  the calls
    */
   public async getCalls(
       contract: any|string,
@@ -291,7 +291,7 @@ first
       offset = 0,
       reverse = false): Promise<any> {
     const serviceContract = (typeof contract === 'object') ?
-      contract: this.options.loader.loadContract('ServiceContractInterface', contract);
+      contract : this.options.loader.loadContract('ServiceContractInterface', contract);
 
     // get entries
     const { entries, indices } = await this.getEntries(serviceContract,
@@ -325,7 +325,7 @@ first
 
     return result;
   }
-  
+
   /**
    * get number of calls of a contract
    *

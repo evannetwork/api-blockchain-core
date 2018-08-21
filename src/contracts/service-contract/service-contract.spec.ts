@@ -452,7 +452,7 @@ describe('ServiceContract', function() {
       await sc2.sendAnswer(contract, accounts[2], currentSample, 0, call.metadata.author);
     }
     const answers = await sc0.getAnswers(contract, accounts[0], 0);
-    expect(answers.length).to.eq(3);
+    expect(Object.keys(answers).length).to.eq(3);
     const reversed = answers.reverse();
     expect(answers[0]).to.deep.eq(reversed[0]);
     expect(answers[1]).to.deep.eq(reversed[1]);
@@ -497,209 +497,208 @@ describe('ServiceContract', function() {
          sampleAnswers.push(answer);
       }
 
-      // // if using existing contract
-      // contract = loader.loadContract('ServiceContractInterface', '0xdeDca22030f95488E7db80A3aF26A1C122aeCa17');
+      // if using existing contract
+      contract = loader.loadContract('ServiceContractInterface', '0xFADAfb542140DD965299DB80CaFBA466da8491C0');
 
-      // if creating new contract
-      contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
-      await sc0.inviteToContract(businessCenterDomain, contract.options.address, accounts[0], accounts[2]);
-      const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', 0);
-      await sharing.addSharing(contract.options.address, accounts[0], accounts[2], '*', 0, contentKey);
-      let callIndex = 0;
-      for (let currentSample of sampleAnswers) {
-        console.log(`send test call ${callIndex++}`);
-        await sc0.sendCall(contract, accounts[0], currentSample, [accounts[2]]);
-      }
-      let answerIndex = 0;
-      for (let answer of sampleAnswers) {
-        console.log(`send test answer ${answerIndex++}`);
-        await sc2.sendAnswer(contract, accounts[2], answer, anweredCallId, accounts[0])
-      }
-      console.log(contract.options.address);
+      // // if creating new contract
+      // contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+      // await sc0.inviteToContract(businessCenterDomain, contract.options.address, accounts[0], accounts[2]);
+      // const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', 0);
+      // await sharing.addSharing(contract.options.address, accounts[0], accounts[2], '*', 0, contentKey);
+      // let callIndex = 0;
+      // for (let currentSample of sampleCalls) {
+      //   console.log(`send test call ${callIndex++}`);
+      //   await sc0.sendCall(contract, accounts[0], currentSample, [accounts[2]]);
+      // }
+      // let answerIndex = 0;
+      // for (let answer of sampleAnswers) {
+      //   console.log(`send test answer ${answerIndex++}`);
+      //   await sc2.sendAnswer(contract, accounts[2], answer, anweredCallId, accounts[0])
+      // }
+      // console.log(contract.options.address);
     });
 
     describe('when retrieving calls', () => {
       it('can retrieve calls', async() => {
         const calls = await sc0.getCalls(contract, accounts[0]);
-        expect(calls.length).to.eq(Math.min(sampleCalls.length, 10));
-        expect(calls.length).to.eq(10);
-        for (let i = 0; i < calls.length; i++) {
-          expect(calls[i]).to.deep.eq(sampleCalls[i]);
-        }
+        expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length, 10));
+        Object.keys(calls).forEach((callId, i) => {
+          expect(calls[callId]).to.deep.eq(sampleCalls[i]);
+        });
       });
 
       it('can retrieve calls with a limited page size', async() => {
         const count = 2;
         const calls = await sc0.getCalls(contract, accounts[0], count);
-        expect(calls.length).to.eq(Math.min(sampleCalls.length, count));
-        for (let i = 0; i < calls.length; i++) {
-          expect(calls[i]).to.deep.eq(sampleCalls[i]);
-        }
+        expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length, count));
+        Object.keys(calls).forEach((callId, i) => {
+          expect(calls[callId]).to.deep.eq(sampleCalls[i]);
+        });
       });
 
       it('can retrieve calls with offset that results in a in a full page', async() => {
         const offset = 7;
         const calls = await sc0.getCalls(contract, accounts[0], 10, offset);
-        expect(calls.length).to.eq(Math.min(sampleCalls.length - offset, 10));
-        for (let i = 0; i < calls.length; i++) {
-          expect(calls[i]).to.deep.eq(sampleCalls[i + offset]);
-        }
+        expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length - offset, 10));
+        Object.keys(calls).forEach((callId, i) => {
+          expect(calls[callId]).to.deep.eq(sampleCalls[i + offset]);
+        });
       });
 
       it('can retrieve calls with offset that doesn\'t result not full page', async() => {
         const offset = 17;
         const calls = await sc0.getCalls(contract, accounts[0], 10, offset);
-        expect(calls.length).to.eq(Math.min(sampleCalls.length - offset, 10));
-        for (let i = 0; i < calls.length; i++) {
-          expect(calls[i]).to.deep.eq(sampleCalls[i + offset]);
-        }
+        expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length - offset, 10));
+        Object.keys(calls).forEach((callId, i) => {
+          expect(calls[callId]).to.deep.eq(sampleCalls[i + offset]);
+        });
       });
 
       it('can retrieve calls with limited page size and offset', async() => {
         const count = 2;
         const offset = 17;
         const calls = await sc0.getCalls(contract, accounts[0], 2, offset);
-        expect(calls.length).to.eq(Math.min(sampleCalls.length - offset, count));
-        for (let i = 0; i < calls.length; i++) {
-          expect(calls[i]).to.deep.eq(sampleCalls[i + offset]);
-        }
+        expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length - offset, count));
+        Object.keys(calls).forEach((callId, i) => {
+          expect(calls[callId]).to.deep.eq(sampleCalls[i + offset]);
+        });
       });
 
       it('can retrieve calls in reverse order', async() => {
         const calls = await sc0.getCalls(contract, accounts[0], 10, 0, true);
-        expect(calls.length).to.eq(10);
-        for (let i = 0; i < calls.length; i++) {
-          expect(calls[i]).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i]);
-        }
+        expect(Object.keys(calls).length).to.eq(10);
+        Object.keys(calls).reverse().forEach((callId, i) => {
+          expect(calls[callId]).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i]);
+        });
       });
 
       it('can retrieve calls in reverse order with a limited page size', async() => {
         const count = 2;
         const calls = await sc0.getCalls(contract, accounts[0], count, 0, true);
-        expect(calls.length).to.eq(Math.min(sampleCalls.length, count));
-        for (let i = 0; i < calls.length; i++) {
-          expect(calls[i]).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i]);
-        }
+        expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length, count));
+        Object.keys(calls).reverse().forEach((callId, i) => {
+          expect(calls[callId]).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i]);
+        });
       });
 
       it('can retrieve calls in reverse order with offset that results in a full page', async() => {
         const offset = 7;
         const calls = await sc0.getCalls(contract, accounts[0], 10, offset, true);
-        expect(calls.length).to.eq(Math.min(sampleCalls.length - offset, 10));
-        for (let i = 0; i < calls.length; i++) {
-          expect(calls[i]).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i - offset]);
-        }
+        expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length - offset, 10));
+        Object.keys(calls).reverse().forEach((callId, i) => {
+          expect(calls[callId]).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i - offset]);
+        });
       });
 
-      it('can retrieve calls with offset that doesn\'t result not full page', async() => {
+      it('can retrieve calls in reverse order with offset that doesn\'t result not full page', async() => {
         const offset = 17;
         const calls = await sc0.getCalls(contract, accounts[0], 10, offset, true);
-        expect(calls.length).to.eq(Math.min(sampleCalls.length - offset, 10));
-        for (let i = 0; i < calls.length; i++) {
-          expect(calls[i]).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i - offset]);
-        }
+        expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length - offset, 10));
+        Object.keys(calls).reverse().forEach((callId, i) => {
+          expect(calls[callId]).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i - offset]);
+        });
       });
 
-      it('can retrieve calls with limited page size and offset', async() => {
+      it('can retrieve calls in reverse order with limited page size and offset', async() => {
         const count = 2;
         const offset = 17;
         const calls = await sc0.getCalls(contract, accounts[0], 2, offset, true);
-        expect(calls.length).to.eq(Math.min(sampleCalls.length - offset, count));
-        for (let i = 0; i < calls.length; i++) {
-          expect(calls[i]).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i - offset]);
-        }
+        expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length - offset, count));
+        Object.keys(calls).reverse().forEach((callId, i) => {
+          expect(calls[callId]).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i - offset]);
+        });
       });
     });
 
     describe('when retrieving answers', () => {
       it('can retrieve answers', async() => {
         const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId);
-        expect(answers.length).to.eq(Math.min(sampleAnswers.length, 10));
-        for (let i = 0; i < answers.length; i++) {
-          expect(answers[i]).to.deep.eq(sampleAnswers[i]);
-        }
+        expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length, 10));
+        Object.keys(answers).forEach((answerId, i) => {
+          expect(answers[answerId]).to.deep.eq(sampleAnswers[i]);
+        });
       });
 
       it('can retrieve answers with a limited page size', async() => {
         const count = 2;
         const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, count);
-        expect(answers.length).to.eq(Math.min(sampleAnswers.length, count));
-        for (let i = 0; i < answers.length; i++) {
-          expect(answers[i]).to.deep.eq(sampleAnswers[i]);
-        }
+        expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length, count));
+        Object.keys(answers).forEach((answerId, i) => {
+          expect(answers[answerId]).to.deep.eq(sampleAnswers[i]);
+        });
       });
 
       it('can retrieve answers with offset that results in a in a full page', async() => {
         const offset = 7;
         const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, 10, offset);
-        expect(answers.length).to.eq(Math.min(sampleAnswers.length - offset, 10));
-        for (let i = 0; i < answers.length; i++) {
-          expect(answers[i]).to.deep.eq(sampleAnswers[i + offset]);
-        }
+        expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length - offset, 10));
+        Object.keys(answers).forEach((answerId, i) => {
+          expect(answers[answerId]).to.deep.eq(sampleAnswers[i + offset]);
+        });
       });
 
       it('can retrieve answers with offset that doesn\'t result not full page', async() => {
         const offset = 17;
         const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, 10, offset);
-        expect(answers.length).to.eq(Math.min(sampleAnswers.length - offset, 10));
-        for (let i = 0; i < answers.length; i++) {
-          expect(answers[i]).to.deep.eq(sampleAnswers[i + offset]);
-        }
+        expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length - offset, 10));
+        Object.keys(answers).forEach((answerId, i) => {
+          expect(answers[answerId]).to.deep.eq(sampleAnswers[i + offset]);
+        });
       });
 
       it('can retrieve answers with limited page size and offset', async() => {
         const count = 2;
         const offset = 17;
         const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, 2, offset);
-        expect(answers.length).to.eq(Math.min(sampleAnswers.length - offset, count));
-        for (let i = 0; i < answers.length; i++) {
-          expect(answers[i]).to.deep.eq(sampleAnswers[i + offset]);
-        }
+        expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length - offset, count));
+        Object.keys(answers).forEach((answerId, i) => {
+          expect(answers[answerId]).to.deep.eq(sampleAnswers[i + offset]);
+        });
       });
 
       it('can retrieve answers in reverse order', async() => {
         const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, 10, 0, true);
-        expect(answers.length).to.eq(10);
-        for (let i = 0; i < answers.length; i++) {
-          expect(answers[i]).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i]);
-        }
+        expect(Object.keys(answers).length).to.eq(10);
+        Object.keys(answers).reverse().forEach((answerId, i) => {
+          expect(answers[answerId]).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i]);
+        });
       });
 
       it('can retrieve answers in reverse order with a limited page size', async() => {
         const count = 2;
         const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, count, 0, true);
-        expect(answers.length).to.eq(Math.min(sampleAnswers.length, count));
-        for (let i = 0; i < answers.length; i++) {
-          expect(answers[i]).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i]);
-        }
+        expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length, count));
+        Object.keys(answers).reverse().forEach((answerId, i) => {
+          expect(answers[answerId]).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i]);
+        });
       });
 
       it('can retrieve answers in reverse order with offset that results in a full page', async() => {
         const offset = 7;
         const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, 10, offset, true);
-        expect(answers.length).to.eq(Math.min(sampleAnswers.length - offset, 10));
-        for (let i = 0; i < answers.length; i++) {
-          expect(answers[i]).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i - offset]);
-        }
+        expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length - offset, 10));
+        Object.keys(answers).reverse().forEach((answerId, i) => {
+          expect(answers[answerId]).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i - offset]);
+        });
       });
 
-      it('can retrieve answers with offset that doesn\'t result not full page', async() => {
+      it('can retrieve answers in reverse with offset that doesn\'t result not full page', async() => {
         const offset = 17;
         const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, 10, offset, true);
-        expect(answers.length).to.eq(Math.min(sampleAnswers.length - offset, 10));
-        for (let i = 0; i < answers.length; i++) {
-          expect(answers[i]).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i - offset]);
-        }
+        expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length - offset, 10));
+        Object.keys(answers).reverse().forEach((answerId, i) => {
+          expect(answers[answerId]).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i - offset]);
+        });
       });
 
-      it('can retrieve answers with limited page size and offset', async() => {
+      it('can retrieve answers in reverse with limited page size and offset', async() => {
         const count = 2;
         const offset = 17;
         const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, 2, offset, true);
-        expect(answers.length).to.eq(Math.min(sampleAnswers.length - offset, count));
-        for (let i = 0; i < answers.length; i++) {
-          expect(answers[i]).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i - offset]);
-        }
+        expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length - offset, count));
+        Object.keys(answers).reverse().forEach((answerId, i) => {
+          expect(answers[answerId]).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i - offset]);
+        });
       });
     });
   });
