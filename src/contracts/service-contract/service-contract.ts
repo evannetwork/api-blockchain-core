@@ -58,8 +58,8 @@ const serviceSchema = {
 };
 
 export interface Answer {
-  hash: string;
   data: any;
+  hash: string;
   owner: string;
   created: number;
   parent: number;
@@ -70,8 +70,8 @@ export interface AnswerResult {
 }
 
 export interface Call {
-  hash: string;
   data: any;
+  hash: string;
   owner: string;
   created: number;
   answerCount: number;
