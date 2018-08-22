@@ -292,7 +292,7 @@ describe('ServiceContract', function() {
     const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
     const callId = await sc0.sendCall(contract, accounts[0], sampleCall);
     const call = await sc0.getCall(contract, accounts[0], callId);
-    expect(call).to.deep.eq(sampleCall);
+    expect(call.data).to.deep.eq(sampleCall);
   });
 
   it('cannot send a service message, that doesn\'t match the definition', async() => {
@@ -310,9 +310,9 @@ describe('ServiceContract', function() {
     await sharing.addSharing(contract.options.address, accounts[0], accounts[2], '*', 0, contentKey);
     const callId = await sc0.sendCall(contract, accounts[0], sampleCall, [accounts[2]]);
     const call = await sc2.getCall(contract, accounts[0], callId);
-    const answerId = await sc2.sendAnswer(contract, accounts[2], sampleAnswer, callId, call.metadata.author);
+    const answerId = await sc2.sendAnswer(contract, accounts[2], sampleAnswer, callId, call.data.metadata.author);
     const answer = await sc2.getAnswer(contract, accounts[2], callId, answerId);
-    expect(answer).to.deep.eq(sampleAnswer);
+    expect(answer.data).to.deep.eq(sampleAnswer);
   });
 
   it('cannot send an answer to a service message, that doesn\'t match the definition', async() => {
@@ -324,7 +324,7 @@ describe('ServiceContract', function() {
     const call = await sc2.getCall(contract, accounts[0], callId);
     const brokenAnswer = JSON.parse(JSON.stringify(sampleAnswer));
     brokenAnswer.payload.someBogus = 123;
-    const sendAnswerPromise = sc2.sendAnswer(contract, accounts[2], brokenAnswer, callId, call.metadata.author);
+    const sendAnswerPromise = sc2.sendAnswer(contract, accounts[2], brokenAnswer, callId, call.data.metadata.author);
     await expect(sendAnswerPromise).to.be.rejected;
   });
 
@@ -338,9 +338,9 @@ describe('ServiceContract', function() {
     for (let currentSample of sampleCalls) {
       await sc0.sendCall(contract, accounts[0], currentSample);
     }
-    expect(await sc0.getCall(contract, accounts[0], 0)).to.deep.eq(sampleCalls[0]);
-    expect(await sc0.getCall(contract, accounts[0], 1)).to.deep.eq(sampleCalls[1]);
-    expect(await sc0.getCall(contract, accounts[0], 2)).to.deep.eq(sampleCalls[2]);
+    expect((await sc0.getCall(contract, accounts[0], 0)).data).to.deep.eq(sampleCalls[0]);
+    expect((await sc0.getCall(contract, accounts[0], 1)).data).to.deep.eq(sampleCalls[1]);
+    expect((await sc0.getCall(contract, accounts[0], 2)).data).to.deep.eq(sampleCalls[2]);
   });
 
   it('allows to retrieve the call owner', async () => {
@@ -380,7 +380,7 @@ describe('ServiceContract', function() {
     const callId = await sc0.sendCall(contract, accounts[0], sampleCall);
     await sc0.addToCallSharing(contract, accounts[0], callId, [accounts[2]]);
     const call = await sc2.getCall(contract, accounts[2], 0);
-    expect(call).to.deep.eq(sampleCall);
+    expect(call.data).to.deep.eq(sampleCall);
   });
 
   it('does not allow answers to be read by other members than the original caller', async() => {
@@ -392,7 +392,7 @@ describe('ServiceContract', function() {
     await sharing.addSharing(contract.options.address, accounts[0], accounts[2], '*', 0, contentKey);
     await sc0.sendCall(contract, accounts[0], sampleCall, [accounts[2]]);
     const call = await sc2.getCall(contract, accounts[0], 0);
-    await sc2.sendAnswer(contract, accounts[2], sampleAnswer, 0, call.metadata.author);
+    await sc2.sendAnswer(contract, accounts[2], sampleAnswer, 0, call.data.metadata.author);
 
     // create second service contract helper with fewer keys
     const limitedKeyProvider = TestUtils.getKeyProvider([
@@ -430,7 +430,7 @@ describe('ServiceContract', function() {
     await sc0.sendCall(contract, accounts[0], sampleCall, [accounts[2]]);
     const call = await sc2.getCall(contract, accounts[2], 0);
     for (let currentSample of sampleAnswers) {
-      await sc2.sendAnswer(contract, accounts[2], currentSample, 0, call.metadata.author);
+      await sc2.sendAnswer(contract, accounts[2], currentSample, 0, call.data.metadata.author);
     }
     const answerCount = await sc0.getAnswerCount(contract, 0);
     expect(answerCount).to.eq(sampleAnswers.length);
@@ -449,14 +449,13 @@ describe('ServiceContract', function() {
     await sc0.sendCall(contract, accounts[0], sampleCall, [accounts[2]]);
     const call = await sc2.getCall(contract, accounts[0], 0);
     for (let currentSample of sampleAnswers) {
-      await sc2.sendAnswer(contract, accounts[2], currentSample, 0, call.metadata.author);
+      await sc2.sendAnswer(contract, accounts[2], currentSample, 0, call.data.metadata.author);
     }
     const answers = await sc0.getAnswers(contract, accounts[0], 0);
     expect(Object.keys(answers).length).to.eq(3);
-    const reversed = answers.reverse();
-    expect(answers[0]).to.deep.eq(reversed[0]);
-    expect(answers[1]).to.deep.eq(reversed[1]);
-    expect(answers[2]).to.deep.eq(reversed[2]);
+    Object.keys(answers).reverse().forEach((answerId, i) => {
+      expect(answers[answerId].data).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i]);
+    });
   });
 
   it('can create answers and read and answer them with another user', async() => {
@@ -468,12 +467,12 @@ describe('ServiceContract', function() {
 
     // retrieve call with other account, create answer
     const call = await sc2.getCall(contract, accounts[2], callId);
-    expect(call).to.deep.eq(sampleCall);
-    const answerId = await sc2.sendAnswer(contract, accounts[2], sampleAnswer, callId, call.metadata.author);
+    expect(call.data).to.deep.eq(sampleCall);
+    const answerId = await sc2.sendAnswer(contract, accounts[2], sampleAnswer, callId, call.data.metadata.author);
 
     // retrieve answer with first account
     const answer = await sc2.getAnswer(contract, accounts[0], callId, answerId);
-    expect(answer).to.deep.eq(sampleAnswer);
+    expect(answer.data).to.deep.eq(sampleAnswer);
   });
 
   describe('when paging through answers and answers', () => {
@@ -498,7 +497,7 @@ describe('ServiceContract', function() {
       }
 
       // if using existing contract
-      contract = loader.loadContract('ServiceContractInterface', '0xFADAfb542140DD965299DB80CaFBA466da8491C0');
+      contract = loader.loadContract('ServiceContractInterface', '0xEAC2daae30c9636161F25aBd2074fE61DeAff85d');
 
       // // if creating new contract
       // contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
@@ -523,7 +522,7 @@ describe('ServiceContract', function() {
         const calls = await sc0.getCalls(contract, accounts[0]);
         expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length, 10));
         Object.keys(calls).forEach((callId, i) => {
-          expect(calls[callId]).to.deep.eq(sampleCalls[i]);
+          expect(calls[callId].data).to.deep.eq(sampleCalls[i]);
         });
       });
 
@@ -532,7 +531,7 @@ describe('ServiceContract', function() {
         const calls = await sc0.getCalls(contract, accounts[0], count);
         expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length, count));
         Object.keys(calls).forEach((callId, i) => {
-          expect(calls[callId]).to.deep.eq(sampleCalls[i]);
+          expect(calls[callId].data).to.deep.eq(sampleCalls[i]);
         });
       });
 
@@ -541,7 +540,7 @@ describe('ServiceContract', function() {
         const calls = await sc0.getCalls(contract, accounts[0], 10, offset);
         expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length - offset, 10));
         Object.keys(calls).forEach((callId, i) => {
-          expect(calls[callId]).to.deep.eq(sampleCalls[i + offset]);
+          expect(calls[callId].data).to.deep.eq(sampleCalls[i + offset]);
         });
       });
 
@@ -550,7 +549,7 @@ describe('ServiceContract', function() {
         const calls = await sc0.getCalls(contract, accounts[0], 10, offset);
         expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length - offset, 10));
         Object.keys(calls).forEach((callId, i) => {
-          expect(calls[callId]).to.deep.eq(sampleCalls[i + offset]);
+          expect(calls[callId].data).to.deep.eq(sampleCalls[i + offset]);
         });
       });
 
@@ -560,7 +559,7 @@ describe('ServiceContract', function() {
         const calls = await sc0.getCalls(contract, accounts[0], 2, offset);
         expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length - offset, count));
         Object.keys(calls).forEach((callId, i) => {
-          expect(calls[callId]).to.deep.eq(sampleCalls[i + offset]);
+          expect(calls[callId].data).to.deep.eq(sampleCalls[i + offset]);
         });
       });
 
@@ -568,7 +567,7 @@ describe('ServiceContract', function() {
         const calls = await sc0.getCalls(contract, accounts[0], 10, 0, true);
         expect(Object.keys(calls).length).to.eq(10);
         Object.keys(calls).reverse().forEach((callId, i) => {
-          expect(calls[callId]).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i]);
+          expect(calls[callId].data).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i]);
         });
       });
 
@@ -577,7 +576,7 @@ describe('ServiceContract', function() {
         const calls = await sc0.getCalls(contract, accounts[0], count, 0, true);
         expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length, count));
         Object.keys(calls).reverse().forEach((callId, i) => {
-          expect(calls[callId]).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i]);
+          expect(calls[callId].data).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i]);
         });
       });
 
@@ -586,7 +585,7 @@ describe('ServiceContract', function() {
         const calls = await sc0.getCalls(contract, accounts[0], 10, offset, true);
         expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length - offset, 10));
         Object.keys(calls).reverse().forEach((callId, i) => {
-          expect(calls[callId]).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i - offset]);
+          expect(calls[callId].data).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i - offset]);
         });
       });
 
@@ -595,7 +594,7 @@ describe('ServiceContract', function() {
         const calls = await sc0.getCalls(contract, accounts[0], 10, offset, true);
         expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length - offset, 10));
         Object.keys(calls).reverse().forEach((callId, i) => {
-          expect(calls[callId]).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i - offset]);
+          expect(calls[callId].data).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i - offset]);
         });
       });
 
@@ -605,7 +604,7 @@ describe('ServiceContract', function() {
         const calls = await sc0.getCalls(contract, accounts[0], 2, offset, true);
         expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length - offset, count));
         Object.keys(calls).reverse().forEach((callId, i) => {
-          expect(calls[callId]).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i - offset]);
+          expect(calls[callId].data).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i - offset]);
         });
       });
     });
@@ -615,7 +614,7 @@ describe('ServiceContract', function() {
         const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId);
         expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length, 10));
         Object.keys(answers).forEach((answerId, i) => {
-          expect(answers[answerId]).to.deep.eq(sampleAnswers[i]);
+          expect(answers[answerId].data).to.deep.eq(sampleAnswers[i]);
         });
       });
 
@@ -624,7 +623,7 @@ describe('ServiceContract', function() {
         const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, count);
         expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length, count));
         Object.keys(answers).forEach((answerId, i) => {
-          expect(answers[answerId]).to.deep.eq(sampleAnswers[i]);
+          expect(answers[answerId].data).to.deep.eq(sampleAnswers[i]);
         });
       });
 
@@ -633,7 +632,7 @@ describe('ServiceContract', function() {
         const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, 10, offset);
         expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length - offset, 10));
         Object.keys(answers).forEach((answerId, i) => {
-          expect(answers[answerId]).to.deep.eq(sampleAnswers[i + offset]);
+          expect(answers[answerId].data).to.deep.eq(sampleAnswers[i + offset]);
         });
       });
 
@@ -642,7 +641,7 @@ describe('ServiceContract', function() {
         const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, 10, offset);
         expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length - offset, 10));
         Object.keys(answers).forEach((answerId, i) => {
-          expect(answers[answerId]).to.deep.eq(sampleAnswers[i + offset]);
+          expect(answers[answerId].data).to.deep.eq(sampleAnswers[i + offset]);
         });
       });
 
@@ -652,7 +651,7 @@ describe('ServiceContract', function() {
         const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, 2, offset);
         expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length - offset, count));
         Object.keys(answers).forEach((answerId, i) => {
-          expect(answers[answerId]).to.deep.eq(sampleAnswers[i + offset]);
+          expect(answers[answerId].data).to.deep.eq(sampleAnswers[i + offset]);
         });
       });
 
@@ -660,7 +659,7 @@ describe('ServiceContract', function() {
         const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, 10, 0, true);
         expect(Object.keys(answers).length).to.eq(10);
         Object.keys(answers).reverse().forEach((answerId, i) => {
-          expect(answers[answerId]).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i]);
+          expect(answers[answerId].data).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i]);
         });
       });
 
@@ -669,7 +668,7 @@ describe('ServiceContract', function() {
         const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, count, 0, true);
         expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length, count));
         Object.keys(answers).reverse().forEach((answerId, i) => {
-          expect(answers[answerId]).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i]);
+          expect(answers[answerId].data).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i]);
         });
       });
 
@@ -678,7 +677,7 @@ describe('ServiceContract', function() {
         const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, 10, offset, true);
         expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length - offset, 10));
         Object.keys(answers).reverse().forEach((answerId, i) => {
-          expect(answers[answerId]).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i - offset]);
+          expect(answers[answerId].data).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i - offset]);
         });
       });
 
@@ -687,7 +686,7 @@ describe('ServiceContract', function() {
         const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, 10, offset, true);
         expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length - offset, 10));
         Object.keys(answers).reverse().forEach((answerId, i) => {
-          expect(answers[answerId]).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i - offset]);
+          expect(answers[answerId].data).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i - offset]);
         });
       });
 
@@ -697,7 +696,7 @@ describe('ServiceContract', function() {
         const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, 2, offset, true);
         expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length - offset, count));
         Object.keys(answers).reverse().forEach((answerId, i) => {
-          expect(answers[answerId]).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i - offset]);
+          expect(answers[answerId].data).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i - offset]);
         });
       });
     });
@@ -710,26 +709,35 @@ describe('ServiceContract', function() {
 
     // get cryptor for annotating encryption of properties
     const cryptor = sc0.options.cryptoProvider.getCryptorByCryptoAlgo(sc0.options.defaultCryptoAlgo);
+    const secretPayload = {
+      someNumber: Math.random(),
+      someText: `I like randomNumbers in payload, for example: ${Math.random()}`,
+    };
+    const secretMetadata = `I like randomNumbers in metadata, for example: ${Math.random()}`;
     callForNesting.payload.privateData = {
-      private: {
-        someNumber: Math.random(),
-        someText: `I like randomNumbers in payload, for example: ${Math.random()}`,
-      },
+      private: secretPayload,
       cryptoInfo: cryptor.getCryptoInfo(sc0.options.nameResolver.soliditySha3(contract.options.address)),
     };
     callForNesting.metadata.privateData = {
-      private: `I like randomNumbers in metadata, for example: ${Math.random()}`,
+      private: secretMetadata,
       cryptoInfo: cryptor.getCryptoInfo(sc0.options.nameResolver.soliditySha3(contract.options.address)),
     };
     // send it as usual (to-encrypt properties are encrypted automatically); invite participant
     const callId = await sc0.sendCall(contract, accounts[0], callForNesting, [accounts[2]]);
 
     // fetch with creator
-    let call = await sc0.getCall(contract, accounts[0], callId);
-    expect(call).to.deep.eq(callForNesting);
+    const fullyDecrypedCall = JSON.parse(JSON.stringify(callForNesting));
+    fullyDecrypedCall.payload.privateData = {
+      someNumber: Math.random(),
+      someText: `I like randomNumbers in payload, for example: ${Math.random()}`,
+    };
+    fullyDecrypedCall.payload.privateData = secretPayload;
+    fullyDecrypedCall.metadata.privateData = secretMetadata;
+    let call = (await sc0.getCall(contract, accounts[0], callId)).data;
+    expect(call).to.deep.eq(fullyDecrypedCall);
 
     // fetch with participant
-    call = await sc2.getCall(contract, accounts[2], callId);
+    call = (await await sc2.getCall(contract, accounts[2], callId)).data;
     // participant can read 'outer' properties
     expect(call.metadata.author).to.eq(callForNesting.metadata.author);
     expect(call.payload.callName).to.eq(callForNesting.payload.callName);
@@ -749,7 +757,7 @@ describe('ServiceContract', function() {
     await sc0.addToCallSharing(contract, accounts[0], callId, [accounts[2]], null, null, 'privateData');
     // fetch again
     sc2.options.sharing.clearCache();
-    call = await sc2.getCall(contract, accounts[2], callId);
-    expect(call).to.deep.eq(callForNesting);
+    call = (await sc2.getCall(contract, accounts[2], callId)).data;
+    expect(call).to.deep.eq(fullyDecrypedCall);
   });
 });

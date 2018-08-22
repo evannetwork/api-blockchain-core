@@ -25,9 +25,10 @@
   https://evan.network/license/
 */
 
+import _ = require('lodash');
 import crypto = require('crypto');
 import prottle = require('prottle');
-import _ = require('lodash');
+import Web3 = require('web3');
 
 import {
   ContractLoader,
@@ -43,6 +44,8 @@ import { CryptoProvider } from '../../encryption/crypto-provider';
 import { Sharing } from '../sharing';
 
 const requestWindowSize = 10;
+const web3 = new Web3(null);
+const uintMax = web3.utils.toBN('ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
 
 const serviceSchema = {
   type: 'object',
@@ -54,6 +57,30 @@ const serviceSchema = {
   },
 };
 
+export interface Answer {
+  hash: string;
+  data: any;
+  owner: string;
+  created: number;
+  parent: number;
+}
+
+export interface AnswerResult {
+  [index: number]: Answer;
+}
+
+export interface Call {
+  hash: string;
+  data: any;
+  owner: string;
+  created: number;
+  answerCount: number;
+  sharing: string;
+}
+
+export interface CallResult {
+  [index: number]: Call;
+}
 
 /**
  * options for ServiceContract constructor
@@ -178,15 +205,19 @@ export class ServiceContract extends BaseContract {
       contract: any|string, accountId: string, callId: number, answerIndex: number): Promise<any> {
     const serviceContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('ServiceContractInterface', contract);
-    const encryptedHash = await this.options.executor.executeContractCall(serviceContract, 'answersPerCall', callId, answerIndex);
-    const decryptedHash = await this.decryptHash(encryptedHash, serviceContract, accountId, this.numberToBytes32(callId));
-    const decrypted = await this.decrypt(
+    const queryResult = await this.options.executor.executeContractCall(
+      serviceContract, 'getAnswers', callId, answerIndex);
+    const decryptedHash = await this.decryptHash(
+      queryResult.hash[0], serviceContract, accountId, this.numberToBytes32(callId));
+    const data = await this.decrypt(
       (await this.options.dfs.get(decryptedHash)).toString('utf-8'),
       serviceContract,
       accountId,
       '*'
     );
-    return decrypted;
+    const result = { data, };
+    ['hash', 'owner', 'created', 'parent'].forEach((key) => { result[key] = queryResult[0][key]; });
+    return result;
   }
 
   /**
@@ -199,8 +230,9 @@ export class ServiceContract extends BaseContract {
   public async getAnswerCount(contract: any|string, callId: number): Promise<number> {
     const serviceContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('ServiceContractInterface', contract);
-    const count = await this.options.executor.executeContractCall(serviceContract, 'answersCountPerCall', callId);
-    return parseInt(count, 10);
+    const { answerCount}  = await this.options.executor.executeContractCall(
+      serviceContract, 'calls', callId);
+    return parseInt(answerCount, 10);
   }
 
   /**
@@ -220,20 +252,23 @@ export class ServiceContract extends BaseContract {
       callId: number,
       count = 10,
       offset = 0,
-      reverse = false): Promise<any> {
+      reverse = false): Promise<AnswerResult> {
     const serviceContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('ServiceContractInterface', contract);
 
     // get entries
-    const { entries, indices } = await this.getEntries(serviceContract, 'answers', callId, count, offset, reverse);
+    const { entries, indices } = await this.getEntries(
+      serviceContract, 'answers', callId, count, offset, reverse);
 
     // decrypt contents
     const result = {};
     // answer hashes are encrypted with calls hash key
     const callIdString = this.numberToBytes32(callId);
     const tasks = indices.map((index) => async () => {
-      const decryptedHash = await this.decryptHash(entries[index].encryptedHash, serviceContract, accountId, callIdString);
-      result[index] = await this.decrypt(
+      const decryptedHash = await this.decryptHash(
+        entries[index].hash, serviceContract, accountId, callIdString);
+      result[index] = entries[index];
+      result[index].data = await this.decrypt(
         (await this.options.dfs.get(decryptedHash)).toString('utf-8'),
         serviceContract,
         accountId,
@@ -261,17 +296,17 @@ export class ServiceContract extends BaseContract {
     const serviceContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('ServiceContractInterface', contract);
     const callIdString = this.numberToBytes32(callId);
-    const encryptedHash = await this.options.executor.executeContractCall(
+    let call = await this.options.executor.executeContractCall(
       serviceContract, 'calls', callIdString);
-    const decryptedHash = await this.decryptHash(encryptedHash, serviceContract, accountId, callIdString);
-    const decrypted = await this.decrypt(
+    const decryptedHash = await this.decryptHash(call.hash, serviceContract, accountId, callIdString);
+    call.data = await this.decrypt(
       (await this.options.dfs.get(decryptedHash)).toString('utf-8'),
       serviceContract,
       accountId,
       '*',
       callIdString,
     );
-    return decrypted;
+    return call;
   }
 
  /**
@@ -289,7 +324,7 @@ export class ServiceContract extends BaseContract {
       accountId: string,
       count = 10,
       offset = 0,
-      reverse = false): Promise<any> {
+      reverse = false): Promise<CallResult> {
     const serviceContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('ServiceContractInterface', contract);
 
@@ -307,10 +342,10 @@ export class ServiceContract extends BaseContract {
     const result = {};
     const tasks = indices.map((index) => async () => {
       const callIdString = this.numberToBytes32(index);
-      const decryptedHash = await this.decryptHash(entries[index].encryptedHash, serviceContract,
+      const decryptedHash = await this.decryptHash(entries[index].hash, serviceContract,
         accountId, callIdString);
-
-      result[index] = await this.decrypt(
+      result[index] = entries[index];
+      result[index].data = await this.decrypt(
         (await this.options.dfs.get(decryptedHash)).toString('utf-8'),
         serviceContract,
         accountId,
@@ -349,11 +384,8 @@ export class ServiceContract extends BaseContract {
   public async getCallOwner(contract: any|string, callId: number): Promise<string> {
     const serviceContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('ServiceContractInterface', contract);
-    return this.options.executor.executeContractCall(
-      serviceContract,
-      'multiSharingsOwner',
-      `0x${(callId).toString(16).padStart(64, '0')}`,
-    )
+    return (await this.options.executor.executeContractCall(
+      serviceContract, 'calls', callId)).owner;
   }
 
   /**
@@ -393,7 +425,8 @@ export class ServiceContract extends BaseContract {
       accountId: string,
       answer: any,
       callId: number,
-      callAuthor: string): Promise<number> {
+      callAuthor: string,
+      callParent = uintMax): Promise<number> {
     const serviceContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('ServiceContractInterface', contract);
 
@@ -427,6 +460,7 @@ export class ServiceContract extends BaseContract {
       },
       encryptdHash,
       callId,
+      callParent,
     );
     return parseInt(answerId, 16);
   };
@@ -823,7 +857,8 @@ export class ServiceContract extends BaseContract {
     let entryCount;
     let queryOffset = offset;
     if (reverse) {
-      entryCount = await (type === 'calls' ? this.getCallCount(serviceContract) : this.getAnswerCount(serviceContract, callId));
+      entryCount = await (type === 'calls' ?
+        this.getCallCount(serviceContract) : this.getAnswerCount(serviceContract, callId));
       queryOffset = Math.max(entryCount - offset - count, 0);
     }
     let itemsRetrieved = 0;
@@ -831,21 +866,23 @@ export class ServiceContract extends BaseContract {
     const getResults = async (singleQueryOffset) => {
       let queryResult;
       if (type === 'calls') {
-        queryResult = await this.options.executor.executeContractCall(serviceContract, 'getCalls', singleQueryOffset);
+        queryResult = await this.options.executor.executeContractCall(
+          serviceContract, 'getCalls', singleQueryOffset);
       } else {
-        queryResult = await this.options.executor.executeContractCall(serviceContract, 'getAnswers', callId, singleQueryOffset);
+        queryResult = await this.options.executor.executeContractCall(
+          serviceContract, 'getAnswers', callId, singleQueryOffset);
       }
       itemsRetrieved += resultsPerPage;
 
-      for (let i = 0; i < queryResult.page.length; i++) {
+      for (let i = 0; i < queryResult.hash.length; i++) {
         const resultId = i + singleQueryOffset;
         result.indices.push(resultId);
-        result.entries[resultId] = {
-          encryptedHash: queryResult.page[i],
-        };
-        if (type === 'calls') {
-          result.entries[resultId].sharing = queryResult.sharings[i];
-        }
+        result.entries[resultId] = {};
+        ['hash', 'owner', 'created', 'answerCount', 'sharing', 'parent'].forEach((key) => {
+          if (queryResult[key] && queryResult[key][i]) {
+            result.entries[resultId][key] = queryResult[key][i];
+          }
+        });
       }
 
       if (typeof entryCount === 'undefined') {
