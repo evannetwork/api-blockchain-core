@@ -207,16 +207,18 @@ export class ServiceContract extends BaseContract {
       contract : this.options.loader.loadContract('ServiceContractInterface', contract);
     const queryResult = await this.options.executor.executeContractCall(
       serviceContract, 'getAnswers', callId, answerIndex);
+    const result = {};
+    ['hash', 'owner', 'created', 'parent'].forEach((key) => { result[key] = queryResult[0][key]; });
     const decryptedHash = await this.decryptHash(
       queryResult.hash[0], serviceContract, accountId, this.numberToBytes32(callId));
-    const data = await this.decrypt(
-      (await this.options.dfs.get(decryptedHash)).toString('utf-8'),
-      serviceContract,
-      accountId,
-      '*'
-    );
-    const result = { data, };
-    ['hash', 'owner', 'created', 'parent'].forEach((key) => { result[key] = queryResult[0][key]; });
+    if (decryptedHash) {
+      const data = await this.decrypt(
+        (await this.options.dfs.get(decryptedHash)).toString('utf-8'),
+        serviceContract,
+        accountId,
+        '*'
+      );
+    }
     return result;
   }
 
@@ -268,13 +270,15 @@ export class ServiceContract extends BaseContract {
       const decryptedHash = await this.decryptHash(
         entries[index].hash, serviceContract, accountId, callIdString);
       result[index] = entries[index];
-      result[index].data = await this.decrypt(
-        (await this.options.dfs.get(decryptedHash)).toString('utf-8'),
-        serviceContract,
-        accountId,
-        '*',
-        callIdString,
-      );
+      if (decryptedHash) {
+        result[index].data = await this.decrypt(
+          (await this.options.dfs.get(decryptedHash)).toString('utf-8'),
+          serviceContract,
+          accountId,
+          '*',
+          callIdString,
+        );
+      }
     });
 
     if (tasks.length) {
@@ -299,13 +303,15 @@ export class ServiceContract extends BaseContract {
     let call = await this.options.executor.executeContractCall(
       serviceContract, 'calls', callIdString);
     const decryptedHash = await this.decryptHash(call.hash, serviceContract, accountId, callIdString);
-    call.data = await this.decrypt(
-      (await this.options.dfs.get(decryptedHash)).toString('utf-8'),
-      serviceContract,
-      accountId,
-      '*',
-      callIdString,
-    );
+    if (decryptedHash) {
+      call.data = await this.decrypt(
+        (await this.options.dfs.get(decryptedHash)).toString('utf-8'),
+        serviceContract,
+        accountId,
+        '*',
+        callIdString,
+      );
+    }
     return call;
   }
 
@@ -345,13 +351,15 @@ export class ServiceContract extends BaseContract {
       const decryptedHash = await this.decryptHash(entries[index].hash, serviceContract,
         accountId, callIdString);
       result[index] = entries[index];
-      result[index].data = await this.decrypt(
-        (await this.options.dfs.get(decryptedHash)).toString('utf-8'),
-        serviceContract,
-        accountId,
-        '*',
-        callIdString,
-      );
+      if (decryptedHash) {
+        result[index].data = await this.decrypt(
+          (await this.options.dfs.get(decryptedHash)).toString('utf-8'),
+          serviceContract,
+          accountId,
+          '*',
+          callIdString,
+        );
+      }
     });
 
     if (tasks.length) {
