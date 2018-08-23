@@ -49,7 +49,8 @@ use(chaiAsPromised);
 
 describe('ServiceContract', function() {
   this.timeout(60000);
-  let sc0: ServiceContract;
+  let sc0: ServiceContract
+  let sc1: ServiceContract;;
   let sc2: ServiceContract;
   let contractFactory: any;
   let executor: Executor;
@@ -222,6 +223,25 @@ describe('ServiceContract', function() {
       dfs: ipfs,
       executor,
       keyProvider: new KeyProvider({ keys: keys0, }),
+      loader,
+      nameResolver,
+      sharing: await TestUtils.getSharing(web3, ipfs),
+      web3,
+    });
+    const keys1 = {};
+    const requiredKeys1 = [
+      // own 'self' key
+      web3.utils.soliditySha3(accounts[1]),
+      // own edge key
+      web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
+        [web3.utils.soliditySha3(accounts[1]), web3.utils.soliditySha3(accounts[1])].sort()),
+    ];
+    requiredKeys1.forEach((key) => { keys1[key] = defaultKeys[key]; });
+    sc1 = new ServiceContract({
+      cryptoProvider: TestUtils.getCryptoProvider(),
+      dfs: ipfs,
+      executor,
+      keyProvider: new KeyProvider({ keys: keys1, }),
       loader,
       nameResolver,
       sharing: await TestUtils.getSharing(web3, ipfs),
@@ -473,6 +493,31 @@ describe('ServiceContract', function() {
     // retrieve answer with first account
     const answer = await sc2.getAnswer(contract, accounts[0], callId, answerId);
     expect(answer.data).to.deep.eq(sampleAnswer);
+  });
+
+  it('can create answers and gets only basic answer information if unable to decrypt', async() => {
+    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+    await sc0.inviteToContract(businessCenterDomain, contract.options.address, accounts[0], accounts[2]);
+    const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', 0);
+    await sharing.addSharing(contract.options.address, accounts[0], accounts[2], '*', 0, contentKey);
+    const callId = await sc0.sendCall(contract, accounts[0], sampleCall, [accounts[2]]);
+
+    // retrieve call with other account, create answer
+    const call = await sc2.getCall(contract, accounts[2], callId);
+    expect(call.data).to.deep.eq(sampleCall);
+    const answerId = await sc2.sendAnswer(contract, accounts[2], sampleAnswer, callId, call.data.metadata.author);
+
+    // retrieve answer with first account
+    const answer0 = await sc0.getAnswer(contract, accounts[0], callId, answerId);
+    expect(answer0.data).to.deep.eq(sampleAnswer)
+    const answers0 = await sc0.getAnswers(contract, accounts[2], callId);
+    expect(answers0[answerId].data).to.deep.eq(sampleAnswer);
+
+    // retrieve answer with random account
+    const answer1 = await sc1.getAnswer(contract, accounts[2], callId, answerId);
+    expect(answer1.data).to.deep.eq(null);
+    const answers1 = await sc1.getAnswers(contract, accounts[2], callId);
+    expect(answers1[answerId].data).to.deep.eq(null);
   });
 
   describe('when paging through answers and answers', () => {

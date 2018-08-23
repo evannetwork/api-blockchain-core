@@ -20,6 +20,7 @@
 ### Fixes
 - add validation for service definitions, calls and answers to `ServiceContract`
 - remove `@evan.network/smart-contracts-admin` dependency
+- `ServiceContracts`s getter for calls and answers now return null, if unable to decrypt to allow retrieving multiple calls/answers and ignore unrelated ones
 
 ### Deprecations
 - remove endpoint property from service contracts

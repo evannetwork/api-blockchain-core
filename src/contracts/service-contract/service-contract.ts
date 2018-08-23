@@ -636,14 +636,14 @@ export class ServiceContract extends BaseContract {
   }
 
   /**
-   * decrypt message
+   * decrypt message; returns null if unable to decyrypt
    *
    * @param      {string}           toDecrypt     message to decrypt
    * @param      {any}              contract      contract the message belongs to
    * @param      {string}           accountId     account, that decrypts
    * @param      {string}           propertyName  name of the property to decrypt
    * @param      {string}           callId        (optional) if a call, id of the call to decrypt
-   * @return     {Promise<string>}  decrypted message
+   * @return     {Promise<string>}  decrypted message or null (if unable to decyrypt)
    */
   private async decrypt(
       toDecrypt: string,
@@ -651,63 +651,85 @@ export class ServiceContract extends BaseContract {
       accountId: string,
       propertyName: string,
       callId?: string): Promise<string> {
-    const envelope: Envelope = JSON.parse(toDecrypt);
-    const cryptor = this.options.cryptoProvider.getCryptorByCryptoInfo(envelope.cryptoInfo);
-    // check if directed message, encrypted with comm key
-    let contentKey = await this.options.keyProvider.getKey(envelope.cryptoInfo);
-    if (!contentKey) {
-      // check if encrypted via sharing
-      contentKey = await this.options.sharing.getKey(contract.options.address, accountId, propertyName, envelope.cryptoInfo.block, callId);
-    }
-    if (!contentKey) {
-      throw new Error(`could not decrypt data, no content key found for contract "${contract.options.address}" and account "${accountId}"`);
-    }
-    const decryptedObject = await cryptor.decrypt(
-      Buffer.from(envelope.private, this.encodingEncrypted), { key: contentKey, });
+    try {
+      const envelope: Envelope = JSON.parse(toDecrypt);
+      const cryptor = this.options.cryptoProvider.getCryptorByCryptoInfo(envelope.cryptoInfo);
+      // check if directed message, encrypted with comm key
+      let contentKey = await this.options.keyProvider.getKey(envelope.cryptoInfo);
+      if (!contentKey) {
+        // check if encrypted via sharing
+        contentKey = await this.options.sharing.getKey(
+          contract.options.address, accountId, propertyName, envelope.cryptoInfo.block, callId);
+      }
+      if (!contentKey) {
+        throw new Error(`could not decrypt data, no content key found for contract ` +
+          `"${contract.options.address}" and account "${accountId}"`);
+      }
+      const decryptedObject = await cryptor.decrypt(
+        Buffer.from(envelope.private, this.encodingEncrypted), { key: contentKey, });
 
-    await Promise.all(Object.keys(decryptedObject).map(async (property) => {
-      await Promise.all(Object.keys(decryptedObject[property]).map(async (key) => {
-        if (decryptedObject[property][key].hasOwnProperty('private') &&
-            decryptedObject[property][key].hasOwnProperty('cryptoInfo')) {
-          try {
-            const innerCryptor = this.options.cryptoProvider.getCryptorByCryptoInfo(decryptedObject[property][key].cryptoInfo);
-            const envelopeInner = decryptedObject[property][key];
-            const contentKeyInner = await this.options.sharing.getKey(
-              contract.options.address, accountId, key, envelopeInner.cryptoInfo.block, callId);
-            decryptedObject[property][key] = await innerCryptor.decrypt(
-              Buffer.from(envelopeInner.private, this.encodingEncrypted), { key: contentKeyInner, });
-          } catch (ex) {
-            this.log(`could not decrypt inner service message part ${property}/${key}; ${ex.message || ex}`, 'info')
+      await Promise.all(Object.keys(decryptedObject).map(async (property) => {
+        await Promise.all(Object.keys(decryptedObject[property]).map(async (key) => {
+          if (decryptedObject[property][key].hasOwnProperty('private') &&
+              decryptedObject[property][key].hasOwnProperty('cryptoInfo')) {
+            try {
+              const innerCryptor = this.options.cryptoProvider.getCryptorByCryptoInfo(
+                decryptedObject[property][key].cryptoInfo);
+              const envelopeInner = decryptedObject[property][key];
+              const contentKeyInner = await this.options.sharing.getKey(
+                contract.options.address, accountId, key, envelopeInner.cryptoInfo.block, callId);
+              decryptedObject[property][key] = await innerCryptor.decrypt(
+                Buffer.from(envelopeInner.private, this.encodingEncrypted), { key: contentKeyInner, });
+            } catch (ex) {
+              this.log(`could not decrypt inner service message part ` +
+                `${property}/${key}; ${ex.message || ex}`, 'info')
+            }
           }
-        }
+        }));
       }));
-    }));
 
-    return decryptedObject;
+      return decryptedObject;
+    } catch (ex) {
+      this.log(`could not decrypt service contract message "${toDecrypt}" for contract ` +
+        `"${contract.options.address}" with account id "${accountId}" in section "${propertyName}"` +
+        callId ? (' for call ' + callId) : '',
+        'debug',
+      );
+      return null;
+    }
   }
 
   /**
-   * decrypt input hash, return decrypted hash
+   * decrypt input hash, return decrypted hash; returns null if unable to decyrypt
    *
    * @param      {string}        toDecrypt  data to decrypt
    * @param      {any}           contract   contract instance or contract id
    * @param      {string}        accountId  account id that decrypts the data
    * @param      {string}        callId     (optional) if a call should be decrypted, id of the call
-   * @return     {Promise<any>}  decrypted envelope
+   * @return     {Promise<any>}  decrypted envelope or null (if unable to decyrypt)
    */
   private async decryptHash(
       toDecrypt: string, contract: any, accountId: string, callId?: string): Promise<string> {
     const dataContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('ServiceContractInterface', contract);
-    // decode hash
-    const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(this.cryptoAlgorithHashes);
-    const hashKey = await this.options.sharing.getHashKey(dataContract.options.address, accountId, callId);
-    if (!hashKey) {
-      throw new Error(`no hashKey key found for contract "${dataContract.options.address}" and account "${accountId}"`);
+    try {
+      // decode hash
+      const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(this.cryptoAlgorithHashes);
+      const hashKey = await this.options.sharing.getHashKey(dataContract.options.address, accountId, callId);
+      if (!hashKey) {
+        throw new Error(`no hashKey key found for contract "${dataContract.options.address}" and account "${accountId}"`);
+      }
+      const decryptedBuffer = await cryptor.decrypt(
+        Buffer.from(toDecrypt.substr(2), this.encodingEncrypted), { key: hashKey, });
+      return `0x${decryptedBuffer.toString(this.encodingUnencryptedHash)}`;
+    } catch (ex) {
+      this.log(`could not decrypt service contract hash "${toDecrypt}" for contract ` +
+        `"${dataContract.options.address}" with account id "${accountId}"` +
+        callId ? (' for call ' + callId) : '',
+        'debug',
+      );
+      return null;
     }
-    const decryptedBuffer = await cryptor.decrypt(
-      Buffer.from(toDecrypt.substr(2), this.encodingEncrypted), { key: hashKey, });
-    return `0x${decryptedBuffer.toString(this.encodingUnencryptedHash)}`;
   }
 
   /**
