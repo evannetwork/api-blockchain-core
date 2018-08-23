@@ -102,7 +102,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   const solcCfg = { compileContracts: false, }
   if (runtimeConfig.contractsLoadPath) solcCfg['destinationPath'] = runtimeConfig.contractsLoadPath
   const solc = new smartContract.Solc({ config: solcCfg, log, });
-  await solc.ensureCompiled();
+  await solc.ensureCompiled(runtimeConfig.additionalContractsPaths || [], solcCfg['destinationPath']);
   const contracts = solc.getContracts();
 
   // web3 contract interfaces
