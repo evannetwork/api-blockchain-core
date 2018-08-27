@@ -292,7 +292,7 @@ export class Sharing extends Logger {
   }
 
   /**
-   * get sharings from smart contract
+   * get encrypted sharings from smart contract
    *
    * @param      {any}           contract   contract with sharing info
    * @param      {string}        sharingId  id of a sharing in mutlisharings
