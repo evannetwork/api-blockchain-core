@@ -2,6 +2,8 @@
 
 ## Next Version
 ### Features
+- add `NameResolver` class, that extends DBCPs version with `claimAddress` that allows to claim domains from a fifs registrar node
+
 ### Fixes
 - fix contract references in service contract calls
 - fix decryption issues in service contracts
