@@ -151,20 +151,7 @@ export class Sharing extends Logger {
 
     // save updated sharings
     if (address.startsWith('0x')) {
-      // upload to ipfs and hash
-      const updatedHash = await this.options.dfs.add(
-        'sharing', Buffer.from(JSON.stringify(sharings), this.encodingUnencrypted));
-      // save to contract
-      if (sharingId) {
-        await this.options.executor.executeContractTransaction(
-          contract, 'setMultiSharing', { from: originator, autoGas: 1.1, }, sharingId, updatedHash);
-      } else {
-        await this.options.executor.executeContractTransaction(
-          contract, 'setSharing', { from: originator, autoGas: 1.1, }, updatedHash);
-      }
-      if (this.hashCache[contract.options.address] && this.hashCache[contract.options.address][sharingId]) {
-        delete this.hashCache[contract.options.address][sharingId];
-      }
+      await this.saveSharingsToContract(address, sharings, originator, sharingId);
     } else {
       // save to ens
       description.public.sharings = sharings;
@@ -302,6 +289,46 @@ export class Sharing extends Logger {
       }
     }
     return this.decryptSharings(sharings, _partner, _section, _block);
+  }
+
+  /**
+   * get sharings from smart contract
+   *
+   * @param      {any}           contract   contract with sharing info
+   * @param      {string}        sharingId  id of a sharing in mutlisharings
+   * @return     {Promise<any>}  sharings object
+   */
+  public async getSharingsFromContract(contract: any, sharingId: string = null): Promise<any> {
+    let result = {};
+    let sharings;
+    let sharingHash;
+    // use preloaded hashes if available
+    if (!this.hashCache[contract.options.address] ||
+        !this.hashCache[contract.options.address][sharingId] ||
+        this.hashCache[contract.options.address][sharingId] === '0x0000000000000000000000000000000000000000000000000000000000000000') {
+      if (!this.hashCache[contract.options.address]) {
+        this.hashCache[contract.options.address] = {};
+      }
+      if (sharingId) {
+        this.hashCache[contract.options.address][sharingId] =
+          await this.options.executor.executeContractCall(contract, 'multiSharings', sharingId);
+      } else {
+        this.hashCache[contract.options.address][sharingId] =
+          await this.options.executor.executeContractCall(contract, 'sharing');
+      }
+    }
+    sharingHash = this.hashCache[contract.options.address][sharingId];
+
+    if (sharingHash !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
+      const buffer = await this.options.dfs.get(sharingHash);
+      if (!buffer) {
+        throw new Error(`could not get sharings from hash ${sharingHash}`);
+      }
+      sharings = JSON.parse(buffer.toString());
+    } else {
+      sharings = {};
+    }
+    return sharings;
   }
 
   /**
@@ -445,43 +472,40 @@ export class Sharing extends Logger {
   }
 
   /**
-   * get sharings from smart contract
+   * save sharings object with encrypted keys to contract
    *
-   * @param      {any}           contract   contract with sharing info
-   * @param      {string}        sharingId  id of a sharing in mutlisharings
-   * @return     {Promise<any>}  sharings object
+   * @param      {string|any}     contract    contract address or instance
+   * @param      {any}            sharings    sharings object with encrypted keys
+   * @param      {string}         originator  Ethereum account id of the sharing user
+   * @param      {string}         sharingId   id of a sharing (when multi-sharings is used)
+   * @return     {Promise<void>}  resolved when done
    */
-  private async getSharingsFromContract(contract: any, sharingId: string = null): Promise<any> {
-    let result = {};
-    let sharings;
-    let sharingHash;
-    // use preloaded hashes if available
-    if (!this.hashCache[contract.options.address] ||
-        !this.hashCache[contract.options.address][sharingId] ||
-        this.hashCache[contract.options.address][sharingId] === '0x0000000000000000000000000000000000000000000000000000000000000000') {
-      if (!this.hashCache[contract.options.address]) {
-        this.hashCache[contract.options.address] = {};
-      }
+  public async saveSharingsToContract(
+      contract: string, sharings: any, originator: string, sharingId?: string): Promise<void> {
+    let shareContract;
+    if (typeof contract === 'string') {
       if (sharingId) {
-        this.hashCache[contract.options.address][sharingId] =
-          await this.options.executor.executeContractCall(contract, 'multiSharings', sharingId);
+        shareContract = this.options.contractLoader.loadContract('MultiShared', contract);
       } else {
-        this.hashCache[contract.options.address][sharingId] =
-          await this.options.executor.executeContractCall(contract, 'sharing');
+        shareContract = this.options.contractLoader.loadContract('Shared', contract);
       }
-    }
-    sharingHash = this.hashCache[contract.options.address][sharingId];
-
-    if (sharingHash !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
-      const buffer = await this.options.dfs.get(sharingHash);
-      if (!buffer) {
-        throw new Error(`could not get sharings from hash ${sharingHash}`);
-      }
-      sharings = JSON.parse(buffer.toString());
     } else {
-      sharings = {};
+      shareContract = contract;
     }
-    return sharings;
+    // upload to ipfs and hash
+    const updatedHash = await this.options.dfs.add(
+      'sharing', Buffer.from(JSON.stringify(sharings), this.encodingUnencrypted));
+    // save to contract
+    if (sharingId) {
+      await this.options.executor.executeContractTransaction(
+        shareContract, 'setMultiSharing', { from: originator, autoGas: 1.1, }, sharingId, updatedHash);
+    } else {
+      await this.options.executor.executeContractTransaction(
+        shareContract, 'setSharing', { from: originator, autoGas: 1.1, }, updatedHash);
+    }
+    if (this.hashCache[shareContract.options.address] && this.hashCache[shareContract.options.address][sharingId]) {
+      delete this.hashCache[shareContract.options.address][sharingId];
+    }
   }
 
   private async decryptSharings(sharings: any, _partner?: string, _section?: string, _block?: number): Promise<any> {

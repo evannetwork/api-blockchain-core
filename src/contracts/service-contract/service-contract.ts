@@ -141,12 +141,12 @@ export class ServiceContract extends BaseContract {
     ]);
     const contentKeyToShare = contentKey ||
       (await this.options.sharing.getKey(serviceContract.options.address, accountId, section, blockNr, callIdHash));
+    const sharings = await this.options.sharing.getSharingsFromContract(serviceContract, callIdHash);
     for (let target of to) {
-      await this.options.sharing.ensureHashKey(
-        serviceContract.options.address, accountId, target, hashKeyToShare, null, callIdHash);
-      await this.options.sharing.addSharing(
-        serviceContract.options.address, accountId, target, section, 0, contentKeyToShare, null, false, callIdHash);
+      await this.options.sharing.extendSharings(sharings, accountId, target, section, 0, contentKeyToShare, null);
+      await this.options.sharing.extendSharings(sharings, accountId, target, '*', 'hashKey', hashKeyToShare, null);
     }
+    await this.options.sharing.saveSharingsToContract(serviceContract.options.address, sharings, accountId, callIdHash);
   }
 
   /**
@@ -207,12 +207,12 @@ export class ServiceContract extends BaseContract {
       contract : this.options.loader.loadContract('ServiceContractInterface', contract);
     const queryResult = await this.options.executor.executeContractCall(
       serviceContract, 'getAnswers', callId, answerIndex);
-    const result = {};
-    ['hash', 'owner', 'created', 'parent'].forEach((key) => { result[key] = queryResult[0][key]; });
+    const result: any = {};
+    ['hash', 'owner', 'created', 'parent'].forEach((key) => { result[key] = queryResult[key][0]; });
     const decryptedHash = await this.decryptHash(
       queryResult.hash[0], serviceContract, accountId, this.numberToBytes32(callId));
     if (decryptedHash) {
-      const data = await this.decrypt(
+      result.data = await this.decrypt(
         (await this.options.dfs.get(decryptedHash)).toString('utf-8'),
         serviceContract,
         accountId,
@@ -503,9 +503,6 @@ export class ServiceContract extends BaseContract {
     // create local copy of call for encryption
     const callCopy = _.clone(call);
 
-    // get block number for cryptoInfos
-    const blockNr = await this.options.web3.eth.getBlockNumber();
-
     // subproperties metadata.fnord and payload.fnord use the same key,
     // so track keys for subproperties and cryptors like 'fnord' here
     const innerEncryptionData = {};
@@ -533,7 +530,11 @@ export class ServiceContract extends BaseContract {
     // create keys for new call (outer properties)
     const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(this.options.defaultCryptoAlgo);
     const hashCryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(this.cryptoAlgorithHashes);
-    const [contentKey, hashKey] = await Promise.all([cryptor.generateKey(), hashCryptor.generateKey()]);
+    const [contentKey, hashKey, blockNr] = await Promise.all([
+      cryptor.generateKey(),
+      hashCryptor.generateKey(),
+      this.options.web3.eth.getBlockNumber(),
+    ]);
 
     // use key to encrypt message  (outer properties)
     const encrypted = await this.encrypt(
@@ -569,27 +570,21 @@ export class ServiceContract extends BaseContract {
     // put key in sharings, requires msg to be stored
     // add hash key
     const callId = this.numberToBytes32(callIdUint256);
-    // keep keys for owner
-    await this.options.sharing.ensureHashKey(
-      serviceContract.options.address, accountId, accountId, hashKey, null, callId);
-    await this.options.sharing.addSharing(
-      serviceContract.options.address, accountId, accountId, '*', 0, contentKey, null, false, callId);
+
+    // for each to, add sharing keys; owner is added to add his/her keys as well
+    await this.addToCallSharing(
+      serviceContract, accountId, callIdUint256, to.concat(accountId), hashKey, contentKey);
     // if subproperties were encryted, keep them for owner as well
-    for (let propertyName of Object.keys(innerEncryptionData)) {
-      await this.options.sharing.addSharing(
-        serviceContract.options.address,
-        accountId,
-        accountId,
-        propertyName,
-        0,
-        innerEncryptionData[propertyName].key,
-        null,
-        false,
-        callId
-      );
+    const innerEncryptionKeys = Object.keys(innerEncryptionData);
+    if (innerEncryptionKeys.length) {
+      const sharings = await this.options.sharing.getSharingsFromContract(serviceContract, callId);
+      for (let propertyName of innerEncryptionKeys) {
+        await this.options.sharing.extendSharings(
+          sharings, accountId, accountId, propertyName, 0, innerEncryptionData[propertyName].key);
+      }
+      await this.options.sharing.saveSharingsToContract(
+        serviceContract.options.address, sharings, accountId, callId);
     }
-    // for each to, add sharing keys
-    await this.addToCallSharing(serviceContract, accountId, callIdUint256, to, hashKey, contentKey);
 
     // return id of new call
     return parseInt(callId, 16);
