@@ -501,7 +501,7 @@ export class ServiceContract extends BaseContract {
     }
 
     // create local copy of call for encryption
-    const callCopy = _.clone(call);
+    const callCopy = _.cloneDeep(call);
 
     // get block number for cryptoInfos
     const blockNr = await this.options.web3.eth.getBlockNumber();
