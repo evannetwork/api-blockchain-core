@@ -995,6 +995,6 @@ export class ServiceContract extends BaseContract {
    * @return     {string}  bytes32 string with '0x' prefix
    */
   private numberToBytes32(number: number): string {
-    return `0x${(number).toString(16).padStart(64, '0')}`;
+    return `0x${(typeof number === 'number' ? number : parseInt(number)).toString(16).padStart(64, '0')}`;
   }
 }
