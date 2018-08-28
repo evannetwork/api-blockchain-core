@@ -23,7 +23,6 @@ help:
 	wget  -P blockchain -N "$(dbcpDocsUrl)blockchain/account-store.rst"
 	wget  -P blockchain -N "$(dbcpDocsUrl)blockchain/event-hub.rst"
 	wget  -P blockchain -N "$(dbcpDocsUrl)blockchain/executor.rst"
-	wget  -P blockchain -N "$(dbcpDocsUrl)blockchain/name-resolver.rst"
 	wget  -P blockchain -N "$(dbcpDocsUrl)blockchain/signer.rst"
 	wget  -P common -N "$(dbcpDocsUrl)common/logger.rst"
 	wget  -P common -N "$(dbcpDocsUrl)common/validator.rst"

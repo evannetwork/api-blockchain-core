@@ -188,12 +188,12 @@ export class AesBlob extends Logger implements Cryptor {
         throw new Error('no key given');
       }
       let encryptedWrapperMessage;
-      const initialVector = generateInitialVector();
       // its an array of blobs
       if(Array.isArray(message)) {
         const files = [];
         for(let blob of message) {
           let encrypted;
+          const initialVector = generateInitialVector();
           if((<any>global).crypto.subtle) {
             encrypted = await this.encryptBrowser(this.webCryptoAlgo, Buffer.from(blob.file), new Buffer(options.key, 'hex'), initialVector);
           } else {
@@ -212,6 +212,7 @@ export class AesBlob extends Logger implements Cryptor {
           message[i].file = hashes[i];
         }
       } else {
+        const initialVector = generateInitialVector();
         const cipher = crypto.createCipheriv(this.algorithm, new Buffer(options.key, 'hex'), initialVector);
         let encrypted;
         if((<any>global).crypto.subtle) {
@@ -225,13 +226,14 @@ export class AesBlob extends Logger implements Cryptor {
         const hash = await this.options.dfs.add(stateMd5, encryptedWithIv);
         message.file = hash;
       }
+      const initialVector = generateInitialVector();
       const wrapperMessage = Buffer.from(JSON.stringify(message), this.encodingUnencrypted);
       if((<any>global).crypto.subtle) {
         encryptedWrapperMessage = await this.encryptBrowser(this.webCryptoAlgo, Buffer.from(wrapperMessage), new Buffer(options.key, 'hex'), initialVector);
       } else {
         const wrapperDecipher = crypto.createCipheriv(this.algorithm, new Buffer(options.key, 'hex'), initialVector);
         encryptedWrapperMessage = Buffer.concat([wrapperDecipher.update(wrapperMessage), wrapperDecipher.final()]);
-      }      
+      }
       return Promise.resolve(Buffer.concat([initialVector, encryptedWrapperMessage]));
     } catch(ex) {
       this.log(`could not encrypt; ${ex.message || ex}`, 'error');

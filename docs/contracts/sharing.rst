@@ -487,6 +487,100 @@ Example
 
 --------------------------------------------------------------------------------
 
+.. _sharing_getSharingsFromContract:
+
+getSharingsFromContract
+================================================================================
+
+.. code-block:: typescript
+
+  sharing.getSharingsFromContract(contract[, sharingId]);
+
+Get encrypted sharings from smart contract.
+
+This can be used in combination with :ref:`getSharingsFromContract<sharing_saveSharingsToContract>` to bulk editing sharing info.
+
+----------
+Parameters
+----------
+
+#. ``contact`` - ``any``: contract with sharing info
+#. ``sharingId`` - ``string`` (optional): id of a sharing in mutlisharings, defaults to ``null``
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // get sharings (encrypted)
+  const sharings = await sharing.getSharingsFromContract(serviceContract, callIdHash);
+
+  // make changes to sharing
+  await sharing.extendSharings(sharings, accountId, target, section, 0, contentKeyToShare, null);
+  await sharing.extendSharings(sharings, accountId, target, '*', 'hashKey', hashKeyToShare, null);
+
+  // commit changes
+  await sharing.saveSharingsToContract(serviceContract.options.address, sharings, accountId, callIdHash);
+
+
+
+--------------------------------------------------------------------------------
+
+.. _sharing_saveSharingsToContract:
+
+saveSharingsToContract
+================================================================================
+
+.. code-block:: typescript
+
+  sharing.saveSharingsToContract(contract, sharings, originator[, sharingId]);
+
+Save sharings object with encrypted keys to contract.
+
+This can be used to pull sharings, edit them offline and commit changes in a bulk. See example section for usage.
+
+----------
+Parameters
+----------
+
+#. ``contract`` - ``string|any``: contract address or instance
+#. ``sharings`` - ``any``: sharings object with encrypted keys
+#. ``originator`` - ``string``: Ethereum account id of the sharing user
+#. ``sharingId`` - ``string`` (optional): id of a sharing (when multi-sharings is used)
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // get sharings (encrypted)
+  const sharings = await sharing.getSharingsFromContract(serviceContract, callIdHash);
+
+  // make changes to sharing
+  await sharing.extendSharings(sharings, accountId, target, section, 0, contentKeyToShare, null);
+  await sharing.extendSharings(sharings, accountId, target, '*', 'hashKey', hashKeyToShare, null);
+
+  // commit changes
+  await sharing.saveSharingsToContract(serviceContract.options.address, sharings, accountId, callIdHash);
+
+
+
+--------------------------------------------------------------------------------
+
 .. _sharing_addHashToCache:
 
 addHashToCache
@@ -528,6 +622,10 @@ clearCache
   sharing.clearCache();
 
 Clear caches and fetch new hashes and sharing on next request.
+
+When sharings are fetched and not all results could be read, the result would stay the same in
+following requests due to the internal caching mechanism, even if a proper key has been shared with
+the user later on. To prevent such old values from showing up, the cache can be cleared.
 
 -------
 Example
