@@ -450,7 +450,55 @@ export class ServiceContract extends BaseContract {
     }
 
     const blockNr = 0;  // will be ignored as callAuthor is set
-    const encrypted = await this.encrypt(answer, serviceContract, accountId, '*', blockNr, callAuthor);
+
+    // subproperties metadata.fnord and payload.fnord use the same key,
+    // so track keys for subproperties and cryptors like 'fnord' here
+    const innerEncryptionData = {};
+    const innerPropertiesToEncrpt = {};
+
+    // encrypt properties
+    const genericKey = this.options.nameResolver.soliditySha3('*');
+    const contentKey = await this.options.sharing.getKey(
+          serviceContract.options.address, accountId, '*', blockNr, this.numberToBytes32(callId));
+    const generateKeys = async (property) => {
+      innerPropertiesToEncrpt[property] = [];
+      if (answer[property]) {
+        for (let key of Object.keys(answer[property])) {
+          if (answer[property][key].hasOwnProperty('private') &&
+              answer[property][key].hasOwnProperty('cryptoInfo') &&
+              !innerPropertiesToEncrpt[property][key]) {
+            innerPropertiesToEncrpt[property].push(key);
+            innerEncryptionData[key] = {};
+            innerEncryptionData[key].cryptor = this.options.cryptoProvider.getCryptorByCryptoInfo(
+              answer[property][key].cryptoInfo);
+
+            // if we have properties to be encrypted with the original content key (e.g. files/binaries)
+            // use the previous generated content key
+            if(answer[property][key].cryptoInfo.originator && 
+              answer[property][key].cryptoInfo.originator === genericKey) {
+              innerEncryptionData[key].key = contentKey;
+            }
+          }
+        }
+      }
+    };
+
+    // run once for metadata and once for payload, await them sequentially to track already generated keys
+    await Object.keys(answer).reduce((chain, key) => chain.then(() => { generateKeys(key) }), Promise.resolve());
+
+
+    // use key to encrypt message  (outer properties)
+    const encrypted = await this.encrypt(
+      answer,
+      serviceContract,
+      accountId,
+      '*',
+      blockNr,
+      callAuthor,
+      null,
+      innerPropertiesToEncrpt,
+      innerEncryptionData,
+    );
     const stateMd5 = crypto.createHash('md5').update(encrypted).digest('hex');
     const answerHash = await this.options.dfs.add(stateMd5, Buffer.from(encrypted));
     const hashKey = await this.options.sharing.getHashKey(serviceContract.options.address, accountId, this.numberToBytes32(callId));
@@ -501,13 +549,24 @@ export class ServiceContract extends BaseContract {
     }
 
     // create local copy of call for encryption
-    const callCopy = _.clone(call);
+    const callCopy = _.cloneDeep(call);
 
     // subproperties metadata.fnord and payload.fnord use the same key,
     // so track keys for subproperties and cryptors like 'fnord' here
     const innerEncryptionData = {};
     const innerPropertiesToEncrpt = {};
+
+    // create keys for new call (outer properties)
+    const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(this.options.defaultCryptoAlgo);
+    const hashCryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(this.cryptoAlgorithHashes);
+    const [contentKey, hashKey, blockNr] = await Promise.all([
+      cryptor.generateKey(),
+      hashCryptor.generateKey(),
+      this.options.web3.eth.getBlockNumber(),
+    ]);
+
     // encrypt properties
+    const genericKey = this.options.nameResolver.soliditySha3('*');
     const generateKeys = async (property) => {
       innerPropertiesToEncrpt[property] = [];
       if (callCopy[property]) {
@@ -519,22 +578,21 @@ export class ServiceContract extends BaseContract {
             innerEncryptionData[key] = {};
             innerEncryptionData[key].cryptor = this.options.cryptoProvider.getCryptorByCryptoInfo(
               callCopy[property][key].cryptoInfo);
-            innerEncryptionData[key].key = await innerEncryptionData[key].cryptor.generateKey();
+
+            // if we have properties to be encrypted with the original content key (e.g. files/binaries)
+            // use the previous generated content key
+            if(callCopy[property][key].cryptoInfo.originator && 
+              callCopy[property][key].cryptoInfo.originator === genericKey) {
+              innerEncryptionData[key].key = contentKey;
+            } else {
+              innerEncryptionData[key].key = await innerEncryptionData[key].cryptor.generateKey();
+            }
           }
         }
       }
     };
     // run once for metadata and once for payload, await them sequentially to track already generated keys
     await Object.keys(callCopy).reduce((chain, key) => chain.then(() => { generateKeys(key) }), Promise.resolve());
-
-    // create keys for new call (outer properties)
-    const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(this.options.defaultCryptoAlgo);
-    const hashCryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(this.cryptoAlgorithHashes);
-    const [contentKey, hashKey, blockNr] = await Promise.all([
-      cryptor.generateKey(),
-      hashCryptor.generateKey(),
-      this.options.web3.eth.getBlockNumber(),
-    ]);
 
     // use key to encrypt message  (outer properties)
     const encrypted = await this.encrypt(
