@@ -49,8 +49,8 @@ use(chaiAsPromised);
 
 describe('ServiceContract', function() {
   this.timeout(60000);
-  let sc0: ServiceContract
-  let sc1: ServiceContract;;
+  let sc0: ServiceContract;
+  let sc1: ServiceContract;
   let sc2: ServiceContract;
   let contractFactory: any;
   let executor: Executor;
@@ -386,9 +386,9 @@ describe('ServiceContract', function() {
     await sc0.inviteToContract(businessCenterDomain, contract.options.address, accounts[0], accounts[2]);
     const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', blockNr);
     await sharing.addSharing(contract.options.address, accounts[0], accounts[2], '*', blockNr, contentKey);
-    await sc0.sendCall(contract, accounts[0], sampleCall);
-    const callPromise = sc2.getCall(contract, accounts[2], 0);
-    await expect(callPromise).to.be.rejected;
+    const callId = await sc0.sendCall(contract, accounts[0], sampleCall);
+    const call = await sc2.getCall(contract, accounts[2], callId);
+    expect(call.data).to.be.undefined;
   });
 
   it('allows calls to be read, when added to a calls sharing', async() => {
@@ -420,8 +420,8 @@ describe('ServiceContract', function() {
         [nameResolver.soliditySha3(accounts[0]), nameResolver.soliditySha3(accounts[1])].sort()),
     ]);
     const limitedSc = await TestUtils.getServiceContract(web3, ipfs, limitedKeyProvider);
-    const answerPromise = limitedSc.getAnswer(contract, accounts[1], 0, 0);
-    await expect(answerPromise).to.be.rejected;
+    const answer = await limitedSc.getAnswer(contract, accounts[1], 0, 0);
+    await expect(answer.data).to.be.undefined;
   });
 
   it('can retrieve the count for calls', async() => {
@@ -542,7 +542,7 @@ describe('ServiceContract', function() {
       }
 
       // if using existing contract
-      contract = loader.loadContract('ServiceContractInterface', '0xEAC2daae30c9636161F25aBd2074fE61DeAff85d');
+      contract = loader.loadContract('ServiceContractInterface', '0x7B818d221C2F3e1eB64e5417047F94bc6cC91610');
 
       // // if creating new contract
       // contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
