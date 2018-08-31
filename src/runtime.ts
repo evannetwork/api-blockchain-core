@@ -36,7 +36,6 @@ import {
   Ipfs,
   KeyProvider,
   Logger,
-  NameResolver,
   SignerInterface,
   SignerInternal,
   Unencrypted,
@@ -52,6 +51,7 @@ import { Description } from './shared-description';
 import { Ipld } from './dfs/ipld';
 import { KeyExchange } from './keyExchange';
 import { Mailbox } from './mailbox';
+import { NameResolver } from './name-resolver';
 import { Onboarding } from './onboarding';
 import { Profile } from './profile/profile';
 import { RightsAndRoles } from './contracts/rights-and-roles';
