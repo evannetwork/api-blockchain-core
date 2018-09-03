@@ -339,10 +339,11 @@ export class ServiceContract extends BaseContract {
       'calls', null, count, offset, reverse);
 
     // add sharings hashes to sharing module cache
-    indices.forEach((index) => {
+    await Promise.all(indices.map(async (index) => {
+      const sharings = await this.options.dfs.get(entries[index].sharing);
       this.options.sharing.addHashToCache(serviceContract.options.address,
-        entries[index].sharing, this.numberToBytes32(index));
-    });
+        sharings, this.numberToBytes32(index));
+    }));
 
     // decrypt contents
     const result = {};

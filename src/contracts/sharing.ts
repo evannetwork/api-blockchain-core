@@ -160,18 +160,18 @@ export class Sharing extends Logger {
   }
 
   /**
-   * add a hash to to cache, can be used to speed up sharing key retrieval, when sharings hash is
-   * already known
+   * add a hash to to cache, can be used to speed up sharing key retrieval, when
+   * sharings hash is already known
    *
-   * @param      {string}  address      contract address
-   * @param      {string}  sharingHash  bytes32 hash of a sharing
-   * @param      {string}  sharingId    id of a multisharing
+   * @param      {string}  address    contract address
+   * @param      {any}     sharings   encrypted sharings object
+   * @param      {string}  sharingId  id of a multisharing
    */
-  public addHashToCache(address: string, sharingHash: string, sharingId: string = null): void {
+  public addHashToCache(address: string, sharings: any, sharingId: string = null): void {
     if (!this.hashCache[address]) {
       this.hashCache[address] = {};
     }
-    this.hashCache[address][sharingId] = sharingHash;
+    this.hashCache[address][sharingId] = sharings;
   }
 
   /**
@@ -301,7 +301,7 @@ export class Sharing extends Logger {
   public async getSharingsFromContract(contract: any, sharingId: string = null): Promise<any> {
     let result = {};
     let sharings;
-    let sharingHash;
+
     // use preloaded hashes if available
     if (!this.hashCache[contract.options.address] ||
         !this.hashCache[contract.options.address][sharingId] ||
@@ -309,26 +309,28 @@ export class Sharing extends Logger {
       if (!this.hashCache[contract.options.address]) {
         this.hashCache[contract.options.address] = {};
       }
+
+      let sharingHash;
+
       if (sharingId) {
-        this.hashCache[contract.options.address][sharingId] =
+        sharingHash =
           await this.options.executor.executeContractCall(contract, 'multiSharings', sharingId);
       } else {
-        this.hashCache[contract.options.address][sharingId] =
+        sharingHash =
           await this.options.executor.executeContractCall(contract, 'sharing');
       }
-    }
-    sharingHash = this.hashCache[contract.options.address][sharingId];
 
-    if (sharingHash !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
-      const buffer = await this.options.dfs.get(sharingHash);
-      if (!buffer) {
-        throw new Error(`could not get sharings from hash ${sharingHash}`);
+      if (sharingHash !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
+        const buffer = await this.options.dfs.get(sharingHash);
+        if (!buffer) {
+          throw new Error(`could not get sharings from hash ${sharingHash}`);
+        }
+        this.hashCache[contract.options.address][sharingId] = JSON.parse(buffer.toString());
+      } else {
+        this.hashCache[contract.options.address][sharingId] = {};
       }
-      sharings = JSON.parse(buffer.toString());
-    } else {
-      sharings = {};
     }
-    return sharings;
+    return this.hashCache[contract.options.address][sharingId];
   }
 
   /**

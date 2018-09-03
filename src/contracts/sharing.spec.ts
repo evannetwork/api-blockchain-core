@@ -338,38 +338,12 @@ describe('Sharing handler', function() {
           executor.executeContractCall(contract, 'multiSharings', sharingId) :
           executor.executeContractCall(contract, 'sharing')
         );
-        newSharing.addHashToCache(contract.options.address, sharingHash, sharingId);
+        const sharings = await dfs.get('sharingHash');
+        newSharing.addHashToCache(contract.options.address, sharings, sharingId);
         const key = await newSharing.getKey(contract.options.address, accounts[1], '*', 0, sharingId);
         expect(key).to.eq(randomSecret);
       });
 
-      it('should fail to load sharing, when added hashes contain errors', async () => {
-        // start the same way as in last test --> not added to cache by side effects
-        const randomSecret = `super secret; ${Math.random()}`;
-        // create a contract with a sharing
-        const contract = await executor.createContract(
-          contractName, [], { from: accounts[0], gas: 500000, });
-        await sharing.addSharing(contract.options.address, accounts[0], accounts[1], '*', 0, randomSecret, null, false, sharingId);
-
-        // create new sharing with empty cache
-        const newSharing = new Sharing({
-          contractLoader: await TestUtils.getContractLoader(web3),
-          cryptoProvider,
-          description,
-          executor,
-          dfs,
-          keyProvider: TestUtils.getKeyProvider(),
-          nameResolver: nameResolver,
-          defaultCryptoAlgo: 'aes',
-        });
-
-        // add random stuff, will trigger timeout and won't retrieve sharing
-        const sharingHash =
-          `0x${[...Array(64)].map(() => (Math.random() * 16).toString(16).split('.')[0]).join('')}`;
-        newSharing.addHashToCache(contract.options.address, sharingHash, sharingId);
-        const keyPromise = newSharing.getKey(contract.options.address, accounts[1], '*', 0, sharingId);
-        await expect(keyPromise).to.be.rejected;
-      });
     });
   }
 
