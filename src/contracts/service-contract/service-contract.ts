@@ -342,7 +342,7 @@ export class ServiceContract extends BaseContract {
     await Promise.all(indices.map(async (index) => {
       const sharings = await this.options.dfs.get(entries[index].sharing);
       this.options.sharing.addHashToCache(serviceContract.options.address,
-        sharings, this.numberToBytes32(index));
+        JSON.parse(sharings.toString()), this.numberToBytes32(index));
     }));
 
     // decrypt contents
