@@ -295,6 +295,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     dataContract,
     description,
     dfs,
+    eventHub,
     executor,
     ipld,
     keyExchange,
