@@ -69,6 +69,7 @@ import { Profile } from '../../profile/profile';
 import { RightsAndRoles } from '../../contracts/rights-and-roles';
 import { Sharing } from '../../contracts/sharing';
 import { ServiceContract } from '../../contracts/service-contract/service-contract';
+import { createDefaultRuntime } from '../../runtime';
 
 /**************************************************************************************************/
 
@@ -651,6 +652,7 @@ export {
   createAndSetCore,
   createBC,
   createCore,
+  createDefaultRuntime,
   CryptoProvider,
   DataContract,
   Description,
@@ -682,4 +684,5 @@ export {
   SignerInternal,
   Unencrypted,
   Web3,
+
 };
