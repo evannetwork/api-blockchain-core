@@ -44,6 +44,7 @@ export { createDefaultRuntime, Runtime } from './runtime';
 export { CryptoProvider } from './encryption/crypto-provider';
 export { DataContract } from './contracts/data-contract/data-contract';
 export { Description } from './shared-description';
+export { ExecutorAgent } from './contracts/executor-agent';
 export { Ipld } from './dfs/ipld';
 export { KeyExchange } from './keyExchange';
 export { Mailbox } from './mailbox';

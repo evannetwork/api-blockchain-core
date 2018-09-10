@@ -71,6 +71,7 @@ export interface Runtime {
   description: Description,
   dataContract: DataContract,
   dfs: DfsInterface,
+  eventHub: EventHub,
   executor: Executor,
   ipld: Ipld,
   keyExchange: KeyExchange,
