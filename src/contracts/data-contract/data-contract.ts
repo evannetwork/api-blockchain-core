@@ -131,7 +131,7 @@ export class DataContract extends BaseContract {
    * @param      {string}        accountId  owner of the new contract
    * @return     {Promise<any>}  sharing info with { contentKey, hashKey, sharings, sharingsHash, }
    */
-  public async createSharing(accountId): Promise<any> {
+  public async createSharing(accountId: string, skipUpload = false): Promise<any> {
     // create sharing key for owner
     const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(this.options.defaultCryptoAlgo);
     const hashCryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(this.cryptoAlgorithHashes);
@@ -142,7 +142,10 @@ export class DataContract extends BaseContract {
     await this.options.sharing.extendSharings(sharings, accountId, accountId, '*', blockNr, contentKey);
     await this.options.sharing.extendSharings(sharings, accountId, accountId, '*', 'hashKey', hashKey);
 
-    const sharingsHash = await this.options.dfs.add('sharing', Buffer.from(JSON.stringify(sharings), this.encodingUnencrypted));
+    let sharingsHash = null;
+    if (!skipUpload) {
+      sharingsHash = await this.options.dfs.add('sharing', Buffer.from(JSON.stringify(sharings), this.encodingUnencrypted));
+    }
 
     return {
       contentKey,
