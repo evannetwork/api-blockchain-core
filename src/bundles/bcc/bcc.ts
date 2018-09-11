@@ -70,6 +70,7 @@ import { RightsAndRoles } from '../../contracts/rights-and-roles';
 import { Sharing } from '../../contracts/sharing';
 import { ServiceContract } from '../../contracts/service-contract/service-contract';
 import { createDefaultRuntime } from '../../runtime';
+import { ExecutorAgent } from '../../contracts/executor-agent';
 
 /**************************************************************************************************/
 
@@ -659,6 +660,7 @@ export {
   DfsInterface,
   EventHub,
   Executor,
+  ExecutorAgent,
   Ipfs,
   IpfsRemoteConstructor,
   Ipld,
