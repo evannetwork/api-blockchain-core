@@ -5,6 +5,7 @@
 - add `NameResolver` class, that extends DBCPs version with `claimAddress` that allows to claim domains from a fifs registrar node
 - add functions for editing sharings with `Sharings` module in bulk
 - improve `ServiceContract` call creation performance
+- add encryptioncontext to dataContract
 
 ### Fixes
 - fix contract references in service contract calls
