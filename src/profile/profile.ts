@@ -101,7 +101,7 @@ export class Profile extends Logger {
   }
 
   /**
-   * add a contract to a business center scope the current profile
+   * add a contract (task contract etc. ) to a business center scope of the current profile
    *
    * @param      {string}         bc       business center ens address or contract address
    * @param      {string}         address  contact address
