@@ -45,7 +45,7 @@ import { config } from '../../config';
 import { CryptoProvider } from '../../encryption/crypto-provider';
 import { DataContract } from './data-contract';
 import { Sharing } from '../../contracts/sharing';
-import { TestUtils } from '../../test/test-utils';
+import { sampleContext, TestUtils } from '../../test/test-utils';
 
 use(chaiAsPromised);
 
@@ -199,6 +199,23 @@ describe('DataContract', function() {
             expect(data).to.eq(sampleValues[0]);
           }
         });
+        it('allows content to be shared via contexts', async () => {
+          // create contract, set value
+          const contract = await dc.create('testdatacontract', accounts[0]);
+          await dc.setEntry(contract, 'entry_settable_by_owner', sampleValues[0], accounts[0], storeInDfs, encryptHashes);
+
+          // account 1 is invited, but has no sharing
+          await dc.inviteToContract(null, contract.options.address, accounts[0], accounts[1]);
+
+          // get key to share
+          const blockNr = await web3.eth.getBlockNumber();
+          const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', blockNr);
+
+          // add context based sharing key
+          await sharing.addSharing(contract.options.address, accounts[0], sampleContext, '*', 0, contentKey, sampleContext);
+          const retrieved = await dc.getEntry(contract, 'entry_settable_by_owner', sampleContext, storeInDfs, encryptHashes);
+          expect(retrieved).to.eq(sampleValues[0]);
+        })
       });
       describe('that can be set by owner and member', async () => {
         it('allows the owner to add and get entries', async () => {
