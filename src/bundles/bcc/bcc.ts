@@ -178,6 +178,7 @@ export interface ProfileBundleOptions {
   // 'internal' / 'external'
   signer: SignerInternal | SignerExternal;
   keyProvider: KeyProvider;
+  executor: Executor;
 }
 
 export interface ProfileInstance {
@@ -351,7 +352,7 @@ const create = function(options: ProfileBundleOptions): ProfileInstance {
   const web3 = options.coreOptions.web3;
 
   // => correct executor
-  const executor = new Executor({
+  const executor = options.executor || new Executor({
     config: options.coreOptions.config,
     web3: web3,
     signer: options.signer,
