@@ -645,7 +645,7 @@ export class DataContract extends BaseContract {
         this.options.web3.eth.getBlockNumber(),
       ]);
       await this.validate(description, entryName, value);
-      const encrypted = await this.encrypt({ private: value }, dataContract, accountId, entryName, blockNr, encryptionContext);
+      const encrypted = await this.encrypt({ private: value }, dataContract, accountId, entryName, blockNr);
       const stateMd5 = crypto.createHash('md5').update(encrypted).digest('hex');
       toSet = await this.options.dfs.add(stateMd5, Buffer.from(encrypted));
     }
@@ -697,7 +697,7 @@ export class DataContract extends BaseContract {
         this.options.web3.eth.getBlockNumber(),
       ]);
       await this.validate(description, mappingName, value);
-      const encrypted = await this.encrypt({ private: value }, dataContract, accountId, mappingName, blockNr, encryptionContext);
+      const encrypted = await this.encrypt({ private: value }, dataContract, accountId, mappingName, blockNr);
       const stateMd5 = crypto.createHash('md5').update(encrypted).digest('hex');
       toSet = await this.options.dfs.add(stateMd5, Buffer.from(encrypted));
     }
