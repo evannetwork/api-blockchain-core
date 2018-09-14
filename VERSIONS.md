@@ -2,6 +2,11 @@
 
 ## Next Version
 ### Features
+### Fixes
+### Deprecations
+
+## Version 1.2.0
+### Features
 - add `NameResolver` class, that extends DBCPs version with `claimAddress` that allows to claim domains from a fifs registrar node
 - add functions for editing sharings with `Sharings` module in bulk
 - improve `ServiceContract` call creation performance
@@ -10,9 +15,6 @@
 ### Fixes
 - fix contract references in service contract calls
 - fix decryption issues in service contracts
-
-### Deprecations
-
 
 ## Version 1.1.0
 ### Features

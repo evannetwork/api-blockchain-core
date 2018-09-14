@@ -9,7 +9,7 @@
       "files": [
         "bcc.js"
       ],
-      "origin": "QmVNELpzewD1HUNM1hcXPdodGVByRPf1F6YciF7BmYp8du",
+      "origin": "QmaAPp1kDch1NBZGja2MLDvcyFM2FPosd3U5YGofMWeG6q",
       "type": "library"
     },
     "description": "Contractus for loading ens entries and it's data...",
@@ -19,14 +19,15 @@
       "contractus",
       "library"
     ],
-    "version": "1.1.1",
+    "version": "1.2.0",
     "versions": {
       "0.1.0": "QmTsY7ASbvxATLnEemHZQ8oQha64ujYe9VXbDCouDk7Xtp",
       "0.9.0": "Qmbw3yX82TVN9WhsRyeaRpd89M9XXL1pds9GgqJL29ohar",
       "1.0.0": "QmcECAYTqmKP5AQwkKaCiov77KhgpNLTawAN3tmBCHQeTi",
       "1.0.1": "QmQNVUFewk95FFkuA62E2TVZNV9w3L6ybMK3b82wyJpg25",
       "1.0.2": "QmdC3NTNRPCs2VTrEQx1RNL6LoaDzhQLpa4nsAMA61sM7i",
-      "1.1.0": "QmeXw3ytsm7WWH71R1LEG1ocLbrVnGMzVLk4Wfx7FqQr6v"
+      "1.1.0": "QmeXw3ytsm7WWH71R1LEG1ocLbrVnGMzVLk4Wfx7FqQr6v",
+      "1.2.0": "QmPUppHfJh9FEcqYQJpYXWHtxSQsJfy1gwqhSCPGXccEpP"
     }
   }
 }
