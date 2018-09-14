@@ -46,7 +46,6 @@ import {
   KeyProviderInterface,
   Logger,
   LogLevel,
-  NameResolver,
   SignerExternal,
   SignerInternal,
   Unencrypted,
@@ -64,11 +63,14 @@ import { Description } from '../../shared-description';
 import { Ipld } from '../../dfs/ipld';
 import { KeyExchange } from '../../keyExchange';
 import { Mailbox, Mail } from '../../mailbox';
+import { NameResolver } from '../../name-resolver';
 import { Onboarding } from '../../onboarding';
 import { Profile } from '../../profile/profile';
 import { RightsAndRoles } from '../../contracts/rights-and-roles';
 import { Sharing } from '../../contracts/sharing';
 import { ServiceContract } from '../../contracts/service-contract/service-contract';
+import { createDefaultRuntime } from '../../runtime';
+import { ExecutorAgent } from '../../contracts/executor-agent';
 
 /**************************************************************************************************/
 
@@ -176,6 +178,7 @@ export interface ProfileBundleOptions {
   // 'internal' / 'external'
   signer: SignerInternal | SignerExternal;
   keyProvider: KeyProvider;
+  executor: Executor;
 }
 
 export interface ProfileInstance {
@@ -349,7 +352,7 @@ const create = function(options: ProfileBundleOptions): ProfileInstance {
   const web3 = options.coreOptions.web3;
 
   // => correct executor
-  const executor = new Executor({
+  const executor = options.executor || new Executor({
     config: options.coreOptions.config,
     web3: web3,
     signer: options.signer,
@@ -651,12 +654,14 @@ export {
   createAndSetCore,
   createBC,
   createCore,
+  createDefaultRuntime,
   CryptoProvider,
   DataContract,
   Description,
   DfsInterface,
   EventHub,
   Executor,
+  ExecutorAgent,
   Ipfs,
   IpfsRemoteConstructor,
   Ipld,
@@ -682,4 +687,5 @@ export {
   SignerInternal,
   Unencrypted,
   Web3,
+
 };

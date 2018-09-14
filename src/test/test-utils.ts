@@ -38,7 +38,6 @@ import {
   Ipfs,
   KeyProvider,
   Logger,
-  NameResolver,
   SignerInternal,
   Unencrypted,
 } from '@evan.network/dbcp';
@@ -54,6 +53,7 @@ import { CryptoProvider } from '../encryption/crypto-provider';
 import { DataContract } from '../contracts/data-contract/data-contract';
 import { ExecutorWallet } from '../contracts/executor-wallet';
 import { Ipld } from '../dfs/ipld';
+import { NameResolver } from '../name-resolver';
 import { Profile } from '../profile/profile';
 import { RightsAndRoles } from '../contracts/rights-and-roles';
 import { ServiceContract } from '../contracts/service-contract/service-contract';

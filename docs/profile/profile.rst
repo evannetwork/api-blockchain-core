@@ -973,16 +973,16 @@ Example
 
 --------------------------------------------------------------------------------
 
-.. _profile_addBccContract:
+.. _profile_addBcContract:
 
-addBccContract
+addBcContract
 ================================================================================
 
 .. code-block:: typescript
 
-  profile.addBccContract(bc, address, data)
+  profile.addBcContract(bc, address, data)
 
-Add a contract to a business center scope the current profile.
+Add a contract (task contract etc. ) to a business center scope of the current profile
 
 ----------
 Parameters

@@ -5,6 +5,16 @@
 ### Fixes
 ### Deprecations
 
+## Version 1.2.0
+### Features
+- add `NameResolver` class, that extends DBCPs version with `claimAddress` that allows to claim domains from a fifs registrar node
+- add functions for editing sharings with `Sharings` module in bulk
+- improve `ServiceContract` call creation performance
+- add encryptioncontext to dataContract
+
+### Fixes
+- fix contract references in service contract calls
+- fix decryption issues in service contracts
 
 ## Version 1.1.0
 ### Features
@@ -17,6 +27,7 @@
 ### Fixes
 - add validation for service definitions, calls and answers to `ServiceContract`
 - remove `@evan.network/smart-contracts-admin` dependency
+- `ServiceContracts`s getter for calls and answers now return null, if unable to decrypt to allow retrieving multiple calls/answers and ignore unrelated ones
 
 ### Deprecations
 - remove endpoint property from service contracts

@@ -36,7 +36,6 @@ import {
   Ipfs,
   KeyProvider,
   Logger,
-  NameResolver,
   SignerInterface,
   SignerInternal,
   Unencrypted,
@@ -52,6 +51,7 @@ import { Description } from './shared-description';
 import { Ipld } from './dfs/ipld';
 import { KeyExchange } from './keyExchange';
 import { Mailbox } from './mailbox';
+import { NameResolver } from './name-resolver';
 import { Onboarding } from './onboarding';
 import { Profile } from './profile/profile';
 import { RightsAndRoles } from './contracts/rights-and-roles';
@@ -71,6 +71,7 @@ export interface Runtime {
   description: Description,
   dataContract: DataContract,
   dfs: DfsInterface,
+  eventHub: EventHub,
   executor: Executor,
   ipld: Ipld,
   keyExchange: KeyExchange,
@@ -102,7 +103,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   const solcCfg = { compileContracts: false, }
   if (runtimeConfig.contractsLoadPath) solcCfg['destinationPath'] = runtimeConfig.contractsLoadPath
   const solc = new smartContract.Solc({ config: solcCfg, log, });
-  await solc.ensureCompiled();
+  await solc.ensureCompiled(runtimeConfig.additionalContractsPaths || [], solcCfg['destinationPath']);
   const contracts = solc.getContracts();
 
   // web3 contract interfaces
@@ -295,6 +296,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     dataContract,
     description,
     dfs,
+    eventHub,
     executor,
     ipld,
     keyExchange,

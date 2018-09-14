@@ -60,6 +60,7 @@ const browserifyFile = async function(bundleName) {
       debug: true,
     })
     .exclude('bcc')
+    .exclude('@evan.network/smart-contracts-core')
     .transform("babelify", {
       //parse all sub node_modules es5 to es6 
       global: true,

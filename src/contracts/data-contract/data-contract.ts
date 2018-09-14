@@ -131,7 +131,7 @@ export class DataContract extends BaseContract {
    * @param      {string}        accountId  owner of the new contract
    * @return     {Promise<any>}  sharing info with { contentKey, hashKey, sharings, sharingsHash, }
    */
-  public async createSharing(accountId): Promise<any> {
+  public async createSharing(accountId: string, skipUpload = false): Promise<any> {
     // create sharing key for owner
     const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(this.options.defaultCryptoAlgo);
     const hashCryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(this.cryptoAlgorithHashes);
@@ -142,7 +142,10 @@ export class DataContract extends BaseContract {
     await this.options.sharing.extendSharings(sharings, accountId, accountId, '*', blockNr, contentKey);
     await this.options.sharing.extendSharings(sharings, accountId, accountId, '*', 'hashKey', hashKey);
 
-    const sharingsHash = await this.options.dfs.add('sharing', Buffer.from(JSON.stringify(sharings), this.encodingUnencrypted));
+    let sharingsHash = null;
+    if (!skipUpload) {
+      sharingsHash = await this.options.dfs.add('sharing', Buffer.from(JSON.stringify(sharings), this.encodingUnencrypted));
+    }
 
     return {
       contentKey,
@@ -171,7 +174,8 @@ export class DataContract extends BaseContract {
       accountId: string,
       dfsStorage = true,
       encryptedHashes = true,
-      encryption: string = this.options.defaultCryptoAlgo): Promise<void> {
+      encryption: string = this.options.defaultCryptoAlgo,
+      encryptionContext = accountId): Promise<void> {
     const dataContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('DataContractInterface', contract);
     const listNames = Array.isArray(listName) ? listName : [listName];
@@ -179,7 +183,7 @@ export class DataContract extends BaseContract {
     let hashes = values;
     if (!dfsStorage) {
       if (encryptedHashes) {
-        hashes = await Promise.all(hashes.map(hash => this.encryptHash(hash, dataContract, accountId)));
+        hashes = await Promise.all(hashes.map(hash => this.encryptHash(hash, dataContract, encryptionContext)));
       }
       // store as is
       await this.options.executor.executeContractTransaction(
@@ -192,12 +196,12 @@ export class DataContract extends BaseContract {
     } else {
       // upload to ipfs
       const [ description, blockNr ] = await Promise.all([
-        this.options.description.getDescriptionFromContract(dataContract.options.address, accountId),
+        this.options.description.getDescriptionFromContract(dataContract.options.address, encryptionContext),
         this.options.web3.eth.getBlockNumber(),
       ]);
       await Promise.all((listNames).map(name => this.validate(description, name, hashes)));
       // get all keys and check if they differ
-      const keys = await Promise.all(listNames.map(name => this.options.sharing.getKey(dataContract.options.address, accountId, name, blockNr)));
+      const keys = await Promise.all(listNames.map(name => this.options.sharing.getKey(dataContract.options.address, encryptionContext, name, blockNr)));
       const groupedKeys = {};
       keys.forEach((key, index) => {
         if (groupedKeys[key]) {
@@ -210,7 +214,7 @@ export class DataContract extends BaseContract {
       for (let key of Object.keys(groupedKeys)) {
         const ipfsFiles = [];
         for (let value of hashes) {
-          const encrypted = await this.encrypt({private: value}, dataContract, accountId, groupedKeys[key][0], blockNr, encryption);
+          const encrypted = await this.encrypt({private: value}, dataContract, encryptionContext, groupedKeys[key][0], blockNr, encryption);
           const stateMd5 = crypto.createHash('md5').update(encrypted).digest('hex');
           ipfsFiles.push({
             path: stateMd5,
@@ -219,7 +223,7 @@ export class DataContract extends BaseContract {
         };
         hashes = await this.options.dfs.addMultiple(ipfsFiles);
         if (encryptedHashes) {
-          hashes = await Promise.all(hashes.map(hash => this.encryptHash(hash, dataContract, accountId)));
+          hashes = await Promise.all(hashes.map(hash => this.encryptHash(hash, dataContract, encryptionContext)));
         }
         await this.options.executor.executeContractTransaction(
           dataContract,
@@ -626,7 +630,8 @@ export class DataContract extends BaseContract {
       accountId: string,
       dfsStorage = true,
       encryptedHashes = true,
-      encryption: string = this.options.defaultCryptoAlgo): Promise<void> {
+      encryption: string = this.options.defaultCryptoAlgo,
+      encryptionContext = accountId): Promise<void> {
     const dataContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('DataContractInterface', contract);
     let toSet;
@@ -636,16 +641,16 @@ export class DataContract extends BaseContract {
       toSet = value;
     } else {
       const [ description, blockNr ] = await Promise.all([
-        this.options.description.getDescriptionFromContract(dataContract.options.address, accountId),
+        this.options.description.getDescriptionFromContract(dataContract.options.address, encryptionContext),
         this.options.web3.eth.getBlockNumber(),
       ]);
       await this.validate(description, entryName, value);
-      const encrypted = await this.encrypt({ private: value }, dataContract, accountId, entryName, blockNr, encryption);
+      const encrypted = await this.encrypt({ private: value }, dataContract, accountId, entryName, blockNr, encryptionContext);
       const stateMd5 = crypto.createHash('md5').update(encrypted).digest('hex');
       toSet = await this.options.dfs.add(stateMd5, Buffer.from(encrypted));
     }
     if (encryptedHashes) {
-      toSet = await this.encryptHash(toSet, dataContract, accountId);
+      toSet = await this.encryptHash(toSet, dataContract, encryptionContext);
     }
     await this.options.executor.executeContractTransaction(
       dataContract,
@@ -677,7 +682,8 @@ export class DataContract extends BaseContract {
       accountId: string,
       dfsStorage = true,
       encryptedHashes = true,
-      encryption: string = this.options.defaultCryptoAlgo): Promise<void> {
+      encryption: string = this.options.defaultCryptoAlgo,
+      encryptionContext = accountId): Promise<void> {
     const dataContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('DataContractInterface', contract);
     let toSet;
@@ -687,16 +693,16 @@ export class DataContract extends BaseContract {
       toSet = value;
     } else {
       const [ description, blockNr ] = await Promise.all([
-        this.options.description.getDescriptionFromContract(contract.options.address, accountId),
+        this.options.description.getDescriptionFromContract(contract.options.address, encryptionContext),
         this.options.web3.eth.getBlockNumber(),
       ]);
       await this.validate(description, mappingName, value);
-      const encrypted = await this.encrypt({ private: value }, dataContract, accountId, mappingName, blockNr, encryption);
+      const encrypted = await this.encrypt({ private: value }, dataContract, accountId, mappingName, blockNr, encryptionContext);
       const stateMd5 = crypto.createHash('md5').update(encrypted).digest('hex');
       toSet = await this.options.dfs.add(stateMd5, Buffer.from(encrypted));
     }
     if (encryptedHashes) {
-      toSet = await this.encryptHash(toSet, dataContract, accountId);
+      toSet = await this.encryptHash(toSet, dataContract, encryptionContext);
     }
     await this.options.executor.executeContractTransaction(
       dataContract,

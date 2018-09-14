@@ -78,7 +78,6 @@ describe('Blob Encryption', function() {
   it('should be able to decrypt a sample message', async () => {
     const aes = new AesBlob({dfs: ipfs});
     const decrypted = await aes.decrypt(Buffer.from(sampleEncryptedHex, 'hex'), { key: sampleKey, });
-    debugger;
     expect(decrypted).to.deep.equal(fileDescription);
   });
 });
