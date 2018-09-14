@@ -17,6 +17,14 @@ Data Contract
 
 The `DataContract <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/data-contract/data-contract.ts>`_ is a secured data storage contract for single properties and lists. If created on its own, DataContracts cannot do very much. They rely on their authority to check which entries or lists can be used.
 
+The following functions support the ``encryptionContext`` argument:
+
+- :ref:`addListEntries <data-contract_addListEntries>`
+- :ref:`setEntry <data-contract_setEntry>`
+- :ref:`setMappingValue <data-contract_setMappingValue>`
+
+If this argument is set, the data key in the data contracts sharing is encrypted by using a context key instead of the communication key between owner and contract member. This allows to omit key exchanges between contract owner and members and therefore enables the owner to write content to the smart contract, that can be used by a group of accounts, which only needs to hold the context key. So the ``encryptionContext`` can be used to address a group of accounts instead of single accounts.
+
 For more information about DataContracts purpose and their authorities see `Data Contract <https://evannetwork.github.io/dev/data-contract>`_ in the evan.network wiki.
 
 
@@ -240,6 +248,7 @@ Parameters
 #. ``dfsStorage`` - ``Function`` (optional): store values in dfs, defaults to ``true``
 #. ``encryptedHashes`` - ``boolean`` (optional): encrypt hashes from values, defaults to ``true``
 #. ``encryption`` - ``string`` (optional): encryption algorithm to use, defaults to ``defaultCryptoAlgo`` (set in constructor)
+#. ``encryptionContext`` - ``string`` (optional): plain text name of an encryption context, defaults to ``accountId``
 
 -------
 Returns
@@ -348,6 +357,7 @@ Parameters
 #. ``dfsStorage`` - ``string`` (optional): store values in dfs, defaults to ``true``
 #. ``encryptedHashes`` - ``boolean`` (optional): encrypt hashes from values, defaults to ``true``
 #. ``encryption`` - ``string`` (optional): encryption algorithm to use, defaults to ``defaultCryptoAlgo`` (set in constructor)
+#. ``encryptionContext`` - ``string`` (optional): plain text name of an encryption context, defaults to ``accountId``
 
 -------
 Returns
@@ -619,6 +629,7 @@ Parameters
 #. ``dfsStorage`` - ``string`` (optional): store values in dfs, defaults to ``true``
 #. ``encryptedHashes`` - ``boolean`` (optional): encrypt hashes from values, defaults to ``true``
 #. ``encryption`` - ``string`` (optional): encryption algorithm to use, defaults to ``defaultCryptoAlgo`` (set in constructor)
+#. ``encryptionContext`` - ``string`` (optional): plain text name of an encryption context, defaults to ``accountId``
 
 -------
 Returns
