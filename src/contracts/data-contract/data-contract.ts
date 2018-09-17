@@ -386,10 +386,6 @@ export class DataContract extends BaseContract {
     if (!dfsStorage) {
       return hash;
     } else {
-      let hash = entryRaw;
-      if (encryptedHashes) {
-        hash = await this.decryptHash(entryRaw, dataContract, accountId);
-      }
       const encryptedContent = (await this.options.dfs.get(hash)).toString('utf-8');
       const decrypted = await this.decrypt(
         encryptedContent,
