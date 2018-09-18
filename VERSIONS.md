@@ -3,6 +3,8 @@
 ## Next Version
 ### Features
 ### Fixes
+- replace "interruptStep = 200;" with "interruptStep = 2000" to fix old / mobile browser breaking by calling to many setTimeouts  
+
 ### Deprecations
 
 ## Version 1.2.0
