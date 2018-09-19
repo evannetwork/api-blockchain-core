@@ -38,6 +38,7 @@ export {
 } from '@evan.network/dbcp'
 
 export { Aes } from './encryption/aes';
+export { AesBlob } from './encryption/aes-blob';
 export { AesEcb } from './encryption/aes-ecb';
 export { AesBlob } from './encryption/aes-blob';
 export { ContractState } from './contracts/base-contract/base-contract';
