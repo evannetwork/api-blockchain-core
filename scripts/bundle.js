@@ -139,6 +139,7 @@ const browserifyFile = async function(bundleName) {
     .pipe(gulpReplace('exports.randomBytes = /* common-shake removed: exports.rng = */ void 0, /* common-shake removed: exports.pseudoRandomBytes = */ void 0, /* common-shake removed: exports.prng = */ require(\'randombytes\');', 'exports.randomBytes = require(\'randombytes\');'))
     .pipe(gulpReplace('require("babel-polyfill");', ''))
     .pipe(gulpReplace('var createBC = function () {', 'require("babel-polyfill");\nvar createBC = function () {'))
+    .pipe(gulpReplace('interruptStep\ \=\ 200\;', 'interruptStep\ \=\ 2000\;'))
     .pipe(gulp.dest(`${bundleFolder}`))
     .on('end', () => resolve())
   )

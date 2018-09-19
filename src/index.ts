@@ -38,6 +38,7 @@ export {
 } from '@evan.network/dbcp'
 
 export { Aes } from './encryption/aes';
+export { AesBlob } from './encryption/aes-blob';
 export { AesEcb } from './encryption/aes-ecb';
 export { ContractState } from './contracts/base-contract/base-contract';
 export { createDefaultRuntime, Runtime } from './runtime';
@@ -49,5 +50,5 @@ export { Ipld } from './dfs/ipld';
 export { KeyExchange } from './keyExchange';
 export { Mailbox } from './mailbox';
 export { Profile } from './profile/profile';
-export { Sharing } from './contracts/sharing';
 export { RightsAndRoles, ModificationType, PropertyType } from './contracts/rights-and-roles';
+export { Sharing } from './contracts/sharing';

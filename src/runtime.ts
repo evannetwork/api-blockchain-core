@@ -42,6 +42,7 @@ import {
 } from '@evan.network/dbcp';
 
 import { Aes } from './encryption/aes';
+import { AesBlob } from './encryption/aes-blob';
 import { AesEcb } from './encryption/aes-ecb';
 import { BaseContract } from './contracts/base-contract/base-contract';
 import { config } from './config';
@@ -101,7 +102,9 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   // get/compile smart contracts
   // It is possible to load contracts from non-default locations
   const solcCfg = { compileContracts: false, }
-  if (runtimeConfig.contractsLoadPath) solcCfg['destinationPath'] = runtimeConfig.contractsLoadPath
+  if (runtimeConfig.contractsLoadPath) {
+    solcCfg['destinationPath'] = runtimeConfig.contractsLoadPath;
+  }
   const solc = new smartContract.Solc({ config: solcCfg, log, });
   await solc.ensureCompiled(runtimeConfig.additionalContractsPaths || [], solcCfg['destinationPath']);
   const contracts = solc.getContracts();
@@ -131,6 +134,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   const cryptoConfig = {};
   cryptoConfig['aes'] = new Aes();
   cryptoConfig['unencrypted'] = new Unencrypted();
+  cryptoConfig['aesBlob'] = new AesBlob();
   cryptoConfig['aesEcb'] = new AesEcb();
   const cryptoProvider = new CryptoProvider(cryptoConfig);
   const keyProvider = new KeyProvider({ keys: runtimeConfig.keyConfig, });

@@ -45,7 +45,7 @@ import { Sharing } from '../sharing';
 
 const requestWindowSize = 10;
 const web3 = new Web3(null);
-const uintMax = web3.utils.toBN('ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
+const uintMax = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
 
 const serviceSchema = {
   type: 'object',

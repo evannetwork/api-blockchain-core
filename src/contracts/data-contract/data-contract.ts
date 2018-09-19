@@ -386,10 +386,6 @@ export class DataContract extends BaseContract {
     if (!dfsStorage) {
       return hash;
     } else {
-      let hash = entryRaw;
-      if (encryptedHashes) {
-        hash = await this.decryptHash(entryRaw, dataContract, accountId);
-      }
       const encryptedContent = (await this.options.dfs.get(hash)).toString('utf-8');
       const decrypted = await this.decrypt(
         encryptedContent,
@@ -645,7 +641,7 @@ export class DataContract extends BaseContract {
         this.options.web3.eth.getBlockNumber(),
       ]);
       await this.validate(description, entryName, value);
-      const encrypted = await this.encrypt({ private: value }, dataContract, accountId, entryName, blockNr, encryptionContext);
+      const encrypted = await this.encrypt({ private: value }, dataContract, accountId, entryName, blockNr);
       const stateMd5 = crypto.createHash('md5').update(encrypted).digest('hex');
       toSet = await this.options.dfs.add(stateMd5, Buffer.from(encrypted));
     }
@@ -697,7 +693,7 @@ export class DataContract extends BaseContract {
         this.options.web3.eth.getBlockNumber(),
       ]);
       await this.validate(description, mappingName, value);
-      const encrypted = await this.encrypt({ private: value }, dataContract, accountId, mappingName, blockNr, encryptionContext);
+      const encrypted = await this.encrypt({ private: value }, dataContract, accountId, mappingName, blockNr);
       const stateMd5 = crypto.createHash('md5').update(encrypted).digest('hex');
       toSet = await this.options.dfs.add(stateMd5, Buffer.from(encrypted));
     }
