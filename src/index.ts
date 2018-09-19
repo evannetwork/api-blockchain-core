@@ -39,6 +39,7 @@ export {
 
 export { Aes } from './encryption/aes';
 export { AesEcb } from './encryption/aes-ecb';
+export { AesBlob } from './encryption/aes-blob';
 export { ContractState } from './contracts/base-contract/base-contract';
 export { createDefaultRuntime, Runtime } from './runtime';
 export { CryptoProvider } from './encryption/crypto-provider';
