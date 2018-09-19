@@ -3,11 +3,12 @@
 ## Next Version
 ### Features
 ### Fixes
-- replace "interruptStep = 200;" with "interruptStep = 2000" to fix old / mobile browser breaking by calling to many setTimeouts
-- add `AesBlob` to index export and runtime
-
 ### Deprecations
 
+## Version 1.2.1
+### Fixes
+- replace `interruptStep = 200` with `interruptStep = 2000` to fix old / mobile browser breaking by calling to many setTimeouts
+- add `AesBlob` to index export and runtime
 
 ## Version 1.2.0
 ### Features
