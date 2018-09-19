@@ -36,9 +36,10 @@ import { TestUtils } from '../test/test-utils'
 
 let sampleFile;
 let fileDescription;
+let fileValidation;
 let ipfs;
-const sampleEncryptedHex = '763e585420c5d1a4d46e2764ee4ff71e3019fb7dfabad91da1e5433171f8f87a37d1da127c50b91243901275f3df8815d1bd4a57401a62fa51fcb262962aefac3701594a6ed4fb0f006b618a02f6b9a4b8cfa83547a1884501170ae60ae7a1d4c7ae1899f64a70aeae65737e5b58a70193824d519f4ef963e922514eae4a9cb8c6ed3c48994fa006aa9323eecbdd1794';
 const sampleKey = '346c22768f84f3050f5c94cec98349b3c5cbfa0b7315304e13647a49181fd1ef';
+let encryptedFile;
 
 describe('Blob Encryption', function() {
   this.timeout(300000);
@@ -49,7 +50,12 @@ describe('Blob Encryption', function() {
       name: 'testfile.spec.jpg',
       fileType: 'image/jpeg',
       file: sampleFile
-    };    
+    };   
+    fileValidation = {
+      name: 'testfile.spec.jpg',
+      fileType: 'image/jpeg',
+      file: sampleFile
+    };   
     ipfs = await TestUtils.getIpfs();
   });
 
@@ -71,13 +77,13 @@ describe('Blob Encryption', function() {
 
   it('should be able to encrypt a sample message', async () => {
     const aes = new AesBlob({dfs: ipfs});
-    const encrypted = await aes.encrypt(fileDescription, { key: sampleKey, });
-    expect(encrypted.toString('hex')).to.deep.eq(sampleEncryptedHex);
+    encryptedFile = await aes.encrypt(fileDescription, { key: sampleKey, });
+    expect(encryptedFile.toString('hex')).not.to.be.undefined;
   });
 
   it('should be able to decrypt a sample message', async () => {
     const aes = new AesBlob({dfs: ipfs});
-    const decrypted = await aes.decrypt(Buffer.from(sampleEncryptedHex, 'hex'), { key: sampleKey, });
-    expect(decrypted).to.deep.equal(fileDescription);
+    const decrypted = await aes.decrypt(Buffer.from(encryptedFile, 'hex'), { key: sampleKey, });
+    expect(decrypted).to.deep.equal(fileValidation);
   });
 });

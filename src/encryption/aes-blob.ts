@@ -135,9 +135,9 @@ export class AesBlob extends Logger implements Cryptor {
     const key = await (<any>global).crypto.subtle.importKey(
       'raw',
       decryptKey,
-      { 
+      {
         name: algorithm,
-        length: 256, 
+        length: 256,
       },
       false,
       ['decrypt']
@@ -157,9 +157,9 @@ export class AesBlob extends Logger implements Cryptor {
     const key = await (<any>global).crypto.subtle.importKey(
       'raw',
       encryptionKey,
-      { 
+      {
         name: algorithm,
-        length: 256, 
+        length: 256,
       },
       false,
       ['encrypt']
@@ -173,7 +173,7 @@ export class AesBlob extends Logger implements Cryptor {
       buffer
     );
     return Buffer.from(encrypted);
-  }  
+  }
 
   /**
    * encrypt a message
@@ -189,12 +189,12 @@ export class AesBlob extends Logger implements Cryptor {
       }
       let encryptedWrapperMessage;
       // its an array of blobs
-      if(Array.isArray(message)) {
+      if (Array.isArray(message)) {
         const files = [];
-        for(let blob of message) {
+        for (let blob of message) {
           let encrypted;
           const initialVector = generateInitialVector();
-          if((<any>global).crypto && (<any>global).crypto.subtle) {
+          if ((<any>global).crypto && (<any>global).crypto.subtle) {
             encrypted = await this.encryptBrowser(this.webCryptoAlgo, Buffer.from(blob.file), new Buffer(options.key, 'hex'), initialVector);
           } else {
             const cipher = crypto.createCipheriv(this.algorithm, new Buffer(options.key, 'hex'), initialVector);
@@ -208,14 +208,14 @@ export class AesBlob extends Logger implements Cryptor {
           });
         }
         const hashes = await this.options.dfs.addMultiple(files);
-        for(var i=0; i < message.length; i++) {
+        for (var i=0; i < message.length; i++) {
           message[i].file = hashes[i];
         }
       } else {
         const initialVector = generateInitialVector();
         const cipher = crypto.createCipheriv(this.algorithm, new Buffer(options.key, 'hex'), initialVector);
         let encrypted;
-        if((<any>global).crypto && (<any>global).crypto.subtle) {
+        if ((<any>global).crypto && (<any>global).crypto.subtle) {
           encrypted = await this.encryptBrowser(this.webCryptoAlgo,Buffer.from(message.file), new Buffer(options.key, 'hex'), initialVector);
         } else {
           const cipher = crypto.createCipheriv(this.algorithm, new Buffer(options.key, 'hex'), initialVector);
@@ -228,14 +228,14 @@ export class AesBlob extends Logger implements Cryptor {
       }
       const initialVector = generateInitialVector();
       const wrapperMessage = Buffer.from(JSON.stringify(message), this.encodingUnencrypted);
-      if((<any>global).crypto && (<any>global).crypto.subtle) {
+      if ((<any>global).crypto && (<any>global).crypto.subtle) {
         encryptedWrapperMessage = await this.encryptBrowser(this.webCryptoAlgo, Buffer.from(wrapperMessage), new Buffer(options.key, 'hex'), initialVector);
       } else {
         const wrapperDecipher = crypto.createCipheriv(this.algorithm, new Buffer(options.key, 'hex'), initialVector);
         encryptedWrapperMessage = Buffer.concat([wrapperDecipher.update(wrapperMessage), wrapperDecipher.final()]);
       }
       return Promise.resolve(Buffer.concat([initialVector, encryptedWrapperMessage]));
-    } catch(ex) {
+    } catch (ex) {
       this.log(`could not encrypt; ${ex.message || ex}`, 'error');
       return Promise.reject(ex);
     }
@@ -257,7 +257,7 @@ export class AesBlob extends Logger implements Cryptor {
       const initialVector = message.slice(0, 16);
       const encrypted = message.slice(16);
       let decrypted;
-      if((<any>global).crypto && (<any>global).crypto.subtle) {
+      if ((<any>global).crypto && (<any>global).crypto.subtle) {
         decrypted = await this.decryptBrowser(this.webCryptoAlgo, encrypted, new Buffer(options.key, 'hex'), initialVector);
       } else {
         const decipher = crypto.createDecipheriv(this.algorithm, new Buffer(options.key, 'hex'), initialVector);
@@ -267,19 +267,19 @@ export class AesBlob extends Logger implements Cryptor {
       const wrapper = JSON.parse(decrypted.toString(this.encodingUnencrypted));
 
 
-      if(Array.isArray(wrapper)) {
+      if (Array.isArray(wrapper)) {
         const encryptedFiles = [];
-        for(let blob of wrapper) {
+        for (let blob of wrapper) {
           const ipfsFile = await this.options.dfs.get(blob.file, true);
           let file = new Buffer('');
           const initialVectorFile = ipfsFile.slice(0, 16);
           const encryptedFile = ipfsFile.slice(16);
-          if((<any>global).crypto.subtle) {
+          if ((<any>global).crypto.subtle) {
             file = await this.decryptBrowser(this.webCryptoAlgo, encryptedFile, new Buffer(options.key, 'hex'), initialVectorFile);
           } else {
             const fileDecipher = crypto.createDecipheriv(this.algorithm, new Buffer(options.key, 'hex'), initialVectorFile);
             const chunks = this.chunkBuffer(encryptedFile, 1024);
-            for(let chunk of chunks) {
+            for (let chunk of chunks) {
               file = Buffer.concat([file, fileDecipher.update(chunk)]);
             }
             file = Buffer.concat([file, fileDecipher.final()]);
@@ -291,12 +291,12 @@ export class AesBlob extends Logger implements Cryptor {
         const initialVectorFile = ipfsFile.slice(0, 16);
         const encryptedFile = ipfsFile.slice(16);
         let file = new Buffer('');
-        if((<any>global).crypto && (<any>global).crypto.subtle) {
+        if ((<any>global).crypto && (<any>global).crypto.subtle) {
           file = await this.decryptBrowser(this.webCryptoAlgo, encryptedFile, new Buffer(options.key, 'hex'), initialVectorFile);
         } else {
           const fileDecipher = crypto.createDecipheriv(this.algorithm, new Buffer(options.key, 'hex'), initialVectorFile);
           const chunks = this.chunkBuffer(encryptedFile, 1024);
-          for(let chunk of chunks) {
+          for (let chunk of chunks) {
             file = Buffer.concat([file, fileDecipher.update(chunk)]);
           }
           file = Buffer.concat([file, fileDecipher.final()]);
