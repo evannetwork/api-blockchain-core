@@ -189,6 +189,7 @@ export class AesBlob extends Logger implements Cryptor {
       }
       let encryptedWrapperMessage;
       // its an array of blobs
+      console.log('encrypt file with key ' + options.key);
       if (Array.isArray(message)) {
         const files = [];
         for (let blob of message) {
@@ -274,7 +275,7 @@ export class AesBlob extends Logger implements Cryptor {
           let file = new Buffer('');
           const initialVectorFile = ipfsFile.slice(0, 16);
           const encryptedFile = ipfsFile.slice(16);
-          if ((<any>global).crypto.subtle) {
+          if ((<any>global).crypto && (<any>global).crypto.subtle) {
             file = await this.decryptBrowser(this.webCryptoAlgo, encryptedFile, new Buffer(options.key, 'hex'), initialVectorFile);
           } else {
             const fileDecipher = crypto.createDecipheriv(this.algorithm, new Buffer(options.key, 'hex'), initialVectorFile);

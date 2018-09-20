@@ -134,7 +134,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   const cryptoConfig = {};
   cryptoConfig['aes'] = new Aes();
   cryptoConfig['unencrypted'] = new Unencrypted();
-  cryptoConfig['aesBlob'] = new AesBlob();
+  cryptoConfig['aesBlob'] = new AesBlob({ dfs });
   cryptoConfig['aesEcb'] = new AesEcb();
   const cryptoProvider = new CryptoProvider(cryptoConfig);
   const keyProvider = new KeyProvider({ keys: runtimeConfig.keyConfig, });
