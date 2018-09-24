@@ -122,7 +122,7 @@ export class RightsAndRoles extends Logger {
     const permissionHash = bytes4(keccak256(functionSignature));
     await this.options.executor.executeContractTransaction(
       dsRolesContract, 'setRoleCapability', { from: accountId, autoGas: 1.1, },
-      role, 0, permissionHash, allow);
+      role, '0x0000000000000000000000000000000000000000', permissionHash, allow);
   }
 
   /**
@@ -153,7 +153,7 @@ export class RightsAndRoles extends Logger {
     const permissionHash = keccak256(keccak256(propertyType, keccak256(propertyName)), modificationType)
     await this.options.executor.executeContractTransaction(
       dsRolesContract, 'setRoleOperationCapability', { from: accountId, autoGas: 1.1, },
-      role, 0, permissionHash, allow);
+      role, '0x0000000000000000000000000000000000000000', permissionHash, allow);
   }
 
   /**
