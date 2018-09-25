@@ -126,6 +126,32 @@ describe('BaseContract', function() {
     expect(isMember).to.be.true;
   });
 
+  it.only('can remove invited members to it by the owner', async () => {
+    const contractId = await baseContract.createUninitialized(
+      'testdatacontract',
+      accounts[0],
+      businessCenterDomain);
+    const contract = loader.loadContract('BaseContractInterface', contractId);
+    let isMember = await executor.executeContractCall(contract, 'isConsumer', accounts[1]);
+    expect(isMember).to.be.false;
+    await baseContract.inviteToContract(
+      businessCenterDomain,
+      contractId,
+      accounts[0],
+      accounts[1],
+    );
+    isMember = await executor.executeContractCall(contract, 'isConsumer', accounts[1]);
+    expect(isMember).to.be.true;
+    await baseContract.removeFromContract(
+      businessCenterDomain,
+      contractId,
+      accounts[0],
+      accounts[1],
+    );
+    isMember = await executor.executeContractCall(contract, 'isConsumer', accounts[1]);
+    expect(isMember).to.be.false;
+  });
+
   it('cannot have new members invited to it by members that are not the owner ', async () => {
     const contractId = await baseContract.createUninitialized(
       'testdatacontract',
@@ -163,6 +189,7 @@ describe('BaseContract', function() {
     await expect(promise).to.be.rejected;
   });
 
+  // intendend skip, tested but currently not activated
   it.skip('cannot have members invited, when the invitee doesn\'t know / ignores inviter', async () => {
     const contractId = await baseContract.createUninitialized(
       'testdatacontract',
@@ -251,6 +278,32 @@ describe('BaseContract', function() {
       );
       isMember = await executor.executeContractCall(contract, 'isConsumer', accounts[1]);
       expect(isMember).to.be.true;
+    });
+
+    it('can remove invited members to it by the owner', async () => {
+      const contractId = await baseContract.createUninitialized(
+        'testdatacontract',
+        accounts[0],
+        null);
+      const contract = loader.loadContract('BaseContractInterface', contractId);
+      let isMember = await executor.executeContractCall(contract, 'isConsumer', accounts[1]);
+      expect(isMember).to.be.false;
+      await baseContract.inviteToContract(
+        null,
+        contractId,
+        accounts[0],
+        accounts[1],
+      );
+      isMember = await executor.executeContractCall(contract, 'isConsumer', accounts[1]);
+      expect(isMember).to.be.true;
+      await baseContract.removeFromContract(
+        null,
+        contractId,
+        accounts[0],
+        accounts[1],
+      );
+      isMember = await executor.executeContractCall(contract, 'isConsumer', accounts[1]);
+      expect(isMember).to.be.false;
     });
 
     it('triggers contract events from on its own instead of letting the bc do this', async () => {

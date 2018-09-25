@@ -194,6 +194,64 @@ To check if an account is a member of a contract, the contract function ``isMemb
 
 --------------------------------------------------------------------------------
 
+.. _base-contract_removeFromContract:
+
+removeFromContract
+================================================================================
+
+.. code-block:: javascript
+
+    baseContract.removeFromContract(businessCenterDomain, contract, accountId, idToBeRemoved);
+
+Remove user from contract.
+To deny previously invited accounts to work with contract resources, they have to be removed as members from the contract. This function does exactly that.
+
+
+----------
+Parameters
+----------
+
+#. ``businessCenterDomain`` - ``string`` : ENS domain name of the business center the contract was created in; use null when working without business center
+#. ``contract`` - ``string`` : Ethereum id of the contract
+#. ``accountId`` - ``string`` : account id of executing user
+#. ``idToBeRemoved`` - ``string`` : account id which should be removed
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: javascript
+
+  const contractOwner = '0x0000000000000000000000000000000000000001';
+  const idToBeRemoved = '0x0000000000000000000000000000000000000002';
+  const businessCenterDomain = 'testbc.evan';
+  const contract = loader.loadContract('BaseContractInterface', contractId);
+  await baseContract.removeFromContract(
+    businessCenterDomain,
+    contractId,
+    contractOwner,
+    idToBeRemoved,
+  );
+
+
+To check if an account is a member of a contract, the contract function ``isMember`` can be used:
+
+.. code-block:: typescript
+
+  const isMember = await executor.executeContractCall(contract, 'isConsumer', idToBeRemoved);
+  console.log(isMember);
+  // Output:
+  // false
+
+
+--------------------------------------------------------------------------------
+
 .. _base-contract_changeConsumerState:
 
 changeConsumerState
