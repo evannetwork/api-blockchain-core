@@ -3,13 +3,13 @@
     "author": "evan GmbH",
     "dapp": {
       "dependencies": {
-        "smartcontracts": "^1.1.1"
+        "smartcontracts": "^1.0.3"
       },
       "entrypoint": "bcc.js",
       "files": [
         "bcc.js"
       ],
-      "origin": "QmPVwMgnJe2fWo5B114UCs6MFriuztvUA2QSDmRLXze6JL",
+      "origin": "QmZDuLvoCZyE5RuwtwUzgDu7S6B9VyK5HeWeeQ73DfSoVa",
       "type": "library"
     },
     "description": "Contractus for loading ens entries and it's data...",
@@ -28,7 +28,7 @@
       "1.0.2": "QmdC3NTNRPCs2VTrEQx1RNL6LoaDzhQLpa4nsAMA61sM7i",
       "1.1.0": "QmeXw3ytsm7WWH71R1LEG1ocLbrVnGMzVLk4Wfx7FqQr6v",
       "1.2.0": "QmSqC4ZP3yAncMKB31KBx6UqBzcxUg1wK4vT6Ku6dsQcBH",
-      "1.2.1": "QmcRAPSNfyMii1xYCfDHmQRwS8DvB2vc6T8Wk4jSQQMN13"
+      "1.2.1": "QmdUcpwzH2shsicqP28vin9C3bSKtTsBhvujizhjpV8UKX"
     },
     "dbcpVersion": 1
   }

@@ -3,6 +3,8 @@
 ## Next Version
 ### Features
 ### Fixes
+- move require(`@evan.network/smart-contracts-core`) within `createDefaultRuntime` to capsuled scope, to be able to require it only in backend scope
+
 ### Deprecations
 
 ## Version 1.2.1
