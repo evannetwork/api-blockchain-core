@@ -3,12 +3,14 @@
 ## Next Version
 ### Features
 ### Fixes
+### Deprecations
+
+## Version 1.2.2
+### Fixes
 - move require(`@evan.network/smart-contracts-core`) within `createDefaultRuntime` to capsuled scope, to be able to require it only in backend scope
 - fix window checks on node environments
 - fix initailization of aesblob with dfs
 - fix rights and roles 0x0 encoding
-
-### Deprecations
 
 ## Version 1.2.1
 ### Fixes
