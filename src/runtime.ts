@@ -25,8 +25,6 @@
   https://evan.network/license/
 */
 
-import smartContract = require('@evan.network/smart-contracts-core');
-
 import {
   AccountStore,
   ContractLoader,
@@ -99,15 +97,30 @@ export interface Runtime {
 export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtimeConfig: any): Promise<Runtime> {
   // get default logger
   const log = (new Logger()).logFunction;
-  // get/compile smart contracts
-  // It is possible to load contracts from non-default locations
-  const solcCfg = { compileContracts: false, }
-  if (runtimeConfig.contractsLoadPath) {
-    solcCfg['destinationPath'] = runtimeConfig.contractsLoadPath;
+
+  // if this function is used within node and no browser context exists, load the
+  // @evan.network/smart-contracts-core normally and use the Solc functionalities to parse and
+  // retrieve contracts
+  let contracts;
+  if (typeof global === 'undefined' || !(<any>global).localStorage) {
+    // get/compile smart contracts
+    // It is possible to load contracts from non-default locations
+    const solcCfg = { compileContracts: false, }
+    if (runtimeConfig.contractsLoadPath) {
+      solcCfg['destinationPath'] = runtimeConfig.contractsLoadPath;
+    }
+
+    const smartContract = require('@evan.network/smart-contracts-core');
+    const solc = new smartContract.Solc({ config: solcCfg, log, });
+    await solc.ensureCompiled(runtimeConfig.additionalContractsPaths || [], solcCfg['destinationPath']);
+
+    contracts = solc.getContracts();
+  } else {
+    // if this lib is used within the browser using browserify, smart-contracts-core needs to be
+    // defined externaly (normally defined by @evan.network/ui-dapp-browser) to return the abis
+    // directly as json
+    contracts = require('@evan.network/smart-contracts-core');
   }
-  const solc = new smartContract.Solc({ config: solcCfg, log, });
-  await solc.ensureCompiled(runtimeConfig.additionalContractsPaths || [], solcCfg['destinationPath']);
-  const contracts = solc.getContracts();
 
   // web3 contract interfaces
   const contractLoader = new ContractLoader({ contracts, web3, });
@@ -134,7 +147,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   const cryptoConfig = {};
   cryptoConfig['aes'] = new Aes();
   cryptoConfig['unencrypted'] = new Unencrypted();
-  cryptoConfig['aesBlob'] = new AesBlob();
+  cryptoConfig['aesBlob'] = new AesBlob({ dfs });
   cryptoConfig['aesEcb'] = new AesEcb();
   const cryptoProvider = new CryptoProvider(cryptoConfig);
   const keyProvider = new KeyProvider({ keys: runtimeConfig.keyConfig, });
