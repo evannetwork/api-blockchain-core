@@ -4,6 +4,8 @@
 ### Features
 ### Fixes
 - move require(`@evan.network/smart-contracts-core`) within `createDefaultRuntime` to capsuled scope, to be able to require it only in backend scope
+- fix window checks on node environments
+- fix initailization of aesblob with dfs
 
 ### Deprecations
 
