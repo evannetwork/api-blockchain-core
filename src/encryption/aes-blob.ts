@@ -189,7 +189,6 @@ export class AesBlob extends Logger implements Cryptor {
       }
       let encryptedWrapperMessage;
       // its an array of blobs
-      console.log('encrypt file with key ' + options.key);
       if (Array.isArray(message)) {
         const files = [];
         for (let blob of message) {

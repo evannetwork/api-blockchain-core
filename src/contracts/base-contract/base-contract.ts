@@ -164,7 +164,7 @@ export class BaseContract extends Logger {
       'inviteConsumer',
       { from: inviterId, autoGas: 1.1, },
       inviteeId,
-      businessCenterAddress
+      businessCenterAddress,
     );
   }
 
