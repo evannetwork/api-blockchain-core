@@ -477,7 +477,6 @@ describe('IPLD handler', function() {
       await createSampleGraph();
     });
 
-
     it('can delete plain object properties in a simple tree', async () => {
       const expectedGraph = {
         gods: {
@@ -586,6 +585,196 @@ describe('IPLD handler', function() {
       expect(loaded).not.to.be.undefined;
       Ipld.purgeCryptoInfo(loaded);
       expect(loaded).to.deep.eq(expectedGraph);
-    })
+    });
+
+    it('can delete different properties inside subtrees', async () => {
+      const deletion = 'gods/eris/details/origin';
+      const expectedGraph = {
+        gods: {
+          eris: {
+            '/': {
+              name: 'eris',
+              latinName: 'discordia',
+              details: {
+                '/': {
+                  occupation: 'goddess of chaos',
+                },
+              },
+            },
+          },
+        },
+        humans: {
+          helena: {
+            origin: 'troja',
+          },
+        },
+        titans: {
+          '/': {},
+        },
+      };
+      let stored;
+      let loaded;
+      let updated;
+
+      const sampleGraph = await createSampleGraph();
+      updated = await ipld.remove(sampleGraph, deletion);
+      stored = await ipld.store(Object.assign({}, updated));
+      loaded = await ipld.getResolvedGraph(stored, '');
+
+      // add lv2
+      let plusSub = await ipld.set(sampleGraph, 'titans', {});
+      plusSub = await ipld.set(sampleGraph, 'titans/prometeus', { origin: 'none' });
+      const loadedSub = await ipld.getLinkedGraph(plusSub, '');
+      updated = await ipld.remove(loadedSub, 'titans/prometeus');
+
+      stored = await ipld.store(Object.assign({}, updated));
+      loaded = await ipld.getResolvedGraph(stored, '');
+      Ipld.purgeCryptoInfo(loaded);
+      expect(loaded).to.deep.eq(expectedGraph);
+    });
+
+    it('can delete different properties inside subtrees', async () => {
+      const deletion = 'gods/eris/details/origin';
+      const expectedGraph = {
+        gods: {
+          eris: {
+            '/': {
+              name: 'eris',
+              latinName: 'discordia',
+              details: {
+                '/': {
+                  occupation: 'goddess of chaos',
+                },
+              },
+            },
+          },
+        },
+        humans: {
+          helena: {
+            origin: 'troja',
+          },
+        },
+        titans: {
+          '/': {
+            prometeus: {
+              '/': {},
+            },
+          },
+        },
+      };
+      let stored;
+      let loaded;
+      let updated;
+
+      const sampleGraph = await createSampleGraph();
+      updated = await ipld.remove(sampleGraph, deletion);
+      stored = await ipld.store(Object.assign({}, updated));
+      loaded = await ipld.getResolvedGraph(stored, '');
+
+      // add lv3
+      let plusSub = await ipld.set(sampleGraph, 'titans', {});
+      plusSub = await ipld.set(sampleGraph, 'titans/prometeus', { });
+      plusSub = await ipld.set(sampleGraph, 'titans/prometeus/punishment', { animal: 'raven' });
+      const loadedSub = await ipld.getLinkedGraph(plusSub, '');
+      updated = await ipld.remove(loadedSub, 'titans/prometeus/punishment');
+
+      stored = await ipld.store(Object.assign({}, updated));
+      loaded = await ipld.getResolvedGraph(stored, '');
+      Ipld.purgeCryptoInfo(loaded);
+      expect(loaded).to.deep.eq(expectedGraph);
+    });
+
+    it('can delete different properties inside subtrees', async () => {
+      const deletion = 'gods/eris/details/origin';
+      const expectedGraph = {
+        gods: {
+          eris: {
+            '/': {
+              name: 'eris',
+              latinName: 'discordia',
+              details: {
+                '/': {
+                  occupation: 'goddess of chaos',
+                },
+              },
+            },
+          },
+        },
+        humans: {
+          helena: {
+            origin: 'troja',
+          },
+        },
+        titans: {
+          prometeus: {
+            '/': {},
+          },
+        },
+      };
+      let stored;
+      let loaded;
+      let updated;
+
+      const sampleGraph = await createSampleGraph();
+      updated = await ipld.remove(sampleGraph, deletion);
+      stored = await ipld.store(Object.assign({}, updated));
+      loaded = await ipld.getResolvedGraph(stored, '');
+
+      // add lv3
+      let plusSub = await ipld.set(sampleGraph, 'titans/prometeus', { punishment: { animal: 'raven' } });
+      const loadedSub = await ipld.getLinkedGraph(plusSub, '');
+      updated = await ipld.remove(loadedSub, 'titans/prometeus/punishment');
+
+      stored = await ipld.store(Object.assign({}, updated));
+      loaded = await ipld.getResolvedGraph(stored, '');
+      Ipld.purgeCryptoInfo(loaded);
+      expect(loaded).to.deep.eq(expectedGraph);
+    });
+
+    it('can delete different properties inside subtrees', async () => {
+      const deletion = 'gods/eris/details/origin';
+      const expectedGraph = {
+        gods: {
+          eris: {
+            '/': {
+              name: 'eris',
+              latinName: 'discordia',
+            },
+          },
+        },
+        humans: {
+          helena: {
+            origin: 'troja',
+          },
+        },
+        titans: {
+          prometeus: {
+            '/': {
+              'punishment': {
+                animal: 'raven',
+              },
+            },
+          },
+        },
+      };
+      let stored;
+      let loaded;
+      let updated;
+
+      const sampleGraph = await createSampleGraph();
+      updated = await ipld.remove(sampleGraph, deletion);
+      stored = await ipld.store(Object.assign({}, updated));
+      loaded = await ipld.getResolvedGraph(stored, '');
+
+      // add lv3
+      let plusSub = await ipld.set(sampleGraph, 'titans/prometeus', { punishment: { animal: 'raven' } });
+      const loadedSub = await ipld.getLinkedGraph(plusSub, '');
+      updated = await ipld.remove(loadedSub, 'gods/eris/details');
+
+      stored = await ipld.store(Object.assign({}, updated));
+      loaded = await ipld.getResolvedGraph(stored, '');
+      Ipld.purgeCryptoInfo(loaded);
+      expect(loaded).to.deep.eq(expectedGraph);
+    });
   });
 });

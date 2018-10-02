@@ -303,7 +303,11 @@ export class Ipld extends Logger {
     while (currentNode = toTraverse.pop()) {
       currentTree = await this.getLinkedGraph(tree, toTraverse.join('/'));
       if (currentTree[currentNode]['/']) {
-        linkedParent = await this.getLinkedGraph(tree, `${toTraverse.join('/')}/${currentNode}`);
+        if (toTraverse.length) {
+          linkedParent = await this.getLinkedGraph(tree, `${toTraverse.join('/')}/${currentNode}`);
+        } else {
+          linkedParent = await this.getLinkedGraph(tree, currentNode);
+        }
         break;
       }
     }
@@ -316,7 +320,13 @@ export class Ipld extends Logger {
       splitPathInParent = pathInParent.split('/').slice(1, -1);  // skip parent prop, skip last
     } else {
       pathInParent = path;
-      splitPathInParent = path.split('/').slice(0, -1);  // skip last
+      if (linkedParent === tree) {
+        // entire graph is plain object, current linkedParent is entire tree
+        splitPathInParent = path.split('/').slice(0, -1);  // skip last
+      } else {
+        // linkedParent points to found node, node name is still in path
+        splitPathInParent = path.split('/').slice(1, -1);  // skip parent prop, skip last
+      }
     }
     let nodeInParentPath = linkedParent;
     let nodeNameInParentPath;

@@ -3,7 +3,10 @@
 ## Next Version
 ### Features
 ### Fixes
+- fix `ipld` deleting issue, that occurred when deleting linked nodes in linked subtrees
+
 ### Deprecations
+
 
 ## Version 1.2.2
 ### Fixes
