@@ -224,6 +224,55 @@ Example
 
 --------------------------------------------------------------------------------
 
+.. _sharing_bumpSharings:
+
+bumpSharings
+================================================================================
+
+.. code-block:: typescript
+
+  sharing.bumpSharings(address, originator, partners, section, block, sharingKey);
+
+Bump keys for given accounts by adding given key to their sharings. This is basically a shorthand
+version for adding the new key for every account in the ``partners`` array in a single transaction.
+
+``context``, ``hashKeys`` and ``sharingId`` are currently not supported.
+
+----------
+Parameters
+----------
+
+#. ``address`` - ``string``: contract address or ENS address
+#. ``originator`` - ``string``: Ethereum account id of the sharing user
+#. ``partner`` - ``string``: Ethereum account id for which key shall be added
+#. ``section`` - ``string``: data section the key is intended for or '*'
+#. ``block`` - ``number|string``: starting with this block, the key is valid
+#. ``sharingKey`` - ``string``: key to share
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // two sample users, user1 wants to bump keys for user2 and user3
+  const user1 = '0x0000000000000000000000000000000000000001';
+  const user2 = '0x0000000000000000000000000000000000000002';
+  const user3 = '0x0000000000000000000000000000000000000003';
+  // assume we have a contract with sharings for those accounts
+  const contractId = '0x00000000000000000000000000000000c027rac7';
+  await sharing.bumpSharings(contractId, user1, [ user2, user3 ], '*', 0, 'i am a bump key');
+
+
+
+--------------------------------------------------------------------------------
+
 .. _sharing_extendSharing:
 
 extendSharing
@@ -305,6 +354,47 @@ Example
   // user2 wants to read a key after receiving a sharing
   // the key requested should be valid for all contexts ('*') and valid up to and including block 100
   const key = await sharing.getKey(contract.options.address, user2, '*', 100);
+
+
+
+--------------------------------------------------------------------------------
+
+.. _sharing_getKeyHistory:
+
+getKeyHistory
+================================================================================
+
+.. code-block:: typescript
+
+  sharing.getKeyHistory(address, partner, section[, sharingId]);
+
+Get history of keys for an account and a section.
+
+----------
+Parameters
+----------
+
+#. ``address`` - ``string``: contract address or ENS address
+#. ``partner`` - ``string``: Ethereum account id for which key shall be retrieved
+#. ``section`` - ``string``: data section the key is intended for or '*'
+#. ``sharingId`` - ``string`` (optional): id of a sharing (when multi-sharings is used), defaults to ``null``
+
+-------
+Returns
+-------
+
+``Promise`` returns ``any``: object with key: blockNr, value: key
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // a sample user
+  const user2 = '0x0000000000000000000000000000000000000002';
+  // user2 wants to retrieve all keys for '*'
+  const keyHistory = await sharing.getKeyHistory(contract.options.address, user2, '*');
 
 
 

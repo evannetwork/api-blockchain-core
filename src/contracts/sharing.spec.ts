@@ -313,6 +313,23 @@ describe('Sharing handler', function() {
       expect(hashKeyRetrieved).to.eq(hashKey);
     });
 
+    it('should be able to retrieve a history of keys for an account and a section', async () => {
+      const randomSecret = [
+        `super secret; ${Math.random()}`,
+        `super secret; ${Math.random()}`,
+      ];
+      const target = {
+        100: randomSecret[0],
+        200: randomSecret[1],
+      };
+      const contract = await executor.createContract(contractName, [], { from: accounts[0], gas: 500000, });
+      await sharing.addSharing(contract.options.address, accounts[0], accounts[1], 'sectionOne', 100, randomSecret[0], null, false, sharingId);
+      await sharing.addSharing(contract.options.address, accounts[0], accounts[1], 'sectionOne', 200, randomSecret[1], null, false, sharingId);
+      const history = await sharing.getKeyHistory(contract.options.address, accounts[1], 'sectionOne', sharingId);
+
+      expect(history).to.deep.eq(target);
+    });
+
     describe('when adding preloaded sharing hashes', () => {
       it('should be able to work with correct added to the hash cache', async () => {
         const randomSecret = `super secret; ${Math.random()}`;
@@ -343,12 +360,41 @@ describe('Sharing handler', function() {
         const key = await newSharing.getKey(contract.options.address, accounts[1], '*', 0, sharingId);
         expect(key).to.eq(randomSecret);
       });
-
     });
   }
 
   describe('for contracts that inherit from "Shared"', function() {
     runContractTests(false);
+
+    it('should be able to bump keys (add a new key for given section to all given accounts', async () => {
+      const randomSecret = [
+        `super secret; ${Math.random()}`,
+        `super secret; ${Math.random()}`,
+      ];
+      const target = {
+        100: randomSecret[0],
+        200: randomSecret[1],
+      };
+      const contract = await executor.createContract('Shared', [], { from: accounts[0], gas: 500000, });
+      await sharing.addSharing(contract.options.address, accounts[0], accounts[1], 'sectionOne', 100, randomSecret[0], null, false);
+      await sharing.addSharing(contract.options.address, accounts[0], accounts[1], 'sectionOne', 200, randomSecret[1], null, false);
+      const history = await sharing.getKeyHistory(contract.options.address, accounts[1], 'sectionOne');
+
+      const bumpKey = `bump bump bump ${Math.random()}`;
+      let block = await web3.eth.getBlockNumber();
+      await sharing.bumpSharings(
+        contract.options.address,
+        accounts[0],
+        [ accounts[1] ],
+        'sectionOne',
+        block,
+        bumpKey,
+      );
+      sharing.clearCache();
+      block = await web3.eth.getBlockNumber();
+      const key = await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', block);
+      expect(key).to.eq(bumpKey);
+    });
   });
 
   describe('for contracts that inherit from "MultiShared"', function() {

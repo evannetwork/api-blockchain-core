@@ -211,4 +211,37 @@ export class BaseContract extends Logger {
       state,
     );
   }
+
+  /**
+   * remove user from contract
+   *
+   * @param      {string}         businessCenterDomain  ENS domain name of the business center the
+   *                                                    contract was created in; use null when
+   *                                                    working without business center
+   * @param      {string}         contract              Ethereum id of the contract
+   * @param      {string}         accountId             account id of executing user
+   * @param      {string}         idToBeRemoved         account id which should be removed
+   * @return     {Promise<void>}  resolved when done
+   */
+  public async removeFromContract(
+      businessCenterDomain: string,
+      contract: string,
+      accountId: string,
+      idToBeRemoved: string): Promise<void> {
+    const baseContractInterface = (typeof contract === 'object') ?
+      contract : this.options.loader.loadContract('BaseContractInterface', contract);
+    let businessCenterAddress;
+    if (businessCenterDomain) {
+      businessCenterAddress = await this.options.nameResolver.getAddress(businessCenterDomain);
+    } else {
+      businessCenterAddress = '0x0000000000000000000000000000000000000000';
+    }
+    await this.options.executor.executeContractTransaction(
+      baseContractInterface,
+      'removeConsumer',
+      { from: accountId, autoGas: 1.1, },
+      idToBeRemoved,
+      businessCenterAddress
+    );
+  }
 }
