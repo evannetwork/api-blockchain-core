@@ -175,6 +175,68 @@ export class Sharing extends Logger {
   }
 
   /**
+   * Bump keys for given accounts by adding given key to their sharings. This is basically a
+   * shorthand version for adding the new key for every account in the `partners` array in a single
+   * transaction. Sharing context and sharingIds are currently not supported.
+   *
+   * @param      {string}         address     contract address
+   * @param      {string}         originator  executing users account id
+   * @param      {string}         partners    account ids of a contract participant
+   * @param      {string}         section     data section the key is intended for or '*'
+   * @param      {number}         block       starting with this block, the key is valid
+   * @param      {string}         sharingKey  new key to share
+   * @return     {Promise<void>}  resolved when done
+   */
+  public async bumpSharings(
+      address: string,
+      originator: string,
+      partners: string[],
+      section: string,
+      block: number,
+      sharingKey: string,
+    ): Promise<void> {
+    let sharings;
+    let contract;
+    let description;
+
+    // load
+    if (address.startsWith('0x')) {
+      // encrypted sharings from contract
+      contract = this.options.contractLoader.loadContract('Shared', address);
+      sharings = await this.getSharingsFromContract(contract);
+    } else {
+      description = await this.options.description.getDescriptionFromEns(address);
+      // ensure sharings
+      if (description && description.public && description.public.sharings) {
+        sharings = description.public.sharings;
+      } else {
+        sharings = {};
+      }
+      // ensure description
+      if (!description) {
+        description = {};
+      }
+      if (!description.public) {
+        description.public = {};
+      }
+    }
+
+    // add new keys
+    for (let partner of partners) {
+      sharings = await this.extendSharings(sharings, originator, partner, section, block, sharingKey);
+    }
+
+    // save updated sharings
+    if (address.startsWith('0x')) {
+      await this.saveSharingsToContract(address, sharings, originator);
+    } else {
+      // save to ens
+      description.public.sharings = sharings;
+      await this.options.description.setDescriptionToEns(address, description, originator);
+    }
+  }
+
+  /**
    * clear caches and fetch new hashes and sharing on next request
    *
    * @return     {void}  resolved when done
@@ -393,6 +455,26 @@ export class Sharing extends Logger {
         return sectionBlocks[block];
       }
 
+    }
+  }
+
+  /**
+   * get history of keys for an account and a section
+   *
+   * @param      {string}        address    contract address or ENS address
+   * @param      {string}        partner    Ethereum account id for which key shall be retrieved
+   * @param      {string}        section    data section the key is intended for or '*'
+   * @param      {string}        sharingId  id of a sharing (when multi-sharings is used)
+   * @return     {Promise<any>}  object with key: blockNr, value: key
+   */
+  public async getKeyHistory(address: string, partner: string, section: string, sharingId: string = null): Promise<any[]> {
+    const sharings = await this.getSharings(address, partner, section, null, sharingId);
+    const partnetHash = this.options.nameResolver.soliditySha3(partner);
+    const sectiontHash = this.options.nameResolver.soliditySha3(section);
+    if (sharings && sharings[partnetHash] && sharings[partnetHash][sectiontHash]) {
+      return sharings[partnetHash][sectiontHash];
+    } else {
+      return null;
     }
   }
 
