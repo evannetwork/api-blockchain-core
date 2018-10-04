@@ -873,7 +873,7 @@ addContract
 
 .. code-block:: typescript
 
-  profile.addContract(address, data);
+  profile.addContract(bc, address, data);
 
 Add a contract to the current profile.
 
@@ -881,6 +881,7 @@ Add a contract to the current profile.
 Parameters
 ----------
 
+#. ``bc`` - ``string``: business center ens address or contract address
 #. ``address`` - ``string``: contact address
 #. ``data`` - ``any``: bookmark metadata
 
@@ -897,6 +898,44 @@ Example
 .. code-block:: typescript
 
   await profile.addBcContract('testbc.evan', '0x', contractDescription);
+
+
+
+------------------------------------------------------------------------------
+
+
+
+.. _profile_removeContract:
+
+removeContract
+================================================================================
+
+.. code-block:: typescript
+
+  profile.removeContract(address, data);
+
+removes a contract (task contract etc. ) from a business center scope of the current profile
+
+----------
+Parameters
+----------
+
+#. ``bc`` - ``string``: business center ens address or contract address
+#. ``address`` - ``any``: contact address
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await profile.removeBcContract('testbc.evan', '0x');
 
 
 
