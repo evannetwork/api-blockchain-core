@@ -9,7 +9,7 @@
       "files": [
         "bcc.js"
       ],
-      "origin": "QmS7s1dwp9pXnkQbmKQADrZXtrib1PAu3NnhaA71PskNfs",
+      "origin": "Qmf2BxUD3BotTisDbedeMCCeiDsctoVgCaRnMfUQVya1ug",
       "type": "library"
     },
     "description": "Contractus for loading ens entries and it's data...",
@@ -28,7 +28,7 @@
       "1.0.2": "QmdC3NTNRPCs2VTrEQx1RNL6LoaDzhQLpa4nsAMA61sM7i",
       "1.1.0": "QmeXw3ytsm7WWH71R1LEG1ocLbrVnGMzVLk4Wfx7FqQr6v",
       "1.2.0": "QmSqC4ZP3yAncMKB31KBx6UqBzcxUg1wK4vT6Ku6dsQcBH",
-      "1.2.1": "QmdVyU3a4tnZtWibggZcUEDZyvBQ39HfxJhuSejheNKsAk"
+      "1.2.1": "QmWVFRDQvxJYGxYtBwkZZq7eG6A3XGYBvJp8s1YF8eiXWw"
     },
     "dbcpVersion": 1
   }

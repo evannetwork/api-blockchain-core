@@ -5,6 +5,7 @@
 - add `getKeyHistory` to `sharings` to retrieve all keys for an account and a section
 - add `bumpSharings` to `sharings`, that adds a new key for all given accounts for given section
 - add `removeBcContract` to `profile` to remove profile entries that were writte using `addBcContract`
+- export `crypto` library, `DBCP Vaildator`, `DBCP Envelop`
 
 ### Fixes
 - fix `ipld` deleting issue, that occurred when deleting linked nodes in linked subtrees
