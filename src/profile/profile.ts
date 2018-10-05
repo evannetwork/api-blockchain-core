@@ -118,6 +118,21 @@ export class Profile extends Logger {
   }
 
   /**
+   * removes a contract (task contract etc. ) from a business center scope of the current profile
+   *
+   * @param      {string}         bc       business center ens address or contract address
+   * @param      {string}         address  contact address
+   * @return     {Promise<void>}  resolved when done
+   */
+  async removeBcContract(bc: string, address: string): Promise<void> {
+    this.ensureTree('contracts');
+    const bcSet = await this.ipld.getLinkedGraph(this.trees['contracts'], bc);
+    if (bcSet) {
+      await this.ipld.remove(this.trees['contracts'], `${bc}/${address}`);
+    }
+  }
+
+  /**
    * add a key for a contact to bookmarks
    *
    * @param      {string}         address  account key of the contact
