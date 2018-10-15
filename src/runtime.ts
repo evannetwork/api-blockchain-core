@@ -119,7 +119,14 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     // if this lib is used within the browser using browserify, smart-contracts-core needs to be
     // defined externaly (normally defined by @evan.network/ui-dapp-browser) to return the abis
     // directly as json
-    contracts = require('@evan.network/smart-contracts-core');
+    const originalContracts = require('@evan.network/smart-contracts-core');
+    contracts = { };
+
+    // map the contracts value object correctly
+    Object.keys(originalContracts).forEach((key) => {
+      const contractKey = (key.indexOf(':') !== -1) ? key.split(':')[1] : key;
+      contracts[contractKey] = originalContracts[key];
+    });
   }
 
   // web3 contract interfaces
