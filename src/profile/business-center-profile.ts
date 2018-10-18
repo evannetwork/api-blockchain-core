@@ -202,4 +202,21 @@ export class BusinessCenterProfile extends Logger {
       await this.loadFromIpld(hash);
     }
   }
+
+  /**
+   * gets all registered contracts for a specific contract type on a businesscenter
+   *
+   * @param      {string}  businessCenterDomain  The business center domain
+   * @param      {string}  contractType          The contract type
+   * @param      {string}  account               current accountId
+   * @return     {Array}   Array with all registered bc contracts 
+   */
+  async getMyBusinessCenterContracts(businessCenterDomain: string, contractType: string, account: string): Promise<any> {
+    const address = await this.nameResolver.getAddress(businessCenterDomain);
+    const contract = this.nameResolver.contractLoader.loadContract('BusinessCenterInterface', address);
+    const bcIndex = await this.nameResolver.executor.executeContractCall(contract, 'getMyIndex', {from: account});
+    const indexContract = this.nameResolver.contractLoader.loadContract('DataStoreIndexInterface', bcIndex);
+    const contracts = await this.nameResolver.getArrayFromIndexContract(indexContract, this.nameResolver.soliditySha3(contractType));
+    return contracts;
+  }
 }

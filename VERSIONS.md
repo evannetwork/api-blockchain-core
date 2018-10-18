@@ -5,6 +5,17 @@
 ### Fixes
 ### Deprecations
 
+## Version 1.3.0
+### Features
+- add `getKeyHistory` to `sharings` to retrieve all keys for an account and a section
+- add `bumpSharings` to `sharings`, that adds a new key for all given accounts for given section
+- add `removeBcContract` to `profile` to remove profile entries that were writte using `addBcContract`
+- export `crypto` library, `DBCP Vaildator`, `DBCP Envelop`
+- export `createDefaultRuntime` within the `bcc frontend bundle` + adjust it for frontend smartcontracts usage
+
+### Fixes
+- fix `ipld` deleting issue, that occurred when deleting linked nodes in linked subtrees
+
 ## Version 1.2.2
 ### Fixes
 - move require(`@evan.network/smart-contracts-core`) within `createDefaultRuntime` to capsuled scope, to be able to require it only in backend scope

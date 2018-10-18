@@ -33,6 +33,7 @@ import keystore = require('eth-lightwallet/lib/keystore');
 import Mnemonic = require('bitcore-mnemonic');
 import Web3 = require('web3');
 import prottle = require('prottle');
+import crypto = require('crypto');
 
 // used for building bundle
 import {
@@ -655,10 +656,12 @@ export {
   createBC,
   createCore,
   createDefaultRuntime,
+  crypto,
   CryptoProvider,
   DataContract,
   Description,
   DfsInterface,
+  Envelope,
   EventHub,
   Executor,
   ExecutorAgent,
@@ -686,6 +689,6 @@ export {
   SignerExternal,
   SignerInternal,
   Unencrypted,
+  Validator,
   Web3,
-
 };
