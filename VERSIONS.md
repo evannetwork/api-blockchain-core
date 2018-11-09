@@ -3,6 +3,8 @@
 ## Next Version
 ### Features
 ### Fixes
+- fix `Profile.exists` check, that threw if profile contract cannot be found
+
 ### Deprecations
 
 ## Version 1.3.0
