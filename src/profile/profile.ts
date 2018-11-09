@@ -262,12 +262,17 @@ export class Profile extends Logger {
    * @return     {Promise<boolean>}  true if a contract was registered, false if not
    */
   async exists(): Promise<boolean> {
-    const ensName = this.nameResolver.getDomainName(this.nameResolver.config.domains.profile);
-    const address = await this.nameResolver.getAddress(ensName);
-    const indexContract = this.nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
-    const profileContractAddress = await this.executor.executeContractCall(
-      indexContract, 'getProfile', this.activeAccount, { from: this.activeAccount, });
-    return profileContractAddress !== '0x0000000000000000000000000000000000000000';
+    try {
+      const ensName = this.nameResolver.getDomainName(this.nameResolver.config.domains.profile);
+      const address = await this.nameResolver.getAddress(ensName);
+      const indexContract = this.nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
+      const profileContractAddress = await this.executor.executeContractCall(
+        indexContract, 'getProfile', this.activeAccount, { from: this.activeAccount, });
+      return profileContractAddress !== '0x0000000000000000000000000000000000000000';
+    } catch(ex) {
+      this.log(`error occurred while checking if profile exists; ${ex.message || ex}`, 'debug');
+      return false;
+    }
   }
 
   /**
