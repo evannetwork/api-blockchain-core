@@ -89,9 +89,9 @@ describe('Rights and Roles handler', function() {
   });
 
   it('should be able to retrieve all members', async () => {
-     const contract = await sc.create(accounts[0], businessCenterDomain, '');
-     await sc.inviteToContract(businessCenterDomain, contract.options.address, accounts[0], accounts[1]);
-     await sc.inviteToContract(businessCenterDomain, contract.options.address, accounts[0], accounts[2]);
+     const contract = await dc.create('testdatacontract', accounts[0], businessCenterDomain);
+     await dc.inviteToContract(businessCenterDomain, contract.options.address, accounts[0], accounts[1]);
+     await dc.inviteToContract(businessCenterDomain, contract.options.address, accounts[0], accounts[2]);
      const contractParticipants = await rar.getMembers(contract);
      const members = contractParticipants[1];
      expect(members.length).to.eq(3);
@@ -154,6 +154,43 @@ describe('Rights and Roles handler', function() {
 
       await rar.setFunctionPermission(contract, accounts[0], memberRole, 'addListEntries(bytes32[],bytes32[])', false);
       await expect(dc.addListEntries(contract, 'list_settable_by_member', [samples[1]], accounts[1])).to.be.rejected;
+    });
+
+
+    it('should be able to transfer ownership multiple times from an existing contract', async () => {
+      const contract = await createSampleContract();
+
+      let contractParticipants = await rar.getMembers(contract);
+      let owners = contractParticipants[0];
+      expect(owners.length).to.eq(1);
+      expect(owners[0]).to.eq(accounts[0]);
+
+      await rar.addAccountToRole(contract, accounts[0], accounts[1], 0);
+      await rar.transferOwnership(contract, accounts[1], accounts[1]);
+      await rar.removeAccountFromRole(contract, accounts[1], accounts[0], 0);
+
+      contractParticipants = await rar.getMembers(contract);
+      owners = contractParticipants[0];
+      expect(owners.length).to.eq(1);
+      expect(owners[0]).to.eq(accounts[1]);
+
+      await rar.addAccountToRole(contract, accounts[1], accounts[0], 0);
+      await rar.transferOwnership(contract, accounts[0], accounts[0]);
+      await rar.removeAccountFromRole(contract, accounts[0], accounts[1], 0);
+
+      contractParticipants = await rar.getMembers(contract);
+      owners = contractParticipants[0];
+      expect(owners.length).to.eq(1);
+      expect(owners[0]).to.eq(accounts[0]);
+
+      await rar.addAccountToRole(contract, accounts[0], accounts[1], 0);
+      await rar.transferOwnership(contract, accounts[1], accounts[1]);
+      await rar.removeAccountFromRole(contract, accounts[1], accounts[0], 0);
+
+      contractParticipants = await rar.getMembers(contract);
+      owners = contractParticipants[0];
+      expect(owners.length).to.eq(1);
+      expect(owners[0]).to.eq(accounts[1]);
     });
   });
 });

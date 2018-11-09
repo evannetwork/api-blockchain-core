@@ -5,6 +5,10 @@
 ### Fixes
 ### Deprecations
 
+## Version 1.3.1
+### Fixes
+- fix `Profile.exists` check, that threw if profile contract cannot be found
+
 ## Version 1.3.0
 ### Features
 - add `getKeyHistory` to `sharings` to retrieve all keys for an account and a section
