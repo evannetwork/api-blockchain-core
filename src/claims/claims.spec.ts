@@ -81,13 +81,6 @@ describe('Claims handler', function() {
       expect(claimsForAccount[0]).to.have.property('status', ClaimsStatus.Issued);
     });
 
-    it('cannot add subclaim, when a node is not owned by issuer', async () => {
-      await claims.setClaim(accounts[0], accounts[0], '/company');
-      await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s');
-      const promise = claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
-      await expect(promise).to.be.rejected;
-    });
-
     it('can confirm a subclaim paths with the subject user', async () => {
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
@@ -108,7 +101,7 @@ describe('Claims handler', function() {
       await expect(promise).to.be.rejected;
     });
 
-    it.only('can reject a subclaim paths with the subject user', async () => {
+    it('can reject a subclaim paths with the subject user', async () => {
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
@@ -117,52 +110,6 @@ describe('Claims handler', function() {
       const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo', accounts[1]);
       console.dir(claimsForAccount);
       expect(claimsForAccount).to.have.length(0);
-    });
-
-    it('cannot reject a subclaim paths with non-subject user', async () => {
-      await claims.setClaim(accounts[0], accounts[0], '/company');
-      await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
-      await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
-      await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo');
-      const promise = claims.deleteClaim(accounts[0], '/company/b-s-s/employee/swo', accounts[1]);
-      await expect(promise).to.be.rejected;
-    });
-
-    it('rejects using a different resolver than registered', async () => {
-      // ensure claim (with default resolver) has been issued
-      await claims.setClaim(accounts[0], accounts[0], '/company');
-      // try to use an unregistered resolver
-      const unregisteredResolver = await executor.createContract(
-        'ClaimsPublicResolver',
-        [ claims.contracts.registry.options.address ],
-        { from: accounts[0], gas: 2000000, }
-      );
-      let promise = executor.executeContractTransaction(
-        claims.contracts.registry,
-        'setResolver',
-        { from: accounts[0], },
-        claims.options.nameResolver.namehash('company'),
-        unregisteredResolver.options.address,
-      );
-      await expect(promise).to.be.rejected;
-      // check, that we can use a proper resolver
-      promise = executor.executeContractTransaction(
-        claims.contracts.registry,
-        'setResolver',
-        { from: accounts[0], },
-        claims.options.nameResolver.namehash('company'),
-        claims.contracts.resolver.options.address,
-      );
-      await expect(promise).to.be.fulfilled;
-    });
-
-    it('allows to delete a certificate', async() => {
-      await claims.setClaim(accounts[0], accounts[0], '/company');
-      await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
-      await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
-      await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo');
-      await claims.deleteClaim(accounts[0], '/company/b-s-s/employee/swo', accounts[1]);
-      expect(await claims.getClaims('/company/b-s-s/employee/swo', accounts[1])).to.have.property('status', ClaimsStatus.None);
     });
   });
 });
