@@ -53,6 +53,8 @@ describe('Claims handler', function() {
     contractLoader = await TestUtils.getContractLoader(web3);
     claims = await TestUtils.getClaims(web3);
     await claims.createStructure(accounts[0]);
+    console.dir(claims);
+    process.exit();
     await claims.createIdentity(accounts[0]);
     await claims.createIdentity(accounts[1]);
   });
@@ -64,7 +66,7 @@ describe('Claims handler', function() {
   describe('when creating basic contracts', () => {
     let claimsContracts;
 
-    it('can add a claim', async () => {
+    it.only('can add a claim', async () => {
       await claims.setClaim(accounts[0], accounts[1], '/company');
       const claimsForAccount = await claims.getClaims('/company', accounts[1]);
       expect(claimsForAccount).to.have.length(1);

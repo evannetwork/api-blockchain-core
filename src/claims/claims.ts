@@ -178,8 +178,9 @@ export class Claims extends Logger {
    * name seen as a path, the parent 'folder'). Subjects of a claim may only delete it, if they are
    * the issuer as well. If not, they can only react to it by confirming or rejecting the claim.
    *
-   * @param      {string}         issuer     issuer of the claim; only the issuer can delete a claim
+   * @param      {string}         subject    the subject of the claim
    * @param      {string}         claimName  name of the claim (full path)
+   * @param      {string}         issuer     issuer of the claim; only the issuer can delete a claim
    * @return     {Promise<void>}  resolved when done
    */
   public async deleteClaim(subject: string, claimName: string, issuer: string): Promise<void> {
@@ -209,12 +210,12 @@ export class Claims extends Logger {
   }
 
   /**
-   * gets claim informations for a claim name fropm a given account
+   * gets claim informations for a claim name from a given account
    *
    * @param      {string}        claimName  name (/path) of a claim
    * @param      {string}        subject    the target subject
-   * @return     {Promise<any>}  claim info array, contains: issuer, name, status, subject, value,
-   *                             uri, signature
+   * @return     {Promise<any>}  claim info array, contains: issuer, name, status, subject, data,
+   *                             uri, signature, creationDate
    */
   public async getClaims(claimName: string, subject: string): Promise<any> {
     // get the target identity contract for the subject
@@ -271,7 +272,7 @@ export class Claims extends Logger {
         name: claimName,
         status: claimStatus ? ClaimsStatus.Confirmed : ClaimsStatus.Issued,
         subject,
-        value: (<any>claim).data,
+        data: (<any>claim).data,
         uri: (<any>claim).uri,
         signature: (<any>claim).signature,
         creationDate: creationDate,
@@ -281,6 +282,28 @@ export class Claims extends Logger {
     return claims.filter(function (el) {
       return el;
     });;
+  }
+
+  /**
+   * checks if a account has already a identity contract
+   *
+   * @param      {string}        subject  the target subject
+   * @return     {Promise<any>}  true if identity exists, otherwise false
+   */
+  public async identityAvailable(subject: string): Promise<any> {
+    // get the target identity contract for the subject
+    const identity = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'users',
+      subject
+    );
+
+    if(!identity) {
+      return false;
+    } else {
+      return true;
+    }
+
   }
 
   /**
