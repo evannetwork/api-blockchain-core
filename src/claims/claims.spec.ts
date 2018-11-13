@@ -53,6 +53,8 @@ describe('Claims handler', function() {
     contractLoader = await TestUtils.getContractLoader(web3);
     claims = await TestUtils.getClaims(web3);
     await claims.createStructure(accounts[0]);
+    await claims.createIdentity(accounts[0]);
+    await claims.createIdentity(accounts[1]);
   });
 
   after(async () => {
@@ -64,12 +66,9 @@ describe('Claims handler', function() {
 
     it('can add a claim', async () => {
       await claims.setClaim(accounts[0], accounts[1], '/company');
-      expect(await claims.getClaim('/company')).to.have.property('status', ClaimsStatus.Issued);
-    });
-
-    it('cannot add a claim, if parent node isn\'t owned by issuer', async () => {
-      const promise = claims.setClaim(accounts[1], accounts[0], '/company');
-      await expect(promise).to.be.rejected;
+      const claimsForAccount = await claims.getClaims('/company', accounts[1]);
+      expect(claimsForAccount).to.have.length(1);
+      expect(claimsForAccount[0]).to.have.property('status', ClaimsStatus.Issued);
     });
 
     it('can add subclaim paths', async () => {
@@ -77,7 +76,9 @@ describe('Claims handler', function() {
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
       await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo');
-      expect(await claims.getClaim('/company/b-s-s/employee/swo')).to.have.property('status', ClaimsStatus.Issued);
+      const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo', accounts[1]);
+      expect(claimsForAccount).to.have.length(1);
+      expect(claimsForAccount[0]).to.have.property('status', ClaimsStatus.Issued);
     });
 
     it('cannot add subclaim, when a node is not owned by issuer', async () => {
@@ -92,8 +93,10 @@ describe('Claims handler', function() {
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
       await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo');
-      await claims.confirmClaim(accounts[1], '/company/b-s-s/employee/swo');
-      expect(await claims.getClaim('/company/b-s-s/employee/swo')).to.have.property('status', ClaimsStatus.Confirmed);
+      await claims.confirmClaim(accounts[1], '/company/b-s-s/employee/swo', accounts[0]);
+      const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo', accounts[1]);
+      expect(claimsForAccount).to.have.length(1);
+      expect(claimsForAccount[0]).to.have.property('status', ClaimsStatus.Confirmed);
     });
 
     it('cannot confirm a subclaim paths with a non-subject user', async () => {
@@ -101,17 +104,19 @@ describe('Claims handler', function() {
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
       await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo');
-      const promise = claims.confirmClaim(accounts[0], '/company/b-s-s/employee/swo');
+      const promise = claims.confirmClaim(accounts[0], '/company/b-s-s/employee/swo', accounts[1]);
       await expect(promise).to.be.rejected;
     });
 
-    it('can reject a subclaim paths with the subject user', async () => {
+    it.only('can reject a subclaim paths with the subject user', async () => {
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
       await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo');
-      await claims.rejectClaim(accounts[1], '/company/b-s-s/employee/swo');
-      expect(await claims.getClaim('/company/b-s-s/employee/swo')).to.have.property('status', ClaimsStatus.Rejected);
+      await claims.deleteClaim(accounts[1], '/company/b-s-s/employee/swo', accounts[0]);
+      const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo', accounts[1]);
+      console.dir(claimsForAccount);
+      expect(claimsForAccount).to.have.length(0);
     });
 
     it('cannot reject a subclaim paths with non-subject user', async () => {
@@ -119,7 +124,7 @@ describe('Claims handler', function() {
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
       await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo');
-      const promise = claims.rejectClaim(accounts[0], '/company/b-s-s/employee/swo');
+      const promise = claims.deleteClaim(accounts[0], '/company/b-s-s/employee/swo', accounts[1]);
       await expect(promise).to.be.rejected;
     });
 
@@ -156,8 +161,8 @@ describe('Claims handler', function() {
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
       await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo');
-      await claims.deleteClaim(accounts[0], '/company/b-s-s/employee/swo');
-      expect(await claims.getClaim('/company/b-s-s/employee/swo')).to.have.property('status', ClaimsStatus.None);
+      await claims.deleteClaim(accounts[0], '/company/b-s-s/employee/swo', accounts[1]);
+      expect(await claims.getClaims('/company/b-s-s/employee/swo', accounts[1])).to.have.property('status', ClaimsStatus.None);
     });
   });
 });

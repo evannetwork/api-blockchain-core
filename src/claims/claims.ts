@@ -26,12 +26,14 @@
 */
 
 import coder = require('web3-eth-abi');
-
+import { BigNumber } from 'bignumber.js';
+var linker = require('solc/linker');
 
 const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const nullAddress = '0x0000000000000000000000000000000000000000';
 
 import {
+  AccountStore,
   ContractLoader,
   Description,
   EventHub,
@@ -73,8 +75,8 @@ export interface ClaimsOptions extends LoggerOptions {
   contractLoader: ContractLoader;
   executor: Executor;
   nameResolver: NameResolver;
-  registry?: string;
-  resolver?: string;
+  accountStore: AccountStore;
+  storage?: string;
 }
 
 /**
@@ -89,8 +91,8 @@ export class Claims extends Logger {
   constructor(options: ClaimsOptions) {
     super(options);
     this.options = options;
-    if (options.registry && options.resolver) {
-      this.loadContracts(options.registry, options.resolver);
+    if (options.storage) {
+      this.contracts.storage = this.options.contractLoader.loadContract('V00_UserRegistry', options.storage);
     }
   }
 
@@ -103,20 +105,47 @@ export class Claims extends Logger {
    *                             contract instances
    */
   public async createStructure(accountId: string): Promise<any> {
-    // create ens / claims registry
-    const registry = await this.options.executor.createContract(
-      'ClaimsENS', [], { from: accountId, gas: 1000000, });
 
-    // create claims resolver and point it to ens
-    const resolver = await this.options.executor.createContract(
-      'ClaimsPublicResolver', [ registry.options.address ], { from: accountId, gas: 2000000, });
+    // create Identity Storage
+    const storage = await this.options.executor.createContract(
+      'V00_UserRegistry', [], { from: accountId, gas: 1000000, });
 
-    // register resolver as accepted in ens
+    const keyHolderLib = await this.options.executor.createContract(
+      'KeyHolderLibrary', [], { from: accountId, gas: 2000000, });
+
+    this.options.contractLoader.contracts['ClaimHolderLibrary'].bytecode = linker.linkBytecode(
+      this.options.contractLoader.contracts['ClaimHolderLibrary'].bytecode, 
+      { 'claims/KeyHolderLibrary.sol:KeyHolderLibrary': keyHolderLib.options.address }
+    )
+
+    const claimHolderLib = await this.options.executor.createContract(
+      'ClaimHolderLibrary', [], { from: accountId, gas: 2000000, });
+
+    this.options.contractLoader.contracts['OriginIdentity'].bytecode = linker.linkBytecode(
+      this.options.contractLoader.contracts['OriginIdentity'].bytecode, 
+      { 
+        'claims/ClaimHolderLibrary.sol:ClaimHolderLibrary': claimHolderLib.options.address,
+        'claims/KeyHolderLibrary.sol:KeyHolderLibrary': keyHolderLib.options.address 
+      },
+    )
+
+    this.contracts = { storage, };
+  }
+
+  public async createIdentity(accountId: string): Promise<any> {
+    // create Identity contract
+    const identityContract = await this.options.executor.createContract(
+      'OriginIdentity', [], { from: accountId, gas: 2000000, });
+
+    const identityStorage = this.contracts.storage.options.address !== nullAddress ?
+      this.options.contractLoader.loadContract('V00_UserRegistry', this.contracts.storage.options.address) : null;
+
     await this.options.executor.executeContractTransaction(
-      registry, 'setAcceptedResolverState', { from: accountId, }, resolver.options.address, true);
-
-    this.contracts = { registry, resolver, };
-    return this.contracts;
+      identityStorage,
+      'registerUser',
+      { from: accountId, },
+      identityContract.options.address,
+    );
   }
 
   /**
@@ -125,14 +154,33 @@ export class Claims extends Logger {
    *
    * @param      {string}         subject     account, that approves the claim
    * @param      {string}         claimName   name of the claim (full path)
-   * @param      {string}         claimValue  bytes32 hash of the claim value; this is the subjects
-   *                                          value for the claim and has to be the as the issuers
-   *                                          value for the claim
    * @return     {Promise<void>}  resolved when done
    */
   public async confirmClaim(
-      subject: string, claimName: string, claimValue?: string): Promise<void> {
-    return this.respondToClaim(subject, claimName, 2, claimValue);
+      subject: string, claimName: string, issuer: string): Promise<void> {
+
+    const identity = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'users',
+      subject
+    );
+
+    const issuerIdentity = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'users',
+      issuer
+    );
+
+    const identityContract = this.options.contractLoader.loadContract('OriginIdentity', identity);
+    const sha3ClaimName = this.options.nameResolver.soliditySha3(claimName);
+    const uint256ClaimName = new BigNumber(sha3ClaimName).toString(10);
+    const sha3ClaimId = this.options.nameResolver.soliditySha3(issuerIdentity, uint256ClaimName);
+    await this.options.executor.executeContractTransaction(
+      identityContract,
+      'approveClaim',
+      { from: subject, },
+      sha3ClaimId
+    );
   }
 
   /**
@@ -144,61 +192,30 @@ export class Claims extends Logger {
    * @param      {string}         claimName  name of the claim (full path)
    * @return     {Promise<void>}  resolved when done
    */
-  public async deleteClaim(issuer: string, claimName: string): Promise<void> {
-    // create required hashes, etc
-    const [ ensPath, nodeHash ] = this.getClaimProperties(claimName);
-    const [_, node, parent] = /([^.]+)\.?(.*)/.exec(ensPath);
-    const parentHash = parent ? this.options.nameResolver.namehash(parent) : nullBytes32;
-    // get resolver (if any)
-    const resolverAddress = await this.options.executor.executeContractCall(
-      this.contracts.registry,
-      'resolver',
-      nodeHash,
+  public async deleteClaim(subject: string, claimName: string, issuer: string): Promise<void> {
+    const identity = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'users',
+      subject
     );
-    const resolver = resolverAddress !== nullAddress ?
-      this.options.contractLoader.loadContract('ClaimsPublicResolver', resolverAddress) : null;
 
-    await Promise.all([
-      // remove owner (== subject)
-      (await this.options.executor.executeContractCall(this.contracts.registry, 'owner', nodeHash) !== nullAddress ?
-        this.options.executor.executeContractTransaction(
-          this.contracts.registry,
-          'setSubnodeOwner',
-          { from: issuer, },
-          parentHash,
-          this.options.nameResolver.soliditySha3(node),
-          nullAddress,
-        ) : null
-      ),
-      // clear resolver for node
-      resolver ? this.options.executor.executeContractTransaction(
-        this.contracts.registry,
-        'setResolver',
-        { from: issuer, },
-        nodeHash,
-        nullAddress,
-      ) : null,
-      // remove addr (== subject)
-      resolver && (await this.options.executor.executeContractCall(resolver, 'addr', nodeHash) !== nullAddress ?
-        this.options.executor.executeContractTransaction(
-          resolver,
-          'setAddr',
-          { from: issuer, },
-          nodeHash,
-          nullAddress,
-        ) : null
-      ),
-      // remov content (== claim value)
-      resolver && (await this.options.executor.executeContractCall(resolver, 'content', nodeHash) !== nullBytes32 ?
-        this.options.executor.executeContractTransaction(
-          resolver,
-          'setContent',
-          { from: issuer, },
-          nodeHash,
-          nullBytes32,
-        ) : null
-      ),
-    ]);
+    const issuerIdentity = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'users',
+      issuer
+    );
+
+    const identityContract = this.options.contractLoader.loadContract('OriginIdentity', identity);
+    const sha3ClaimName = this.options.nameResolver.soliditySha3(claimName);
+    const uint256ClaimName = new BigNumber(sha3ClaimName).toString(10);
+    const sha3ClaimId = this.options.nameResolver.soliditySha3(issuerIdentity, uint256ClaimName);
+    
+    await this.options.executor.executeContractTransaction(
+      identityContract,
+      'removeClaim',
+      { from: subject, },
+      sha3ClaimId
+    );
   }
 
   /**
@@ -208,48 +225,55 @@ export class Claims extends Logger {
    * @return     {Promise<any>}  claim info, contains: issuer, name, selfIssuedState, selfIssuedValue,
    *                             status, subject, value
    */
-  public async getClaim(claimName: string): Promise<any> {
-    const [ ensPath, nodeHash ] = this.getClaimProperties(claimName);
-    const resolverAddress = await this.options.executor.executeContractCall(
-      this.contracts.registry, 'resolver', nodeHash);
-    if (resolverAddress === nullAddress) {
-      return { status: ClaimsStatus.None, };
+  public async getClaims(claimName: string, accountId: string): Promise<any> {
+    const identity = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'users',
+      accountId
+    );
+
+    if(!identity) {
+      const msg = `trying to get claim ${claimName} with account ${accountId}, ` +
+        `but the idendity for account ${accountId} not exists`;
+      this.log(msg, 'error');
+      throw new Error(msg);
     }
-    const resolver = this.options.contractLoader.loadContract(
-      'ClaimsPublicResolver', resolverAddress);
-    const [ value, issuer, [ subject, selfIssuedState, selfIssuedValue ]] = await Promise.all([
-      this.options.executor.executeContractCall(resolver, 'content', nodeHash),
-      this.options.executor.executeContractCall(this.contracts.registry, 'owner', nodeHash),
-      (async() => {
-        const addr = await this.options.executor.executeContractCall(resolver, 'addr', nodeHash);
-        return await Promise.all([
-          addr,
-          this.options.executor.executeContractCall(resolver, 'selfIssuedState', nodeHash, addr),
-          this.options.executor.executeContractCall(resolver, 'selfIssuedContent', nodeHash, addr),
-        ]);
-      })(),
-    ]);
-    const claim = {
-      issuer,
-      name: claimName,
-      selfIssuedState,
-      selfIssuedValue,
-      status: ClaimsStatus.Unknown,
-      subject,
-      value,
-    };
-    if (subject === nullAddress) {
-      claim.status = ClaimsStatus.None;
-    } else if (selfIssuedState === '1') {
-      claim.status = ClaimsStatus.Rejected;
-    } else if (selfIssuedState === '0') {
-      claim.status = ClaimsStatus.Issued
-    } else if (selfIssuedState === '2' && value === selfIssuedValue) {
-      claim.status = ClaimsStatus.Confirmed;
-    } else if (value !== selfIssuedValue) {
-      claim.status = ClaimsStatus.ValueMissmatch;
-    }
-    return claim;
+
+
+    const identityContract = this.options.contractLoader.loadContract('OriginIdentity', identity);
+    const sha3ClaimName = this.options.nameResolver.soliditySha3(claimName);
+    const uint256ClaimName = new BigNumber(sha3ClaimName).toString(10);
+    const claimsForTopic = await this.options.executor.executeContractCall(
+      identityContract,
+      'getClaimIdsByTopic',
+      uint256ClaimName
+    );
+
+    const claims = await Promise.all(claimsForTopic.map(async (claimId) => {
+      const claimP = this.options.executor.executeContractCall(
+        identityContract,
+        'getClaim',
+        claimId
+      );
+      const claimStatusP = this.options.executor.executeContractCall(
+        identityContract,
+        'isClaimApproved',
+        claimId
+      );
+      let [claim, claimStatus] = await Promise.all([claimP, claimStatusP]);
+
+      return {
+        issuer: (<any>claim).issuer,
+        name: claimName,
+        status: claimStatus ? ClaimsStatus.Confirmed : ClaimsStatus.Issued,
+        subject: accountId,
+        value: (<any>claim).data,
+        uri: (<any>claim).uri,
+        signature: (<any>claim).signature,
+      };
+    }));
+
+    return claims;
   }
 
   /**
@@ -264,76 +288,50 @@ export class Claims extends Logger {
    */
   public async setClaim(
       issuer: string, subject: string, claimName: string, claimValue?: string): Promise<void> {
-    // transform to ens like path (use dots, remove leading '/')
-    // /company/b-s-s/employee/aik --> aik.employee.b-s-s.company
-    const [ ensPath, nodeHash ] = this.getClaimProperties(claimName);
-    // split into node laben and parent path
-    // e.g. '/company/b-s-s/employee/aik' --> 'aik' and 'employee.b-s-s.company' (ens like path)
-    const [_, node, parent] = /([^.]+)\.?(.*)/.exec(ensPath);
-    // check parent owner
-    const parentHash = parent ? this.options.nameResolver.namehash(parent) : nullBytes32;
-    const owner = await this.options.executor.executeContractCall(
-      this.contracts.registry,
-      'owner',
-      parentHash,
+
+
+    // get the identiy contract for the subject
+
+    const targetIdentity = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'users',
+      subject
     );
-    if (owner !== issuer) {
+
+    const sourceIdentity = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'users',
+      issuer
+    );
+
+    if(!targetIdentity) {
       const msg = `trying to set claim ${claimName} with account ${issuer}, ` +
-        `but parent claim ${parent} not owned by ${issuer}`;
+        `but target idendity for account ${subject} not exists`;
       this.log(msg, 'error');
       throw new Error(msg);
     }
-    await Promise.all([
-      this.options.executor.executeContractTransaction(
-        this.contracts.registry,
-        'setSubnodeOwner',  // (bytes32 node, bytes32 label, address owner)
-        { from: issuer, },
-        parentHash,
-        this.options.nameResolver.soliditySha3(node),
-        subject,
-      ),
-      this.options.executor.executeContractTransaction(
-        this.contracts.registry,
-        'setResolver',
-        { from: issuer, },
-        nodeHash,
-        this.contracts.resolver.options.address,
-      ),
-      this.options.executor.executeContractTransaction(
-        this.contracts.resolver,
-        'setAddr',
-        { from: issuer, },
-        nodeHash,
-        subject,
-      ),
-      claimValue ? this.options.executor.executeContractTransaction(
-        this.contracts.resolver,
-        'setContent',
-        { from: issuer, },
-        nodeHash,
-        claimValue,
-      ) : null,
-    ]);
-  }
 
-  /**
-   * reject a claim; this can be done, it a claim has been issued for a subject and the subject
-   * wants to reject it
-   *
-   * @param      {string}         subject     account, that approves the claim
-   * @param      {string}         claimName   name of the claim (full path)
-   * @param      {string}         claimValue  bytes32 hash of the claim value; this is the subjects
-   *                                          value for the claim and may differ from the issuers
-   *                                          value for the claim
-   * @return     {Promise<void>}  resolved when done
-   */
-  public async rejectClaim(subject: string, claimName: string, claimValue?: string): Promise<void> {
-    return this.respondToClaim(subject, claimName, 1, claimValue);
-  }
 
-  private getClaimProperties(claimName: string): string[] {
-    const ensPath = claimName.split('/').slice(1).reverse().join('.');
-    return [ensPath, this.options.nameResolver.namehash(ensPath)];
+    const identityContract = this.options.contractLoader.loadContract('OriginIdentity', targetIdentity);
+    
+    const sha3ClaimName = this.options.nameResolver.soliditySha3(claimName);
+    const uint256ClaimName = new BigNumber(sha3ClaimName).toString(10);
+    const signedSignature = await this.options.executor.web3.eth.accounts.sign(
+      this.options.nameResolver.soliditySha3(targetIdentity, uint256ClaimName).replace('0x', ''), 
+      await this.options.accountStore.getPrivateKey(issuer)
+    );
+
+    await this.options.executor.executeContractTransaction(
+      identityContract,
+      'addClaim',
+      { from: issuer, },
+      uint256ClaimName,
+      '1',
+      sourceIdentity,
+      signedSignature.signature,
+      '0x00',
+      ''
+    );
   }
 
   private loadContracts(registry, resolver) {
@@ -341,16 +339,5 @@ export class Claims extends Logger {
       registry: this.options.contractLoader.loadContract('ENS', registry),
       resolver: this.options.contractLoader.loadContract('ClaimsPublicResolver', resolver),
     };
-  }
-
-  private async respondToClaim(
-      subject: string, claimName: string, state: number, claimValue?: string): Promise<void> {
-    const [ _, nodeHash ] = this.getClaimProperties(claimName);
-    await Promise.all([
-      await this.options.executor.executeContractTransaction(
-        this.contracts.resolver, 'setSelfIssuedState', { from: subject, }, nodeHash, state),
-      claimValue ? this.options.executor.executeContractTransaction(
-        this.contracts.resolver, 'setSelfIssuedContent', { from: subject, }, nodeHash, claimValue) : null,
-    ]);
   }
 }

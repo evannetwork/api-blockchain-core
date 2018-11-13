@@ -124,6 +124,7 @@ export class TestUtils {
       contractLoader: await TestUtils.getContractLoader(web3),
       executor,
       nameResolver: await this.getNameResolver(web3),
+      accountStore: this.getAccountStore({})
     });
   }
 
