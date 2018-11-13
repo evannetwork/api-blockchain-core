@@ -251,7 +251,16 @@ export class Claims extends Logger {
         'isClaimApproved',
         claimId
       );
-      let [claim, claimStatus] = await Promise.all([claimP, claimStatusP]);
+      const claimCreationP = this.options.executor.executeContractCall(
+        identityContract,
+        'claimCreationDate',
+        claimId
+      );
+      let [claim, claimStatus, creationDate] = await Promise.all([
+        claimP,
+        claimStatusP,
+        claimCreationP
+      ]);
 
       if(claim.issuer == nullAddress) {
         return false;
@@ -265,6 +274,7 @@ export class Claims extends Logger {
         value: (<any>claim).data,
         uri: (<any>claim).uri,
         signature: (<any>claim).signature,
+        creationDate: creationDate,
       };
     }));
 
