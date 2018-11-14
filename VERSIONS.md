@@ -2,6 +2,7 @@
 
 ## Next Version
 ### Features
+- adjust claims service to be ERC725/ERC735 compliant
 ### Fixes
 ### Deprecations
 
