@@ -118,13 +118,14 @@ export class TestUtils {
     });
   };
 
-  static async getClaims(web3): Promise<Claims> {
+  static async getClaims(web3, dfs): Promise<Claims> {
     const executor = await TestUtils.getExecutor(web3);
     return new Claims({
       contractLoader: await TestUtils.getContractLoader(web3),
       executor,
       nameResolver: await this.getNameResolver(web3),
-      accountStore: this.getAccountStore({})
+      accountStore: this.getAccountStore({}),
+      dfs
     });
   }
 

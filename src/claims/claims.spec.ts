@@ -46,15 +46,15 @@ describe('Claims handler', function() {
   let contractLoader: ContractLoader;
   let executor: Executor;
   let web3: any;
+  let dfs: any;
 
   before(async () => {
     web3 = TestUtils.getWeb3();
     executor = await TestUtils.getExecutor(web3);
     contractLoader = await TestUtils.getContractLoader(web3);
-    claims = await TestUtils.getClaims(web3);
+    dfs = await TestUtils.getIpfs();
+    claims = await TestUtils.getClaims(web3, dfs);
     await claims.createStructure(accounts[0]);
-    console.dir(claims);
-    process.exit();
     await claims.createIdentity(accounts[0]);
     await claims.createIdentity(accounts[1]);
   });
@@ -66,11 +66,45 @@ describe('Claims handler', function() {
   describe('when creating basic contracts', () => {
     let claimsContracts;
 
-    it.only('can add a claim', async () => {
+    it('can add a claim', async () => {
       await claims.setClaim(accounts[0], accounts[1], '/company');
       const claimsForAccount = await claims.getClaims('/company', accounts[1]);
       expect(claimsForAccount).to.have.length(1);
       expect(claimsForAccount[0]).to.have.property('status', ClaimsStatus.Issued);
+    });
+
+    it('can add a claim with specific data', async () => {
+      await claims.setClaim(accounts[0], accounts[1], '/company', {foo: 'bar'});
+      const claimsForAccount = await claims.getClaims('/company', accounts[1]);
+      console.dir(claimsForAccount);
+      expect(claimsForAccount).to.have.length(1);
+      expect(claimsForAccount[0]).to.have.property('uri', 'https://ipfs.evan.network/ipfs/Qmbjig3cZbUUufWqCEFzyCppqdnmQj3RoDjJWomnqYGy1f');
+    });
+
+    it('can add a claim and validate the integrity', async () => {
+      await claims.setClaim(accounts[0], accounts[1], '/company');
+      const claimsForAccount = await claims.getClaims('/company', accounts[1]);
+      expect(claimsForAccount).to.have.length(1);
+      await claims.validateClaim(claimsForAccount[0].id, accounts[1]);
+      expect(claimsForAccount[0]).to.have.property('status', ClaimsStatus.Issued);
+    });
+
+    it('can add subclaim paths and validate it', async () => {
+      await claims.setClaim(accounts[0], accounts[0], '/company');
+      await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
+      await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
+      await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo');
+      const identity = await claims.getIdentityForAccount(accounts[1]);
+      const claimTree = await claims.validateClaimTree('/company/b-s-s/employee/swo', identity.options.address);
+      expect(claimTree).to.have.length(4);
+    });
+
+    it('can add subclaim paths and don\'t have the needed root claims.', async () => {
+      await claims.setClaim(accounts[0], accounts[0], '/company/evan/employee');
+      await claims.setClaim(accounts[0], accounts[1], '/company/evan/employee/swo');
+      const identity = await claims.getIdentityForAccount(accounts[1]);
+      const claimTree = await claims.validateClaimTree('/company/evan/employee/swo', identity.options.address);
+      expect(claimTree).to.have.length(2);
     });
 
     it('can add subclaim paths', async () => {
@@ -94,13 +128,18 @@ describe('Claims handler', function() {
       expect(claimsForAccount[0]).to.have.property('status', ClaimsStatus.Confirmed);
     });
 
-    it('cannot confirm a subclaim paths with a non-subject user', async () => {
-      await claims.setClaim(accounts[0], accounts[0], '/company');
-      await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
-      await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
+
+    it.only('can update a claim and the status should be not confirmed', async () => {
       await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo');
-      const promise = claims.confirmClaim(accounts[0], '/company/b-s-s/employee/swo', accounts[1]);
-      await expect(promise).to.be.rejected;
+      await claims.confirmClaim(accounts[1], '/company/b-s-s/employee/swo', accounts[0]);
+      const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo', accounts[1]);
+      expect(claimsForAccount).to.have.length(1);
+      expect(claimsForAccount[0]).to.have.property('status', ClaimsStatus.Confirmed);
+      debugger;
+      await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo', {test:'test'});
+      const claimsForAccount2 = await claims.getClaims('/company/b-s-s/employee/swo', accounts[1]);
+      expect(claimsForAccount2).to.have.length(1);
+      expect(claimsForAccount2[0]).to.have.property('status', ClaimsStatus.Issued);
     });
 
     it('can reject a subclaim paths with the subject user', async () => {

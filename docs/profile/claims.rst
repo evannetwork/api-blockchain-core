@@ -49,6 +49,10 @@ Under this "path" a set of values can be found. These value describe the claim, 
   It MUST be a signed message of the following structure: keccak256(address identityHolder_address, uint256 _ topic, bytes data)
 - ``creationDate``
   creationDate of the claim
+- ``id``
+  id of the current claim
+- ``valid``
+  check if the claim has a valid signature
 
 
 --------------------------------------------------------------------------------
@@ -77,6 +81,7 @@ Parameters
     * ``executor`` - |source executor|_: |source executor|_ instance
     * ``nameResolver`` - |source nameResolver|_: |source nameResolver|_ instance
     * ``accountStore`` - |source accountStore|_: |source accountStore|_ instance
+    * ``dfs`` - |source dfs|_: |source dfs|_ instance
     * ``log`` - ``Function`` (optional): function to use for logging: ``(message, level) => {...}``
     * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
@@ -193,7 +198,7 @@ getClaims
 
 .. code-block:: typescript
 
-  claims.getClaims(claimName, subject);
+  claims.getClaims(claimName, subject, isIdentity);
 
 gets claim informations for a claim name from a given account
 
@@ -203,6 +208,7 @@ Parameters
 
 #. ``claimName`` - ``string``: name (/path) of a claim
 #. ``subject`` - ``string``: subject of the claims
+#. ``isIdentity`` - ``string``(optional): indicates if the subject is already a identity address
 
 -------
 Returns
@@ -226,7 +232,9 @@ Example
     data: '0x0000000000000000000000000000000000000000000000000000000000000000',
     uri: '',
     signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
-    creationDate: 1234567890 }]
+    creationDate: 1234567890,
+    id: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    valid: true }]
 
 
 
@@ -265,6 +273,101 @@ Example
   // Output:
   true
 
+
+
+--------------------------------------------------------------------------------
+
+
+.. _claims_validateClaim:
+
+validateClaim
+================================================================================
+
+.. code-block:: typescript
+
+  claims.validateClaim(claimId, subject);
+
+validates a given claimId in case of integrity
+
+----------
+Parameters
+----------
+
+#. ``claimId`` - ``string``: The claim identifier
+#. ``subject`` - ``string``: subject of the claims
+
+-------
+Returns
+-------
+
+``Promise`` returns ``any``: resolves with true if the claim is valid, otherwise false
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  console.dir(await claims.validateClaim('0x0000000000000000000000000000000000000000000000000000000000000000', accounts[1]));
+  // Output:
+  true
+
+
+
+--------------------------------------------------------------------------------
+
+.. _claims_validateClaimTree:
+
+validateClaimTree
+================================================================================
+
+.. code-block:: typescript
+
+  claims.validateClaimTree(claimLabel, subject, treeArr);
+
+validates a whole claim tree if the path is valid (called recursive)
+
+----------
+Parameters
+----------
+
+#. ``claimLabel`` - ``string``: The full claim label
+#. ``subject`` - ``string``: subject of the claims
+#. ``treeArr`` - ``array``: the result tree array, defaults to []
+-------
+Returns
+-------
+
+``Promise`` returns ``any``: Array with all resolved claims for the tree
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  console.dir(await claims.validateClaimTree('/company/test/foo', accounts[1]));
+  // Output:
+  [{ issuer: '0x0000000000000000000000000000000000000001',
+    name: '/company/test/foo',
+    status: 1
+    subject: '0x0000000000000000000000000000000000000002',
+    data: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    uri: '',
+    signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    creationDate: 1234567890,
+    id: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    valid: true },
+    { issuer: '0x0000000000000000000000000000000000000001',
+    name: '/company/test',
+    status: 1
+    subject: '0x0000000000000000000000000000000000000002',
+    data: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    uri: '',
+    signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    creationDate: 1234567890,
+    id: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    valid: true }]
 
 
 --------------------------------------------------------------------------------
