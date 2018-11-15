@@ -56,6 +56,7 @@ import {
 import { Aes } from '../../encryption/aes';
 import { AesBlob } from '../../encryption/aes-blob';
 import { AesEcb } from '../../encryption/aes-ecb';
+import { Claims } from '../../claims/claims';
 import { BusinessCenterProfile } from '../../profile/business-center-profile';
 import { CryptoProvider } from '../../encryption/crypto-provider';
 import { BaseContract } from '../../contracts/base-contract/base-contract';
@@ -184,6 +185,7 @@ export interface ProfileBundleOptions {
 
 export interface ProfileInstance {
   // profile exports
+  claims: Claims,
   dataContract: DataContract,
   ipldInstance: Ipld,
   keyExchange: KeyExchange,
@@ -470,12 +472,23 @@ const create = function(options: ProfileBundleOptions): ProfileInstance {
     logLogLevel
   });
 
+  const claims = new Claims({
+    accountStore: (<any>options.signer).accountStore,
+    contractLoader: coreInstance.contractLoader,
+    dfs: coreInstance.dfs,
+    executor: executor,
+    logLog,
+    logLogLevel,
+    nameResolver: coreInstance.nameResolver,
+  });
+
   (<any>options.keyProvider).origin.init(profile);
 
   coreInstance.description.sharing = sharing;
 
   return {
     // profile exports
+    claims,
     dataContract,
     ipldInstance,
     keyExchange,
@@ -647,6 +660,7 @@ export {
   BaseContract,
   BCRuntime,
   buffer,
+  Claims,
   ContractLoader,
   CoreRuntime,
   create,
