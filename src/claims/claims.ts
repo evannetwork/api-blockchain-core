@@ -370,12 +370,11 @@ export class Claims extends Logger {
       subject
     );
 
-    if(!identity) {
+    if (!identity || identity === nullAddress) {
       return false;
     } else {
       return true;
     }
-
   }
 
   /**
@@ -404,7 +403,7 @@ export class Claims extends Logger {
       issuer
     );
     // check if target and source identity are existing
-    if(!targetIdentity) {
+    if (!targetIdentity || targetIdentity === nullAddress) {
       const msg = `trying to set claim ${claimName} with account ${issuer}, ` +
         `but target idendity for account ${subject} not exists`;
       this.log(msg, 'error');
