@@ -54,7 +54,7 @@ describe('Claims handler', function() {
     contractLoader = await TestUtils.getContractLoader(web3);
     dfs = await TestUtils.getIpfs();
     claims = await TestUtils.getClaims(web3, dfs);
-    await claims.createStructure(accounts[0]);
+    //await claims.createStructure(accounts[0]);
     await claims.createIdentity(accounts[0]);
     await claims.createIdentity(accounts[1]);
   });

@@ -28,7 +28,6 @@
 import coder = require('web3-eth-abi');
 import { BigNumber } from 'bignumber.js';
 import crypto = require('crypto');
-var linker = require('solc/linker');
 
 const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const nullAddress = '0x0000000000000000000000000000000000000000';
@@ -82,41 +81,6 @@ export class Claims extends Logger {
     if (options.storage) {
       this.contracts.storage = this.options.contractLoader.loadContract('V00_UserRegistry', options.storage);
     }
-  }
-
-  /**
-   * create a new claims structure; this includes a userregistry and the associated libraries
-   *
-   * @param      {string}        accountId  account, that execute the transaction and owner of the
-   *                                        new registry
-   * @return     {Promise<any>}  object with property 'storage', that is a web3js contract instance
-   */
-  public async createStructure(accountId: string): Promise<any> {
-
-    // create user registry
-    const storage = await this.options.executor.createContract(
-      'V00_UserRegistry', [], { from: accountId, gas: 1000000, });
-    // create key holder library
-    const keyHolderLib = await this.options.executor.createContract(
-      'KeyHolderLibrary', [], { from: accountId, gas: 2000000, });
-    // link ClaimHolderLibray with KeyHolderLibrary
-    this.options.contractLoader.contracts['ClaimHolderLibrary'].bytecode = linker.linkBytecode(
-      this.options.contractLoader.contracts['ClaimHolderLibrary'].bytecode, 
-      { 'claims/KeyHolderLibrary.sol:KeyHolderLibrary': keyHolderLib.options.address }
-    )
-    // create ClaimHolderLibrary
-    const claimHolderLib = await this.options.executor.createContract(
-      'ClaimHolderLibrary', [], { from: accountId, gas: 2000000, });
-    // link OriginIdentity with KeyHolderLibrary and ClaimHolderLibrary
-    this.options.contractLoader.contracts['OriginIdentity'].bytecode = linker.linkBytecode(
-      this.options.contractLoader.contracts['OriginIdentity'].bytecode, 
-      { 
-        'claims/ClaimHolderLibrary.sol:ClaimHolderLibrary': claimHolderLib.options.address,
-        'claims/KeyHolderLibrary.sol:KeyHolderLibrary': keyHolderLib.options.address 
-      },
-    )
-
-    this.contracts = { storage, };
   }
 
   /**
