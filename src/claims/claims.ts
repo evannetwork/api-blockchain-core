@@ -72,14 +72,31 @@ export interface ClaimsOptions extends LoggerOptions {
  * @class      Sharing (name)
  */
 export class Claims extends Logger {
-  contracts: any;
+  contracts: any = { };
   options: ClaimsOptions;
 
   constructor(options: ClaimsOptions) {
     super(options);
     this.options = options;
+
     if (options.storage) {
-      this.contracts.storage = this.options.contractLoader.loadContract('V00_UserRegistry', options.storage);
+      this.contracts.storage = this.options.contractLoader.loadContract('V00_UserRegistry',
+        options.storage);
+    }
+  }
+
+  /**
+   * Checks if a storage was initialized before, if not, load the default one.
+   *
+   * @return     {Promise<void>}  resolved when storage exists or storage was loaded 
+   */
+  private async ensureStorage() {
+    if (!this.contracts.storage) {
+      const storageAddress = await this.options.nameResolver
+        .getAddress(`identities.${ this.options.nameResolver.config.labels.ensRoot }`);
+
+      this.contracts.storage = this.options.contractLoader.loadContract('V00_UserRegistry',
+        storageAddress);
     }
   }
 
@@ -90,6 +107,8 @@ export class Claims extends Logger {
    * @return     {Promise<any>}       resolves when done
    */
   public async createIdentity(accountId: string): Promise<any> {
+    await this.ensureStorage();
+
     // create Identity contract
     const identityContract = await this.options.executor.createContract(
       'OriginIdentity', [], { from: accountId, gas: 2000000, });
@@ -116,6 +135,7 @@ export class Claims extends Logger {
    */
   public async confirmClaim(
       subject: string, claimName: string, issuer: string): Promise<void> {
+    await this.ensureStorage();
 
     const identity = await this.options.executor.executeContractCall(
       this.contracts.storage,
@@ -152,6 +172,8 @@ export class Claims extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async deleteClaim(subject: string, claimName: string, issuer: string): Promise<void> {
+    await this.ensureStorage();
+
     const identity = await this.options.executor.executeContractCall(
       this.contracts.storage,
       'users',
@@ -187,6 +209,8 @@ export class Claims extends Logger {
    *                             uri, signature, creationDate, valid
    */
   public async getClaims(claimName: string, subject: string, isIdentity?: boolean): Promise<any> {
+    await this.ensureStorage();
+
     // get the target identity contract for the subject
     let identity = subject;
     if(!isIdentity) {
@@ -268,6 +292,8 @@ export class Claims extends Logger {
    * @return     {Promise<bool>}  resolves with true if the claim is valid, otherwise false
    */
   public async validateClaim(claimId: string, subject: string) {
+    await this.ensureStorage();
+
     // get the target identiy contract for the subject
     const subjectIdentity = await this.options.executor.executeContractCall(
       this.contracts.storage,
@@ -335,6 +361,8 @@ export class Claims extends Logger {
    * @return     {Promise<any>}  true if identity exists, otherwise false
    */
   public async identityAvailable(subject: string): Promise<any> {
+    await this.ensureStorage();
+
     // get the target identity contract for the subject
     const identity = await this.options.executor.executeContractCall(
       this.contracts.storage,
@@ -361,6 +389,7 @@ export class Claims extends Logger {
    */
   public async setClaim(
       issuer: string, subject: string, claimName: string, claimValue?: any): Promise<void> {
+    await this.ensureStorage();
 
     // get the target identiy contract for the subject
     const targetIdentity = await this.options.executor.executeContractCall(
@@ -431,6 +460,8 @@ export class Claims extends Logger {
    * @return     {Promise<any>}  the identity contract instance 
    */
   public async getIdentityForAccount(subject: string) {
+    await this.ensureStorage();
+
     // get the target identity contract for the subject
     const targetIdentity = await this.options.executor.executeContractCall(
       this.contracts.storage,
