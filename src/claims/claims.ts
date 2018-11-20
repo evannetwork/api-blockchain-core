@@ -254,10 +254,17 @@ export class Claims extends Logger {
         'claimCreationDate',
         claimId
       );
-      let [claim, claimStatus, creationDate] = await Promise.all([
+
+      const claimexpirationDateP = this.options.executor.executeContractCall(
+        identityContract,
+        'getClaimExpirationDate',
+        claimId
+      );
+      let [claim, claimStatus, creationDate, expirationDate] = await Promise.all([
         claimP,
         claimStatusP,
-        claimCreationP
+        claimCreationP,
+        claimexpirationDateP
       ]);
 
       if(claim.issuer == nullAddress) {
@@ -276,6 +283,7 @@ export class Claims extends Logger {
         topic: claim.topic,
         uri: (<any>claim).uri,
         valid: await this.validateClaim(claimId, subject, isIdentity),
+        expirationDate: expirationDate == 0 ? null : expirationDate,
       };
     }));
 
@@ -386,14 +394,16 @@ export class Claims extends Logger {
   /**
    * sets or creates a claim to a given subject identity
    *
-   * @param      {string}         issuer      issuer of the claim
-   * @param      {string}         subject     subject of the claim and the owner of the claim node
-   * @param      {string}         claimName   name of the claim (full path)
-   * @param      {object}         claimValue  json object which will be stored in the claim
+   * @param      {string}         issuer          issuer of the claim
+   * @param      {string}         subject         subject of the claim and the owner of the claim
+   *                                              node
+   * @param      {string}         claimName       name of the claim (full path)
+   * @param      {<type>}         expirationDate  The expiration date for the claim
+   * @param      {object}         claimValue      json object which will be stored in the claim
    * @return     {Promise<void>}  resolved when done
    */
   public async setClaim(
-      issuer: string, subject: string, claimName: string, claimValue?: any): Promise<void> {
+      issuer: string, subject: string, claimName: string, expirationDate?: number, claimValue?: any): Promise<void> {
     await this.ensureStorage();
 
     // get the target identiy contract for the subject
@@ -456,6 +466,22 @@ export class Claims extends Logger {
       claimData,
       claimDataUrl
     );
+
+    if(expirationDate) {
+      const claimId = this.options.nameResolver.soliditySha3(sourceIdentity, uint256ClaimName);
+      const sourceIdentityContract = this.options.contractLoader.loadContract('OriginIdentity', sourceIdentity);
+      const abi = await sourceIdentityContract.methods
+        .setClaimExpirationDate(claimId, expirationDate)
+        .encodeABI();
+      await this.options.executor.executeContractTransaction(
+        sourceIdentityContract,
+        'execute',
+        { from: issuer, },
+        targetIdentity,
+        0,
+        abi
+      );
+    }
   }
 
   /**
