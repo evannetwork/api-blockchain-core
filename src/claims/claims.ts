@@ -265,16 +265,17 @@ export class Claims extends Logger {
       }
 
       return {
+        creationDate: creationDate,
+        data: (<any>claim).data,
+        id: claimId,
         issuer: (<any>claim).issuer,
         name: claimName,
+        signature: (<any>claim).signature,
         status: claimStatus ? ClaimsStatus.Confirmed : ClaimsStatus.Issued,
         subject,
-        data: (<any>claim).data,
+        topic: claim.topic,
         uri: (<any>claim).uri,
-        signature: (<any>claim).signature,
-        creationDate: creationDate,
-        id: claimId,
-        valid: await this.validateClaim(claimId, subject)
+        valid: await this.validateClaim(claimId, subject, isIdentity),
       };
     }));
 
@@ -287,25 +288,30 @@ export class Claims extends Logger {
   /**
    * validates a given claimId in case of integrity
    *
-   * @param      {string}  claimId  The claim identifier
-   * @param      {string}  subject  the subject of the claim
+   * @param      {string}         claimId     The claim identifier
+   * @param      {string}         subject     the subject of the claim
+   * @param      {boolean}        isIdentity  optional indicates if the subject is already a
+   *                                          identity
    * @return     {Promise<bool>}  resolves with true if the claim is valid, otherwise false
    */
-  public async validateClaim(claimId: string, subject: string) {
+  public async validateClaim(claimId: string, subject: string, isIdentity?: boolean) {
     await this.ensureStorage();
 
-    // get the target identiy contract for the subject
-    const subjectIdentity = await this.options.executor.executeContractCall(
-      this.contracts.storage,
-      'users',
-      subject
-    );
+    let subjectIdentity = subject;
+    if (!isIdentity) {
+      // get the target identiy contract for the subject
+      subjectIdentity = await this.options.executor.executeContractCall(
+        this.contracts.storage,
+        'users',
+        subject
+      );
 
-    // check if target and source identity are existing
-    if(!subjectIdentity) {
-      const msg = `target idendity for account ${subject} not exists`;
-      this.log(msg, 'error');
-      throw new Error(msg);
+      // check if target and source identity are existing
+      if (!subjectIdentity) {
+        const msg = `target idendity for account ${subject} not exists`;
+        this.log(msg, 'error');
+        throw new Error(msg);
+      }
     }
 
     const identityContract = this.options.contractLoader.loadContract('OriginIdentity', subjectIdentity);
