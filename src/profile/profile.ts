@@ -82,6 +82,7 @@ export class Profile extends Logger {
   profileContract: any;
   trees: any;
   treeLabels = {
+    activeClaims: 'activeClaims',
     addressBook: 'addressBook',
     bookmarkedDapps: 'bookmarkedDapps',
     contracts: 'contracts',
@@ -558,6 +559,42 @@ export class Profile extends Logger {
       this.trees[this.treeLabels.bookmarkedDapps],
       this.treeLabels.bookmarkedDapps,
       bookmarks,
+      true
+    );
+  }
+
+  /**
+   * Load all claims that should be displayed for this profile within the ui.
+   *
+   * @return     {Array<string>}  resolved when done
+   */
+  private async loadActiveClaims() {
+    if (!this.trees[this.treeLabels.activeClaims]) {
+      await this.loadForAccount(this.treeLabels.activeClaims);
+    }
+
+    return (await this.ipld.getLinkedGraph(this.trees[this.treeLabels.activeClaims],
+      this.treeLabels.activeClaims)) || [ ];
+  }
+
+  /**
+   * Save an array of active claims to the profile.
+   *
+   * @param      {any}            bookmarks  bookmarks to set
+   * @return     {Promise<void>}  resolved when done
+   */
+  async setActiveClaims(claims: Array<string>): Promise<void> {
+    if (!claims) {
+      throw new Error('no claims are given');
+    }
+    // ensure that the tree exists
+    this.ensureTree(this.treeLabels.activeClaims);
+
+    // save it!
+    await this.ipld.set(
+      this.trees[this.treeLabels.activeClaims],
+      this.treeLabels.activeClaims,
+      claims,
       true
     );
   }
