@@ -2,11 +2,13 @@
 
 ## Next Version
 ### Features
-- adjust claims service to be ERC725/ERC735 compliant
-- add `loadActiveClaims` and `setActiveClaims` function to profile to handle users active claims
-
 ### Fixes
 ### Deprecations
+
+## Version 1.4.0
+### Features
+- adjust claims service to be ERC725/ERC735 compliant
+- add `loadActiveClaims` and `setActiveClaims` function to profile to handle users active claims
 
 ## Version 1.3.1
 ### Fixes
