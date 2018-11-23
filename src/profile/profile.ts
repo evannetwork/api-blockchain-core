@@ -566,7 +566,7 @@ export class Profile extends Logger {
   /**
    * Load all claims that should be displayed for this profile within the ui.
    *
-   * @return     {Array<string>}  resolved when done
+   * @return     {Array<string>}  array of topics of claims that should be displayed
    */
   private async loadActiveClaims() {
     if (!this.trees[this.treeLabels.activeClaims]) {
