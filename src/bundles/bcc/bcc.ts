@@ -246,7 +246,7 @@ const createCore = function(options: CoreBundleOptions): CoreInstance {
   if (options.dfs) {
     dfs = options.dfs;
   } else if (options.dfsRemoteNode) {
-    dfs = new Ipfs({remoteNode: options.dfsRemoteNode, cache: options.ipfsCache, logLog, logLogLevel });
+    dfs = new Ipfs({web3: options.web3, remoteNode: options.dfsRemoteNode, cache: options.ipfsCache, logLog, logLogLevel });
     // TODO cleanup after dbcp > 1.0.3 release
     if(options.ipfsCache) {
       dfs.cache = options.ipfsCache;
@@ -364,6 +364,16 @@ const create = function(options: ProfileBundleOptions): ProfileInstance {
   });
 
   options.coreOptions.executor = executor;
+
+  options.coreOptions.dfs = new Ipfs({
+    remoteNode: options.coreOptions.dfsRemoteNode,
+    cache: options.coreOptions.ipfsCache,
+    accountId: options.accountId,
+    accountStore: (<any>options.signer).accountStore,
+    web3: web3,
+    logLog, 
+    logLogLevel 
+  });
 
   const coreInstance = options.CoreBundle.createAndSetCore(options.coreOptions);
 
