@@ -3,7 +3,7 @@
     "author": "evan GmbH",
     "dapp": {
       "dependencies": {
-        "smartcontracts": "^1.1.3"
+        "smartcontracts": "^1.2.0"
       },
       "entrypoint": "bcc.js",
       "files": [
@@ -19,7 +19,7 @@
       "contractus",
       "library"
     ],
-    "version": "1.3.1",
+    "version": "1.4.0",
     "versions": {
       "0.1.0": "QmTsY7ASbvxATLnEemHZQ8oQha64ujYe9VXbDCouDk7Xtp",
       "0.9.0": "Qmbw3yX82TVN9WhsRyeaRpd89M9XXL1pds9GgqJL29ohar",
