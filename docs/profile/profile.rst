@@ -1191,6 +1191,71 @@ Example
 
   const key = await profile.getPublicKey();
 
+------------------------------------------------------------------------------
+
+.. _profile_loadActiveClaims:
+
+loadActiveClaims
+================================================================================
+
+.. code-block:: typescript
+
+  profile.loadActiveClaims();
+
+Load all claims that should be displayed for this profile within the ui.
+
+----------
+Parameters
+----------
+
+(none)
+
+-------
+Returns
+-------
+
+``Promise`` returns ``Array<string>``: array of topics of claims that should be displayed (e.g. [ '/company/tuev', '/test/1234' ] )
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const topics = await bcc.profile.loadActiveClaims();
+
+------------------------------------------------------------------------------
+
+.. _profile_setActiveClaims:
+
+setActiveClaims
+================================================================================
+
+.. code-block:: typescript
+
+  profile.setActiveClaims(bookmarks);
+
+Save an array of active claims to the profile.
+
+----------
+Parameters
+----------
+
+#. ``bookmarks`` - ``Array<string>``: bookmarks to set
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when saving is done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await bcc.profile.setActiveClaims([ '/company/tuev', '/test/1234' ]);
 
 
 .. required for building markup

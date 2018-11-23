@@ -56,6 +56,7 @@ import {
 import { Aes } from '../../encryption/aes';
 import { AesBlob } from '../../encryption/aes-blob';
 import { AesEcb } from '../../encryption/aes-ecb';
+import { Claims } from '../../claims/claims';
 import { BusinessCenterProfile } from '../../profile/business-center-profile';
 import { CryptoProvider } from '../../encryption/crypto-provider';
 import { BaseContract } from '../../contracts/base-contract/base-contract';
@@ -184,6 +185,7 @@ export interface ProfileBundleOptions {
 
 export interface ProfileInstance {
   // profile exports
+  claims: Claims,
   dataContract: DataContract,
   ipldInstance: Ipld,
   keyExchange: KeyExchange,
@@ -244,7 +246,7 @@ const createCore = function(options: CoreBundleOptions): CoreInstance {
   if (options.dfs) {
     dfs = options.dfs;
   } else if (options.dfsRemoteNode) {
-    dfs = new Ipfs({remoteNode: options.dfsRemoteNode, cache: options.ipfsCache, logLog, logLogLevel });
+    dfs = new Ipfs({web3: options.web3, remoteNode: options.dfsRemoteNode, cache: options.ipfsCache, logLog, logLogLevel });
     // TODO cleanup after dbcp > 1.0.3 release
     if(options.ipfsCache) {
       dfs.cache = options.ipfsCache;
@@ -363,6 +365,16 @@ const create = function(options: ProfileBundleOptions): ProfileInstance {
 
   options.coreOptions.executor = executor;
 
+  options.coreOptions.dfs = new Ipfs({
+    remoteNode: options.coreOptions.dfsRemoteNode,
+    cache: options.coreOptions.ipfsCache,
+    accountId: options.accountId,
+    accountStore: (<any>options.signer).accountStore,
+    web3: web3,
+    logLog, 
+    logLogLevel 
+  });
+
   const coreInstance = options.CoreBundle.createAndSetCore(options.coreOptions);
 
   coreInstance.description.cryptoProvider = new CryptoProvider({
@@ -470,12 +482,23 @@ const create = function(options: ProfileBundleOptions): ProfileInstance {
     logLogLevel
   });
 
+  const claims = new Claims({
+    accountStore: (<any>options.signer).accountStore,
+    contractLoader: coreInstance.contractLoader,
+    dfs: coreInstance.dfs,
+    executor: executor,
+    logLog,
+    logLogLevel,
+    nameResolver: coreInstance.nameResolver,
+  });
+
   (<any>options.keyProvider).origin.init(profile);
 
   coreInstance.description.sharing = sharing;
 
   return {
     // profile exports
+    claims,
     dataContract,
     ipldInstance,
     keyExchange,
@@ -647,6 +670,7 @@ export {
   BaseContract,
   BCRuntime,
   buffer,
+  Claims,
   ContractLoader,
   CoreRuntime,
   create,

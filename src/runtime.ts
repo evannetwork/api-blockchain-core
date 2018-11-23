@@ -56,6 +56,7 @@ import { Profile } from './profile/profile';
 import { RightsAndRoles } from './contracts/rights-and-roles';
 import { ServiceContract } from './contracts/service-contract/service-contract';
 import { Sharing } from './contracts/sharing';
+import { Claims } from './claims/claims';
 
 
 /**
@@ -65,10 +66,11 @@ export interface Runtime {
   accountStore: AccountStore,
   activeAccount: string,
   baseContract: BaseContract,
+  claims: Claims,
   contractLoader: ContractLoader,
   cryptoProvider: CryptoProvider,
-  description: Description,
   dataContract: DataContract,
+  description: Description,
   dfs: DfsInterface,
   eventHub: EventHub,
   executor: Executor,
@@ -288,6 +290,15 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     account: activeAccount,
     keyProvider,
   });
+
+  const claims = new Claims({
+    accountStore: accountStore,
+    contractLoader: contractLoader,
+    dfs: dfs,
+    executor: executor,
+    nameResolver: nameResolver,
+  })
+
   if (await profile.exists()) {
     log(`profile for ${activeAccount} exists, fetching keys`, 'debug');
     try {
@@ -315,6 +326,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     accountStore,
     activeAccount,
     baseContract,
+    claims,
     contractLoader,
     cryptoProvider,
     dataContract,

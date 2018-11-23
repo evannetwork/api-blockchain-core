@@ -18,11 +18,11 @@ Claims
 The ``Claims`` module allows to
 
 - issue claims about oneself or about other parties
-- confirm or reject claims about oneself
+- confirm or delete claims about oneself
 
-Claims have a pattern similar to file paths or DNS/ENS domains, a claim for an account called "foo" being an employee of a company called "bar" may look like this:
+Claims have a pattern similar to file paths, a claim for an account called "foo" being an employee of a company called "bar" may look like this:
 
-``/company/bar/employee/foo``
+``/company/bar/employee``
 
 Under this "path" a set of values can be found. These value describe the claim, the subject of the claim and optional its response to it. Basically an ``issuer`` creates a ``claim`` about a ``subject`` The values are:
 
@@ -35,19 +35,24 @@ Under this "path" a set of values can be found. These value describe the claim, 
 - ``issuer``
   an account (group/wallet or externally owned) that creates a claim,
   to be able to issue a claim, the ``issuer`` has to be the ``subject`` of the parent claim ``/company/bar/employee``
-- ``content``
-  extra data attached to a ``claim``, the value is of type ``bytes32``,
-  binary data like files, etc. can be encrypted (if desired) and uploaded to a ``DFS`` and then references as a ``bytes32`` hash
-- ``self issued content``
-  this represents a ``subjects`` value for a certificate,
-  ``subjects`` can attach an own value to a claim to show approval or disapproval of a claims value,
-  for the content to be seen as valid, ``issuers`` content value and ``subjects`` content value must equal
-- ``self issed state``
-  this represents a ``subjects`` "opinion" about a claim,
+- ``data``
+  The hash of the claim data, sitting in another location, a bit-mask, call data, or actual data based on the claim scheme.
+- ``uri``
+  The location of the claim, this can be HTTP links, swarm hashes, IPFS hashes, and such.
+- ``status``
+  this represents a ``claims`` status,
   values are ``uint8`` range from 0 to 255, the currently used values are:
-  - 0: unset / no response from ``subject``
-  - 1: rejection of claim
-  - 2: approval of claim
+  - 0: Issued
+  - 1: Confirmed
+- ``signature``
+  Signature which is the proof that the claim issuer issued a claim of topic for this identity. 
+  It MUST be a signed message of the following structure: keccak256(address identityHolder_address, uint256 _ topic, bytes data)
+- ``creationDate``
+  creationDate of the claim
+- ``id``
+  id of the current claim
+- ``valid``
+  check if the claim has a valid signature
 
 
 --------------------------------------------------------------------------------
@@ -75,12 +80,13 @@ Parameters
     * ``contractLoader`` - |source contractLoader|_: |source contractLoader|_ instance
     * ``executor`` - |source executor|_: |source executor|_ instance
     * ``nameResolver`` - |source nameResolver|_: |source nameResolver|_ instance
+    * ``accountStore`` - |source accountStore|_: |source accountStore|_ instance
+    * ``dfs`` - |source dfs|_: |source dfs|_ instance
     * ``log`` - ``Function`` (optional): function to use for logging: ``(message, level) => {...}``
     * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
     * ``logLogLevel`` - |source logLevel|_ (optional): messages with this level will be pushed to ``logLog``
-    * ``registry`` - ``string`` (optional): contract address of the claims registry
-    * ``resolver`` - ``string`` (optional): contract address of the claims default resolver
+    * ``storage`` - ``string`` (optional): contract address of the identity storage registry
 
 -------
 Returns
@@ -98,10 +104,9 @@ Example
     contractLoader,
     executor,
     nameResolver,
-    registry: '0x0000000000000000000000000000000000000001',
-    resolver: '0x0000000000000000000000000000000000000002',
+    accountStore
+    storage: '0x0000000000000000000000000000000000000001',
   });
-  await mailbox.init();
 
 
 
@@ -112,7 +117,40 @@ Example
 = Issuers =
 ==========================
 
+.. _claims_createIdentity:
 
+createIdentity
+================================================================================
+
+.. code-block:: typescript
+
+  claims.createIdentity(accountId);
+
+Creates a new identity for Account and registers them on the storage
+
+----------
+Parameters
+----------
+
+#. ``accountId`` - ``string``: the account identifier
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await claims.createIdentity(accounts[0]);
+
+
+
+--------------------------------------------------------------------------------
 
 .. _claims_setClaim:
 
@@ -153,29 +191,30 @@ Example
 
 --------------------------------------------------------------------------------
 
-.. _claims_getClaim:
+.. _claims_getClaims:
 
-getClaim
+getClaims
 ================================================================================
 
 .. code-block:: typescript
 
-  claims.getClaim(claimName);
+  claims.getClaims(claimName, subject, isIdentity);
 
-Gets claim information for a claim name.
+gets claim informations for a claim name from a given account
 
 ----------
 Parameters
 ----------
 
 #. ``claimName`` - ``string``: name (/path) of a claim
+#. ``subject`` - ``string``: subject of the claims
+#. ``isIdentity`` - ``string``(optional): indicates if the subject is already a identity address
 
 -------
 Returns
 -------
 
-``Promise`` returns ``any``: claim info, contains: issuer, name, selfIssuedState, selfIssuedValue, status,
-subject, value
+``Promise`` returns ``any``: claim info array, contains: issuer, name, status, subject, data, uri, signature, creatioonDate
 
 -------
 Example
@@ -184,18 +223,151 @@ Example
 .. code-block:: typescript
 
   await claims.setClaim(accounts[0], accounts[1], '/company');
-  console.dir(await claims.getClaim('/company'));
+  console.dir(await claims.getClaims('/company', accounts[1]));
   // Output:
-  { issuer: '0x0000000000000000000000000000000000000001',
+  [{ issuer: '0x0000000000000000000000000000000000000001',
     name: '/company',
-    selfIssuedState: '0',
-    selfIssuedValue: '0x0000000000000000000000000000000000000000000000000000000000000000',
-    status: 3,
+    status: 1
     subject: '0x0000000000000000000000000000000000000002',
-    value: '0x0000000000000000000000000000000000000000000000000000000000000000' }
+    data: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    uri: '',
+    signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    creationDate: 1234567890,
+    id: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    valid: true }]
 
 
 
+--------------------------------------------------------------------------------
+
+.. _claims_identityAvailable:
+
+identityAvailable
+================================================================================
+
+.. code-block:: typescript
+
+  claims.identityAvailable(subject);
+
+checks if a account has already a identity contract
+
+----------
+Parameters
+----------
+
+#. ``subject`` - ``string``: subject of the claims
+
+-------
+Returns
+-------
+
+``Promise`` returns ``any``: true if identity exists, otherwise false
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  console.dir(await claims.identityAvailable(accounts[1]));
+  // Output:
+  true
+
+
+
+--------------------------------------------------------------------------------
+
+
+.. _claims_validateClaim:
+
+validateClaim
+================================================================================
+
+.. code-block:: typescript
+
+  claims.validateClaim(claimId, subject);
+
+validates a given claimId in case of integrity
+
+----------
+Parameters
+----------
+
+#. ``claimId`` - ``string``: The claim identifier
+#. ``subject`` - ``string``: subject of the claims
+
+-------
+Returns
+-------
+
+``Promise`` returns ``any``: resolves with true if the claim is valid, otherwise false
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  console.dir(await claims.validateClaim('0x0000000000000000000000000000000000000000000000000000000000000000', accounts[1]));
+  // Output:
+  true
+
+
+
+--------------------------------------------------------------------------------
+
+.. _claims_validateClaimTree:
+
+validateClaimTree
+================================================================================
+
+.. code-block:: typescript
+
+  claims.validateClaimTree(claimLabel, subject, treeArr);
+
+validates a whole claim tree if the path is valid (called recursive)
+
+----------
+Parameters
+----------
+
+#. ``claimLabel`` - ``string``: The full claim label
+#. ``subject`` - ``string``: subject of the claims
+#. ``treeArr`` - ``array``: the result tree array, defaults to []
+-------
+Returns
+-------
+
+``Promise`` returns ``any``: Array with all resolved claims for the tree
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  console.dir(await claims.validateClaimTree('/company/test/foo', accounts[1]));
+  // Output:
+  [{ issuer: '0x0000000000000000000000000000000000000001',
+    name: '/company/test/foo',
+    status: 1
+    subject: '0x0000000000000000000000000000000000000002',
+    data: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    uri: '',
+    signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    creationDate: 1234567890,
+    id: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    valid: true },
+    { issuer: '0x0000000000000000000000000000000000000001',
+    name: '/company/test',
+    status: 1
+    subject: '0x0000000000000000000000000000000000000002',
+    data: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    uri: '',
+    signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    creationDate: 1234567890,
+    id: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    valid: true }]
 
 
 --------------------------------------------------------------------------------
@@ -207,7 +379,7 @@ deleteClaim
 
 .. code-block:: typescript
 
-  claims.deleteClaim(issuer, claimName);
+  claims.deleteClaim(subject, claimName, issuer);
 
 Delete a claim. This requires the **issuer** to have permissions for the parent claim (if claim name seen as a path, the parent 'folder'). Subjects of a claim may only delete it, if they are the issuer as well. If not, they can only react to it by confirming or rejecting the claim.
 
@@ -215,8 +387,9 @@ Delete a claim. This requires the **issuer** to have permissions for the parent 
 Parameters
 ----------
 
-#. ``issuer`` - ``string``: issuer of the claim
+#. ``subject`` - ``string``: the subject of the claim
 #. ``claimName`` - ``string``: name of the claim (full path)
+#. ``issuer`` - ``string``: issuer of the claim
 
 -------
 Returns
@@ -231,7 +404,7 @@ Example
 .. code-block:: typescript
 
   await claims.setClaim(accounts[0], accounts[1], '/company');
-  await claims.deleteClaim(accounts[0], '/company');
+  await claims.deleteClaim(accounts[0], '/company', accounts[1]);
 
 
 
@@ -261,7 +434,7 @@ Parameters
 
 #. ``subject`` - ``string``: account, that approves the claim
 #. ``claimName`` - ``string``: name of the claim (full path)
-#. ``claimValue`` - ``string`` (optional): bytes32 hash of the claim value; this is the subjects value for the claim and has to be the as the issuers value for the claim, will not be set if omitted
+#. ``issuer`` - ``string``: The issuer which has signed the claim
 
 -------
 Returns
@@ -276,51 +449,11 @@ Example
 .. code-block:: typescript
 
   await claims.setClaim(accounts[0], accounts[1], '/company');
-  await claims.confirmClaim(accounts[1], '/company');
+  await claims.confirmClaim(accounts[1], '/company', accounts[0]);
 
 
 
 --------------------------------------------------------------------------------
-
-.. _claims_rejectClaim:
-
-rejectClaim
-================================================================================
-
-.. code-block:: typescript
-
-  claims.rejectClaim(subject, claimName[, claimValue]);
-
-Rejects a claim; this can be done, it a claim has been issued for a subject and the subject wants to
-reject it.
-
-----------
-Parameters
-----------
-
-#. ``subject`` - ``string``: account, that approves the claim
-#. ``claimName`` - ``string``: name of the claim (full path)
-#. ``claimValue`` - ``string`` (optional): bytes32 hash of the claim value; this is the subjects value for the claim and may differ from the issuers value for the claim
-
--------
-Returns
--------
-
-``Promise`` returns ``void``: resolved when done
-
--------
-Example
--------
-
-.. code-block:: typescript
-
-  await claims.setClaim(accounts[0], accounts[1], '/company');
-  await claims.rejectClaim(accounts[1], '/company');
-
-
-
---------------------------------------------------------------------------------
-
 
 
 = Deployment =
@@ -337,7 +470,7 @@ createStructure
 
   claims.createStructure(accountId);
 
-Create a new claims structure; this includes a new registry and a default resolver for it. This
+Create a new claims structure; this includes a userregistry and the associated libraries. This
 isn't required for creating a module instance, its is solely used for creating new structures on the
 blockchain.
 
@@ -351,8 +484,8 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``any``: object with properties 'registry' and 'resolver', that are web3js
-contract instances
+``Promise`` returns ``any``: object with property 'storage', that is a web3js
+contract instance
 
 -------
 Example
@@ -361,12 +494,9 @@ Example
 .. code-block:: typescript
 
   const claimsStructure = await claims.createStructure(accountId);
-  console.log(claimsStructure.registry.options.address);
+  console.log(claimsStructure.storage.options.address);
   // Output:
   // 0x000000000000000000000000000000000000000a
-  console.log(claimsStructure.resolver.options.address);
-  // Output:
-  // 0x000000000000000000000000000000000000000b
 
 
 
@@ -386,3 +516,6 @@ Example
 
 .. |source nameResolver| replace:: ``NameResolver``
 .. _source nameResolver: /blockchain/name-resolver.html
+
+.. |source accountStore| replace:: ``AccountStore``
+.. _source accountStore: /blockchain/account-store.html

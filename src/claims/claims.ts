@@ -26,12 +26,14 @@
 */
 
 import coder = require('web3-eth-abi');
-
+import { BigNumber } from 'bignumber.js';
+import crypto = require('crypto');
 
 const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const nullAddress = '0x0000000000000000000000000000000000000000';
 
 import {
+  AccountStore,
   ContractLoader,
   Description,
   EventHub,
@@ -39,33 +41,19 @@ import {
   Logger,
   LoggerOptions,
   NameResolver,
+  DfsInterface,
+  Ipfs
 } from '@evan.network/dbcp';
 
 export enum ClaimsStatus {
-  /**
-   * empty subject
-   */
-  None,
-  /**
-   * self issued state is 1, values may match
-   */
-  Rejected,
-  /**
-   * issued by both, self issued state is 2, values match
-   */
-  Confirmed,
   /**
    * issued by a non-issuer parent claim holder, self issued state is 0
    */
   Issued,
   /**
-   * value from issuer and subject (self issued) missmatch
+   * issued by a non-issuer parent claim holder, self issued state is 0
    */
-  ValueMissmatch,
-  /**
-   * subject set, but value and/or states do not fall within expected range
-   */
-  Unknown,
+  Confirmed
 }
 
 
@@ -73,8 +61,9 @@ export interface ClaimsOptions extends LoggerOptions {
   contractLoader: ContractLoader;
   executor: Executor;
   nameResolver: NameResolver;
-  registry?: string;
-  resolver?: string;
+  accountStore: AccountStore;
+  dfs: DfsInterface;
+  storage?: string;
 }
 
 /**
@@ -83,56 +72,93 @@ export interface ClaimsOptions extends LoggerOptions {
  * @class      Sharing (name)
  */
 export class Claims extends Logger {
-  contracts: any;
+  contracts: any = { };
   options: ClaimsOptions;
 
   constructor(options: ClaimsOptions) {
     super(options);
     this.options = options;
-    if (options.registry && options.resolver) {
-      this.loadContracts(options.registry, options.resolver);
+
+    if (options.storage) {
+      this.contracts.storage = this.options.contractLoader.loadContract('V00_UserRegistry',
+        options.storage);
     }
   }
 
   /**
-   * create a new claims structure; this includes a new registry and a default resolver for it
+   * Checks if a storage was initialized before, if not, load the default one.
    *
-   * @param      {string}        accountId  account, that execute the transaction and owner of the
-   *                                        new registry
-   * @return     {Promise<any>}  object with properties 'registry' and 'resolver', that are web3js
-   *                             contract instances
+   * @return     {Promise<void>}  resolved when storage exists or storage was loaded 
    */
-  public async createStructure(accountId: string): Promise<any> {
-    // create ens / claims registry
-    const registry = await this.options.executor.createContract(
-      'ClaimsENS', [], { from: accountId, gas: 1000000, });
+  private async ensureStorage() {
+    if (!this.contracts.storage) {
+      const storageAddress = await this.options.nameResolver
+        .getAddress(`identities.${ this.options.nameResolver.config.labels.ensRoot }`);
 
-    // create claims resolver and point it to ens
-    const resolver = await this.options.executor.createContract(
-      'ClaimsPublicResolver', [ registry.options.address ], { from: accountId, gas: 2000000, });
+      this.contracts.storage = this.options.contractLoader.loadContract('V00_UserRegistry',
+        storageAddress);
+    }
+  }
 
-    // register resolver as accepted in ens
+  /**
+   * Creates a new identity for Account 
+   *
+   * @param      {string}  accountId  The account identifier
+   * @return     {Promise<any>}       resolves when done
+   */
+  public async createIdentity(accountId: string): Promise<any> {
+    await this.ensureStorage();
+
+    // create Identity contract
+    const identityContract = await this.options.executor.createContract(
+      'OriginIdentity', [], { from: accountId, gas: 2000000, });
+
+    const identityStorage = this.contracts.storage.options.address !== nullAddress ?
+      this.options.contractLoader.loadContract('V00_UserRegistry', this.contracts.storage.options.address) : null;
+    // register the new user in the registry
     await this.options.executor.executeContractTransaction(
-      registry, 'setAcceptedResolverState', { from: accountId, }, resolver.options.address, true);
-
-    this.contracts = { registry, resolver, };
-    return this.contracts;
+      identityStorage,
+      'registerUser',
+      { from: accountId, },
+      identityContract.options.address,
+    );
   }
 
   /**
    * confirms a claim; this can be done, it a claim has been issued for a subject and the subject
    * wants to confirms it
    *
-   * @param      {string}         subject     account, that approves the claim
-   * @param      {string}         claimName   name of the claim (full path)
-   * @param      {string}         claimValue  bytes32 hash of the claim value; this is the subjects
-   *                                          value for the claim and has to be the as the issuers
-   *                                          value for the claim
+   * @param      {string}         subject    account, that approves the claim
+   * @param      {string}         claimName  name of the claim (full path)
+   * @param      {string}         issuer     The issuer which has signed the claim
    * @return     {Promise<void>}  resolved when done
    */
   public async confirmClaim(
-      subject: string, claimName: string, claimValue?: string): Promise<void> {
-    return this.respondToClaim(subject, claimName, 2, claimValue);
+      subject: string, claimName: string, issuer: string): Promise<void> {
+    await this.ensureStorage();
+
+    const identity = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'users',
+      subject
+    );
+
+    const issuerIdentity = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'users',
+      issuer
+    );
+
+    const identityContract = this.options.contractLoader.loadContract('OriginIdentity', identity);
+    const sha3ClaimName = this.options.nameResolver.soliditySha3(claimName);
+    const uint256ClaimName = new BigNumber(sha3ClaimName).toString(10);
+    const sha3ClaimId = this.options.nameResolver.soliditySha3(issuerIdentity, uint256ClaimName);
+    await this.options.executor.executeContractTransaction(
+      identityContract,
+      'approveClaim',
+      { from: subject, },
+      sha3ClaimId
+    );
   }
 
   /**
@@ -140,217 +166,352 @@ export class Claims extends Logger {
    * name seen as a path, the parent 'folder'). Subjects of a claim may only delete it, if they are
    * the issuer as well. If not, they can only react to it by confirming or rejecting the claim.
    *
-   * @param      {string}         issuer     issuer of the claim; only the issuer can delete a claim
+   * @param      {string}         subject    the subject of the claim
    * @param      {string}         claimName  name of the claim (full path)
+   * @param      {string}         issuer     issuer of the claim; only the issuer can delete a claim
    * @return     {Promise<void>}  resolved when done
    */
-  public async deleteClaim(issuer: string, claimName: string): Promise<void> {
-    // create required hashes, etc
-    const [ ensPath, nodeHash ] = this.getClaimProperties(claimName);
-    const [_, node, parent] = /([^.]+)\.?(.*)/.exec(ensPath);
-    const parentHash = parent ? this.options.nameResolver.namehash(parent) : nullBytes32;
-    // get resolver (if any)
-    const resolverAddress = await this.options.executor.executeContractCall(
-      this.contracts.registry,
-      'resolver',
-      nodeHash,
+  public async deleteClaim(subject: string, claimName: string, issuer: string): Promise<void> {
+    await this.ensureStorage();
+
+    const identity = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'users',
+      subject
     );
-    const resolver = resolverAddress !== nullAddress ?
-      this.options.contractLoader.loadContract('ClaimsPublicResolver', resolverAddress) : null;
 
-    await Promise.all([
-      // remove owner (== subject)
-      (await this.options.executor.executeContractCall(this.contracts.registry, 'owner', nodeHash) !== nullAddress ?
-        this.options.executor.executeContractTransaction(
-          this.contracts.registry,
-          'setSubnodeOwner',
-          { from: issuer, },
-          parentHash,
-          this.options.nameResolver.soliditySha3(node),
-          nullAddress,
-        ) : null
-      ),
-      // clear resolver for node
-      resolver ? this.options.executor.executeContractTransaction(
-        this.contracts.registry,
-        'setResolver',
-        { from: issuer, },
-        nodeHash,
-        nullAddress,
-      ) : null,
-      // remove addr (== subject)
-      resolver && (await this.options.executor.executeContractCall(resolver, 'addr', nodeHash) !== nullAddress ?
-        this.options.executor.executeContractTransaction(
-          resolver,
-          'setAddr',
-          { from: issuer, },
-          nodeHash,
-          nullAddress,
-        ) : null
-      ),
-      // remov content (== claim value)
-      resolver && (await this.options.executor.executeContractCall(resolver, 'content', nodeHash) !== nullBytes32 ?
-        this.options.executor.executeContractTransaction(
-          resolver,
-          'setContent',
-          { from: issuer, },
-          nodeHash,
-          nullBytes32,
-        ) : null
-      ),
-    ]);
+    const issuerIdentity = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'users',
+      issuer
+    );
+
+    const identityContract = this.options.contractLoader.loadContract('OriginIdentity', identity);
+    const sha3ClaimName = this.options.nameResolver.soliditySha3(claimName);
+    const uint256ClaimName = new BigNumber(sha3ClaimName).toString(10);
+    const sha3ClaimId = this.options.nameResolver.soliditySha3(issuerIdentity, uint256ClaimName);
+    
+    await this.options.executor.executeContractTransaction(
+      identityContract,
+      'removeClaim',
+      { from: subject, },
+      sha3ClaimId
+    );
   }
 
   /**
-   * gets claim information for a claim name
+   * gets claim informations for a claim name from a given account
    *
-   * @param      {string}        claimName  name (/path) of a claim
-   * @return     {Promise<any>}  claim info, contains: issuer, name, selfIssuedState, selfIssuedValue,
-   *                             status, subject, value
+   * @param      {string}        claimName   name (/path) of a claim
+   * @param      {string}        subject     the target subject
+   * @param      {boolean}       isIdentity  optional indicates if the subject is already a identity
+   * @return     {Promise<any>}  claim info array, contains: issuer, name, status, subject, data,
+   *                             uri, signature, creationDate, valid
    */
-  public async getClaim(claimName: string): Promise<any> {
-    const [ ensPath, nodeHash ] = this.getClaimProperties(claimName);
-    const resolverAddress = await this.options.executor.executeContractCall(
-      this.contracts.registry, 'resolver', nodeHash);
-    if (resolverAddress === nullAddress) {
-      return { status: ClaimsStatus.None, };
+  public async getClaims(claimName: string, subject: string, isIdentity?: boolean): Promise<any> {
+    await this.ensureStorage();
+
+    // get the target identity contract for the subject
+    let identity = subject;
+    if(!isIdentity) {
+      identity = await this.options.executor.executeContractCall(
+        this.contracts.storage,
+        'users',
+        subject
+      );
+
+      if(!identity) {
+        const msg = `trying to get claim ${claimName} with account ${subject}, ` +
+          `but the idendity for account ${subject} not exists`;
+        this.log(msg, 'error');
+        throw new Error(msg);
+      }
     }
-    const resolver = this.options.contractLoader.loadContract(
-      'ClaimsPublicResolver', resolverAddress);
-    const [ value, issuer, [ subject, selfIssuedState, selfIssuedValue ]] = await Promise.all([
-      this.options.executor.executeContractCall(resolver, 'content', nodeHash),
-      this.options.executor.executeContractCall(this.contracts.registry, 'owner', nodeHash),
-      (async() => {
-        const addr = await this.options.executor.executeContractCall(resolver, 'addr', nodeHash);
-        return await Promise.all([
-          addr,
-          this.options.executor.executeContractCall(resolver, 'selfIssuedState', nodeHash, addr),
-          this.options.executor.executeContractCall(resolver, 'selfIssuedContent', nodeHash, addr),
-        ]);
-      })(),
-    ]);
-    const claim = {
-      issuer,
-      name: claimName,
-      selfIssuedState,
-      selfIssuedValue,
-      status: ClaimsStatus.Unknown,
-      subject,
-      value,
-    };
-    if (subject === nullAddress) {
-      claim.status = ClaimsStatus.None;
-    } else if (selfIssuedState === '1') {
-      claim.status = ClaimsStatus.Rejected;
-    } else if (selfIssuedState === '0') {
-      claim.status = ClaimsStatus.Issued
-    } else if (selfIssuedState === '2' && value === selfIssuedValue) {
-      claim.status = ClaimsStatus.Confirmed;
-    } else if (value !== selfIssuedValue) {
-      claim.status = ClaimsStatus.ValueMissmatch;
+
+
+    const identityContract = this.options.contractLoader.loadContract('OriginIdentity', identity);
+    const sha3ClaimName = this.options.nameResolver.soliditySha3(claimName);
+    const uint256ClaimName = new BigNumber(sha3ClaimName).toString(10);
+    const claimsForTopic = await this.options.executor.executeContractCall(
+      identityContract,
+      'getClaimIdsByTopic',
+      uint256ClaimName
+    );
+
+    const claims = await Promise.all(claimsForTopic.map(async (claimId) => {
+      const claimP = this.options.executor.executeContractCall(
+        identityContract,
+        'getClaim',
+        claimId
+      );
+      const claimStatusP = this.options.executor.executeContractCall(
+        identityContract,
+        'isClaimApproved',
+        claimId
+      );
+      const claimCreationP = this.options.executor.executeContractCall(
+        identityContract,
+        'claimCreationDate',
+        claimId
+      );
+
+      const claimexpirationDateP = this.options.executor.executeContractCall(
+        identityContract,
+        'getClaimExpirationDate',
+        claimId
+      );
+      let [claim, claimStatus, creationDate, expirationDate] = await Promise.all([
+        claimP,
+        claimStatusP,
+        claimCreationP,
+        claimexpirationDateP
+      ]);
+
+      if(claim.issuer == nullAddress) {
+        return false;
+      }
+
+      return {
+        creationDate: creationDate,
+        data: (<any>claim).data,
+        id: claimId,
+        issuer: (<any>claim).issuer,
+        name: claimName,
+        signature: (<any>claim).signature,
+        status: claimStatus ? ClaimsStatus.Confirmed : ClaimsStatus.Issued,
+        subject,
+        topic: claim.topic,
+        uri: (<any>claim).uri,
+        valid: await this.validateClaim(claimId, subject, isIdentity),
+        expirationDate: expirationDate == 0 ? null : expirationDate,
+      };
+    }));
+
+    return claims.filter(function (el) {
+      return el;
+    });;
+  }
+
+
+  /**
+   * validates a given claimId in case of integrity
+   *
+   * @param      {string}         claimId     The claim identifier
+   * @param      {string}         subject     the subject of the claim
+   * @param      {boolean}        isIdentity  optional indicates if the subject is already a
+   *                                          identity
+   * @return     {Promise<bool>}  resolves with true if the claim is valid, otherwise false
+   */
+  public async validateClaim(claimId: string, subject: string, isIdentity?: boolean) {
+    await this.ensureStorage();
+
+    let subjectIdentity = subject;
+    if (!isIdentity) {
+      // get the target identiy contract for the subject
+      subjectIdentity = await this.options.executor.executeContractCall(
+        this.contracts.storage,
+        'users',
+        subject
+      );
+
+      // check if target and source identity are existing
+      if (!subjectIdentity) {
+        const msg = `target idendity for account ${subject} not exists`;
+        this.log(msg, 'error');
+        throw new Error(msg);
+      }
     }
-    return claim;
+
+    const identityContract = this.options.contractLoader.loadContract('OriginIdentity', subjectIdentity);
+    const claim = await this.options.executor.executeContractCall(
+      identityContract,
+      'getClaim',
+      claimId
+    );
+
+    const dataHash = this.options.nameResolver.soliditySha3(subjectIdentity, claim.topic, claim.data).replace('0x', '');
+    const recoveredAddress = this.options.executor.web3.eth.accounts.recover(dataHash, claim.signature);
+    const issuerContract = this.options.contractLoader.loadContract('OriginIdentity', claim.issuer);
+    const keyHasPurpose = await this.options.executor.executeContractCall(
+      issuerContract,
+      'keyHasPurpose',
+      this.options.nameResolver.soliditySha3(recoveredAddress),
+      '1'
+    );
+    return keyHasPurpose;
+  }
+
+
+  /**
+   * validates a whole claim tree if the path is valid (called recursive)
+   *
+   * @param      {string}  claimLabel  The claim label
+   * @param      {string}  subject     The subject of the claim
+   * @param      {array}  treeArr     the result tree array
+   * @return     {Promise<any>}  Array with all resolved claims for the tree
+   */
+  public async validateClaimTree(claimLabel: string, subject: string, treeArr = []) {
+    const splittedClaimLabel = claimLabel.split('/');
+    const claims = await this.getClaims(claimLabel, subject, true);
+    // TODO: -> Add validation of more than one claim if there are more claims for the label
+    if(claims.length > 0) {
+      // check at the moment the first claim
+      treeArr.push(claims[0]);
+      if(splittedClaimLabel.length > 1) {
+        splittedClaimLabel.pop();
+        const subClaim = splittedClaimLabel.join('/');
+        await this.validateClaimTree(subClaim, claims[0].issuer, treeArr);
+      }
+    } else {
+      return treeArr;
+    }
+    return treeArr;
   }
 
   /**
-   * sets or creates a claim; this requires the issuer to have permissions for the parent claim (if
-   * claim name seen as a path, the parent 'folder')
+   * checks if a account has already a identity contract
    *
-   * @param      {string}         issuer      issuer of the claim
-   * @param      {string}         subject     subject of the claim and the owner of the claim node
-   * @param      {string}         claimName   name of the claim (full path)
-   * @param      {string}         claimValue  bytes32 hash of the claim value
+   * @param      {string}        subject  the target subject
+   * @return     {Promise<any>}  true if identity exists, otherwise false
+   */
+  public async identityAvailable(subject: string): Promise<any> {
+    await this.ensureStorage();
+
+    // get the target identity contract for the subject
+    const identity = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'users',
+      subject
+    );
+
+    if (!identity || identity === nullAddress) {
+      return false;
+    } else {
+      return true;
+    }
+  }
+
+  /**
+   * sets or creates a claim to a given subject identity
+   *
+   * @param      {string}         issuer          issuer of the claim
+   * @param      {string}         subject         subject of the claim and the owner of the claim
+   *                                              node
+   * @param      {string}         claimName       name of the claim (full path)
+   * @param      {<type>}         expirationDate  The expiration date for the claim
+   * @param      {object}         claimValue      json object which will be stored in the claim
    * @return     {Promise<void>}  resolved when done
    */
   public async setClaim(
-      issuer: string, subject: string, claimName: string, claimValue?: string): Promise<void> {
-    // transform to ens like path (use dots, remove leading '/')
-    // /company/b-s-s/employee/aik --> aik.employee.b-s-s.company
-    const [ ensPath, nodeHash ] = this.getClaimProperties(claimName);
-    // split into node laben and parent path
-    // e.g. '/company/b-s-s/employee/aik' --> 'aik' and 'employee.b-s-s.company' (ens like path)
-    const [_, node, parent] = /([^.]+)\.?(.*)/.exec(ensPath);
-    // check parent owner
-    const parentHash = parent ? this.options.nameResolver.namehash(parent) : nullBytes32;
-    const owner = await this.options.executor.executeContractCall(
-      this.contracts.registry,
-      'owner',
-      parentHash,
+      issuer: string, subject: string, claimName: string, expirationDate?: number, claimValue?: any): Promise<void> {
+    await this.ensureStorage();
+
+    // get the target identiy contract for the subject
+    const targetIdentity = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'users',
+      subject
     );
-    if (owner !== issuer) {
+    // get the issuer identiy contract
+    const sourceIdentity = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'users',
+      issuer
+    );
+    // check if target and source identity are existing
+    if (!targetIdentity || targetIdentity === nullAddress) {
       const msg = `trying to set claim ${claimName} with account ${issuer}, ` +
-        `but parent claim ${parent} not owned by ${issuer}`;
+        `but target idendity for account ${subject} not exists`;
       this.log(msg, 'error');
       throw new Error(msg);
     }
-    await Promise.all([
-      this.options.executor.executeContractTransaction(
-        this.contracts.registry,
-        'setSubnodeOwner',  // (bytes32 node, bytes32 label, address owner)
+
+
+    const identityContract = this.options.contractLoader.loadContract('OriginIdentity', targetIdentity);
+    // convert the claim name to a unit256
+    const sha3ClaimName = this.options.nameResolver.soliditySha3(claimName);
+    const uint256ClaimName = new BigNumber(sha3ClaimName).toString(10);
+
+    let claimData = nullBytes32;
+    let claimDataUrl = '';
+    if(claimValue) {
+      try{
+        const stringified = JSON.stringify(claimValue);
+        const stateMd5 = crypto.createHash('md5').update(stringified).digest('hex');
+        claimData = await this.options.dfs.add(stateMd5, Buffer.from(stringified));
+        claimDataUrl = `https://ipfs.evan.network/ipfs/${Ipfs.bytes32ToIpfsHash(claimData)}`;
+      } catch(e) {
+        const msg = `error parsing claimValue -> ${e.message}`;
+        this.log(msg, 'info');
+      }
+    }
+
+    // create the signature for the claim
+    const signedSignature = await this.options.executor.web3.eth.accounts.sign(
+      this.options.nameResolver.soliditySha3(targetIdentity, uint256ClaimName, claimData).replace('0x', ''), 
+      '0x' + await this.options.accountStore.getPrivateKey(issuer)
+    );
+
+
+
+    // add the claim to the target identity
+    await this.options.executor.executeContractTransaction(
+      identityContract,
+      'addClaim',
+      { from: issuer, },
+      uint256ClaimName,
+      '1',
+      sourceIdentity,
+      signedSignature.signature,
+      claimData,
+      claimDataUrl
+    );
+
+    if(expirationDate) {
+      const claimId = this.options.nameResolver.soliditySha3(sourceIdentity, uint256ClaimName);
+      const sourceIdentityContract = this.options.contractLoader.loadContract('OriginIdentity', sourceIdentity);
+      const abi = await sourceIdentityContract.methods
+        .setClaimExpirationDate(claimId, expirationDate)
+        .encodeABI();
+      await this.options.executor.executeContractTransaction(
+        sourceIdentityContract,
+        'execute',
         { from: issuer, },
-        parentHash,
-        this.options.nameResolver.soliditySha3(node),
-        subject,
-      ),
-      this.options.executor.executeContractTransaction(
-        this.contracts.registry,
-        'setResolver',
-        { from: issuer, },
-        nodeHash,
-        this.contracts.resolver.options.address,
-      ),
-      this.options.executor.executeContractTransaction(
-        this.contracts.resolver,
-        'setAddr',
-        { from: issuer, },
-        nodeHash,
-        subject,
-      ),
-      claimValue ? this.options.executor.executeContractTransaction(
-        this.contracts.resolver,
-        'setContent',
-        { from: issuer, },
-        nodeHash,
-        claimValue,
-      ) : null,
-    ]);
+        targetIdentity,
+        0,
+        abi
+      );
+    }
   }
 
   /**
-   * reject a claim; this can be done, it a claim has been issued for a subject and the subject
-   * wants to reject it
+   * Gets the identity contract for a given accountid.
    *
-   * @param      {string}         subject     account, that approves the claim
-   * @param      {string}         claimName   name of the claim (full path)
-   * @param      {string}         claimValue  bytes32 hash of the claim value; this is the subjects
-   *                                          value for the claim and may differ from the issuers
-   *                                          value for the claim
-   * @return     {Promise<void>}  resolved when done
+   * @param      {string}  subject  the subject for the identity contract
+   * @return     {Promise<any>}  the identity contract instance 
    */
-  public async rejectClaim(subject: string, claimName: string, claimValue?: string): Promise<void> {
-    return this.respondToClaim(subject, claimName, 1, claimValue);
+  public async getIdentityForAccount(subject: string) {
+    await this.ensureStorage();
+
+    // get the target identity contract for the subject
+    const targetIdentity = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'users',
+      subject
+    );
+    // check if target identity are existing
+    if(!targetIdentity) {
+      const msg = `target identity for account ${subject} not exists`;
+      this.log(msg, 'error');
+      throw new Error(msg);
+    }
+
+    return this.options.contractLoader.loadContract('OriginIdentity', targetIdentity);
   }
 
-  private getClaimProperties(claimName: string): string[] {
-    const ensPath = claimName.split('/').slice(1).reverse().join('.');
-    return [ensPath, this.options.nameResolver.namehash(ensPath)];
-  }
-
-  private loadContracts(registry, resolver) {
+  private loadContracts(storage) {
     this.contracts = {
-      registry: this.options.contractLoader.loadContract('ENS', registry),
-      resolver: this.options.contractLoader.loadContract('ClaimsPublicResolver', resolver),
+      storage: this.options.contractLoader.loadContract('V00_UserRegistry', storage),
     };
-  }
-
-  private async respondToClaim(
-      subject: string, claimName: string, state: number, claimValue?: string): Promise<void> {
-    const [ _, nodeHash ] = this.getClaimProperties(claimName);
-    await Promise.all([
-      await this.options.executor.executeContractTransaction(
-        this.contracts.resolver, 'setSelfIssuedState', { from: subject, }, nodeHash, state),
-      claimValue ? this.options.executor.executeContractTransaction(
-        this.contracts.resolver, 'setSelfIssuedContent', { from: subject, }, nodeHash, claimValue) : null,
-    ]);
   }
 }
