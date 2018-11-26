@@ -213,14 +213,14 @@ export class Claims extends Logger {
 
     // get the target identity contract for the subject
     let identity = subject;
-    if(!isIdentity) {
+    if (!isIdentity) {
       identity = await this.options.executor.executeContractCall(
         this.contracts.storage,
         'users',
         subject
       );
 
-      if(!identity) {
+      if (!identity) {
         const msg = `trying to get claim ${claimName} with account ${subject}, ` +
           `but the idendity for account ${subject} not exists`;
         this.log(msg, 'error');
@@ -260,20 +260,27 @@ export class Claims extends Logger {
         'getClaimExpirationDate',
         claimId
       );
-      let [claim, claimStatus, creationDate, expirationDate] = await Promise.all([
+      const claimDescriptionP = this.options.executor.executeContractCall(
+        identityContract,
+        'getClaimDescription',
+        claimId
+      );
+      let [claim, claimStatus, creationDate, expirationDate, description] = await Promise.all([
         claimP,
         claimStatusP,
         claimCreationP,
-        claimexpirationDateP
+        claimexpirationDateP,
+        claimDescriptionP,
       ]);
 
-      if(claim.issuer == nullAddress) {
+      if (claim.issuer === nullAddress) {
         return false;
       }
 
       return {
         creationDate: creationDate,
         data: (<any>claim).data,
+        description,
         id: claimId,
         issuer: (<any>claim).issuer,
         name: claimName,
@@ -289,7 +296,7 @@ export class Claims extends Logger {
 
     return claims.filter(function (el) {
       return el;
-    });;
+    });
   }
 
 
@@ -354,10 +361,10 @@ export class Claims extends Logger {
     const splittedClaimLabel = claimLabel.split('/');
     const claims = await this.getClaims(claimLabel, subject, true);
     // TODO: -> Add validation of more than one claim if there are more claims for the label
-    if(claims.length > 0) {
+    if (claims.length > 0) {
       // check at the moment the first claim
       treeArr.push(claims[0]);
-      if(splittedClaimLabel.length > 1) {
+      if (splittedClaimLabel.length > 1) {
         splittedClaimLabel.pop();
         const subClaim = splittedClaimLabel.join('/');
         await this.validateClaimTree(subClaim, claims[0].issuer, treeArr);
@@ -403,7 +410,13 @@ export class Claims extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async setClaim(
-      issuer: string, subject: string, claimName: string, expirationDate?: number, claimValue?: any): Promise<void> {
+      issuer: string,
+      subject: string,
+      claimName: string,
+      expirationDate?: number,
+      claimValue?: any,
+      descriptionDomain?: string,
+      ): Promise<void> {
     await this.ensureStorage();
 
     // get the target identiy contract for the subject
@@ -434,13 +447,13 @@ export class Claims extends Logger {
 
     let claimData = nullBytes32;
     let claimDataUrl = '';
-    if(claimValue) {
-      try{
+    if (claimValue) {
+      try {
         const stringified = JSON.stringify(claimValue);
         const stateMd5 = crypto.createHash('md5').update(stringified).digest('hex');
         claimData = await this.options.dfs.add(stateMd5, Buffer.from(stringified));
         claimDataUrl = `https://ipfs.evan.network/ipfs/${Ipfs.bytes32ToIpfsHash(claimData)}`;
-      } catch(e) {
+      } catch (e) {
         const msg = `error parsing claimValue -> ${e.message}`;
         this.log(msg, 'info');
       }
@@ -448,11 +461,9 @@ export class Claims extends Logger {
 
     // create the signature for the claim
     const signedSignature = await this.options.executor.web3.eth.accounts.sign(
-      this.options.nameResolver.soliditySha3(targetIdentity, uint256ClaimName, claimData).replace('0x', ''), 
+      this.options.nameResolver.soliditySha3(targetIdentity, uint256ClaimName, claimData).replace('0x', ''),
       '0x' + await this.options.accountStore.getPrivateKey(issuer)
     );
-
-
 
     // add the claim to the target identity
     await this.options.executor.executeContractTransaction(
@@ -467,20 +478,42 @@ export class Claims extends Logger {
       claimDataUrl
     );
 
-    if(expirationDate) {
+    if (expirationDate || descriptionDomain) {
       const claimId = this.options.nameResolver.soliditySha3(sourceIdentity, uint256ClaimName);
       const sourceIdentityContract = this.options.contractLoader.loadContract('OriginIdentity', sourceIdentity);
-      const abi = await sourceIdentityContract.methods
-        .setClaimExpirationDate(claimId, expirationDate)
-        .encodeABI();
-      await this.options.executor.executeContractTransaction(
-        sourceIdentityContract,
-        'execute',
-        { from: issuer, },
-        targetIdentity,
-        0,
-        abi
-      );
+
+      if (expirationDate) {
+        const abi = await sourceIdentityContract.methods
+          .setClaimExpirationDate(claimId, expirationDate)
+          .encodeABI();
+        await this.options.executor.executeContractTransaction(
+          sourceIdentityContract,
+          'execute',
+          { from: issuer, },
+          targetIdentity,
+          0,
+          abi
+        );
+      }
+
+      if (descriptionDomain) {
+        const ensFullNodeHash = this.options.nameResolver.soliditySha3(
+          this.options.nameResolver.namehash(`${descriptionDomain}.claims.evan`),
+          this.options.nameResolver.soliditySha3(claimName),
+        );
+
+        const abi = await sourceIdentityContract.methods
+          .setClaimDescription(claimId, ensFullNodeHash)
+          .encodeABI();
+        await this.options.executor.executeContractTransaction(
+          sourceIdentityContract,
+          'execute',
+          { from: issuer, },
+          targetIdentity,
+          0,
+          abi
+        );
+      }
     }
   }
 
