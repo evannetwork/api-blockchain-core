@@ -3,6 +3,7 @@
 ## Next Version
 ### Features
 - add description to claims
+- add `addClaimWithMetadata` function to claims for setting claim and metadata at the same time
 
 ### Fixes
 ### Deprecations

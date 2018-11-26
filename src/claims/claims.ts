@@ -439,7 +439,6 @@ export class Claims extends Logger {
       throw new Error(msg);
     }
 
-
     const identityContract = this.options.contractLoader.loadContract('OriginIdentity', targetIdentity);
     // convert the claim name to a unit256
     const sha3ClaimName = this.options.nameResolver.soliditySha3(claimName);
@@ -465,56 +464,29 @@ export class Claims extends Logger {
       '0x' + await this.options.accountStore.getPrivateKey(issuer)
     );
 
+    // build description hash if required
+    let ensFullNodeHash;
+    if (descriptionDomain) {
+      ensFullNodeHash = this.options.nameResolver.soliditySha3(
+        this.options.nameResolver.namehash(`${descriptionDomain}.claims.evan`),
+        this.options.nameResolver.soliditySha3(claimName),
+      );
+    }
+
     // add the claim to the target identity
     await this.options.executor.executeContractTransaction(
       identityContract,
-      'addClaim',
+      'addClaimWithMetadata',
       { from: issuer, },
       uint256ClaimName,
       '1',
       sourceIdentity,
       signedSignature.signature,
       claimData,
-      claimDataUrl
+      claimDataUrl,
+      expirationDate || 0,
+      ensFullNodeHash || nullBytes32
     );
-
-    if (expirationDate || descriptionDomain) {
-      const claimId = this.options.nameResolver.soliditySha3(sourceIdentity, uint256ClaimName);
-      const sourceIdentityContract = this.options.contractLoader.loadContract('OriginIdentity', sourceIdentity);
-
-      if (expirationDate) {
-        const abi = await sourceIdentityContract.methods
-          .setClaimExpirationDate(claimId, expirationDate)
-          .encodeABI();
-        await this.options.executor.executeContractTransaction(
-          sourceIdentityContract,
-          'execute',
-          { from: issuer, },
-          targetIdentity,
-          0,
-          abi
-        );
-      }
-
-      if (descriptionDomain) {
-        const ensFullNodeHash = this.options.nameResolver.soliditySha3(
-          this.options.nameResolver.namehash(`${descriptionDomain}.claims.evan`),
-          this.options.nameResolver.soliditySha3(claimName),
-        );
-
-        const abi = await sourceIdentityContract.methods
-          .setClaimDescription(claimId, ensFullNodeHash)
-          .encodeABI();
-        await this.options.executor.executeContractTransaction(
-          sourceIdentityContract,
-          'execute',
-          { from: issuer, },
-          targetIdentity,
-          0,
-          abi
-        );
-      }
-    }
   }
 
   /**
