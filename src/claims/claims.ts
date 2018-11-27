@@ -26,12 +26,8 @@
 */
 
 import coder = require('web3-eth-abi');
-import { BigNumber } from 'bignumber.js';
 import crypto = require('crypto');
-
-const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
-const nullAddress = '0x0000000000000000000000000000000000000000';
-
+import { BigNumber } from 'bignumber.js';
 import {
   AccountStore,
   ContractLoader,
@@ -44,6 +40,10 @@ import {
   DfsInterface,
   Ipfs
 } from '@evan.network/dbcp';
+
+
+const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
+const nullAddress = '0x0000000000000000000000000000000000000000';
 
 export enum ClaimsStatus {
   /**
@@ -66,6 +66,7 @@ export interface ClaimsOptions extends LoggerOptions {
   storage?: string;
 }
 
+
 /**
  * Claims helper
  *
@@ -83,45 +84,6 @@ export class Claims extends Logger {
       this.contracts.storage = this.options.contractLoader.loadContract('V00_UserRegistry',
         options.storage);
     }
-  }
-
-  /**
-   * Checks if a storage was initialized before, if not, load the default one.
-   *
-   * @return     {Promise<void>}  resolved when storage exists or storage was loaded 
-   */
-  private async ensureStorage() {
-    if (!this.contracts.storage) {
-      const storageAddress = await this.options.nameResolver
-        .getAddress(`identities.${ this.options.nameResolver.config.labels.ensRoot }`);
-
-      this.contracts.storage = this.options.contractLoader.loadContract('V00_UserRegistry',
-        storageAddress);
-    }
-  }
-
-  /**
-   * Creates a new identity for Account 
-   *
-   * @param      {string}  accountId  The account identifier
-   * @return     {Promise<any>}       resolves when done
-   */
-  public async createIdentity(accountId: string): Promise<any> {
-    await this.ensureStorage();
-
-    // create Identity contract
-    const identityContract = await this.options.executor.createContract(
-      'OriginIdentity', [], { from: accountId, gas: 2000000, });
-
-    const identityStorage = this.contracts.storage.options.address !== nullAddress ?
-      this.options.contractLoader.loadContract('V00_UserRegistry', this.contracts.storage.options.address) : null;
-    // register the new user in the registry
-    await this.options.executor.executeContractTransaction(
-      identityStorage,
-      'registerUser',
-      { from: accountId, },
-      identityContract.options.address,
-    );
   }
 
   /**
@@ -158,6 +120,30 @@ export class Claims extends Logger {
       'approveClaim',
       { from: subject, },
       sha3ClaimId
+    );
+  }
+
+  /**
+   * Creates a new identity for Account 
+   *
+   * @param      {string}  accountId  The account identifier
+   * @return     {Promise<any>}       resolves when done
+   */
+  public async createIdentity(accountId: string): Promise<any> {
+    await this.ensureStorage();
+
+    // create Identity contract
+    const identityContract = await this.options.executor.createContract(
+      'OriginIdentity', [], { from: accountId, gas: 2000000, });
+
+    const identityStorage = this.contracts.storage.options.address !== nullAddress ?
+      this.options.contractLoader.loadContract('V00_UserRegistry', this.contracts.storage.options.address) : null;
+    // register the new user in the registry
+    await this.options.executor.executeContractTransaction(
+      identityStorage,
+      'registerUser',
+      { from: accountId, },
+      identityContract.options.address,
     );
   }
 
@@ -314,80 +300,29 @@ export class Claims extends Logger {
     });
   }
 
-
   /**
-   * validates a given claimId in case of integrity
+   * Gets the identity contract for a given accountid.
    *
-   * @param      {string}         claimId     The claim identifier
-   * @param      {string}         subject     the subject of the claim
-   * @param      {boolean}        isIdentity  optional indicates if the subject is already a
-   *                                          identity
-   * @return     {Promise<bool>}  resolves with true if the claim is valid, otherwise false
+   * @param      {string}  subject  the subject for the identity contract
+   * @return     {Promise<any>}  the identity contract instance 
    */
-  public async validateClaim(claimId: string, subject: string, isIdentity?: boolean) {
+  public async getIdentityForAccount(subject: string) {
     await this.ensureStorage();
 
-    let subjectIdentity = subject;
-    if (!isIdentity) {
-      // get the target identiy contract for the subject
-      subjectIdentity = await this.options.executor.executeContractCall(
-        this.contracts.storage,
-        'users',
-        subject
-      );
-
-      // check if target and source identity are existing
-      if (!subjectIdentity) {
-        const msg = `target idendity for account ${subject} not exists`;
-        this.log(msg, 'error');
-        throw new Error(msg);
-      }
+    // get the target identity contract for the subject
+    const targetIdentity = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'users',
+      subject
+    );
+    // check if target identity are existing
+    if(!targetIdentity) {
+      const msg = `target identity for account ${subject} not exists`;
+      this.log(msg, 'error');
+      throw new Error(msg);
     }
 
-    const identityContract = this.options.contractLoader.loadContract('OriginIdentity', subjectIdentity);
-    const claim = await this.options.executor.executeContractCall(
-      identityContract,
-      'getClaim',
-      claimId
-    );
-
-    const dataHash = this.options.nameResolver.soliditySha3(subjectIdentity, claim.topic, claim.data).replace('0x', '');
-    const recoveredAddress = this.options.executor.web3.eth.accounts.recover(dataHash, claim.signature);
-    const issuerContract = this.options.contractLoader.loadContract('OriginIdentity', claim.issuer);
-    const keyHasPurpose = await this.options.executor.executeContractCall(
-      issuerContract,
-      'keyHasPurpose',
-      this.options.nameResolver.soliditySha3(recoveredAddress),
-      '1'
-    );
-    return keyHasPurpose;
-  }
-
-
-  /**
-   * validates a whole claim tree if the path is valid (called recursive)
-   *
-   * @param      {string}  claimLabel  The claim label
-   * @param      {string}  subject     The subject of the claim
-   * @param      {array}  treeArr     the result tree array
-   * @return     {Promise<any>}  Array with all resolved claims for the tree
-   */
-  public async validateClaimTree(claimLabel: string, subject: string, treeArr = []) {
-    const splittedClaimLabel = claimLabel.split('/');
-    const claims = await this.getClaims(claimLabel, subject, true);
-    // TODO: -> Add validation of more than one claim if there are more claims for the label
-    if (claims.length > 0) {
-      // check at the moment the first claim
-      treeArr.push(claims[0]);
-      if (splittedClaimLabel.length > 1) {
-        splittedClaimLabel.pop();
-        const subClaim = splittedClaimLabel.join('/');
-        await this.validateClaimTree(subClaim, claims[0].issuer, treeArr);
-      }
-    } else {
-      return treeArr;
-    }
-    return treeArr;
+    return this.options.contractLoader.loadContract('OriginIdentity', targetIdentity);
   }
 
   /**
@@ -505,28 +440,92 @@ export class Claims extends Logger {
   }
 
   /**
-   * Gets the identity contract for a given accountid.
+   * validates a given claimId in case of integrity
    *
-   * @param      {string}  subject  the subject for the identity contract
-   * @return     {Promise<any>}  the identity contract instance 
+   * @param      {string}         claimId     The claim identifier
+   * @param      {string}         subject     the subject of the claim
+   * @param      {boolean}        isIdentity  optional indicates if the subject is already a
+   *                                          identity
+   * @return     {Promise<bool>}  resolves with true if the claim is valid, otherwise false
    */
-  public async getIdentityForAccount(subject: string) {
+  public async validateClaim(claimId: string, subject: string, isIdentity?: boolean) {
     await this.ensureStorage();
 
-    // get the target identity contract for the subject
-    const targetIdentity = await this.options.executor.executeContractCall(
-      this.contracts.storage,
-      'users',
-      subject
-    );
-    // check if target identity are existing
-    if(!targetIdentity) {
-      const msg = `target identity for account ${subject} not exists`;
-      this.log(msg, 'error');
-      throw new Error(msg);
+    let subjectIdentity = subject;
+    if (!isIdentity) {
+      // get the target identiy contract for the subject
+      subjectIdentity = await this.options.executor.executeContractCall(
+        this.contracts.storage,
+        'users',
+        subject
+      );
+
+      // check if target and source identity are existing
+      if (!subjectIdentity) {
+        const msg = `target idendity for account ${subject} not exists`;
+        this.log(msg, 'error');
+        throw new Error(msg);
+      }
     }
 
-    return this.options.contractLoader.loadContract('OriginIdentity', targetIdentity);
+    const identityContract = this.options.contractLoader.loadContract('OriginIdentity', subjectIdentity);
+    const claim = await this.options.executor.executeContractCall(
+      identityContract,
+      'getClaim',
+      claimId
+    );
+
+    const dataHash = this.options.nameResolver.soliditySha3(subjectIdentity, claim.topic, claim.data).replace('0x', '');
+    const recoveredAddress = this.options.executor.web3.eth.accounts.recover(dataHash, claim.signature);
+    const issuerContract = this.options.contractLoader.loadContract('OriginIdentity', claim.issuer);
+    const keyHasPurpose = await this.options.executor.executeContractCall(
+      issuerContract,
+      'keyHasPurpose',
+      this.options.nameResolver.soliditySha3(recoveredAddress),
+      '1'
+    );
+    return keyHasPurpose;
+  }
+
+  /**
+   * validates a whole claim tree if the path is valid (called recursive)
+   *
+   * @param      {string}  claimLabel  The claim label
+   * @param      {string}  subject     The subject of the claim
+   * @param      {array}  treeArr     the result tree array
+   * @return     {Promise<any>}  Array with all resolved claims for the tree
+   */
+  public async validateClaimTree(claimLabel: string, subject: string, treeArr = []) {
+    const splittedClaimLabel = claimLabel.split('/');
+    const claims = await this.getClaims(claimLabel, subject, true);
+    // TODO: -> Add validation of more than one claim if there are more claims for the label
+    if (claims.length > 0) {
+      // check at the moment the first claim
+      treeArr.push(claims[0]);
+      if (splittedClaimLabel.length > 1) {
+        splittedClaimLabel.pop();
+        const subClaim = splittedClaimLabel.join('/');
+        await this.validateClaimTree(subClaim, claims[0].issuer, treeArr);
+      }
+    } else {
+      return treeArr;
+    }
+    return treeArr;
+  }
+
+  /**
+   * Checks if a storage was initialized before, if not, load the default one.
+   *
+   * @return     {Promise<void>}  resolved when storage exists or storage was loaded
+   */
+  private async ensureStorage() {
+    if (!this.contracts.storage) {
+      const storageAddress = await this.options.nameResolver
+        .getAddress(`identities.${ this.options.nameResolver.config.labels.ensRoot }`);
+
+      this.contracts.storage = this.options.contractLoader.loadContract('V00_UserRegistry',
+        storageAddress);
+    }
   }
 
   private loadContracts(storage) {

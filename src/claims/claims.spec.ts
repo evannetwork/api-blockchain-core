@@ -26,22 +26,18 @@
 */
 
 import 'mocha';
-import { expect, use } from 'chai';
 import chaiAsPromised = require('chai-as-promised');
-
-import {
-  ContractLoader,
-  Executor,
-} from '@evan.network/dbcp';
+import { expect, use } from 'chai';
+import { ContractLoader, Executor } from '@evan.network/dbcp';
 
 import { accounts } from '../test/accounts';
 import { Claims, ClaimsStatus, } from './claims';
 import { TestUtils } from '../test/test-utils';
 
+
 const linker = require('solc/linker');
 
 use(chaiAsPromised);
-
 
 describe('Claims handler', function() {
   let claims: Claims;
