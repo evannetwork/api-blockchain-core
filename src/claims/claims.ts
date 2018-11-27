@@ -249,6 +249,11 @@ export class Claims extends Logger {
         'isClaimApproved',
         claimId
       );
+      const claimCreationBlockP = this.options.executor.executeContractCall(
+        identityContract,
+        'claimCreationBlock',
+        claimId
+      );
       const claimCreationP = this.options.executor.executeContractCall(
         identityContract,
         'claimCreationDate',
@@ -265,20 +270,30 @@ export class Claims extends Logger {
         'getClaimDescription',
         claimId
       );
-      let [claim, claimStatus, creationDate, expirationDate, description] = await Promise.all([
-        claimP,
-        claimStatusP,
-        claimCreationP,
-        claimexpirationDateP,
-        claimDescriptionP,
-      ]);
+      let [
+        claim,
+        claimStatus,
+        creationBlock,
+        creationDate,
+        expirationDate,
+        description,
+        ] = await Promise.all([
+          claimP,
+          claimStatusP,
+          claimCreationBlockP,
+          claimCreationP,
+          claimexpirationDateP,
+          claimDescriptionP,
+        ])
+      ;
 
       if (claim.issuer === nullAddress) {
         return false;
       }
 
       return {
-        creationDate: creationDate,
+        creationBlock,
+        creationDate,
         data: (<any>claim).data,
         description,
         id: claimId,

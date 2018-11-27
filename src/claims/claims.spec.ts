@@ -194,5 +194,29 @@ describe('Claims handler', function() {
       const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo', accounts[1]);
       expect(claimsForAccount).to.have.length(0);
     });
+
+    it('can track the creation date', async() => {
+      const before = Date.now() / 1000;
+      await claims.setClaim(accounts[0], accounts[1], '/company');
+      const after = Date.now() / 1000;
+      const claimsForAccount = await claims.getClaims('/company', accounts[1]);
+      const last = claimsForAccount.length - 1;
+      expect(claimsForAccount[last]).to.have.property('status', ClaimsStatus.Issued);
+      expect(claimsForAccount[last]).to.have.property('creationDate');
+      expect(parseInt(claimsForAccount[last].creationDate, 10)).to.be.gte(before);
+      expect(parseInt(claimsForAccount[last].creationDate, 10)).to.be.lte(after);
+    });
+
+    it('can track the creation block', async() => {
+      const before = await web3.eth.getBlockNumber();
+      await claims.setClaim(accounts[0], accounts[1], '/company');
+      const after = await web3.eth.getBlockNumber();
+      const claimsForAccount = await claims.getClaims('/company', accounts[1]);
+      const last = claimsForAccount.length - 1;
+      expect(claimsForAccount[last]).to.have.property('status', ClaimsStatus.Issued);
+      expect(claimsForAccount[last]).to.have.property('creationBlock');
+      expect(parseInt(claimsForAccount[last].creationBlock, 10)).to.be.gte(before);
+      expect(parseInt(claimsForAccount[last].creationBlock, 10)).to.be.lte(after);
+    });
   });
 });
