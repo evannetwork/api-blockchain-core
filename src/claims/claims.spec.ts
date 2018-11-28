@@ -151,13 +151,13 @@ describe('Claims handler', function() {
       expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Issued);
     });
 
-    it.skip('can confirm a subclaim paths with the subject user', async () => {
+    it('can confirm a subclaim paths with the subject user', async () => {
       const oldLength = (await claims.getClaims('/company/b-s-s/employee/swo4', accounts[1])).length;
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
-      await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo4');
-      await claims.confirmClaim(accounts[1], '/company/b-s-s/employee/swo4', accounts[0]);
+      const claimId = await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo4');
+      await claims.confirmClaim(accounts[1], '/company/b-s-s/employee/swo4', accounts[0], claimId);
       const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo4', accounts[1]);
       expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
       expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Confirmed);
@@ -177,12 +177,12 @@ describe('Claims handler', function() {
       expect(claimsForAccount2[oldLength + 1]).to.have.property('status', ClaimsStatus.Issued);
     });
 
-    it.skip('can reject a subclaim paths with the subject user', async () => {
+    it('can reject a subclaim paths with the subject user', async () => {
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
-      await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo6');
-      await claims.deleteClaim(accounts[1], '/company/b-s-s/employee/swo6', accounts[0]);
+      const claimId = await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo6');
+      await claims.deleteClaim(accounts[1], '/company/b-s-s/employee/swo6', accounts[0], claimId);
       const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo6', accounts[1]);
       expect(claimsForAccount).to.have.lengthOf(0);
     });

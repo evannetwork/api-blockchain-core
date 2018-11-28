@@ -90,16 +90,17 @@ export class Claims extends Logger {
   }
 
   /**
-   * confirms a claim; this can be done, it a claim has been issued for a subject and the subject
-   * wants to confirms it
+   * confirms a claim; this can be done, if a claim has been issued for a subject and the subject
+   * wants to confirm it
    *
    * @param      {string}         subject    account, that approves the claim
    * @param      {string}         claimName  name of the claim (full path)
    * @param      {string}         issuer     The issuer which has signed the claim
+   * @param      {string}         claimId    id of a claim to confirm
    * @return     {Promise<void>}  resolved when done
    */
   public async confirmClaim(
-      subject: string, claimName: string, issuer: string): Promise<void> {
+      subject: string, claimName: string, issuer: string, claimId: string): Promise<void> {
     await this.ensureStorage();
 
     const identity = await this.options.executor.executeContractCall(
@@ -115,22 +116,20 @@ export class Claims extends Logger {
     );
 
     const identityContract = this.options.contractLoader.loadContract('OriginIdentity', identity);
-    const sha3ClaimName = this.options.nameResolver.soliditySha3(claimName);
-    const uint256ClaimName = new BigNumber(sha3ClaimName).toString(10);
-    const sha3ClaimId = this.options.nameResolver.soliditySha3(issuerIdentity, uint256ClaimName);
+    const sha3ClaimId = claimId;
     await this.options.executor.executeContractTransaction(
       identityContract,
       'approveClaim',
       { from: subject, },
-      sha3ClaimId
+      claimId,
     );
   }
 
   /**
-   * Creates a new identity for Account 
+   * Creates a new identity for an account
    *
-   * @param      {string}  accountId  The account identifier
-   * @return     {Promise<any>}       resolves when done
+   * @param      {string}        accountId  The account identifier
+   * @return     {Promise<any>}  resolves when done
    */
   public async createIdentity(accountId: string): Promise<any> {
     await this.ensureStorage();
@@ -160,7 +159,8 @@ export class Claims extends Logger {
    * @param      {string}         issuer     issuer of the claim; only the issuer can delete a claim
    * @return     {Promise<void>}  resolved when done
    */
-  public async deleteClaim(subject: string, claimName: string, issuer: string): Promise<void> {
+  public async deleteClaim(
+      subject: string, claimName: string, issuer: string, claimId: string): Promise<void> {
     await this.ensureStorage();
 
     const identity = await this.options.executor.executeContractCall(
@@ -175,16 +175,12 @@ export class Claims extends Logger {
       issuer
     );
 
-    const identityContract = this.options.contractLoader.loadContract('OriginIdentity', identity);
-    const sha3ClaimName = this.options.nameResolver.soliditySha3(claimName);
-    const uint256ClaimName = new BigNumber(sha3ClaimName).toString(10);
-    const sha3ClaimId = this.options.nameResolver.soliditySha3(issuerIdentity, uint256ClaimName);
-    
+    const identityContract = this.options.contractLoader.loadContract('OriginIdentity', identity);    
     await this.options.executor.executeContractTransaction(
       identityContract,
       'removeClaim',
       { from: subject, },
-      sha3ClaimId
+      claimId,
     );
   }
 
@@ -367,13 +363,14 @@ export class Claims extends Logger {
   /**
    * sets or creates a claim to a given subject identity
    *
-   * @param      {string}         issuer          issuer of the claim
-   * @param      {string}         subject         subject of the claim and the owner of the claim
-   *                                              node
-   * @param      {string}         claimName       name of the claim (full path)
-   * @param      {<type>}         expirationDate  The expiration date for the claim
-   * @param      {object}         claimValue      json object which will be stored in the claim
-   * @return     {Promise<void>}  resolved when done
+   * @param      {string}           issuer             issuer of the claim
+   * @param      {string}           subject            subject of the claim and the owner of the
+   *                                                   claim node
+   * @param      {string}           claimName          name of the claim (full path)
+   * @param      {number}           expirationDate     expiration date for the claim
+   * @param      {object}           claimValue         json object which will be stored in the claim
+   * @param      {<type>}           descriptionDomain  The description domain
+   * @return     {Promise<string>}  claimId
    */
   public async setClaim(
       issuer: string,
@@ -382,7 +379,7 @@ export class Claims extends Logger {
       expirationDate?: number,
       claimValue?: any,
       descriptionDomain?: string,
-      ): Promise<void> {
+      ): Promise<string> {
     await this.ensureStorage();
 
     // get the target identiy contract for the subject
@@ -438,10 +435,14 @@ export class Claims extends Logger {
     }
 
     // add the claim to the target identity
-    await this.options.executor.executeContractTransaction(
+    return await this.options.executor.executeContractTransaction(
       identityContract,
       'addClaimWithMetadata',
-      { from: issuer, },
+      {
+        from: issuer,
+        event: { target: 'ClaimHolderLibrary', eventName: 'ClaimAdded' },
+        getEventResult: (_, args) => { return args.claimId; },
+      },
       uint256ClaimName,
       '1',
       sourceIdentity,
