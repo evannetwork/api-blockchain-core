@@ -81,7 +81,7 @@ Parameters
     * ``executor`` - |source executor|_: |source executor|_ instance
     * ``nameResolver`` - |source nameResolver|_: |source nameResolver|_ instance
     * ``accountStore`` - |source accountStore|_: |source accountStore|_ instance
-    * ``dfs`` - |source dfs|_: |source dfs|_ instance
+    * ``dfs`` - |source dfsInterface|_: |source dfsInterface|_ instance
     * ``log`` - ``Function`` (optional): function to use for logging: ``(message, level) => {...}``
     * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
@@ -208,13 +208,13 @@ Parameters
 
 #. ``claimName`` - ``string``: name (/path) of a claim
 #. ``subject`` - ``string``: subject of the claims
-#. ``isIdentity`` - ``string``(optional): indicates if the subject is already a identity address
+#. ``isIdentity`` - ``string`` (optional): indicates if the subject is already a identity address
 
 -------
 Returns
 -------
 
-``Promise`` returns ``any``: claim info array, contains: issuer, name, status, subject, data, uri, signature, creatioonDate
+``Promise`` returns ``any``: claim info array, contains: issuer, name, status, subject, data, uri, signature, creationDate
 
 -------
 Example
@@ -334,6 +334,7 @@ Parameters
 #. ``claimLabel`` - ``string``: The full claim label
 #. ``subject`` - ``string``: subject of the claims
 #. ``treeArr`` - ``array``: the result tree array, defaults to []
+
 -------
 Returns
 -------
@@ -502,8 +503,14 @@ Example
 
 .. required for building markup
 
+.. |source accountStore| replace:: ``AccountStore``
+.. _source accountStore: /blockchain/account-store.html
+
 .. |source contractLoader| replace:: ``ContractLoader``
 .. _source contractLoader: /contracts/contract-loader.html
+
+.. |source dfsInterface| replace:: ``DfsInterface``
+.. _source dfsInterface: /dfs/dfs-interface.html
 
 .. |source executor| replace:: ``Executor``
 .. _source executor: /blockchain/executor.html
@@ -516,6 +523,3 @@ Example
 
 .. |source nameResolver| replace:: ``NameResolver``
 .. _source nameResolver: /blockchain/name-resolver.html
-
-.. |source accountStore| replace:: ``AccountStore``
-.. _source accountStore: /blockchain/account-store.html
