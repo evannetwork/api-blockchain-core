@@ -58,11 +58,13 @@ export enum ClaimsStatus {
 
 
 export interface ClaimsOptions extends LoggerOptions {
+  accountStore: AccountStore;
   contractLoader: ContractLoader;
+  description: Description;
+  config: any;
+  dfs: DfsInterface;
   executor: Executor;
   nameResolver: NameResolver;
-  accountStore: AccountStore;
-  dfs: DfsInterface;
   storage?: string;
 }
 
@@ -74,6 +76,7 @@ export interface ClaimsOptions extends LoggerOptions {
  */
 export class Claims extends Logger {
   contracts: any = { };
+  encodingEnvelope = 'binary';
   options: ClaimsOptions;
 
   constructor(options: ClaimsOptions) {
@@ -214,7 +217,6 @@ export class Claims extends Logger {
       }
     }
 
-
     const identityContract = this.options.contractLoader.loadContract('OriginIdentity', identity);
     const sha3ClaimName = this.options.nameResolver.soliditySha3(claimName);
     const uint256ClaimName = new BigNumber(sha3ClaimName).toString(10);
@@ -245,17 +247,31 @@ export class Claims extends Logger {
         'claimCreationDate',
         claimId
       );
-
       const claimexpirationDateP = this.options.executor.executeContractCall(
         identityContract,
         'getClaimExpirationDate',
         claimId
       );
-      const claimDescriptionP = this.options.executor.executeContractCall(
-        identityContract,
-        'getClaimDescription',
-        claimId
-      );
+      const claimDescriptionP = (async () => {
+        const descriptionNodeHash = await this.options.executor.executeContractCall(
+          identityContract,
+          'getClaimDescription',
+          claimId
+        );
+        let parsedDescription;
+        if (descriptionNodeHash === nullBytes32) {
+          return null;
+        } else {
+          const resolverAddress = await this.options.executor.executeContractCall(
+            this.options.nameResolver.ensContract, 'resolver', descriptionNodeHash);
+          const resolver =
+            this.options.contractLoader.loadContract('PublicResolver', resolverAddress);
+          const descriptionHash =
+            await this.options.executor.executeContractCall(resolver, 'content', descriptionNodeHash);
+          const envelope = (await this.options.dfs.get(descriptionHash)).toString(this.encodingEnvelope);
+          return JSON.parse(envelope).public;
+        }
+      })();
       let [
         claim,
         claimStatus,
@@ -315,9 +331,9 @@ export class Claims extends Logger {
       'users',
       subject
     );
-    // check if target identity are existing
-    if(!targetIdentity) {
-      const msg = `target identity for account ${subject} not exists`;
+    // check if target identity exists
+    if (!targetIdentity) {
+      const msg = `target identity for account ${subject} does not exist`;
       this.log(msg, 'error');
       throw new Error(msg);
     }
@@ -417,10 +433,8 @@ export class Claims extends Logger {
     // build description hash if required
     let ensFullNodeHash;
     if (descriptionDomain) {
-      ensFullNodeHash = this.options.nameResolver.soliditySha3(
-        this.options.nameResolver.namehash(`${descriptionDomain}.claims.evan`),
-        this.options.nameResolver.soliditySha3(claimName),
-      );
+      ensFullNodeHash = this.options.nameResolver.namehash(
+        this.getFullDescriptionDomainWithHash(claimName, descriptionDomain));
     }
 
     // add the claim to the target identity
@@ -435,8 +449,26 @@ export class Claims extends Logger {
       claimData,
       claimDataUrl,
       expirationDate || 0,
-      ensFullNodeHash || nullBytes32
+      ensFullNodeHash || nullBytes32,
     );
+  }
+
+  /**
+   * set description for a claim under a domain owned by given account
+   *
+   * @param      {<type>}  accountId    The account identifier
+   * @param      {<type>}  topic        The topic
+   * @param      {<type>}  domain       The domain
+   * @param      {<type>}  description  The description
+   * @return     {<type>}  { description_of_the_return_value }
+   */
+  public async setClaimDescription(accountId: string, topic: string, domain: string, description: any) {
+    let toSet = JSON.parse(JSON.stringify(description));
+    if (!toSet.hasOwnProperty('public')) {
+      toSet = { public: toSet };
+    }
+    const domainWithHash = this.getFullDescriptionDomainWithHash(topic, domain);
+    await this.options.description.setDescription(domainWithHash, toSet, accountId);
   }
 
   /**
@@ -526,6 +558,10 @@ export class Claims extends Logger {
       this.contracts.storage = this.options.contractLoader.loadContract('V00_UserRegistry',
         storageAddress);
     }
+  }
+
+  private getFullDescriptionDomainWithHash(topic: string, descriptionDomain: string) {
+    return `${this.options.nameResolver.soliditySha3(topic).substr(2)}.${descriptionDomain}.claims.evan`;
   }
 
   private loadContracts(storage) {
