@@ -11,6 +11,7 @@
 
 ### Fixes
 ### Deprecations
+- claims are no longer updateable, a new claim is created for every `setClaim` transaction
 
 
 ## Version 1.4.0

@@ -163,20 +163,6 @@ describe('Claims handler', function() {
       expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Confirmed);
     });
 
-    it.skip('can update a claim and the status should be not confirmed', async () => {
-      const oldLength = (await claims.getClaims('/company/b-s-s/employee/swo5', accounts[1])).length;
-      await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo5');
-      await claims.confirmClaim(accounts[1], '/company/b-s-s/employee/swo', accounts[0]);
-      const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo5', accounts[1]);
-      expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
-      expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Confirmed);
-      await claims.setClaim(
-        accounts[0], accounts[1], '/company/b-s-s/employee/swo5', null, { test: 'test' });
-      const claimsForAccount2 = await claims.getClaims('/company/b-s-s/employee/swo5', accounts[1]);
-      expect(claimsForAccount).to.have.lengthOf(oldLength + 2);
-      expect(claimsForAccount2[oldLength + 1]).to.have.property('status', ClaimsStatus.Issued);
-    });
-
     it('can reject a subclaim paths with the subject user', async () => {
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
