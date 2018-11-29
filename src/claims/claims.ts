@@ -59,9 +59,9 @@ export enum ClaimsStatus {
 
 export interface ClaimsOptions extends LoggerOptions {
   accountStore: AccountStore;
+  config: any;
   contractLoader: ContractLoader;
   description: Description;
-  config: any;
   dfs: DfsInterface;
   executor: Executor;
   nameResolver: NameResolver;
@@ -157,6 +157,7 @@ export class Claims extends Logger {
    * @param      {string}         subject    the subject of the claim
    * @param      {string}         claimName  name of the claim (full path)
    * @param      {string}         issuer     issuer of the claim; only the issuer can delete a claim
+   * @param      {string}         claimId    id of a claim to delete
    * @return     {Promise<void>}  resolved when done
    */
   public async deleteClaim(
@@ -175,7 +176,7 @@ export class Claims extends Logger {
       issuer
     );
 
-    const identityContract = this.options.contractLoader.loadContract('OriginIdentity', identity);    
+    const identityContract = this.options.contractLoader.loadContract('OriginIdentity', identity);
     await this.options.executor.executeContractTransaction(
       identityContract,
       'removeClaim',
@@ -185,13 +186,14 @@ export class Claims extends Logger {
   }
 
   /**
-   * gets claim informations for a claim name from a given account
+   * gets claim informations for a claim name from a given account; results has the following
+   * properties: creationBlock, creationDate, data, description, expirationDate, id, issuer, name,
+   * signature, status, subject, topic, uri, valid
    *
    * @param      {string}        claimName   name (/path) of a claim
    * @param      {string}        subject     the target subject
    * @param      {boolean}       isIdentity  optional indicates if the subject is already a identity
-   * @return     {Promise<any>}  claim info array, contains: issuer, name, status, subject, data,
-   *                             uri, signature, creationDate, valid
+   * @return     {Promise<any>}  claim info array
    */
   public async getClaims(claimName: string, subject: string, isIdentity?: boolean): Promise<any> {
     await this.ensureStorage();
@@ -207,7 +209,7 @@ export class Claims extends Logger {
 
       if (!identity) {
         const msg = `trying to get claim ${claimName} with account ${subject}, ` +
-          `but the idendity for account ${subject} not exists`;
+          `but the idendity for account ${subject} does not exist`;
         this.log(msg, 'error');
         throw new Error(msg);
       }
@@ -294,6 +296,7 @@ export class Claims extends Logger {
         creationDate,
         data: (<any>claim).data,
         description,
+        expirationDate: expirationDate == 0 ? null : expirationDate,
         id: claimId,
         issuer: (<any>claim).issuer,
         name: claimName,
@@ -303,7 +306,6 @@ export class Claims extends Logger {
         topic: claim.topic,
         uri: (<any>claim).uri,
         valid: await this.validateClaim(claimId, subject, isIdentity),
-        expirationDate: expirationDate == 0 ? null : expirationDate,
       };
     }));
 
@@ -313,10 +315,10 @@ export class Claims extends Logger {
   }
 
   /**
-   * Gets the identity contract for a given accountid.
+   * gets the identity contract for a given account id
    *
-   * @param      {string}  subject  the subject for the identity contract
-   * @return     {Promise<any>}  the identity contract instance 
+   * @param      {string}        subject  the subject for the identity contract
+   * @return     {Promise<any>}  the identity contract instance
    */
   public async getIdentityForAccount(subject: string) {
     await this.ensureStorage();
@@ -340,8 +342,8 @@ export class Claims extends Logger {
   /**
    * checks if a account has already a identity contract
    *
-   * @param      {string}        subject  the target subject
-   * @return     {Promise<any>}  true if identity exists, otherwise false
+   * @param      {string}            subject  the target subject
+   * @return     {Promise<boolean>}  true if identity exists, otherwise false
    */
   public async identityAvailable(subject: string): Promise<any> {
     await this.ensureStorage();
@@ -367,28 +369,32 @@ export class Claims extends Logger {
    * @param      {string}           subject            subject of the claim and the owner of the
    *                                                   claim node
    * @param      {string}           claimName          name of the claim (full path)
-   * @param      {number}           expirationDate     expiration date for the claim
+   * @param      {number}           expirationDate     expiration date, for the claim, defaults to
+   *                                                   ``0`` (does not expire)
    * @param      {object}           claimValue         json object which will be stored in the claim
-   * @param      {<type>}           descriptionDomain  The description domain
+   * @param      {string}           descriptionDomain  domain of the claim, this is a subdomain
+   *                                                   under 'claims.evan', so passing `example`
+   *                                                   will link claims description to
+   *                                                   'sample.claims.evan'
    * @return     {Promise<string>}  claimId
    */
   public async setClaim(
       issuer: string,
       subject: string,
       claimName: string,
-      expirationDate?: number,
+      expirationDate = 0 ,
       claimValue?: any,
       descriptionDomain?: string,
       ): Promise<string> {
     await this.ensureStorage();
 
-    // get the target identiy contract for the subject
+    // get the target identity contract for the subject
     const targetIdentity = await this.options.executor.executeContractCall(
       this.contracts.storage,
       'users',
       subject
     );
-    // get the issuer identiy contract
+    // get the issuer identity contract
     const sourceIdentity = await this.options.executor.executeContractCall(
       this.contracts.storage,
       'users',
@@ -397,13 +403,13 @@ export class Claims extends Logger {
     // check if target and source identity are existing
     if (!targetIdentity || targetIdentity === nullAddress) {
       const msg = `trying to set claim ${claimName} with account ${issuer}, ` +
-        `but target idendity for account ${subject} not exists`;
+        `but target idendity for account ${subject} does not exist`;
       this.log(msg, 'error');
       throw new Error(msg);
     }
 
     const identityContract = this.options.contractLoader.loadContract('OriginIdentity', targetIdentity);
-    // convert the claim name to a unit256
+    // convert the claim name to a uint256
     const sha3ClaimName = this.options.nameResolver.soliditySha3(claimName);
     const uint256ClaimName = new BigNumber(sha3ClaimName).toString(10);
 
@@ -449,44 +455,26 @@ export class Claims extends Logger {
       signedSignature.signature,
       claimData,
       claimDataUrl,
-      expirationDate || 0,
+      expirationDate,
       ensFullNodeHash || nullBytes32,
     );
   }
 
   /**
-   * set description for a claim under a domain owned by given account
-   *
-   * @param      {<type>}  accountId    The account identifier
-   * @param      {<type>}  topic        The topic
-   * @param      {<type>}  domain       The domain
-   * @param      {<type>}  description  The description
-   * @return     {<type>}  { description_of_the_return_value }
-   */
-  public async setClaimDescription(accountId: string, topic: string, domain: string, description: any) {
-    let toSet = JSON.parse(JSON.stringify(description));
-    if (!toSet.hasOwnProperty('public')) {
-      toSet = { public: toSet };
-    }
-    const domainWithHash = this.getFullDescriptionDomainWithHash(topic, domain);
-    await this.options.description.setDescription(domainWithHash, toSet, accountId);
-  }
-
-  /**
    * validates a given claimId in case of integrity
    *
-   * @param      {string}         claimId     The claim identifier
-   * @param      {string}         subject     the subject of the claim
-   * @param      {boolean}        isIdentity  optional indicates if the subject is already a
-   *                                          identity
-   * @return     {Promise<bool>}  resolves with true if the claim is valid, otherwise false
+   * @param      {string}            claimId     claim identifier
+   * @param      {string}            subject     the subject of the claim
+   * @param      {boolean}           isIdentity  optional indicates if the subject is already an
+   *                                             identity
+   * @return     {Promise<boolean>}  resolves with true if the claim is valid, otherwise false
    */
   public async validateClaim(claimId: string, subject: string, isIdentity?: boolean) {
     await this.ensureStorage();
 
     let subjectIdentity = subject;
     if (!isIdentity) {
-      // get the target identiy contract for the subject
+      // get the target identity contract for the subject
       subjectIdentity = await this.options.executor.executeContractCall(
         this.contracts.storage,
         'users',
@@ -495,7 +483,7 @@ export class Claims extends Logger {
 
       // check if target and source identity are existing
       if (!subjectIdentity) {
-        const msg = `target idendity for account ${subject} not exists`;
+        const msg = `target idendity for account ${subject} does not exist`;
         this.log(msg, 'error');
         throw new Error(msg);
       }
@@ -523,10 +511,10 @@ export class Claims extends Logger {
   /**
    * validates a whole claim tree if the path is valid (called recursive)
    *
-   * @param      {string}  claimLabel  The claim label
-   * @param      {string}  subject     The subject of the claim
-   * @param      {array}  treeArr     the result tree array
-   * @return     {Promise<any>}  Array with all resolved claims for the tree
+   * @param      {string}          claimLabel  claim topic of a claim to build the tree for
+   * @param      {string}          subject     subject of the claim and the owner of the claim node
+   * @param      {array}           treeArr     (optional) result tree array, used for recursion
+   * @return     {Promise<any[]>}  Array with all resolved claims for the tree
    */
   public async validateClaimTree(claimLabel: string, subject: string, treeArr = []) {
     const splittedClaimLabel = claimLabel.split('/');

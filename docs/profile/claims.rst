@@ -77,11 +77,13 @@ Parameters
 ----------
 
 #. ``options`` - ``ClaimsOptions``: options for Claims constructor.
+    * ``accountStore`` - |source accountStore|_: |source accountStore|_ instance
+    * ``config`` - ``any``: config object with |source nameResolver|_ config
     * ``contractLoader`` - |source contractLoader|_: |source contractLoader|_ instance
+    * ``description`` - |source description|_: |source description|_ instance
+    * ``dfs`` - |source dfsInterface|_: |source dfsInterface|_ instance
     * ``executor`` - |source executor|_: |source executor|_ instance
     * ``nameResolver`` - |source nameResolver|_: |source nameResolver|_ instance
-    * ``accountStore`` - |source accountStore|_: |source accountStore|_ instance
-    * ``dfs`` - |source dfsInterface|_: |source dfsInterface|_ instance
     * ``log`` - ``Function`` (optional): function to use for logging: ``(message, level) => {...}``
     * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
@@ -101,10 +103,13 @@ Example
 .. code-block:: typescript
   
   const claims = new Claims({
+    accountStore,
+    config,
     contractLoader,
+    description,
+    dfs,
     executor,
     nameResolver,
-    accountStore
     storage: '0x0000000000000000000000000000000000000001',
   });
 
@@ -151,6 +156,83 @@ Example
 
 
 --------------------------------------------------------------------------------
+.. _claims_identityAvailable:
+
+identityAvailable
+================================================================================
+
+.. code-block:: typescript
+
+  claims.identityAvailable(subject);
+
+Checks if a account has already a identity contract.
+
+----------
+Parameters
+----------
+
+#. ``subject`` - ``string``: target subject to check
+
+-------
+Returns
+-------
+
+``Promise`` returns ``boolean``: true if identity exists, otherwise false
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  console.log(await claims.identityAvailable(accounts[0]);
+  // Output:
+  // false
+
+  await  await claims.createIdentity(accounts[0]);
+
+  console.log(await claims.identityAvailable(accounts[0]);
+  // Output:
+  // true
+
+
+
+--------------------------------------------------------------------------------
+
+.. _claims_getIdentityForAccount:
+
+getIdentityForAccount
+================================================================================
+
+.. code-block:: typescript
+
+  claims.getIdentityForAccount(subject);
+
+Gets the identity contract for a given account id.
+
+----------
+Parameters
+----------
+
+#. ``subject`` - ``string``: target subject to get identity for
+
+-------
+Returns
+-------
+
+``Promise`` returns ``any``: identity contract instance
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const identityContract = await claims.getIdentityForAccount(accounts[0]);
+
+
+
+--------------------------------------------------------------------------------
 
 .. _claims_setClaim:
 
@@ -171,13 +253,15 @@ Parameters
 #. ``issuer`` - ``string``: issuer of the claim
 #. ``subject`` - ``string``: subject of the claim and the owner of the claim node
 #. ``claimName`` - ``string``: name of the claim (full path)
+#. ``expirationDate`` - ``number`` (optional): expiration date, for the claim, defaults to ``0`` (does not expire)
 #. ``claimValue`` - ``string`` (optional): bytes32 hash of the claims value, will not be set if omitted
+#. ``descriptionDomain`` - ``string`` (optional): domain of the claim, this is a subdomain under 'claims.evan', so passing `sample` will link claims description to 'sample.claims.evan', unset if omitted
 
 -------
 Returns
 -------
 
-``Promise`` returns ``void``: resolved when done
+``Promise`` returns ``string``: id of new claim
 
 -------
 Example
@@ -185,8 +269,13 @@ Example
 
 .. code-block:: typescript
 
-  await claims.setClaim(accounts[0], accounts[1], '/company');
+  // accounts[0] issues claim '/company' for accounts[1]
+  const firstClaim = await claims.setClaim(accounts[0], accounts[1], '/company');
 
+  // accounts[0] issues claim '/company' for accounts[1], sets an expiration date
+  // and links to description domain 'sample'
+  const secondClaim = await claims.setClaim(
+    accounts[0], accounts[1], '/company', expirationDate, claimValue, 'sample');
 
 
 --------------------------------------------------------------------------------
@@ -225,16 +314,18 @@ Example
   await claims.setClaim(accounts[0], accounts[1], '/company');
   console.dir(await claims.getClaims('/company', accounts[1]));
   // Output:
-  [{ issuer: '0x0000000000000000000000000000000000000001',
+  [{
+    creationDate: 1234567890,
+    data: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    id: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    issuer: '0x0000000000000000000000000000000000000001',
     name: '/company',
     status: 1
     subject: '0x0000000000000000000000000000000000000002',
-    data: '0x0000000000000000000000000000000000000000000000000000000000000000',
     uri: '',
     signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
-    creationDate: 1234567890,
-    id: '0x0000000000000000000000000000000000000000000000000000000000000000',
-    valid: true }]
+    valid: true,
+  }]
 
 
 
@@ -295,12 +386,13 @@ Parameters
 
 #. ``claimId`` - ``string``: The claim identifier
 #. ``subject`` - ``string``: subject of the claims
+#. ``isIdentity`` - ``boolean`` (optional): indicates if the subject is already an identity, defaults to ``false``
 
 -------
 Returns
 -------
 
-``Promise`` returns ``any``: resolves with true if the claim is valid, otherwise false
+``Promise`` returns ``boolean``: resolves with true if the claim is valid, otherwise false
 
 -------
 Example
@@ -308,7 +400,10 @@ Example
 
 .. code-block:: typescript
 
-  console.dir(await claims.validateClaim('0x0000000000000000000000000000000000000000000000000000000000000000', accounts[1]));
+  console.dir(await claims.validateClaim(
+    '0x0000000000000000000000000000000000000000000000000000000000000000',
+    accounts[1]),
+  );
   // Output:
   true
 
@@ -325,21 +420,21 @@ validateClaimTree
 
   claims.validateClaimTree(claimLabel, subject, treeArr);
 
-validates a whole claim tree if the path is valid (called recursive)
+validates a whole claim tree if the path is valid (called recursively)
 
 ----------
 Parameters
 ----------
 
-#. ``claimLabel`` - ``string``: The full claim label
+#. ``claimLabel`` - ``string``: claim topic of a claim to build the tree for
 #. ``subject`` - ``string``: subject of the claims
-#. ``treeArr`` - ``array``: the result tree array, defaults to []
+#. ``treeArr`` - ``array`` (optional): result tree array, used for recursion, defaults to ``[]``
 
 -------
 Returns
 -------
 
-``Promise`` returns ``any``: Array with all resolved claims for the tree
+``Promise`` returns ``any[]``: Array with all resolved claims for the tree
 
 -------
 Example
@@ -391,6 +486,7 @@ Parameters
 #. ``subject`` - ``string``: the subject of the claim
 #. ``claimName`` - ``string``: name of the claim (full path)
 #. ``issuer`` - ``string``: issuer of the claim
+#. ``claimId`` - ``string``: id of a claim to delete
 
 -------
 Returns
@@ -436,6 +532,7 @@ Parameters
 #. ``subject`` - ``string``: account, that approves the claim
 #. ``claimName`` - ``string``: name of the claim (full path)
 #. ``issuer`` - ``string``: The issuer which has signed the claim
+#. ``claimId`` - ``string``: id of a claim to confirm
 
 -------
 Returns
@@ -449,8 +546,8 @@ Example
 
 .. code-block:: typescript
 
-  await claims.setClaim(accounts[0], accounts[1], '/company');
-  await claims.confirmClaim(accounts[1], '/company', accounts[0]);
+  const newClaim = await claims.setClaim(accounts[0], accounts[1], '/company');
+  await claims.confirmClaim(accounts[1], '/company', accounts[0], newClaim);
 
 
 
@@ -508,6 +605,9 @@ Example
 
 .. |source contractLoader| replace:: ``ContractLoader``
 .. _source contractLoader: /contracts/contract-loader.html
+
+.. |source description| replace:: ``Description``
+.. _source description: /blockchain/description.html
 
 .. |source dfsInterface| replace:: ``DfsInterface``
 .. _source dfsInterface: /dfs/dfs-interface.html
