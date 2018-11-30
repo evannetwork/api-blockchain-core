@@ -25,5 +25,5 @@ install:
   - npm install 
 
 script:
-  - ganache-cli -f https://testcore.evan.network &
+  - ganache-cli -f https://testcore.evan.network -l 0x7A1200 -q &
   - npm run test
