@@ -66,7 +66,7 @@ import { Wallet } from '../contracts/wallet';
 export const publicMailBoxExchange = 'mailboxKeyExchange';
 export const sampleContext = 'context sample';
 
-const web3Provider = 'ws://localhost:8546';
+const web3Provider = 'ws://localhost:8545';
 const helperWeb3 = new Web3(null);
 const sampleKeys = {};
 // dataKeys
@@ -282,7 +282,7 @@ export class TestUtils {
   static async getIpfs(): Promise<Ipfs> {
     return new Promise<Ipfs>((resolve) => {
       const remoteNode = IpfsApi({host: 'ipfs.evan.network', port: '443', protocol: 'https'})
-     resolve(new Ipfs({ remoteNode}));
+     resolve(new Ipfs({ remoteNode, accountId: accounts[0], accountStore: this.getAccountStore(null), web3: this.getWeb3()}));
     });
   }
 
