@@ -47,7 +47,6 @@ import { TestUtils } from '../../test/test-utils';
 use(chaiAsPromised);
 
 
-// test BaseContract functionalities with AssetContract
 describe('BaseContract', function() {
   this.timeout(60000);
   let baseContract: BaseContract;
@@ -101,6 +100,7 @@ describe('BaseContract', function() {
   });
 
   it('can be created', async () => {
+    debugger;
     const contractId = await baseContract.createUninitialized(
       'testdatacontract',
       accounts[0],

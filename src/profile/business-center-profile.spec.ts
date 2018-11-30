@@ -27,12 +27,11 @@
 
 import 'mocha';
 import { expect } from 'chai';
-import IpfsServer = require('ipfs');
 
 import {
-  CryptoProvider,
   NameResolver,
   SignerInternal,
+  KeyProvider
 } from '@evan.network/dbcp';
 
 import { accounts } from '../test/accounts';
@@ -75,7 +74,7 @@ describe('BusinessCenterProfile helper', function() {
 
   it('should be able to set and load a profile for a given user in a business center', async () => {
     // use own key for test
-    ipld.keyProvider.keys[nameResolver.soliditySha3(businessCenterDomain)] = ipld.keyProvider.keys[nameResolver.soliditySha3(accounts[0])];
+    (<KeyProvider>ipld.keyProvider).keys[nameResolver.soliditySha3(businessCenterDomain)] = (<KeyProvider>ipld.keyProvider).keys[nameResolver.soliditySha3(accounts[0])];
     // create profile
     const profile = new BusinessCenterProfile({
       ipld,
