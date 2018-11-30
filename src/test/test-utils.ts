@@ -119,9 +119,13 @@ export class TestUtils {
   };
 
   static async getClaims(web3, dfs): Promise<Claims> {
-    const executor = await TestUtils.getExecutor(web3);
+    const eventHub = await this.getEventHub(web3);
+    const executor = await this.getExecutor(web3);
+    executor.eventHub = eventHub;
     return new Claims({
       contractLoader: await TestUtils.getContractLoader(web3),
+      config,
+      description: await TestUtils.getDescription(web3, dfs),
       executor,
       nameResolver: await this.getNameResolver(web3),
       accountStore: this.getAccountStore({}),

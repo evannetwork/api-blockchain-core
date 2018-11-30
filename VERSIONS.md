@@ -4,9 +4,14 @@
 ### Features
 - add description to claims
 - add `addClaimWithMetadata` function to claims for setting claim and metadata at the same time
+- add creation block data to claim information
+- claims are not overwritten anymore, but a new claim is created per set call
+- add description setting (on central claims ENS domain)
+- add description resolval to get function
 
 ### Fixes
 ### Deprecations
+- claims are no longer updateable, a new claim is created for every `setClaim` transaction
 
 
 ## Version 1.4.0

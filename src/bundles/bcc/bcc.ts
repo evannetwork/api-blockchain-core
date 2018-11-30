@@ -371,8 +371,8 @@ const create = function(options: ProfileBundleOptions): ProfileInstance {
     accountId: options.accountId,
     accountStore: (<any>options.signer).accountStore,
     web3: web3,
-    logLog, 
-    logLogLevel 
+    logLog,
+    logLogLevel,
   });
 
   const coreInstance = options.CoreBundle.createAndSetCore(options.coreOptions);
@@ -484,7 +484,9 @@ const create = function(options: ProfileBundleOptions): ProfileInstance {
 
   const claims = new Claims({
     accountStore: (<any>options.signer).accountStore,
+    config: options.coreOptions.config,
     contractLoader: coreInstance.contractLoader,
+    description: coreInstance.description,
     dfs: coreInstance.dfs,
     executor: executor,
     logLog,
