@@ -554,6 +554,81 @@ Example
 --------------------------------------------------------------------------------
 
 
+= Descriptions =
+==========================
+
+.. _claims_setClaimDescription:
+
+setClaimDescription
+================================================================================
+
+.. code-block:: typescript
+
+  claims.setClaimDescription(accountId, topic, domain);
+
+Set description for a claim under a domain owned by given account. This sets the description at the ENS endpoint for a claim.
+
+Notice, that this will **not** insert a description at the claim itself. Consider it as setting a global registry with the description for your claims and not as a label attached to a single claim.
+
+So a setting a description for the claim ``/some/claim`` the subdomain ``example`` registers this at the ENS path `${sha3('/some/claim')}example.claims.evan``.
+
+When this description has been set, it can be used when setting claims, e.g. with
+
+.. code-block:: typescript
+
+  claims.setClaim(accounts[0], accounts[1], '/some/claim', expirationDate, claimValue, 'example');
+
+A description can be setup even after claims have been issued. So it is recommended to use the claim domain when setting up claims, even if the description isn't required at the moment, when claims are set up.
+
+----------
+Parameters
+----------
+
+#. ``accountId`` - ``string``: accountId, that performs the description update
+#. ``topic`` - ``string``: name of the claim (full path) to set description
+#. ``domain`` - ``string``: domain of the claim, this is a subdomain under 'claims.evan', so passing `example` will link claims description to 'sample.claims.evan'
+#. ``description`` - ``string``: DBCP description of the claim; can be an Envelope but only public properties are used
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const sampleClaimsDomain = 'sample';
+    const sampleClaimTopic = '/company';
+    const sampleDescription = {
+      name: 'sample claim',
+      description: 'I\'m a sample claim',
+      author: 'evan.network',
+      version: '1.0.0',
+      dbcpVersion: 1,
+    };
+  await claims.setClaimDescription(accounts[0], sampleClaimTopic, sampleClaimsDomain, sampleDescription);
+  await claims.setClaim(accounts[0], accounts[1], sampleClaimTopic, null, null, sampleClaimsDomain);
+  const claimsForAccount = await claims.getClaims(sampleClaimTopic, accounts[1]);
+  const last = claimsForAccount.length - 1;
+  console.dir(claimsForAccount[last].description);
+  // Output:
+  // {
+  //   name: 'sample claim',
+  //   description: 'I\'m a sample claim',
+  //   author: 'evan.network',
+  //   version: '1.0.0',
+  //   dbcpVersion: 1,
+  // }
+
+
+
+--------------------------------------------------------------------------------
+
+
 = Deployment =
 ==========================
 

@@ -461,6 +461,27 @@ export class Claims extends Logger {
   }
 
   /**
+   * set description for a claim under a domain owned by given account
+   *
+   * @param      {string}         accountId    accountId, that performs the description update
+   * @param      {string}         topic        name of the claim (full path) to set description
+   * @param      {string}         domain       domain of the claim, this is a subdomain under
+   *                                           'claims.evan', so passing `example` will link claims
+   *                                           description to 'sample.claims.evan'
+   * @param      {any}            description  description of the claim; can be an Envelope but
+   *                                           only public properties are used
+   * @return     {Promise<void>}  resolved when done
+   */ 
+  public async setClaimDescription(accountId: string, topic: string, domain: string, description: any) {  
+    let toSet = JSON.parse(JSON.stringify(description));  
+    if (!toSet.hasOwnProperty('public')) {  
+      toSet = { public: toSet };  
+    }  
+    const domainWithHash = this.getFullDescriptionDomainWithHash(topic, domain);  
+    await this.options.description.setDescription(domainWithHash, toSet, accountId);  
+  }
+
+  /**
    * validates a given claimId in case of integrity
    *
    * @param      {string}            claimId     claim identifier
