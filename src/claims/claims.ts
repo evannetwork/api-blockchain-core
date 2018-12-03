@@ -72,7 +72,7 @@ export interface ClaimsOptions extends LoggerOptions {
 /**
  * Claims helper
  *
- * @class      Sharing (name)
+ * @class      Claims (name)
  */
 export class Claims extends Logger {
   contracts: any = { };
@@ -262,12 +262,16 @@ export class Claims extends Logger {
         } else {
           const resolverAddress = await this.options.executor.executeContractCall(
             this.options.nameResolver.ensContract, 'resolver', descriptionNodeHash);
-          const resolver =
-            this.options.contractLoader.loadContract('PublicResolver', resolverAddress);
-          const descriptionHash =
-            await this.options.executor.executeContractCall(resolver, 'content', descriptionNodeHash);
-          const envelope = (await this.options.dfs.get(descriptionHash)).toString(this.encodingEnvelope);
-          return JSON.parse(envelope).public;
+          if (resolverAddress === nullAddress) {
+            return null;
+          } else {
+            const resolver =
+              this.options.contractLoader.loadContract('PublicResolver', resolverAddress);
+            const descriptionHash =
+              await this.options.executor.executeContractCall(resolver, 'content', descriptionNodeHash);
+            const envelope = (await this.options.dfs.get(descriptionHash)).toString(this.encodingEnvelope);
+            return JSON.parse(envelope).public;
+          }
         }
       })();
       let [
@@ -370,12 +374,12 @@ export class Claims extends Logger {
    *                                                   claim node
    * @param      {string}           claimName          name of the claim (full path)
    * @param      {number}           expirationDate     expiration date, for the claim, defaults to
-   *                                                   ``0`` (does not expire)
+   *                                                   `0` (does not expire)
    * @param      {object}           claimValue         json object which will be stored in the claim
    * @param      {string}           descriptionDomain  domain of the claim, this is a subdomain
-   *                                                   under 'claims.evan', so passing `example`
+   *                                                   under 'claims.evan', so passing 'example'
    *                                                   will link claims description to
-   *                                                   'sample.claims.evan'
+   *                                                   'example.claims.evan'
    * @return     {Promise<string>}  claimId
    */
   public async setClaim(
@@ -467,7 +471,7 @@ export class Claims extends Logger {
    * @param      {string}         topic        name of the claim (full path) to set description
    * @param      {string}         domain       domain of the claim, this is a subdomain under
    *                                           'claims.evan', so passing `example` will link claims
-   *                                           description to 'sample.claims.evan'
+   *                                           description to 'example.claims.evan'
    * @param      {any}            description  description of the claim; can be an Envelope but
    *                                           only public properties are used
    * @return     {Promise<void>}  resolved when done
