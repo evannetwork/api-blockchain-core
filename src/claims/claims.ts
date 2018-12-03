@@ -455,7 +455,7 @@ export class Claims extends Logger {
       signedSignature.signature,
       claimData,
       claimDataUrl,
-      expirationDate,
+      expirationDate || 0,
       ensFullNodeHash || nullBytes32,
     );
   }
