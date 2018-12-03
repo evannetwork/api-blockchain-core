@@ -19,11 +19,9 @@ addons:
 before_install:
   - export CXX="g++-4.8"
   - npm install -g npm@latest
-  - npm install -g ganache-cli truffle
 
 install:
   - npm install 
 
 script:
-  - ganache-cli -f https://testcore.evan.network -l 0x3938700 -q &
   - npm run test
