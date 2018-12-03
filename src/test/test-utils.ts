@@ -66,7 +66,7 @@ import { Wallet } from '../contracts/wallet';
 export const publicMailBoxExchange = 'mailboxKeyExchange';
 export const sampleContext = 'context sample';
 
-const web3Provider = 'ws://localhost:8546';
+const web3Provider = 'wss://testcore.evan.network/ws';
 const helperWeb3 = new Web3(null);
 const sampleKeys = {};
 // dataKeys
@@ -119,9 +119,13 @@ export class TestUtils {
   };
 
   static async getClaims(web3, dfs): Promise<Claims> {
-    const executor = await TestUtils.getExecutor(web3);
+    const eventHub = await this.getEventHub(web3);
+    const executor = await this.getExecutor(web3);
+    executor.eventHub = eventHub;
     return new Claims({
       contractLoader: await TestUtils.getContractLoader(web3),
+      config,
+      description: await TestUtils.getDescription(web3, dfs),
       executor,
       nameResolver: await this.getNameResolver(web3),
       accountStore: this.getAccountStore({}),
@@ -278,7 +282,7 @@ export class TestUtils {
   static async getIpfs(): Promise<Ipfs> {
     return new Promise<Ipfs>((resolve) => {
       const remoteNode = IpfsApi({host: 'ipfs.evan.network', port: '443', protocol: 'https'})
-     resolve(new Ipfs({ remoteNode}));
+     resolve(new Ipfs({ remoteNode, accountId: accounts[0], accountStore: this.getAccountStore(null), web3: this.getWeb3()}));
     });
   }
 

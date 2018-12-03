@@ -47,7 +47,6 @@ import { TestUtils } from '../../test/test-utils';
 use(chaiAsPromised);
 
 
-// test BaseContract functionalities with AssetContract
 describe('BaseContract', function() {
   this.timeout(60000);
   let baseContract: BaseContract;
@@ -83,7 +82,7 @@ describe('BaseContract', function() {
     ipld.originator = nameResolver.soliditySha3(accounts[1]);
     profile = await TestUtils.getProfile(web3, ipfs);
     await profile.loadForAccount();
-    await profile.setContactKnownState(accounts[0], true);
+    // await profile.setContactKnownState(accounts[0], true);
     if (!await executor.executeContractCall(businessCenter, 'isMember', accounts[0], { from: accounts[0], })) {
       await executor.executeContractTransaction(businessCenter, 'join', { from: accounts[0], autoGas: 1.1, });
     }
@@ -101,6 +100,7 @@ describe('BaseContract', function() {
   });
 
   it('can be created', async () => {
+    debugger;
     const contractId = await baseContract.createUninitialized(
       'testdatacontract',
       accounts[0],
@@ -126,7 +126,7 @@ describe('BaseContract', function() {
     expect(isMember).to.be.true;
   });
 
-  it.only('can remove invited members to it by the owner', async () => {
+  it('can remove invited members to it by the owner', async () => {
     const contractId = await baseContract.createUninitialized(
       'testdatacontract',
       accounts[0],

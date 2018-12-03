@@ -294,6 +294,8 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   const claims = new Claims({
     accountStore: accountStore,
     contractLoader: contractLoader,
+    config,
+    description,
     dfs: dfs,
     executor: executor,
     nameResolver: nameResolver,

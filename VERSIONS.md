@@ -5,14 +5,30 @@
 ### Fixes
 ### Deprecations
 
+
+## Version 1.5.0
+### Features
+- add description to claims
+- add `addClaimWithMetadata` function to claims for setting claim and metadata at the same time
+- add creation block data to claim information
+- claims are not overwritten anymore, but a new claim is created per set call
+- add description setting (on central claims ENS domain)
+- add description resolval to get function
+
+### Deprecations
+- claims are no longer updateable, a new claim is created for every `setClaim` transaction
+
+
 ## Version 1.4.0
 ### Features
 - adjust claims service to be ERC725/ERC735 compliant
 - add `loadActiveClaims` and `setActiveClaims` function to profile to handle users active claims
 
+
 ## Version 1.3.1
 ### Fixes
 - fix `Profile.exists` check, that threw if profile contract cannot be found
+
 
 ## Version 1.3.0
 ### Features
@@ -25,6 +41,7 @@
 ### Fixes
 - fix `ipld` deleting issue, that occurred when deleting linked nodes in linked subtrees
 
+
 ## Version 1.2.2
 ### Fixes
 - move require(`@evan.network/smart-contracts-core`) within `createDefaultRuntime` to capsuled scope, to be able to require it only in backend scope
@@ -32,10 +49,12 @@
 - fix initailization of aesblob with dfs
 - fix rights and roles 0x0 encoding
 
+
 ## Version 1.2.1
 ### Fixes
 - replace `interruptStep = 200` with `interruptStep = 2000` to fix old / mobile browser breaking by calling to many setTimeouts
 - add `AesBlob` to index export and runtime
+
 
 ## Version 1.2.0
 ### Features
@@ -47,6 +66,7 @@
 ### Fixes
 - fix contract references in service contract calls
 - fix decryption issues in service contracts
+
 
 ## Version 1.1.0
 ### Features
@@ -99,10 +119,12 @@
 - add support for multi-sharings to `Sharings` module
 - add multi-sharing support to `ServiceContract` module
 
+
 ## Version 1.0.0
 - DBCP update
 - Fix web3 reconnect
 - Add iframe support for dapps
+
 
 ## Version 0.9.0
 - initial version and release candidate for 1.0.0
