@@ -7,6 +7,8 @@ node_js:
 
 env:
   - CXX=g++-4.8
+  - TEST=contracts
+  - TEST=services
 
 addons:
   apt:
@@ -24,4 +26,4 @@ install:
   - npm install 
 
 script:
-  - npm run test
+  - npm run test:$TEST
