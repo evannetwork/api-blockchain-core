@@ -33,6 +33,26 @@ const accountMap = {
   '0x00D1267B27C3A80080f9E1B6Ba01DE313b53Ab58':
     'a76a2b068fb715830d042ca40b1a4dab8d088b217d11af91d15b972a7afaf202',
 };
-const accounts = Object.keys(accountMap);
+
+const accountMap2 = {
+  '0x0e10fa0aa2273F074F51a09F2eC95890816FD6d6':
+    '4943D3A1D1457E627537D5C1DD6846B718807D11431283B659AED9F2988F3694',
+  '0xb0646ee7b728B72bc9F73D0f9DDAf00D1a981fa0':
+    'D9734AFE9168C37481A977C91FE25B9C7D814789F515D78DC084A27BD2137E14',
+  '0x04B1Ee1b9D5283B2694B739DA5b49DBC88199750':
+    '68475374AC69364D64F94A47D66410936F63971FE5EEAEFDF85913D153799EE5'
+}
+let accounts; 
+let returnMap;
+if(<any>process.env && <any>process.env.TESTSPEC == 'contracts') {
+  accounts = Object.keys(accountMap);
+  returnMap =  accountMap;
+} else if(<any>process.env && <any>process.env.TESTSPEC == 'services') {
+  accounts = Object.keys(accountMap2);
+  returnMap =  accountMap2;
+} else {
+  accounts = Object.keys(accountMap);
+  returnMap =  accountMap;
+}
 
 export { accounts, accountMap }
