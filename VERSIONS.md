@@ -2,6 +2,8 @@
 
 ## Next Version
 ### Features
+- add `defaultClaims` to `Profile` `loadActiveClaims`
+
 ### Fixes
 ### Deprecations
 
