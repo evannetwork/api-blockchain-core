@@ -2,6 +2,7 @@
 
 ## Next Version
 ### Features
+- add `defaultClaims` to `Profile` `loadActiveClaims`
 - add `Votings` helper for holding votes on-chain
 
 ### Fixes

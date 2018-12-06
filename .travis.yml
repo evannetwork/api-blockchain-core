@@ -6,9 +6,8 @@ node_js:
   - "8.11.3"
 
 env:
-  - CXX=g++-4.8
-  - TEST=contracts
-  - TEST=services
+  - TESTSPEC=contracts
+  - TESTSPEC=services
 
 addons:
   apt:
@@ -26,4 +25,4 @@ install:
   - npm install 
 
 script:
-  - npm run test:$TEST
+  - npm run test:$TESTSPEC
