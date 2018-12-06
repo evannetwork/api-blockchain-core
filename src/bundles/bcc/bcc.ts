@@ -42,7 +42,6 @@ import {
   Envelope,
   EventHub,
   Executor,
-  Ipfs,
   KeyProvider,
   KeyProviderInterface,
   Logger,
@@ -62,6 +61,7 @@ import { CryptoProvider } from '../../encryption/crypto-provider';
 import { BaseContract } from '../../contracts/base-contract/base-contract';
 import { DataContract } from '../../contracts/data-contract/data-contract';
 import { Description } from '../../shared-description';
+import { Ipfs } from '../../dfs/ipfs';
 import { Ipld } from '../../dfs/ipld';
 import { KeyExchange } from '../../keyExchange';
 import { Mailbox, Mail } from '../../mailbox';
@@ -123,7 +123,6 @@ export interface CoreBundle {
   Unencrypted: Unencrypted,
   CoreRuntime: CoreInstance,
   isAccountOnboarded: Function,
-  IpfsRemoteConstructor: IpfsRemoteConstructor,
   keystore: keystore,
   Mnemonic: Mnemonic,
   KeyProviderInterface: KeyProviderInterface,
@@ -138,7 +137,7 @@ export interface CoreBundleOptions {
   contractLoader?: ContractLoader;
   description?: Description;
   dfs?: DfsInterface;
-  dfsRemoteNode?: any;
+  dfsConfig?: any;
   nameResolver?: NameResolver;
   ipfsCache?: any;
 }
@@ -245,8 +244,8 @@ const createCore = function(options: CoreBundleOptions): CoreInstance {
   let dfs;
   if (options.dfs) {
     dfs = options.dfs;
-  } else if (options.dfsRemoteNode) {
-    dfs = new Ipfs({web3: options.web3, remoteNode: options.dfsRemoteNode, cache: options.ipfsCache, logLog, logLogLevel });
+  } else if (options.dfsConfig) {
+    dfs = new Ipfs({web3: options.web3, dfsConfig: options.dfsConfig, cache: options.ipfsCache, logLog, logLogLevel });
     // TODO cleanup after dbcp > 1.0.3 release
     if(options.ipfsCache) {
       dfs.cache = options.ipfsCache;
@@ -254,7 +253,6 @@ const createCore = function(options: CoreBundleOptions): CoreInstance {
   } else {
     throw new Error('missing dfsNode or dfs instance in bundle creator');
   }
-
   // name resolver
   let nameResolver;
   if (options.nameResolver) {
@@ -366,16 +364,18 @@ const create = function(options: ProfileBundleOptions): ProfileInstance {
   options.coreOptions.executor = executor;
 
   options.coreOptions.dfs = new Ipfs({
-    remoteNode: options.coreOptions.dfsRemoteNode,
+    dfsConfig: options.coreOptions.dfsConfig,
     cache: options.coreOptions.ipfsCache,
-    accountId: options.accountId,
-    accountStore: (<any>options.signer).accountStore,
     web3: web3,
     logLog,
     logLogLevel,
   });
 
   const coreInstance = options.CoreBundle.createAndSetCore(options.coreOptions);
+
+  (<any>options.signer).accountStore.getPrivatekey(options.accountId).then((pk) => {
+    coreInstance.dfs.setAccountAndPrivateKey(options.accountId, '0x' + pk);
+  })
 
   coreInstance.description.cryptoProvider = new CryptoProvider({
     unencrypted: new Unencrypted(),

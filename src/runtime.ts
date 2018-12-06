@@ -31,7 +31,6 @@ import {
   DfsInterface,
   EventHub,
   Executor,
-  Ipfs,
   KeyProvider,
   Logger,
   SignerInterface,
@@ -47,6 +46,7 @@ import { config } from './config';
 import { CryptoProvider } from './encryption/crypto-provider';
 import { DataContract } from './contracts/data-contract/data-contract';
 import { Description } from './shared-description';
+import { Ipfs } from './dfs/ipfs';
 import { Ipld } from './dfs/ipld';
 import { KeyExchange } from './keyExchange';
 import { Mailbox } from './mailbox';

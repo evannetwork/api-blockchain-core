@@ -2,6 +2,8 @@
 
 ## Next Version
 ### Features
+- add own ipfs handler
+- add ipfs identification header to enable future ipfs payments
 ### Fixes
 ### Deprecations
 
