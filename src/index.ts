@@ -30,7 +30,6 @@ export {
   ContractLoader,
   EventHub,
   Executor,
-  Ipfs,
   KeyProvider,
   NameResolver,
   SignerInternal,
@@ -47,6 +46,7 @@ export { DataContract } from './contracts/data-contract/data-contract';
 export { Description } from './shared-description';
 export { ExecutorAgent } from './contracts/executor-agent';
 export { Ipld } from './dfs/ipld';
+export { Ipfs } from './dfs/ipfs';
 export { KeyExchange } from './keyExchange';
 export { Mailbox } from './mailbox';
 export { Profile } from './profile/profile';

@@ -61,7 +61,7 @@
     "gulp": "^3.9.1",
     "gulp-open": "^2.0.0",
     "gulp-sourcemaps": "^2.6.1",
-    "ipfs-api": "^17.5.0",
+    "ipfs-api": "^26.1.2",
     "mocha": "4.0.1",
     "ts-node": "3.3.0",
     "typescript": "2.6.2",

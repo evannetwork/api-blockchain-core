@@ -27,7 +27,6 @@
 
 import {
   ContractLoader,
-  Ipfs,
   Logger,
   LoggerOptions,
   NameResolver,
@@ -36,7 +35,7 @@ import {
 
 import { CryptoProvider } from './encryption/crypto-provider';
 import { Ipld } from './dfs/ipld';
-
+import { Ipfs } from './dfs/ipfs';
 
 /**
  * mail object

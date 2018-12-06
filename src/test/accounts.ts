@@ -25,7 +25,7 @@
   https://evan.network/license/
 */
 
-const accountMap = {
+const accountMap1 = {
   '0x001De828935e8c7e4cb56Fe610495cAe63fb2612':
     '01734663843202e2245e5796cb120510506343c67915eb4f9348ac0d8c2cf22a',
   '0x0030C5e7394585400B1FB193DdbCb45a37Ab916E':
@@ -42,17 +42,18 @@ const accountMap2 = {
   '0x04B1Ee1b9D5283B2694B739DA5b49DBC88199750':
     '68475374AC69364D64F94A47D66410936F63971FE5EEAEFDF85913D153799EE5'
 }
+<<<<<<< HEAD
 let accounts;
-let returnMap;
+let accountMap;
 if (<any>process.env && <any>process.env.TESTSPEC === 'contracts') {
-  accounts = Object.keys(accountMap);
-  returnMap =  accountMap;
+  accounts = Object.keys(accountMap1);
+  accountMap =  accountMap1;
 } else if (<any>process.env && <any>process.env.TESTSPEC === 'services') {
   accounts = Object.keys(accountMap2);
-  returnMap =  accountMap2;
+  accountMap =  accountMap2;
 } else {
-  accounts = Object.keys(accountMap);
-  returnMap =  accountMap;
+  accounts = Object.keys(accountMap1);
+  accountMap =  accountMap1;
 }
 
 export { accounts, accountMap }

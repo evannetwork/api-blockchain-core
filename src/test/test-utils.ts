@@ -35,7 +35,6 @@ import {
   DfsInterface,
   EventHub,
   Executor,
-  Ipfs,
   KeyProvider,
   Logger,
   SignerInternal,
@@ -53,6 +52,7 @@ import { CryptoProvider } from '../encryption/crypto-provider';
 import { DataContract } from '../contracts/data-contract/data-contract';
 import { ExecutorWallet } from '../contracts/executor-wallet';
 import { Ipld } from '../dfs/ipld';
+import { Ipfs } from '../dfs/ipfs';
 import { NameResolver } from '../name-resolver';
 import { Profile } from '../profile/profile';
 import { RightsAndRoles } from '../contracts/rights-and-roles';
@@ -281,9 +281,15 @@ export class TestUtils {
   }
 
   static async getIpfs(): Promise<Ipfs> {
-    return new Promise<Ipfs>((resolve) => {
-      const remoteNode = IpfsApi({host: 'ipfs.evan.network', port: '443', protocol: 'https'})
-     resolve(new Ipfs({ remoteNode, accountId: accounts[0], accountStore: this.getAccountStore(null), web3: this.getWeb3()}));
+    return new Promise<Ipfs>(async (resolve) => {
+      const pk = await this.getAccountStore(null).getPrivateKey(accounts[0]);
+      const ipfs = new Ipfs({
+        dfsConfig: {host: 'ipfs.evan.network', port: '443', protocol: 'https'},
+        accountId: accounts[0],
+        privateKey: pk,
+        web3: this.getWeb3()
+      });
+     resolve(ipfs);
     });
   }
 
