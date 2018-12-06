@@ -42,12 +42,12 @@ const accountMap2 = {
   '0x04B1Ee1b9D5283B2694B739DA5b49DBC88199750':
     '68475374AC69364D64F94A47D66410936F63971FE5EEAEFDF85913D153799EE5'
 }
-let accounts; 
+let accounts;
 let returnMap;
-if(<any>process.env && <any>process.env.TESTSPEC == 'contracts') {
+if (<any>process.env && <any>process.env.TESTSPEC === 'contracts') {
   accounts = Object.keys(accountMap);
   returnMap =  accountMap;
-} else if(<any>process.env && <any>process.env.TESTSPEC == 'services') {
+} else if (<any>process.env && <any>process.env.TESTSPEC === 'services') {
   accounts = Object.keys(accountMap2);
   returnMap =  accountMap2;
 } else {
