@@ -4,6 +4,8 @@
 ### Features
 - add own ipfs handler
 - add ipfs identification header to enable future ipfs payments
+- add `defaultClaims` to `Profile` `loadActiveClaims`
+- add `Votings` helper for holding votes on-chain
 ### Fixes
 ### Deprecations
 

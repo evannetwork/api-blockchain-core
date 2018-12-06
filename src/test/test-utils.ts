@@ -60,6 +60,7 @@ import { ServiceContract } from '../contracts/service-contract/service-contract'
 import { setTimeout } from 'timers';
 import { Description } from '../shared-description';
 import { Sharing } from '../contracts/sharing';
+import { Votings } from '../votings/votings';
 import { Wallet } from '../contracts/wallet';
 
 
@@ -382,6 +383,15 @@ export class TestUtils {
       keyProvider: TestUtils.getKeyProvider(),
       nameResolver: await TestUtils.getNameResolver(web3),
       defaultCryptoAlgo: 'aes',
+    });
+  }
+
+  static async getVotings(web3): Promise<Votings> {
+    const executor = await TestUtils.getExecutor(web3);
+    executor.eventHub = await TestUtils.getEventHub(web3);
+    return new Votings({
+      contractLoader: await this.getContractLoader(web3),
+      executor,
     });
   }
 

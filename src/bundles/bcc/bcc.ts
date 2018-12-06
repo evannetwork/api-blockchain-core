@@ -37,6 +37,7 @@ import crypto = require('crypto');
 
 // used for building bundle
 import {
+  AccountStore,
   ContractLoader,
   DfsInterface,
   Envelope,
@@ -180,6 +181,7 @@ export interface ProfileBundleOptions {
   signer: SignerInternal | SignerExternal;
   keyProvider: KeyProvider;
   executor: Executor;
+  accountStore: AccountStore;
 }
 
 export interface ProfileInstance {
@@ -351,6 +353,7 @@ let setCore = function(coreInstance: CoreInstance) {
  */
 const create = function(options: ProfileBundleOptions): ProfileInstance {
   const web3 = options.coreOptions.web3;
+  const accountStore = options.accountStore || (<any>options.signer).accountStore;
 
   // => correct executor
   const executor = options.executor || new Executor({
@@ -483,7 +486,7 @@ const create = function(options: ProfileBundleOptions): ProfileInstance {
   });
 
   const claims = new Claims({
-    accountStore: (<any>options.signer).accountStore,
+    accountStore: accountStore,
     config: options.coreOptions.config,
     contractLoader: coreInstance.contractLoader,
     description: coreInstance.description,

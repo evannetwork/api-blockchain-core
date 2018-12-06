@@ -15,6 +15,7 @@ Blockchain
     name-resolver
     description
     wallet
+    votings
 
 This section contains modules, that deal with basic blockchain interactions, like
 
