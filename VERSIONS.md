@@ -4,6 +4,7 @@
 ### Features
 - add `defaultClaims` to `Profile` `loadActiveClaims`
 - add `Votings` helper for holding votes on-chain
+- add support for `PayableRegistrar`, that allows to by domain names with EVEs
 
 ### Fixes
 ### Deprecations
