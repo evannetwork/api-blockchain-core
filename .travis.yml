@@ -8,6 +8,7 @@ node_js:
 env:
   - TESTSPEC=contracts
   - TESTSPEC=services
+  - TESTSPEC=datacontract
 
 addons:
   apt:
