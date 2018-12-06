@@ -2,6 +2,8 @@
 
 ## Next Version
 ### Features
+- add `Votings` helper for holding votes on-chain
+
 ### Fixes
 ### Deprecations
 
