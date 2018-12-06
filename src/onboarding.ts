@@ -27,7 +27,6 @@
 
 import {
   ContractLoader,
-  Ipfs,
   Logger,
   LoggerOptions,
   NameResolver,
@@ -35,6 +34,7 @@ import {
 } from '@evan.network/dbcp';
 
 import { CryptoProvider } from './encryption/crypto-provider';
+import { Ipfs } from './dfs/ipfs';
 import { Ipld } from './dfs/ipld';
 import { Mail, Mailbox } from './mailbox';
 

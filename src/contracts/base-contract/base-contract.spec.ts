@@ -31,7 +31,6 @@ import chaiAsPromised = require('chai-as-promised');
 
 import {
   ContractLoader,
-  Ipfs,
   EventHub,
   Executor,
   NameResolver,
@@ -40,6 +39,7 @@ import {
 import { accounts } from '../../test/accounts';
 import { BaseContract, ConsumerState, ContractState } from './base-contract';
 import { config } from '../../config';
+import { Ipfs } from '../../dfs/ipfs';
 import { Ipld } from '../../dfs/ipld';
 import { Profile } from '../../profile/profile';
 import { TestUtils } from '../../test/test-utils';
