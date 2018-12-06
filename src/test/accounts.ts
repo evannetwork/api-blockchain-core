@@ -52,9 +52,9 @@ const accountMap3 = {
     '340BA316637FD01A1AFD54D4491A899F6D8EA0FB89A1D7BA94682F7D68B21B20'
 }
 
-let accounts; 
+let accounts;
 let accountMap;
-if(<any>process.env && <any>process.env.TESTSPEC == 'contracts') {
+if (<any>process.env && <any>process.env.TESTSPEC === 'contracts') {
   accounts = Object.keys(accountMap1);
   accountMap =  accountMap1;
 } else if(<any>process.env && <any>process.env.TESTSPEC == 'services') {
