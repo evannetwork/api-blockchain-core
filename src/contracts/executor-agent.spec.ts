@@ -53,7 +53,7 @@ let web3;
 
 use(chaiAsPromised);
 
-describe('Executor handler', function() {
+describe.skip('Executor handler', function() {
   this.timeout(300000);
   let executor: ExecutorAgent;
 

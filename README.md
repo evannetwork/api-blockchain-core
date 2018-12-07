@@ -1,5 +1,7 @@
 # blockchain-core
 
+[![Build Status](https://travis-ci.org/evannetwork/api-blockchain-core.svg?branch=develop)](https://travis-ci.org/evannetwork/api-blockchain-core)
+
 ## Table of Contents
 <!-- MarkdownTOC autolink="true" -->
 

@@ -91,11 +91,12 @@
     "build-contracts": "node scripts/buildContracts.js",
     "discify": "npm run build && gulp --gulpfile scripts/discify.js",
     "installl": "npm install && ./scripts/link.sh",
-    "test:services": "env-cmd ./.env.local npm run build && mocha --inspect -r ts-node/register src/claims/*.spec.ts src/dfs/*.spec.ts src/encryption/*.spec.ts src/profile/*.spec.ts src/*.spec.ts",
-    "test:contracts": "env-cmd ./.env.local npm run build && mocha --inspect -r ts-node/register src/contracts/*.spec.ts src/contracts/base-contract/*.spec.ts src/contracts/business-center/*.spec.ts src/contracts/data-contract/*.spec.ts src/contracts/service-contract/*.spec.ts",
-    "testunit": "env-cmd ./.env.local npm run build && mocha --inspect -r ts-node/register $*",
-    "testunitbail": "env-cmd ./.env.local npm run build && mocha -b --inspect -r ts-node/register $*",
-    "testunitbrk": "env-cmd ./.env.local npm run build && mocha --inspect-brk -r ts-node/register $*"
+    "test:services": "env-cmd ./.env.local npm run build && mocha --exit --inspect -r ts-node/register src/claims/*.spec.ts src/dfs/*.spec.ts src/encryption/*.spec.ts src/profile/*.spec.ts src/*.spec.ts",
+    "test:contracts": "env-cmd ./.env.local npm run build && mocha --exit --inspect -r ts-node/register src/contracts/*.spec.ts src/contracts/base-contract/*.spec.ts src/contracts/business-center/*.spec.ts src/contracts/service-contract/*.spec.ts",
+    "test:datacontract": "env-cmd ./.env.local npm run build && mocha --exit --inspect -r ts-node/register src/contracts/data-contract/*.spec.ts",
+    "testunit": "env-cmd ./.env.local npm run build && mocha --exit --inspect -r ts-node/register $*",
+    "testunitbail": "env-cmd ./.env.local npm run build && mocha --exit -b --inspect -r ts-node/register $*",
+    "testunitbrk": "env-cmd ./.env.local npm run build && mocha --exit --inspect-brk -r ts-node/register $*"
   },
   "types": "./dist/index.d.ts",
   "version": "1.5.0"

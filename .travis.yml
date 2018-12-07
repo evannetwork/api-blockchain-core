@@ -8,6 +8,7 @@ node_js:
 env:
   - TESTSPEC=contracts
   - TESTSPEC=services
+  - TESTSPEC=datacontract
 
 addons:
   apt:
@@ -23,6 +24,7 @@ before_install:
 
 install:
   - npm install 
+  - cd node_modules/@evan.network && rm -rf dbcp && git clone https://github.com/evannetwork/dbcp.git && cd dbcp && git checkout develop && npm i && npm run build && cd ../../../
 
 script:
   - npm run test:$TESTSPEC

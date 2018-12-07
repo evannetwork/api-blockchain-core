@@ -37,9 +37,9 @@ import {
   Logger,
   LoggerOptions,
   NameResolver,
-  DfsInterface,
-  Ipfs
+  DfsInterface
 } from '@evan.network/dbcp';
+import { Ipfs } from '../dfs/ipfs';
 
 
 const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000';

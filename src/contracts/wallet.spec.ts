@@ -33,13 +33,13 @@ import {
   ContractLoader,
   DfsInterface,
   Executor,
-  Ipfs,
   NameResolver,
 } from '@evan.network/dbcp';
 
 import { accounts } from '../test/accounts';
 import { config } from '../config';
 import { CryptoProvider } from '../encryption/crypto-provider';
+import { Ipfs } from '../dfs/ipfs';
 import { Sharing } from './sharing';
 import { sampleContext, TestUtils } from '../test/test-utils';
 import { Wallet } from './wallet';
