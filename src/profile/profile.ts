@@ -570,7 +570,6 @@ export class Profile extends Logger {
    */
   private async loadActiveClaims() {
     const defaultClaims = [
-      '/contacts/valid',
       '/onboarding/agbaccepted',
     ];
 
