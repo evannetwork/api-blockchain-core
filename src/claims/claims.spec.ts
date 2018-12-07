@@ -56,8 +56,8 @@ describe('Claims handler', function() {
     dfs = await TestUtils.getIpfs();
     claims = await TestUtils.getClaims(web3, dfs);
     nameResolver = await TestUtils.getNameResolver(web3);
-    //await claims.createIdentity(accounts[0]);
-    //await claims.createIdentity(accounts[1]);
+    await claims.createIdentity(accounts[0]);
+    await claims.createIdentity(accounts[1]);
   });
 
   after(async () => {

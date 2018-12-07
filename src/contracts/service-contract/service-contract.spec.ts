@@ -520,7 +520,7 @@ describe('ServiceContract', function() {
     expect(answers1[answerId].data).to.deep.eq(null);
   });
 
-  describe('when paging through answers and answers', () => {
+  describe('when paging through calls and answers', () => {
     let contract;
     let sampleCalls;
     let sampleAnswers;
@@ -542,24 +542,24 @@ describe('ServiceContract', function() {
       }
 
       // if using existing contract
-      contract = loader.loadContract('ServiceContractInterface', '0x7B818d221C2F3e1eB64e5417047F94bc6cC91610');
+      // contract = loader.loadContract('ServiceContractInterface', '0x7B818d221C2F3e1eB64e5417047F94bc6cC91610');
 
-      // // if creating new contract
-      // contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
-      // await sc0.inviteToContract(businessCenterDomain, contract.options.address, accounts[0], accounts[2]);
-      // const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', 0);
-      // await sharing.addSharing(contract.options.address, accounts[0], accounts[2], '*', 0, contentKey);
-      // let callIndex = 0;
-      // for (let currentSample of sampleCalls) {
-      //   console.log(`send test call ${callIndex++}`);
-      //   await sc0.sendCall(contract, accounts[0], currentSample, [accounts[2]]);
-      // }
-      // let answerIndex = 0;
-      // for (let answer of sampleAnswers) {
-      //   console.log(`send test answer ${answerIndex++}`);
-      //   await sc2.sendAnswer(contract, accounts[2], answer, anweredCallId, accounts[0])
-      // }
-      // console.log(contract.options.address);
+      // if creating new contract
+      contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+      await sc0.inviteToContract(businessCenterDomain, contract.options.address, accounts[0], accounts[2]);
+      const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', 0);
+      await sharing.addSharing(contract.options.address, accounts[0], accounts[2], '*', 0, contentKey);
+      let callIndex = 0;
+      for (let currentSample of sampleCalls) {
+        console.log(`send test call ${callIndex++}`);
+        await sc0.sendCall(contract, accounts[0], currentSample, [accounts[2]]);
+      }
+      let answerIndex = 0;
+      for (let answer of sampleAnswers) {
+        console.log(`send test answer ${answerIndex++}`);
+        await sc2.sendAnswer(contract, accounts[2], answer, anweredCallId, accounts[0])
+      }
+      console.log(contract.options.address);
     });
 
     describe('when retrieving calls', () => {

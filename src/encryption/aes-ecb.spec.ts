@@ -27,6 +27,7 @@
 
 import 'mocha';
 import { expect } from 'chai';
+import { randomBytes } from 'crypto';
 
 import { AesEcb } from './aes-ecb'
 import { TestUtils } from '../test/test-utils'
@@ -48,21 +49,12 @@ describe('aes (ecb) handler', function() {
     expect(key).not.to.be.undefined;
   });
 
-  it('should be able to encrypt and decrypt a random message', async () => {
+  it('should be able to encrypt and decrypt a random (32 bytes long) data', async () => {
     const aes = new AesEcb();
     const key = await aes.generateKey();
-    const message = Buffer.from(Math.random().toString(), 'utf-8');
+    const message = randomBytes(32);
     const encrypted = await aes.encrypt(message, { key: key, });
     const decrypted = await aes.decrypt(encrypted, { key: key, });
     expect(decrypted.toString('utf-8')).to.eq(message.toString('utf-8'));
-  });
-
-  it('should be able to encrypt and decrypt a random number', async () => {
-    const aes = new AesEcb();
-    const key = await aes.generateKey();
-    const message = Buffer.from(Math.random().toString(), 'utf-8');
-    const encrypted = await aes.encrypt(message, { key: key, });
-    const decrypted = await aes.decrypt(encrypted, { key: key, });
-    expect(decrypted).to.deep.eq(message);
   });
 });
