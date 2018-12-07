@@ -117,6 +117,7 @@ export class Ipfs extends Logger implements DfsInterface {
         this.remoteNode = ipfsAPI(options.dfsConfig);
       } else {
         this.log('No accountId is given for IPFS api', 'warning');
+        this.remoteNode = ipfsAPI(options.dfsConfig);
       }
     } else {
       this.log('No IPFS config of ipfs remotenode are given', 'error');
