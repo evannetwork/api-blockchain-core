@@ -127,23 +127,25 @@ describe('NameResolver class', function() {
     const getWrongPrice = () => web3.utils.toWei('4', 'wei');
 
     // disabled by default, only required when deploying new registrars
-    it('can be set up', async() => {
-      const payableRegistrar = await executor.createContract(
-        'PayableRegistrar',
-        [
-          config.nameResolver.ensAddress,
-          nameResolver.namehash('payable.registrar.test.evan'),
-          getPrice(),
-        ],
-        { from: registrarOwner, gas: 1000000, },
-      );
-      await nameResolver.setAddress(
-        payableRegistrarDomain,
-        payableRegistrar.options.address,
-        registrarOwner,
-        payableRegistrar.options.address,
-      );
-    });
+    if (registrarOwner) {
+      it('can be set up', async() => {
+        const payableRegistrar = await executor.createContract(
+          'PayableRegistrar',
+          [
+            config.nameResolver.ensAddress,
+            nameResolver.namehash('payable.registrar.test.evan'),
+            getPrice(),
+          ],
+          { from: registrarOwner, gas: 1000000, },
+        );
+        await nameResolver.setAddress(
+          payableRegistrarDomain,
+          payableRegistrar.options.address,
+          registrarOwner,
+          payableRegistrar.options.address,
+        );
+      });
+    }
 
     describe('when using another account than the registrar owner', () => {
       it('should be able to claim a new domain from a payable registrar', async() => {
@@ -185,42 +187,55 @@ describe('NameResolver class', function() {
       });
     });
 
-    describe('when using registrar owner account', () => {
-      it('should allow to take a payable claimed domain from another account as registrar owner', async() => {
-        const data = prepareData(payableRegistrarDomain);
-        // check owner at ens
-        const oldOwner = await executor.executeContractCall(data.ens, 'owner', data.domainHash);
-        expect(oldOwner).not.to.eq(data.randomAccount);
-        // claim domain
-        await nameResolver.claimAddress(data.domain, domainNonOwner, data.randomAccount, getPrice());
-        // check again
-        expect(await executor.executeContractCall(
-          data.ens, 'owner', data.domainHash)).to.eq(data.randomAccount);
-        // try to claim address, that is already onwed by data.randomAccount
-        await nameResolver.claimAddress(data.domain, registrarOwner, registrarOwner, getPrice());
-      });
+    if (registrarOwner) {
+      describe('when using registrar owner account', () => {
+        it('should allow to take a payable claimed domain from another account as registrar owner', async() => {
+          const data = prepareData(payableRegistrarDomain);
+          // check owner at ens
+          const oldOwner = await executor.executeContractCall(data.ens, 'owner', data.domainHash);
+          expect(oldOwner).not.to.eq(data.randomAccount);
+          // claim domain
+          await nameResolver.claimAddress(data.domain, domainNonOwner, data.randomAccount, getPrice());
+          // check again
+          expect(await executor.executeContractCall(
+            data.ens, 'owner', data.domainHash)).to.eq(data.randomAccount);
+          // try to claim address, that is already onwed by data.randomAccount
+          await nameResolver.claimAddress(data.domain, registrarOwner, registrarOwner, getPrice());
+        });
 
-      it('should allow to change the price', async() => {
-        const data = prepareData(payableRegistrarDomain);
-        expect(await nameResolver.getPrice(data.domain)).to.eq(getPrice());
-        const newPrice = Math.floor(Math.random() * 10000).toString();
-        await nameResolver.setPrice(payableRegistrarDomain, registrarOwner, newPrice);
-        expect(await nameResolver.getPrice(data.domain)).to.eq(newPrice);
-        // restore price
-        await nameResolver.setPrice(payableRegistrarDomain, registrarOwner, getPrice());
-      });
+        it('should allow to change the price', async() => {
+          const data = prepareData(payableRegistrarDomain);
+          expect(await nameResolver.getPrice(data.domain)).to.eq(getPrice());
+          const newPrice = Math.floor(Math.random() * 10000).toString();
+          await nameResolver.setPrice(payableRegistrarDomain, registrarOwner, newPrice);
+          expect(await nameResolver.getPrice(data.domain)).to.eq(newPrice);
+          // restore price
+          await nameResolver.setPrice(payableRegistrarDomain, registrarOwner, getPrice());
+        });
 
-      it('should allow to claim existing funds from registrar contract', async() => {
-        const data = prepareData(payableRegistrarDomain);
-        // claim domain to ensure funds on contract
-        await nameResolver.claimAddress(data.domain, domainOwner, data.randomAccount, getPrice());
-        const registrarAddress = await executor.executeContractCall(
-          data.ens, 'owner', nameResolver.namehash(payableRegistrarDomain));
-        expect(await web3.eth.getBalance(registrarAddress)).not.to.eq('0');
-        const registrar = contractLoader.loadContract('PayableRegistrar', registrarAddress);
-        await executor.executeContractTransaction(registrar, 'claimFunds', { from: registrarOwner });
-        expect(await web3.eth.getBalance(registrarAddress)).to.eq('0');
+        it('should allow to claim existing funds from registrar contract', async() => {
+          const data = prepareData(payableRegistrarDomain);
+          // claim domain to ensure funds on contract
+          await nameResolver.claimAddress(data.domain, domainOwner, data.randomAccount, getPrice());
+          const registrarAddress = await executor.executeContractCall(
+            data.ens, 'owner', nameResolver.namehash(payableRegistrarDomain));
+          expect(await web3.eth.getBalance(registrarAddress)).not.to.eq('0');
+          const registrar = contractLoader.loadContract('PayableRegistrar', registrarAddress);
+          await nameResolver.claimFunds(payableRegistrarDomain, registrarOwner);
+          expect(await web3.eth.getBalance(registrarAddress)).to.eq('0');
+        });
+
+        it('should not allow to claim existing funds from non registrar owner contract', async() => {
+          const data = prepareData(payableRegistrarDomain);
+          // claim domain to ensure funds on contract
+          await nameResolver.claimAddress(data.domain, domainOwner, data.randomAccount, getPrice());
+          const registrarAddress = await executor.executeContractCall(
+            data.ens, 'owner', nameResolver.namehash(payableRegistrarDomain));
+          expect(await web3.eth.getBalance(registrarAddress)).not.to.eq('0');
+          const registrar = contractLoader.loadContract('PayableRegistrar', registrarAddress);
+          await expect(nameResolver.claimFunds(domainOwner, registrarOwner)).to.be.rejected;
+        });
       });
-    });
+    }
   });
 });

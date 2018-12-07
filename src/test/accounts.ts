@@ -57,10 +57,10 @@ let accountMap;
 if (<any>process.env && <any>process.env.TESTSPEC === 'contracts') {
   accounts = Object.keys(accountMap1);
   accountMap =  accountMap1;
-} else if(<any>process.env && <any>process.env.TESTSPEC == 'services') {
+} else if (<any>process.env && <any>process.env.TESTSPEC === 'services') {
   accounts = Object.keys(accountMap3);
   accountMap =  accountMap3;
-} else if(<any>process.env && <any>process.env.TESTSPEC == 'datacontract') {
+} else if (<any>process.env && <any>process.env.TESTSPEC === 'datacontract') {
   accounts = Object.keys(accountMap2);
   accountMap =  accountMap2;
 } else {

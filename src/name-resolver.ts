@@ -34,13 +34,14 @@ export class NameResolver extends Dbcp.NameResolver {
   }
 
   /**
-   * tries to claim node ownership from parent nodes owner,
-   * this assumes, that the parent node owner is a FIFS registar
+   * tries to claim node ownership from parent nodes owner, this assumes, that the parent node owner
+   * is a registar, that supports claiming address from it (FIFS registrar or PayableRegistrar)
    *
-   * @param      name           domain name to set (plain text)
-   * @param      accountId      account, that executes the transaction
-   * @param      domainOwnerId  owner of the new domain, fallbacks to accountId
-   * @return     {Promise<void>}   resolved when done
+   * @param      {string}         name           domain name to set (plain text)
+   * @param      {string}         accountId      account, that executes the transaction
+   * @param      {string}         domainOwnerId  owner of the new domain, fallbacks to accountId
+   * @param      {string|number}  value          (optional) value to send (if registrar is payable)
+   * @return     {Promise<void>}  resolved when done
    */
   public async claimAddress(
       name: string, accountId: string, domainOwnerId = accountId, value = '0'): Promise<void> {
@@ -82,6 +83,40 @@ export class NameResolver extends Dbcp.NameResolver {
     );
   }
 
+  /**
+   * claim funds for domain
+   *
+   * @param      {string}         name       ENS address of a domain owned by a registrar (e.g.
+   *                                         'sample.payable.test.evan')
+   * @param      {string}         accountId  account that performs the action (needs proper
+   *                                         permisions for registrar)
+   * @return     {Promise<void>}  resolved when done
+   */
+  public async claimFunds(name: string, accountId: string): Promise<void> {
+    const parentOnwer = await this.executor.executeContractCall(
+      this.ensContract, 'owner', this.namehash(name));
+    if (parentOnwer === '0x0000000000000000000000000000000000000000') {
+      const msg = `cannot claim funds for "${name}", node is not owned`;
+      this.log(msg, 'error');
+      throw new Error(msg);
+    }
+    if ((await this.web3.eth.getCode(parentOnwer)) === '0x') {
+      const msg = `cannot claim funds for "${name}", ` +
+        `node owner "${parentOnwer}" does not seem to be a contract`;
+      this.log(msg, 'error');
+      throw new Error(msg);
+    }
+    const registrar = this.contractLoader.loadContract('PayableRegistrar', parentOnwer);
+    await this.executor.executeContractTransaction(registrar, 'claimFunds', { from: accountId });
+  }
+
+  /**
+   * get price for domain (if domain is payable)
+   *
+   * @param      {string}           name    a domain to check price for (e.g.
+   *                                        'sample.payable.test.evan')
+   * @return     {Promise<string>}  price in Wei
+   */
   public async getPrice(name: string): Promise<string> {
     const [ , , parentName  ] = /^([^.]+)\.(.*)$/.exec(name);
     const parentOnwer = await this.executor.executeContractCall(
@@ -101,22 +136,32 @@ export class NameResolver extends Dbcp.NameResolver {
     return this.executor.executeContractCall(registrar, 'price');
   }
 
-  public async setPrice(parentName: string, accountId: string, newPrice: number|string): Promise<string> {
+  /**
+   * set price for a registrar at a domain
+   *
+   * @param      {string}         name       ENS address of a domain owned by a registrar (e.g.
+   *                                         'sample.payable.test.evan')
+   * @param      {string}         accountId  account that performs the action (needs proper
+   *                                         permisions for registrar)
+   * @param      {number|string}  newPrice   new price in Wei
+   * @return     {Promise<void>}  resolved when done
+   */
+  public async setPrice(name: string, accountId: string, newPrice: number|string): Promise<void> {
     const parentOnwer = await this.executor.executeContractCall(
-      this.ensContract, 'owner', this.namehash(parentName));
+      this.ensContract, 'owner', this.namehash(name));
     if (parentOnwer === '0x0000000000000000000000000000000000000000') {
-      const msg = `cannot set price for "${parentName}", node is not owned`;
+      const msg = `cannot set price for "${name}", node is not owned`;
       this.log(msg, 'error');
       throw new Error(msg);
     }
     if ((await this.web3.eth.getCode(parentOnwer)) === '0x') {
-      const msg = `cannot set price for "${parentName}", ` +
+      const msg = `cannot set price for "${name}", ` +
         `node owner "${parentOnwer}" does not seem to be a contract`;
       this.log(msg, 'error');
       throw new Error(msg);
     }
     const registrar = this.contractLoader.loadContract('PayableRegistrar', parentOnwer);
-    return this.executor.executeContractTransaction(
+    await this.executor.executeContractTransaction(
       registrar,
       'setPrice',
       { from: accountId },
