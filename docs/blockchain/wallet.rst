@@ -8,8 +8,6 @@ Wallet
 
    * - Class Name
      - Wallet
-   * - Implements
-     - `Logger <https://github.com/evannetwork/dbcp/tree/master/src/account-store.ts>`__
    * - Extends
      - `Logger <../common/logger.html>`_
    * - Source
@@ -309,8 +307,6 @@ Example
 .. code-block:: typescript
 
   await wallet.removeOwner(accounts[0], accounts[1]);
-
-
 
 
 

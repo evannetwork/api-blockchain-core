@@ -25,7 +25,7 @@
   https://evan.network/license/
 */
 
-const accountMap = {
+const accountMap1 = {
   '0x001De828935e8c7e4cb56Fe610495cAe63fb2612':
     '01734663843202e2245e5796cb120510506343c67915eb4f9348ac0d8c2cf22a',
   '0x0030C5e7394585400B1FB193DdbCb45a37Ab916E':
@@ -42,17 +42,30 @@ const accountMap2 = {
   '0x04B1Ee1b9D5283B2694B739DA5b49DBC88199750':
     '68475374AC69364D64F94A47D66410936F63971FE5EEAEFDF85913D153799EE5'
 }
-let accounts; 
-let returnMap;
-if(<any>process.env && <any>process.env.TESTSPEC == 'contracts') {
-  accounts = Object.keys(accountMap);
-  returnMap =  accountMap;
-} else if(<any>process.env && <any>process.env.TESTSPEC == 'services') {
+
+const accountMap3 = {
+  '0xC2ee94f6cf046B02D530cf1cd16A2b32b8A4340d':
+    'EF7012DD4D5DD6A78765C511F452F8CA641378F0DF071F9C32D506F45F31B22C',
+  '0xac46D762f0aB316105C5Cf4375bb8e380Be88658':
+    'E29C1E4A683CC629E39CE219CFB1F35BBA898605E1B197162F0EECF0F1139630',
+  '0x35f8220bC83577458aEa4a1085A8b832DEa79b7a':
+    '340BA316637FD01A1AFD54D4491A899F6D8EA0FB89A1D7BA94682F7D68B21B20'
+}
+
+let accounts;
+let accountMap;
+if (<any>process.env && <any>process.env.TESTSPEC === 'contracts') {
+  accounts = Object.keys(accountMap1);
+  accountMap =  accountMap1;
+} else if (<any>process.env && <any>process.env.TESTSPEC === 'services') {
+  accounts = Object.keys(accountMap3);
+  accountMap =  accountMap3;
+} else if (<any>process.env && <any>process.env.TESTSPEC === 'datacontract') {
   accounts = Object.keys(accountMap2);
-  returnMap =  accountMap2;
+  accountMap =  accountMap2;
 } else {
-  accounts = Object.keys(accountMap);
-  returnMap =  accountMap;
+  accounts = Object.keys(accountMap1);
+  accountMap =  accountMap1;
 }
 
 export { accounts, accountMap }

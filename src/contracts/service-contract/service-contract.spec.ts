@@ -33,13 +33,13 @@ import {
   ContractLoader,
   EventHub,
   Executor,
-  Ipfs,
   KeyProvider,
   NameResolver,
 } from '@evan.network/dbcp';
 
 import { accounts } from '../../test/accounts';
 import { ContractState } from '../base-contract/base-contract';
+import { Ipfs } from '../../dfs/ipfs';
 import { ServiceContract } from './service-contract';
 import { config } from '../../config';
 import { TestUtils } from '../../test/test-utils';

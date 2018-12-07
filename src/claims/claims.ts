@@ -37,9 +37,9 @@ import {
   Logger,
   LoggerOptions,
   NameResolver,
-  DfsInterface,
-  Ipfs
+  DfsInterface
 } from '@evan.network/dbcp';
+import { Ipfs } from '../dfs/ipfs';
 
 
 const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
@@ -53,7 +53,11 @@ export enum ClaimsStatus {
   /**
    * issued by a non-issuer parent claim holder, self issued state is 0
    */
-  Confirmed
+  Confirmed,
+  /**
+   * claim rejected status
+   */
+  Rejected
 }
 
 
@@ -136,7 +140,7 @@ export class Claims extends Logger {
 
     // create Identity contract
     const identityContract = await this.options.executor.createContract(
-      'OriginIdentity', [], { from: accountId, gas: 2000000, });
+      'OriginIdentity', [], { from: accountId, gas: 3000000, });
 
     const identityStorage = this.contracts.storage.options.address !== nullAddress ?
       this.options.contractLoader.loadContract('V00_UserRegistry', this.contracts.storage.options.address) : null;
@@ -250,6 +254,11 @@ export class Claims extends Logger {
         'getClaimExpirationDate',
         claimId
       );
+      const claimrejectedP = this.options.executor.executeContractCall(
+        identityContract,
+        'isClaimRejected',
+        claimId
+      );
       const claimDescriptionP = (async () => {
         const descriptionNodeHash = await this.options.executor.executeContractCall(
           identityContract,
@@ -281,6 +290,7 @@ export class Claims extends Logger {
         creationDate,
         expirationDate,
         description,
+        rejected,
         ] = await Promise.all([
           claimP,
           claimStatusP,
@@ -288,11 +298,18 @@ export class Claims extends Logger {
           claimCreationP,
           claimexpirationDateP,
           claimDescriptionP,
+          claimrejectedP
         ])
       ;
 
       if (claim.issuer === nullAddress) {
         return false;
+      }
+
+      let claimFlag = claimStatus ? ClaimsStatus.Confirmed : ClaimsStatus.Issued;
+
+      if(rejected) {
+        claimFlag = ClaimsStatus.Rejected;
       }
 
       return {
@@ -305,7 +322,7 @@ export class Claims extends Logger {
         issuer: (<any>claim).issuer,
         name: claimName,
         signature: (<any>claim).signature,
-        status: claimStatus ? ClaimsStatus.Confirmed : ClaimsStatus.Issued,
+        status: claimFlag,
         subject,
         topic: claim.topic,
         uri: (<any>claim).uri,
@@ -364,6 +381,42 @@ export class Claims extends Logger {
     } else {
       return true;
     }
+  }
+
+  /**
+   * rejects a claim; this can be done, if a claim has been issued for a subject and the subject
+   * wants to confirm it
+   *
+   * @param      {string}         subject    account, that rejects the claim
+   * @param      {string}         claimName  name of the claim (full path)
+   * @param      {string}         issuer     The issuer which has signed the claim
+   * @param      {string}         claimId    id of a claim to confirm
+   * @return     {Promise<void>}  resolved when done
+   */
+  public async rejectClaim(
+      subject: string, claimName: string, issuer: string, claimId: string): Promise<void> {
+    await this.ensureStorage();
+
+    const identity = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'users',
+      subject
+    );
+
+    const issuerIdentity = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'users',
+      issuer
+    );
+
+    const identityContract = this.options.contractLoader.loadContract('OriginIdentity', identity);
+    const sha3ClaimId = claimId;
+    await this.options.executor.executeContractTransaction(
+      identityContract,
+      'rejectClaim',
+      { from: subject, },
+      claimId,
+    );
   }
 
   /**

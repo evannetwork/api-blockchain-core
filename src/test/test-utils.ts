@@ -35,7 +35,6 @@ import {
   DfsInterface,
   EventHub,
   Executor,
-  Ipfs,
   KeyProvider,
   Logger,
   SignerInternal,
@@ -53,6 +52,7 @@ import { CryptoProvider } from '../encryption/crypto-provider';
 import { DataContract } from '../contracts/data-contract/data-contract';
 import { ExecutorWallet } from '../contracts/executor-wallet';
 import { Ipld } from '../dfs/ipld';
+import { Ipfs } from '../dfs/ipfs';
 import { NameResolver } from '../name-resolver';
 import { Profile } from '../profile/profile';
 import { RightsAndRoles } from '../contracts/rights-and-roles';
@@ -60,6 +60,7 @@ import { ServiceContract } from '../contracts/service-contract/service-contract'
 import { setTimeout } from 'timers';
 import { Description } from '../shared-description';
 import { Sharing } from '../contracts/sharing';
+import { Votings } from '../votings/votings';
 import { Wallet } from '../contracts/wallet';
 
 
@@ -280,9 +281,15 @@ export class TestUtils {
   }
 
   static async getIpfs(): Promise<Ipfs> {
-    return new Promise<Ipfs>((resolve) => {
-      const remoteNode = IpfsApi({host: 'ipfs.evan.network', port: '443', protocol: 'https'})
-     resolve(new Ipfs({ remoteNode, accountId: accounts[0], accountStore: this.getAccountStore(null), web3: this.getWeb3()}));
+    return new Promise<Ipfs>(async (resolve) => {
+      const pk = await this.getAccountStore(null).getPrivateKey(accounts[0]);
+      const ipfs = new Ipfs({
+        dfsConfig: {host: 'ipfs.evan.network', port: '443', protocol: 'https'},
+        accountId: accounts[0],
+        privateKey: pk,
+        web3: this.getWeb3()
+      });
+     resolve(ipfs);
     });
   }
 
@@ -376,6 +383,15 @@ export class TestUtils {
       keyProvider: TestUtils.getKeyProvider(),
       nameResolver: await TestUtils.getNameResolver(web3),
       defaultCryptoAlgo: 'aes',
+    });
+  }
+
+  static async getVotings(web3): Promise<Votings> {
+    const executor = await TestUtils.getExecutor(web3);
+    executor.eventHub = await TestUtils.getEventHub(web3);
+    return new Votings({
+      contractLoader: await this.getContractLoader(web3),
+      executor,
     });
   }
 
