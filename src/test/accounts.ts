@@ -42,7 +42,7 @@ const accountMap2 = {
   '0x04B1Ee1b9D5283B2694B739DA5b49DBC88199750':
     '68475374AC69364D64F94A47D66410936F63971FE5EEAEFDF85913D153799EE5'
 }
-<<<<<<< HEAD
+
 let accounts;
 let accountMap;
 if (<any>process.env && <any>process.env.TESTSPEC === 'contracts') {
