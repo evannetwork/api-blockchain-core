@@ -376,7 +376,7 @@ const create = function(options: ProfileBundleOptions): ProfileInstance {
 
   const coreInstance = options.CoreBundle.createAndSetCore(options.coreOptions);
 
-  (<any>options.signer).accountStore.getPrivatekey(options.accountId).then((pk) => {
+  accountStore.getPrivateKey(options.accountId).then((pk) => {
     coreInstance.dfs.setAccountAndPrivateKey(options.accountId, '0x' + pk);
   })
 
