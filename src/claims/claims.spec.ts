@@ -64,7 +64,7 @@ describe('Claims handler', function() {
     web3.currentProvider.connection.close();
   });
 
-  //can be used for creating new libraries, but disabled by default
+  // can be used for creating new libraries, but disabled by default
   // it('can deploy a new structure', async () => {
   //   const keyHolderLib = await executor.createContract(
   //     'KeyHolderLibrary', [], { from: accounts[0], gas: 3000000, });
@@ -214,7 +214,7 @@ describe('Claims handler', function() {
     expect(claimsForAccount[last].description).to.deep.eq(sampleDescription);
   });
 
-  it('can reject a a claim', async () => {
+  it('can reject a claim', async () => {
     const oldLength = (await claims.getClaims('/company/b-s-s/employee/swo4', accounts[1])).length;
     await claims.setClaim(accounts[0], accounts[0], '/company');
     await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
@@ -224,5 +224,16 @@ describe('Claims handler', function() {
     const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo4', accounts[1]);
     expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
     expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Rejected);
+  });
+
+  it('can not re accept a rejected claim', async () => {
+    const oldLength = (await claims.getClaims('/company/b-s-s/employee/swo4', accounts[1])).length;
+    await claims.setClaim(accounts[0], accounts[0], '/company');
+    await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
+    await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
+    const claimId = await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo4');
+    await claims.rejectClaim(accounts[1], '/company/b-s-s/employee/swo4', accounts[0], claimId);
+    const reacceptedP = claims.confirmClaim(accounts[1], '/company/b-s-s/employee/swo4', accounts[0], claimId);
+    await expect(reacceptedP).to.be.rejected;
   });
 });
