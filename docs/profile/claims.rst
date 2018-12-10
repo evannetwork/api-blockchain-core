@@ -317,14 +317,26 @@ Example
   [{
     creationDate: 1234567890,
     data: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    description: {
+      name: 'sample claim',
+      description: 'I\'m a sample claim',
+      author: 'evan.network',
+      version: '1.0.0',
+      dbcpVersion: 1,
+    },
+    expirationDate: 1234567890,
     id: '0x0000000000000000000000000000000000000000000000000000000000000000',
     issuer: '0x0000000000000000000000000000000000000001',
     name: '/company',
-    status: 1
+    rejectReason: {
+      "rejected": "rejection message"
+    },
+    signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    status: 0 (Issued) || 1 (Confirmed) || 2 (Rejected), 
     subject: '0x0000000000000000000000000000000000000002',
     uri: '',
     signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
-    valid: true,
+    valid: true
   }]
 
 
@@ -507,6 +519,45 @@ Example
 
 --------------------------------------------------------------------------------
 
+.. _claims_rejectClaim:
+
+rejectClaim
+================================================================================
+
+.. code-block:: typescript
+
+  claims.rejectClaim(subject, claimName, issuer, claimId, rejectReason?);
+
+Reject a Claim. This claim will be marked as rejected but not deleted. This is important for tracking reasons. You can also optionally add a reject reason as JSON object to track additional informations about the rejection. Issuer and Subject can reject a special claim. 
+
+----------
+Parameters
+----------
+
+#. ``subject`` - ``string``: the subject of the claim
+#. ``claimName`` - ``string``: name of the claim (full path)
+#. ``issuer`` - ``string``: issuer of the claim
+#. ``claimId`` - ``string``: id of a claim to delete
+#. ``rejectReason`` - ``object`` (optional): JSON Object of the rejection reason
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await claims.setClaim(accounts[0], accounts[1], '/company');
+  await claims.rejectClaim(accounts[0], '/company', accounts[1], { rejected: "because not valid anymore"});
+
+
+
+--------------------------------------------------------------------------------
 
 
 = Subjects =
