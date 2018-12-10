@@ -307,9 +307,19 @@ export class Claims extends Logger {
       }
 
       let claimFlag = claimStatus ? ClaimsStatus.Confirmed : ClaimsStatus.Issued;
-
-      if(rejected) {
+      let rejectReason;
+      if(rejected.rejected) {
         claimFlag = ClaimsStatus.Rejected;
+      }
+
+      if(rejected.rejectReason !== nullBytes32) {
+        try {
+          const ipfsResponse = await this.options.dfs.get(rejected.rejectReason);
+          rejectReason = JSON.parse(ipfsResponse.toString());
+        } catch (e) {
+          const msg = `error parsing rejectReason -> ${e.message}`;
+          this.log(msg, 'info');
+        }
       }
 
       return {
@@ -327,6 +337,7 @@ export class Claims extends Logger {
         topic: claim.topic,
         uri: (<any>claim).uri,
         valid: await this.validateClaim(claimId, subject, isIdentity),
+        rejectReason
       };
     }));
 
@@ -387,14 +398,15 @@ export class Claims extends Logger {
    * rejects a claim; this can be done, if a claim has been issued for a subject and the subject
    * wants to confirm it
    *
-   * @param      {string}         subject    account, that rejects the claim
-   * @param      {string}         claimName  name of the claim (full path)
-   * @param      {string}         issuer     The issuer which has signed the claim
-   * @param      {string}         claimId    id of a claim to confirm
+   * @param      {string}         subject       account, that rejects the claim
+   * @param      {string}         claimName     name of the claim (full path)
+   * @param      {string}         issuer        The issuer which has signed the claim
+   * @param      {string}         claimId       id of a claim to confirm
+   * @param      {any}            rejectReason  (optional) rejectReason object
    * @return     {Promise<void>}  resolved when done
    */
   public async rejectClaim(
-      subject: string, claimName: string, issuer: string, claimId: string): Promise<void> {
+      subject: string, claimName: string, issuer: string, claimId: string, rejectReason?: any): Promise<void> {
     await this.ensureStorage();
 
     const identity = await this.options.executor.executeContractCall(
@@ -411,11 +423,26 @@ export class Claims extends Logger {
 
     const identityContract = this.options.contractLoader.loadContract('OriginIdentity', identity);
     const sha3ClaimId = claimId;
+
+    if (rejectReason) {
+      try {
+        const stringified = JSON.stringify(rejectReason);
+        const stateMd5 = crypto.createHash('md5').update(stringified).digest('hex');
+        rejectReason = await this.options.dfs.add(stateMd5, Buffer.from(stringified));
+      } catch (e) {
+        const msg = `error parsing claimValue -> ${e.message}`;
+        this.log(msg, 'info');
+      }
+    } else {
+      rejectReason = nullBytes32;
+    }
+
     await this.options.executor.executeContractTransaction(
       identityContract,
       'rejectClaim',
       { from: subject, },
       claimId,
+      rejectReason
     );
   }
 
