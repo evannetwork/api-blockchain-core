@@ -25,6 +25,8 @@
   https://evan.network/license/
 */
 
+import crypto = require('crypto');
+
 import IpfsApi = require('ipfs-api');
 import smartContract = require('@evan.network/smart-contracts-core');
 import Web3 = require('web3');
@@ -346,6 +348,14 @@ export class TestUtils {
     return profile;
   }
 
+  static getRandomAddress(): string {
+    return Web3.utils.toChecksumAddress(`0x${crypto.randomBytes(20).toString('hex')}`);
+  }
+
+  static getRandomBytes32(): string {
+    return `0x${crypto.randomBytes(32).toString('hex')}`;
+  }
+
   static async getRightsAndRoles(web3) {
     return new RightsAndRoles({
       contractLoader: await TestUtils.getContractLoader(web3),
@@ -411,5 +421,13 @@ export class TestUtils {
   static getWeb3(provider = web3Provider) {
     // connect to web3
     return new Web3(new Web3.providers.WebsocketProvider(provider));
+  }
+
+  static async nextBlock(executor: Executor, accoutId: string): Promise<void> {
+    await executor.executeSend({ from: accoutId, value: 0, to: accoutId });
+  };
+
+  static async sleep(ms): Promise<void> {
+    await new Promise(s => setTimeout(() => s(), ms));
   }
 }

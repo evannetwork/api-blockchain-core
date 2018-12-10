@@ -168,4 +168,15 @@ export class NameResolver extends Dbcp.NameResolver {
       newPrice,
     );
   }
+
+  public async setValidUntil(name: string, accountId: string, validUntil: number|string): Promise<void> {
+    const numberString = `${validUntil}`;
+    await this.executor.executeContractTransaction(
+      this.ensContract,
+      'setValidUntil',
+      { from: accountId },
+      this.namehash(name),
+      numberString.substr(0, numberString.length - 3),
+    );
+  }
 }

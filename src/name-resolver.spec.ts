@@ -35,7 +35,7 @@ import { config } from './config';
 import { NameResolver } from './name-resolver';
 import { TestUtils } from './test/test-utils';
 
-const [ domainOwner, domainNonOwner, , registrarOwner ] = accounts;
+const [ domainOwner, domainNonOwner, ensOwner, registrarOwner ] = accounts;
 
 
 use(chaiAsPromised);
@@ -85,8 +85,6 @@ describe('NameResolver class', function() {
     //   registrarOwner,
     //   fifsRegistrar.options.address,
     // );
-
-
   });
 
   after(() => {
@@ -237,5 +235,135 @@ describe('NameResolver class', function() {
         });
       });
     }
+  });
+
+  describe('when using an ENS with a time limited validity for nodes', async() => {
+    let resolverWithTimedEns: NameResolver;
+    let timedEns;
+
+    before(async () => {
+      // create new ens and register test tld
+      timedEns = await executor.createContract('TimedENS', [], { from: ensOwner, gas: 1000000 });
+      await executor.executeContractTransaction(
+        timedEns,
+        'setSubnodeOwner',
+        { from: ensOwner },
+        nameResolver.namehash(''),
+        nameResolver.soliditySha3('test'),
+        ensOwner,
+      );
+      // create new resolver, tied to custom ens
+      const resolver = await executor.createContract(
+        'PublicResolver',
+        [ timedEns.options.address ],
+        { from: ensOwner, gas: 2000000 },
+      );
+
+      const nameResolverConfig = JSON.parse(JSON.stringify(config.nameResolver));
+      nameResolverConfig.ensAddress = timedEns.options.address;
+      nameResolverConfig.ensResolver = resolver.options.address;
+      resolverWithTimedEns = new NameResolver({
+        config: nameResolverConfig,
+        executor,
+        contractLoader,
+        web3,
+      });
+      resolverWithTimedEns.ensContract = timedEns;
+    });
+
+    it('allows setting and getting addresses', async () => {
+      const domain = `sample_${Math.random().toString(36).substr(2)}.test`;
+      const randomAddress = TestUtils.getRandomAddress();
+      await resolverWithTimedEns.setAddress(domain, randomAddress, ensOwner, domainOwner);
+      expect(await resolverWithTimedEns.getAddress(domain)).to.eq(randomAddress);
+    });
+
+    it('allows setting a time limit for resolval as parent domain owner', async () => {
+      const domain = `sample_${Math.random().toString(36).substr(2)}.test`;
+      const randomAddress = TestUtils.getRandomAddress();
+      await resolverWithTimedEns.setAddress(domain, randomAddress, ensOwner, domainOwner);
+
+      // address still up, should resolve
+      expect(await resolverWithTimedEns.getAddress(domain)).to.eq(randomAddress);
+
+      // set valid time
+      const setValidUntilP = resolverWithTimedEns.setValidUntil(domain, ensOwner, Date.now() + 10000);
+      await expect(setValidUntilP).not.to.be.rejected;
+    });
+
+    it('does not allow setting a time limit for resolval as (only) domain owner', async () => {
+      const domain = `sample_${Math.random().toString(36).substr(2)}.test`;
+      const randomAddress = TestUtils.getRandomAddress();
+      await resolverWithTimedEns.setAddress(domain, randomAddress, ensOwner, domainOwner);
+
+      // address still up, should resolve
+      expect(await resolverWithTimedEns.getAddress(domain)).to.eq(randomAddress);
+
+      // set valid time
+      const setValidUntilP = resolverWithTimedEns.setValidUntil(domain, domainNonOwner, Date.now() + 10000);
+      await expect(setValidUntilP).to.be.rejected;
+    });
+
+    it('stops resolving subdomains when time limit reached', async () => {
+      const domain = `sample_${Math.random().toString(36).substr(2)}.test`;
+      const randomAddress = TestUtils.getRandomAddress();
+      await resolverWithTimedEns.setAddress(domain, randomAddress, ensOwner, domainOwner);
+
+      // address still up, should resolve
+      expect(await resolverWithTimedEns.getAddress(domain)).to.eq(randomAddress);
+
+      // set valid time
+      await resolverWithTimedEns.setValidUntil(domain, ensOwner, Date.now() + 10000);
+
+      // check directly after setting
+      await TestUtils.nextBlock(executor, domainOwner);
+      expect(await resolverWithTimedEns.getAddress(domain)).to.eq(randomAddress);
+
+      // wait for timeout
+      await TestUtils.sleep(10000);
+      await TestUtils.nextBlock(executor, domainOwner);
+
+      // check again
+      expect(await resolverWithTimedEns.getAddress(domain)).to.eq(null);
+    });
+
+    it('does not re-enable subdomain resolval, ' +
+        'when refreshing domains between domain to resolve and an expired upper domain', async () => {
+      const domain = `sample_${Math.random().toString(36).substr(2)}.test`;
+      const subdomain = `sub.${domain}`;
+      const randomAddress1 = TestUtils.getRandomAddress();
+      await resolverWithTimedEns.setAddress(domain, randomAddress1, ensOwner, domainOwner);
+      const randomAddress2 = TestUtils.getRandomAddress();
+      await resolverWithTimedEns.setAddress(subdomain, randomAddress2, domainOwner);
+
+      // address still up, should resolve
+      expect(await resolverWithTimedEns.getAddress(domain)).to.eq(randomAddress1);
+      expect(await resolverWithTimedEns.getAddress(subdomain)).to.eq(randomAddress2);
+
+      // set valid time
+      await resolverWithTimedEns.setValidUntil(domain, ensOwner, Date.now() + 60000);
+      await resolverWithTimedEns.setValidUntil(subdomain, domainOwner, Date.now() + 60000);
+
+      // check directly after setting
+      await TestUtils.nextBlock(executor, domainOwner);
+      expect(await resolverWithTimedEns.getAddress(domain)).to.eq(randomAddress1);
+      expect(await resolverWithTimedEns.getAddress(subdomain)).to.eq(randomAddress2);
+
+      // wait for timeout
+      await TestUtils.sleep(60000);
+      await TestUtils.nextBlock(executor, domainOwner);
+
+      // check again
+      expect(await resolverWithTimedEns.getAddress(domain)).to.eq(null);
+      expect(await resolverWithTimedEns.getAddress(subdomain)).to.eq(null);
+
+      // now refresh upper domain
+      await resolverWithTimedEns.setValidUntil(domain, ensOwner, Date.now() + 60000);
+      await TestUtils.nextBlock(executor, domainOwner);
+
+      // check again
+      expect(await resolverWithTimedEns.getAddress(domain)).to.eq(randomAddress1);
+      expect(await resolverWithTimedEns.getAddress(subdomain)).to.eq(null);
+    });
   });
 });
