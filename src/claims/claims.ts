@@ -331,13 +331,13 @@ export class Claims extends Logger {
         id: claimId,
         issuer: (<any>claim).issuer,
         name: claimName,
+        rejectReason,
         signature: (<any>claim).signature,
         status: claimFlag,
         subject,
         topic: claim.topic,
         uri: (<any>claim).uri,
-        valid: await this.validateClaim(claimId, subject, isIdentity),
-        rejectReason
+        valid: await this.validateClaim(claimId, subject, isIdentity)
       };
     }));
 
