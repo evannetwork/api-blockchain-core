@@ -226,7 +226,7 @@ describe('Claims handler', function() {
     expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Rejected);
   });
 
-  it.only('can reject a claim with a reason', async () => {
+  it('can reject a claim with a reason', async () => {
     const oldLength = (await claims.getClaims('/company/b-s-s/employee/swo4', accounts[1])).length;
     await claims.setClaim(accounts[0], accounts[0], '/company');
     await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
