@@ -541,7 +541,7 @@ export class Profile extends Logger {
       throw new Error('no valid address given!');
     }
     this.ensureTree('bookmarkedDapps');
-    await this.ipld.remove(this.trees['bookmarkedDapps'], address);
+    await this.ipld.remove(this.trees['bookmarkedDapps'], `bookmarkedDapps/${address}`);
   }
 
   /**
