@@ -113,20 +113,7 @@ export class Sharing extends Logger {
       }
       sharings = await this.getSharingsFromContract(contract, sharingId);
     } else {
-      description = await this.options.description.getDescriptionFromEns(address);
-      // ensure sharings
-      if (description && description.public && description.public.sharings) {
-        sharings = description.public.sharings;
-      } else {
-        sharings = {};
-      }
-      // ensure description
-      if (!description) {
-        description = {};
-      }
-      if (!description.public) {
-        description.public = {};
-      }
+      throw new Error('setting sharings to ens adresses is not supported');
     }
 
     // extend sharings
@@ -150,13 +137,7 @@ export class Sharing extends Logger {
     }
 
     // save updated sharings
-    if (address.startsWith('0x')) {
-      await this.saveSharingsToContract(address, sharings, originator, sharingId);
-    } else {
-      // save to ens
-      description.public.sharings = sharings;
-      await this.options.description.setDescriptionToEns(address, description, originator);
-    }
+    await this.saveSharingsToContract(address, sharings, originator, sharingId);
   }
 
   /**

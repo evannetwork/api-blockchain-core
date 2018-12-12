@@ -283,16 +283,14 @@ export class TestUtils {
   }
 
   static async getIpfs(): Promise<Ipfs> {
-    return new Promise<Ipfs>(async (resolve) => {
-      const pk = await this.getAccountStore(null).getPrivateKey(accounts[0]);
-      const ipfs = new Ipfs({
-        dfsConfig: {host: 'ipfs.evan.network', port: '443', protocol: 'https'},
-        accountId: accounts[0],
-        privateKey: pk,
-        web3: this.getWeb3()
-      });
-     resolve(ipfs);
+    const pk = await this.getAccountStore(null).getPrivateKey(accounts[0]);
+    const ipfs = new Ipfs({
+      dfsConfig: {host: 'ipfs.evan.network', port: '443', protocol: 'https'},
+      accountId: accounts[0],
+      privateKey: pk,
+      web3: this.getWeb3()
     });
+    return ipfs;
   }
 
   static getKeyProvider(requestedKeys?: string[]) {
