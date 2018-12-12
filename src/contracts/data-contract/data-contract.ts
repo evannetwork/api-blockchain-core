@@ -641,7 +641,7 @@ export class DataContract extends BaseContract {
         this.options.web3.eth.getBlockNumber(),
       ]);
       await this.validate(description, entryName, value);
-      const encrypted = await this.encrypt({ private: value }, dataContract, encryptionContext, entryName, blockNr);
+      const encrypted = await this.encrypt({ private: value }, dataContract, encryptionContext, entryName, blockNr, encryption);
       const stateMd5 = crypto.createHash('md5').update(encrypted).digest('hex');
       toSet = await this.options.dfs.add(stateMd5, Buffer.from(encrypted));
     }
