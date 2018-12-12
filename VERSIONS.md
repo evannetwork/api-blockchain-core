@@ -7,7 +7,8 @@
 - add `defaultClaims` to `Profile` `loadActiveClaims`
 - add `Votings` helper for holding votes on-chain
 - add support for `PayableRegistrar`, that allows to by domain names with EVEs
-- add support for ens registries with time limited nodes
+- add support for ENS registries with time limited nodes
+- add support for permanent ENS address on payable registrar
 
 ### Fixes
 ### Deprecations

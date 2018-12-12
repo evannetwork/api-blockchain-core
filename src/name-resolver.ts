@@ -48,12 +48,11 @@ export class NameResolver extends Dbcp.NameResolver {
     // check ownership
     const namehash = this.namehash(name);
     const nodeOwner = await this.executor.executeContractCall(this.ensContract, 'owner', namehash);
-    if (nodeOwner === domainOwnerId) {
-      // node is already owned by account
-      return;
-    } else if (nodeOwner !== '0x0000000000000000000000000000000000000000' && value === '0' ) {
-      // if node is owned and we don't try a payable registrar node ownership overwrite
-      const msg = `cannot claim address "${name}", address "${name}" already claimed by "${nodeOwner}"`;
+    if (nodeOwner !== domainOwnerId &&
+        nodeOwner !== '0x0000000000000000000000000000000000000000' &&
+        value === '0' ) {
+      // if node is owned and we don't try a payable registrar node ownership overwrite/renew
+      const msg = `cannot claim address "${name}", it\'s' already claimed by "${nodeOwner}"`;
       this.log(msg, 'error');
       throw new Error(msg);
     }
@@ -81,6 +80,36 @@ export class NameResolver extends Dbcp.NameResolver {
       this.soliditySha3(node),
       domainOwnerId,
     );
+  }
+
+  /**
+   * registers a permanent domain via registrar, can only be done by registrar owner
+   *
+   * @param      {string}         name           domain name to set (plain text)
+   * @param      {string}         accountId      account, that executes the transaction, has to be
+   *                                             registrar owner
+   * @param      {string}         domainOwnerId  owner of the new domain, fallbacks to accountId
+   * @return     {Promise<void>}  resolved when done
+   */
+  public async claimPermanentAddress(
+      name: string, accountId: string, domainOwnerId = accountId): Promise<void> {
+    const [ , node, parentName  ] = /^([^.]+)\.(.*)$/.exec(name);
+    const parentOnwer = await this.executor.executeContractCall(
+      this.ensContract, 'owner', this.namehash(parentName));
+    if (parentOnwer === '0x0000000000000000000000000000000000000000') {
+      const msg = `cannot claim address "${name}", parent node is not owned`;
+      this.log(msg, 'error');
+      throw new Error(msg);
+    }
+    if ((await this.web3.eth.getCode(parentOnwer)) === '0x') {
+      const msg = `cannot claim address "${name}", ` +
+        `parent node owner "${parentOnwer}" does not seem to be a contract`;
+      this.log(msg, 'error');
+      throw new Error(msg);
+    }
+    const registrar = this.contractLoader.loadContract('PayableRegistrar', parentOnwer);
+    await this.executor.executeContractTransaction(
+      registrar, 'registerPermanent', { from: accountId }, this.soliditySha3(node), domainOwnerId);
   }
 
   /**
@@ -137,6 +166,21 @@ export class NameResolver extends Dbcp.NameResolver {
   }
 
   /**
+   * get timestamp, when domain will stop resolval
+   *
+   * @param      {string}           name        domain to get valid until for
+   * @return     {Promise<number>}  js timestamp, when resolver lookup will expire
+   */
+  public async getValidUntil(name: string): Promise<number> {
+    const solTimestamp = await this.executor.executeContractCall(
+      this.ensContract,
+      'validUntil',
+      this.namehash(name),
+    );
+    return parseInt(`${solTimestamp.toString()}000`, 10);
+  }
+
+  /**
    * set price for a registrar at a domain
    *
    * @param      {string}         name       ENS address of a domain owned by a registrar (e.g.
@@ -169,7 +213,19 @@ export class NameResolver extends Dbcp.NameResolver {
     );
   }
 
-  public async setValidUntil(name: string, accountId: string, validUntil: number|string): Promise<void> {
+  /**
+   * set duration, that an address is valid; resolval stops after this, depending on configuration
+   * of the ENS an extra period, where owner is still available, can be granted; notice that this
+   * can only be done by parent owner of given domain
+   *
+   * @param      {string}         name        domain to set valid until for
+   * @param      {string}         accountId   account that performs the action; must be parent owner
+   *                                          of given domain
+   * @param      {number|string}  validUntil  js timestamp, when name resolution stops
+   * @return     {Promise<void>}  resolved when done
+   */
+  public async setValidUntil(
+      name: string, accountId: string, validUntil: number|string): Promise<void> {
     const numberString = `${validUntil}`;
     await this.executor.executeContractTransaction(
       this.ensContract,
