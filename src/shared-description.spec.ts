@@ -103,12 +103,13 @@ describe('Description handler', function() {
     executor.eventHub = await TestUtils.getEventHub(web3);
     loader = await TestUtils.getContractLoader(web3);
     cryptoProvider = await TestUtils.getCryptoProvider();
+    dfs = await TestUtils.getIpfs();
     sharing = new Sharing({
       contractLoader: await TestUtils.getContractLoader(web3),
       cryptoProvider,
       description: description,
       executor: await TestUtils.getExecutor(web3),
-      dfs: description.dfs,
+      dfs,
       keyProvider: TestUtils.getKeyProvider(),
       nameResolver: await TestUtils.getNameResolver(web3),
       defaultCryptoAlgo: 'aes',
