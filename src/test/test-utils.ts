@@ -347,7 +347,7 @@ export class TestUtils {
   }
 
   static getRandomAddress(): string {
-    return Web3.utils.toChecksumAddress(`0x${crypto.randomBytes(20).toString('hex')}`);
+    return helperWeb3.utils.toChecksumAddress(`0x${crypto.randomBytes(20).toString('hex')}`);
   }
 
   static getRandomBytes32(): string {
