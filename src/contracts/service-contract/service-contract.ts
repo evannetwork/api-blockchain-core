@@ -485,8 +485,10 @@ export class ServiceContract extends BaseContract {
     };
 
     // run once for metadata and once for payload, await them sequentially to track already generated keys
-    await Object.keys(answer).reduce((chain, key) => chain.then(() => { generateKeys(key) }), Promise.resolve());
-
+    const answerKeys = Object.keys(answer)
+    for(let key of answerKeys) {
+      await generateKeys(key);
+    }
 
     // use key to encrypt message  (outer properties)
     const encrypted = await this.encrypt(
@@ -593,7 +595,10 @@ export class ServiceContract extends BaseContract {
       }
     };
     // run once for metadata and once for payload, await them sequentially to track already generated keys
-    await Object.keys(callCopy).reduce((chain, key) => chain.then(() => { generateKeys(key) }), Promise.resolve());
+    const callKeys = Object.keys(callCopy)
+    for(let key of callKeys) {
+      await generateKeys(key);
+    }
 
     // use key to encrypt message  (outer properties)
     const encrypted = await this.encrypt(
