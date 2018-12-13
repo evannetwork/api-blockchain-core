@@ -433,7 +433,7 @@ describe('NameResolver class', function() {
           expect(await nameResolverTimed.getAddress(domain)).to.eq(null);
         });
 
-        it.only('cannot extend valid duration via registrar before expiration (and before extension timeframe)', async () => {
+        it('cannot extend valid duration via registrar before expiration (and before extension timeframe)', async () => {
           const domain = `sample_${Math.random().toString(36).substr(2)}.payable`;
           const domainHash = nameResolverTimed.namehash(domain);
           const randomAddress = TestUtils.getRandomAddress();
