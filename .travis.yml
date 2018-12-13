@@ -25,6 +25,7 @@ before_install:
 install:
   - npm install 
   - cd node_modules/@evan.network && rm -rf dbcp && git clone https://github.com/evannetwork/dbcp.git && cd dbcp && git checkout develop && npm i && npm run build && cd ../../../
+  - cd node_modules/@evan.network && rm -rf smart-contracts-core && git clone https://github.com/evannetwork/smart-contracts-core.git && cd smart-contracts-core && git checkout develop && npm i && cd ../../../
 
 script:
   - npm run test:$TESTSPEC

@@ -520,7 +520,7 @@ describe('ServiceContract', function() {
     expect(answers1[answerId].data).to.deep.eq(null);
   });
 
-  describe('when paging through calls and answers', () => {
+  describe.only('when paging through calls and answers', () => {
     let contract;
     let sampleCalls;
     let sampleAnswers;
@@ -542,7 +542,7 @@ describe('ServiceContract', function() {
       }
 
       // if using existing contract
-      contract = loader.loadContract('ServiceContractInterface', '0x001De828935e8c7e4cb56Fe610495cAe63fb2612');
+      contract = loader.loadContract('ServiceContractInterface', '0x665339F534618a84B917C0Fc54700F690FC54A4A');
 
       // if creating new contract
       /*contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
