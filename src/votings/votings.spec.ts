@@ -73,19 +73,19 @@ describe('Voting handler', () => {
   });
 
   describe('when managing voting members', () => {
-    it.skip('can add new members', async () => {
+    it('can add new members', async () => {
       await expect(await votings.isMember(votingContract, nonMember)).to.be.false;
       await votings.addMember(votingContract, votingOwner, nonMember, { name: 'Member No. 3' });
       await expect(await votings.isMember(votingContract, nonMember)).to.be.true;
     });
 
-    it.skip('can remove members', async () => {
+    it('can remove members', async () => {
       await expect(await votings.isMember(votingContract, nonMember)).to.be.true;
       await votings.removeMember(votingContract, votingOwner, nonMember);
       await expect(await votings.isMember(votingContract, nonMember)).to.be.false;
     });
 
-    it.skip('can re-add members', async () => {
+    it('can re-add members', async () => {
       await expect(await votings.isMember(votingContract, nonMember)).to.be.false;
       await votings.addMember(votingContract, votingOwner, nonMember, { name: 'Member No. 3' });
       await expect(await votings.isMember(votingContract, nonMember)).to.be.true;
@@ -101,7 +101,7 @@ describe('Voting handler', () => {
       expect(newProposal.description).to.eq(description);
     });
 
-    it.skip('accepts votes from members', async () => {
+    it('accepts votes from members', async () => {
       let description;
       let proposal;
       // accept
@@ -114,7 +114,7 @@ describe('Voting handler', () => {
       await expect(votings.vote(votingContract, member, proposal, false, 'Objection!')).not.to.be.rejected;
     });
 
-    it.skip('does not accept votes from non-members', async () => {
+    it('does not accept votes from non-members', async () => {
       let description;
       let proposal;
       // accept
@@ -129,34 +129,34 @@ describe('Voting handler', () => {
   });
 
   describe('when executing proposals', () => {
-    it.skip('allows votings owner to execute a proposal, if enough votes have been given', async () => {
+    it('allows votings owner to execute a proposal, if enough votes have been given', async () => {
       const proposal = await createProposal(createDescription());
       await votings.vote(votingContract, votingOwner, proposal, true);
       await votings.vote(votingContract, member, proposal, true);
       await expect(votings.execute(votingContract, votingOwner, proposal)).not.to.be.rejected;
     });
 
-    it.skip('allows member to execute a proposal, if enough votes have been given', async () => {
+    it('allows member to execute a proposal, if enough votes have been given', async () => {
       const proposal = await createProposal(createDescription());
       await votings.vote(votingContract, votingOwner, proposal, true);
       await votings.vote(votingContract, member, proposal, true);
       await expect(votings.execute(votingContract, member, proposal)).not.to.be.rejected;
     });
 
-    it.skip('allows any account to execute a proposal, if enough votes have been given', async () => {
+    it('allows any account to execute a proposal, if enough votes have been given', async () => {
       const proposal = await createProposal(createDescription());
       await votings.vote(votingContract, votingOwner, proposal, true);
       await votings.vote(votingContract, member, proposal, true);
       await expect(votings.execute(votingContract, nonMember, proposal)).not.to.be.rejected;
     });
 
-    it.skip('does not allow to execute a proposal, if not enough votes have been given', async () => {
+    it('does not allow to execute a proposal, if not enough votes have been given', async () => {
       const proposal = await createProposal(createDescription());
       await votings.vote(votingContract, votingOwner, proposal, true);
       await expect(votings.execute(votingContract, votingOwner, proposal)).to.be.rejected;
     });
 
-    it.skip('can perform transactions (and not only votes) via congress contract', async() => {
+    it('can perform transactions (and not only votes) via congress contract', async() => {
       const testContract = await executor.createContract(
         'TestContract', ['abc'], { from: votingOwner, gas: 2000000 });
       // input for: setData("def")
@@ -187,7 +187,7 @@ describe('Voting handler', () => {
   });
 
   describe('when executing proposals with voting time', async () => {
-    it.skip('allows proposal execution if executing after vote time ended', async () => {
+    it('allows proposal execution if executing after vote time ended', async () => {
       const contract = await votings.createContract(
         votingOwner,
         {
@@ -209,7 +209,7 @@ describe('Voting handler', () => {
       await expect(votings.execute(contract, votingOwner, proposal)).not.to.be.rejected;
     });
 
-    it.skip('does not allow proposal execution if executing before vote time ended', async () => {
+    it('does not allow proposal execution if executing before vote time ended', async () => {
       const contract = await votings.createContract(
         votingOwner,
         {
