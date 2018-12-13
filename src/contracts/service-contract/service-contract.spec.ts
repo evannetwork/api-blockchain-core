@@ -529,7 +529,7 @@ describe('ServiceContract', function() {
     const callCount = 23;
 
     before(async () => {
-      /*sampleCalls = [...Array(callCount)].map(() => Math.random()).map((rand, i) => {;
+      sampleCalls = [...Array(callCount)].map(() => Math.random()).map((rand, i) => {;
         const currentSample = JSON.parse(JSON.stringify(sampleCall));
         currentSample.payload.note += i;
         return currentSample;
@@ -539,13 +539,13 @@ describe('ServiceContract', function() {
          const answer = JSON.parse(JSON.stringify(sampleAnswer));
          answer.payload.note += i;
          sampleAnswers.push(answer);
-      }*/
+      }
 
       // if using existing contract
       contract = loader.loadContract('ServiceContractInterface', '0x001De828935e8c7e4cb56Fe610495cAe63fb2612');
 
       // if creating new contract
-      contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+      /*contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
       await sc0.inviteToContract(businessCenterDomain, contract.options.address, accounts[0], accounts[2]);
       const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', 0);
       await sharing.addSharing(contract.options.address, accounts[0], accounts[2], '*', 0, contentKey);
@@ -559,7 +559,7 @@ describe('ServiceContract', function() {
         console.log(`send test answer ${answerIndex++}`);
         await sc2.sendAnswer(contract, accounts[2], answer, anweredCallId, accounts[0])
       }
-      console.log(contract.options.address);
+      console.log(contract.options.address);*/
     });
 
     describe('when retrieving calls', () => {
