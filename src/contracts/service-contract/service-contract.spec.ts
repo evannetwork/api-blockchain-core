@@ -529,7 +529,7 @@ describe('ServiceContract', function() {
     const callCount = 23;
 
     before(async () => {
-      sampleCalls = [...Array(callCount)].map(() => Math.random()).map((rand, i) => {;
+      /*sampleCalls = [...Array(callCount)].map(() => Math.random()).map((rand, i) => {;
         const currentSample = JSON.parse(JSON.stringify(sampleCall));
         currentSample.payload.note += i;
         return currentSample;
@@ -539,10 +539,10 @@ describe('ServiceContract', function() {
          const answer = JSON.parse(JSON.stringify(sampleAnswer));
          answer.payload.note += i;
          sampleAnswers.push(answer);
-      }
+      }*/
 
       // if using existing contract
-      // contract = loader.loadContract('ServiceContractInterface', '0x7B818d221C2F3e1eB64e5417047F94bc6cC91610');
+      contract = loader.loadContract('ServiceContractInterface', '0x001De828935e8c7e4cb56Fe610495cAe63fb2612');
 
       // if creating new contract
       contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
