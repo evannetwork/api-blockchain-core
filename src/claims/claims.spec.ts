@@ -232,7 +232,6 @@ describe('Claims handler', function() {
     await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
     await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
     const claimId = await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo4');
-    debugger;
     await claims.rejectClaim(accounts[1], '/company/b-s-s/employee/swo4', accounts[0], claimId, { reason: 'denied' });
     const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo4', accounts[1]);
     expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
