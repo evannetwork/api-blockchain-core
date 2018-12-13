@@ -198,7 +198,7 @@ describe('Description handler', function() {
     it('should be able to set and get encrypted content for ENS addresses', async () => {
       const keyConfig = {};
       keyConfig[nameResolver.soliditySha3(accounts[1])] = sampleKey;
-      const keyProvider = new KeyProvider(keyConfig);
+      const keyProvider = new KeyProvider({keys: keyConfig});
       description.keyProvider = keyProvider;
       const cryptor = new Aes();
       const cryptoConfig = {};

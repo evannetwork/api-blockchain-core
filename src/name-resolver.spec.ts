@@ -127,9 +127,9 @@ describe('NameResolver class', function() {
     let nameResolverTimed: NameResolver;
     let timedEns: any;
     // use modified validity durations
-    let timeValidMs = 30000;
-    let timeValidPreExpireWindowMs = -15000;
-    let timeValidPostExpireWindowMs = 15000;
+    let timeValidMs = 60000;
+    let timeValidPreExpireWindowMs = -20000;
+    let timeValidPostExpireWindowMs = 20000;
 
     const createStructure = async () => {
       // create new ens and register test tld
@@ -429,7 +429,7 @@ describe('NameResolver class', function() {
           await TestUtils.sleep(timeValidMs);
           await TestUtils.nextBlock(executor, domainOwner);
 
-          // check again, resolva should have stopped
+          // check again, resolver should have stopped
           expect(await nameResolverTimed.getAddress(domain)).to.eq(null);
         });
 
@@ -455,7 +455,6 @@ describe('NameResolver class', function() {
 
           // address is still up
           expect(await nameResolverTimed.getAddress(domain)).to.eq(randomAddress);
-
           // extend uptime
           const extendP = nameResolverTimed.claimAddress(domain, domainOwner, domainOwner, getPrice());
           await expect(extendP).to.be.rejected;

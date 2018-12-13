@@ -32,6 +32,7 @@ import { KeyProvider } from '@evan.network/dbcp';
 
 import { accounts } from './test/accounts';
 import { config } from './config';
+import { KeyExchange } from './keyExchange';
 import { Ipld } from './dfs/ipld';
 import { InvitationMail, Onboarding } from './onboarding';
 import { Mailbox } from './mailbox';
@@ -73,6 +74,19 @@ describe('Onboarding helper', function() {
       smartAgentId: config.smartAgents.onboarding.accountId,
       executor,
     });
+
+    const keyExchangeOptions = {
+      mailbox,
+      cryptoProvider:  TestUtils.getCryptoProvider(),
+      defaultCryptoAlgo: 'aes',
+      account: accounts[0],
+      keyProvider: TestUtils.getKeyProvider(),
+    };
+    const keyExchange = new KeyExchange(keyExchangeOptions);
+
+    const commKey = await keyExchange.generateCommKey();
+    await profile.addContactKey(config.smartAgents.onboarding.accountId, 'commKey', commKey);
+
   });
 
   after(async () => {
