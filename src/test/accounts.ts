@@ -52,20 +52,18 @@ const accountMap3 = {
     '340BA316637FD01A1AFD54D4491A899F6D8EA0FB89A1D7BA94682F7D68B21B20'
 }
 
-let accounts;
 let accountMap;
-if (<any>process.env && <any>process.env.TESTSPEC === 'contracts') {
-  accounts = Object.keys(accountMap1);
+if (<any>process.env && <any>process.env.ACCOUNT_MAP) {
+  accountMap = JSON.parse(process.env.ACCOUNT_MAP);
+} else if (<any>process.env && <any>process.env.TESTSPEC === 'contracts') {
   accountMap =  accountMap1;
-} else if (<any>process.env && <any>process.env.TESTSPEC === 'services') {
-  accounts = Object.keys(accountMap3);
-  accountMap =  accountMap3;
 } else if (<any>process.env && <any>process.env.TESTSPEC === 'datacontract') {
-  accounts = Object.keys(accountMap2);
   accountMap =  accountMap2;
+} else if (<any>process.env && <any>process.env.TESTSPEC === 'services') {
+  accountMap =  accountMap3;
 } else {
-  accounts = Object.keys(accountMap1);
   accountMap =  accountMap1;
 }
+let accounts = Object.keys(accountMap);
 
 export { accounts, accountMap }
