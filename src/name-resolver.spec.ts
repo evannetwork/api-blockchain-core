@@ -429,7 +429,7 @@ describe('NameResolver class', function() {
           await TestUtils.sleep(timeValidMs);
           await TestUtils.nextBlock(executor, domainOwner);
 
-          // check again, resolva should have stopped
+          // check again, resolver should have stopped
           expect(await nameResolverTimed.getAddress(domain)).to.eq(null);
         });
 
@@ -440,7 +440,6 @@ describe('NameResolver class', function() {
 
           // claim domain
           await nameResolverTimed.claimAddress(domain, domainOwner, domainOwner, getPrice());
-          console.time('extend')
           // set address to domain
           await nameResolverTimed.setAddress(domain, randomAddress, domainOwner);
 
@@ -456,7 +455,6 @@ describe('NameResolver class', function() {
 
           // address is still up
           expect(await nameResolverTimed.getAddress(domain)).to.eq(randomAddress);
-          console.timeEnd('extend')
           // extend uptime
           const extendP = nameResolverTimed.claimAddress(domain, domainOwner, domainOwner, getPrice());
           await expect(extendP).to.be.rejected;
