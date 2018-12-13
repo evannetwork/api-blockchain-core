@@ -127,9 +127,9 @@ describe('NameResolver class', function() {
     let nameResolverTimed: NameResolver;
     let timedEns: any;
     // use modified validity durations
-    let timeValidMs = 60000;
-    let timeValidPreExpireWindowMs = -20000;
-    let timeValidPostExpireWindowMs = 20000;
+    let timeValidMs = 45000;
+    let timeValidPreExpireWindowMs = -22500;
+    let timeValidPostExpireWindowMs = 22500;
 
     const createStructure = async () => {
       // create new ens and register test tld
