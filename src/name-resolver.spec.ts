@@ -144,7 +144,7 @@ describe('NameResolver class', function() {
         // set duration, that an owner still has excluse claim permission after validity expired
         executor.executeContractTransaction(
           timedEns,
-          'setValidPostExipireWindow',
+          'setValidPostExpireWindow',
           { from: ensOwner },
           Math.floor(timeValidPostExpireWindowMs / 1000),
         ),
