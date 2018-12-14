@@ -5,6 +5,11 @@
 ### Fixes
 ### Deprecations
 
+## Version 1.6.1
+### Fixes
+- remove web3 initialization within the `ServiceContract`
+- use 1.0.0-beta.33, beta.37 will cause Websocket errors in Edge browser
+
 ## Version 1.6.0
 ### Features
 - add own ipfs handler
