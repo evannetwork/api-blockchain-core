@@ -28,7 +28,6 @@
 import _ = require('lodash');
 import crypto = require('crypto');
 import prottle = require('prottle');
-import Web3 = require('web3');
 
 import {
   ContractLoader,
@@ -44,7 +43,6 @@ import { CryptoProvider } from '../../encryption/crypto-provider';
 import { Sharing } from '../sharing';
 
 const requestWindowSize = 10;
-const web3 = new Web3(null);
 const uintMax = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
 
 const serviceSchema = {
