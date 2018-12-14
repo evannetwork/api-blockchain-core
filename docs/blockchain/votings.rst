@@ -346,6 +346,56 @@ Example
 
 --------------------------------------------------------------------------------
 
+.. _votings_getProposalCount:
+
+getProposalCount
+================================================================================
+
+.. code-block:: typescript
+
+  votings.getProposalCount(contract);
+
+Get number of proposals in votings contract.
+
+----------
+Parameters
+----------
+
+#. ``contract`` - ``string|any``: web3 voting contract instance or contract address
+
+-------
+Returns
+-------
+
+``Promise`` returns ``number``: number of proposals
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await votings.createProposal(
+    '0x00000000000000000000000000000000c0274ac7',
+    '0x1111111111111111111111111111111111111111',
+    {
+      description: 'set data of this contract to "def"',
+      data: '0x47064d6a' +
+        '0000000000000000000000000000000000000000000000000000000000000020' +
+        '0000000000000000000000000000000000000000000000000000000000000003' +
+        '6465660000000000000000000000000000000000000000000000000000000000',
+      to: '0x000000000000000000000000a2074340c0274ac7',
+    },
+  );
+  const count = await votings.getProposalCount('0x00000000000000000000000000000000c0274ac7');
+  console.log(count);
+  // Output:
+  // 1
+
+
+
+--------------------------------------------------------------------------------
+
 .. _votings_getProposalInfo:
 
 getProposalInfo
@@ -392,6 +442,59 @@ Example
   //   to: '0x0000000000000000000000000000000000000000',
   //   value: '0'
   // }
+
+
+
+--------------------------------------------------------------------------------
+
+.. _votings_getProposalInfos:
+
+getProposalInfos
+================================================================================
+
+.. code-block:: typescript
+
+  votings.getProposalInfos(contract[, count, offset, reverse]);
+
+Get multiple proposals from votings contract.
+
+----------
+Parameters
+----------
+
+#. ``contract`` - ``string|any``: web3 voting contract instance or contract address
+#. ``count`` - ``number`` (optional): number of items to retrieve, defaults to ``10``
+#. ``offset`` - ``number`` (optional): skip this many entries, defaults to ``0``
+#. ``reverse`` - ``boolean`` (optional): fetch entries, starting with last entry, defaults to ``true``
+
+-------
+Returns
+-------
+
+``Promise`` returns |source proposalinfos|_: proposals listing
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+    await votings.createProposal(
+    '0x00000000000000000000000000000000c0274ac7',
+    '0x1111111111111111111111111111111111111111',
+    {
+      description: 'set data of this contract to "def"',
+      data: '0x47064d6a' +
+        '0000000000000000000000000000000000000000000000000000000000000020' +
+        '0000000000000000000000000000000000000000000000000000000000000003' +
+        '6465660000000000000000000000000000000000000000000000000000000000',
+      to: '0x000000000000000000000000a2074340c0274ac7',
+    },
+  );
+  const proposals = await votings.getProposalInfos('0x00000000000000000000000000000000c0274ac7');
+  console.log(proposals.results.length);
+  // Output:
+  // 1
 
 
 
@@ -539,6 +642,17 @@ ProposalInfo
 
 
 
+.. _votings_ProposalInfos:
+
+-------------
+ProposalInfos
+-------------
+
+#. ``results`` - |source proposalinfo_array|_: proposals of current page (length is 10)
+#. ``totalCount`` - ``number``: total number of results
+
+
+
 .. _votings_ProposalOptions:
 
 ---------------
@@ -579,6 +693,12 @@ VotingsContractOptions
 
 .. |source proposalinfo| replace:: ``ProposalInfo``
 .. _source proposalinfo: #proposalinfo
+
+.. |source proposalinfo_array| replace:: ``ProposalInfo[]``
+.. _source proposalinfo_array: #proposalinfo
+
+.. |source proposalinfos| replace:: ``ProposalInfos``
+.. _source proposalinfos: #proposalinfos
 
 .. |source proposaloptions| replace:: ``ProposalOptions``
 .. _source proposaloptions: #proposaloptions

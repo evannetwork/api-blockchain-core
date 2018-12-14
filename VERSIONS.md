@@ -9,6 +9,7 @@
 - add support for `PayableRegistrar`, that allows to by domain names with EVEs
 - add support for ENS registries with time limited nodes
 - add support for permanent ENS address on payable registrar
+- add support for retrieving proposals paged
 
 ### Fixes
 ### Deprecations
