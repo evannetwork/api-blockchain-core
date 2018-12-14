@@ -520,7 +520,7 @@ describe('ServiceContract', function() {
     expect(answers1[answerId].data).to.deep.eq(null);
   });
 
-  describe.only('when paging through calls and answers', () => {
+  describe('when paging through calls and answers', () => {
     let contract;
     let sampleCalls;
     let sampleAnswers;
