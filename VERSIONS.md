@@ -2,6 +2,11 @@
 
 ## Next Version
 ### Features
+### Fixes
+### Deprecations
+
+## Version 1.6.0
+### Features
 - add own ipfs handler
 - add ipfs identification header to enable future ipfs payments
 - add `defaultClaims` to `Profile` `loadActiveClaims`
@@ -10,9 +15,6 @@
 - add support for ENS registries with time limited nodes
 - add support for permanent ENS address on payable registrar
 - add support for retrieving proposals paged
-
-### Fixes
-### Deprecations
 
 ## Version 1.5.0
 ### Features
