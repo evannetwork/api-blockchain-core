@@ -570,7 +570,7 @@ export class Profile extends Logger {
    */
   private async loadActiveClaims() {
     const defaultClaims = [
-      '/onboarding/agbaccepted',
+      '/evan/termsofuse',
     ];
 
     if (!this.trees[this.treeLabels.activeClaims]) {

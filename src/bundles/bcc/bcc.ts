@@ -376,9 +376,17 @@ const create = function(options: ProfileBundleOptions): ProfileInstance {
 
   const coreInstance = options.CoreBundle.createAndSetCore(options.coreOptions);
 
-  accountStore.getPrivateKey(options.accountId).then((pk) => {
-    coreInstance.dfs.setAccountAndPrivateKey(options.accountId, '0x' + pk);
-  })
+  accountStore
+    .getPrivateKey(options.accountId)
+    .then((pk) => {
+      coreInstance.dfs.setAccountAndPrivateKey(options.accountId, '0x' + pk);
+    })
+    .catch((ex) => {
+      executor.log(
+        `bcc.ProfileBundle Could not load private key from accountStore: ${ ex.message }`,
+        'warning'
+      );
+    });
 
   coreInstance.description.cryptoProvider = new CryptoProvider({
     unencrypted: new Unencrypted(),
