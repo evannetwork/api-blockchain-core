@@ -400,6 +400,7 @@ export class TestUtils {
     return new Votings({
       contractLoader: await this.getContractLoader(web3),
       executor,
+      nameResolver: await this.getNameResolver(web3),
     });
   }
 

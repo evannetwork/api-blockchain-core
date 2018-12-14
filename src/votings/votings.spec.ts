@@ -27,8 +27,8 @@
 
 import 'mocha';
 import chaiAsPromised = require('chai-as-promised');
+import { ContractLoader, Executor } from '@evan.network/dbcp';
 import { expect, use } from 'chai';
-import { Executor } from '@evan.network/dbcp';
 
 import { accounts } from '../test/accounts';
 import { TestUtils } from '../test/test-utils';
@@ -39,6 +39,7 @@ const [ votingOwner, member, nonMember ] = accounts;
 use(chaiAsPromised);
 
 describe('Voting handler', () => {
+  let contractLoader: ContractLoader;
   let executor: Executor;
   let votingContract: any;
   let votings: Votings;
@@ -52,6 +53,7 @@ describe('Voting handler', () => {
 
   before(async () => {
     web3 = TestUtils.getWeb3();
+    contractLoader = await TestUtils.getContractLoader(web3);
     executor = await TestUtils.getExecutor(web3);
     votings = await TestUtils.getVotings(web3);
   });
@@ -229,6 +231,78 @@ describe('Voting handler', () => {
       // make new block to update time check in contract (for gas estimation)
       await nextBlock();
       await expect(votings.execute(contract, votingOwner, proposal)).to.be.rejected;
+    });
+  });
+
+  describe('when paging through proposals', async() => {
+    const descriptions = [
+      '0.17664580626145200 is the most awesome random number ever',
+      '0.67163320670743580 is the most awesome random number ever',
+      '0.07618375841815772 is the most awesome random number ever',
+      '0.18392786041740372 is the most awesome random number ever',
+      '0.56878702637737870 is the most awesome random number ever',
+      '0.82279484477584890 is the most awesome random number ever',
+      '0.24555098987061785 is the most awesome random number ever',
+      '0.51627801995238800 is the most awesome random number ever',
+      '0.82731705261710630 is the most awesome random number ever',
+      '0.23951314981719540 is the most awesome random number ever',
+      '0.26150436924424314 is the most awesome random number ever',
+      '0.23829951536378036 is the most awesome random number ever',
+      '0.08490078250525390 is the most awesome random number ever',
+      '0.34190422508920770 is the most awesome random number ever',
+      '0.62188391550323250 is the most awesome random number ever',
+      '0.57579188868901630 is the most awesome random number ever',
+      '0.64027735039496060 is the most awesome random number ever',
+      '0.27940837974617727 is the most awesome random number ever',
+      '0.09509236784919683 is the most awesome random number ever',
+      '0.33218270780830240 is the most awesome random number ever',
+      '0.94567104633843300 is the most awesome random number ever',
+      '0.50758494770653860 is the most awesome random number ever',
+      '0.44964184294725840 is the most awesome random number ever',
+      '0.90566670541089360 is the most awesome random number ever',
+      '0.14632923460168112 is the most awesome random number ever',
+      '0.07838871652030921 is the most awesome random number ever',
+      '0.98703823197063150 is the most awesome random number ever',
+    ];
+    const descriptionsNewestFirst = descriptions.reverse();
+    const numOfProposals = 27;
+    let contract;
+
+    before(async () => {
+      // // create new voting contract
+      // contract = await votings.createContract(
+      //   votingOwner,
+      //   {
+      //     minimumQuorumForProposals: 2,
+      //     minutesForDebate: 1,
+      //     marginOfVotesForMajority: 0,
+      //   },
+      // );
+      // console.dir(contract.options.address)
+      // for (let description of descriptions) {
+      //   await votings.createProposal(contract, votingOwner, { description });
+      // }
+      contract = contractLoader.loadContract('Congress', '0x9C1F4d7E75163D054A98700b1568347C5f687238');
+    });
+
+    it('can retrieve a single page', async () => {
+      const retrieved = await votings.getProposalInfos(contract);
+      expect(retrieved.totalCount).to.eq(numOfProposals);
+      expect(retrieved.results.length).to.eq(Math.min(10, numOfProposals));
+      for (let [i, result] of retrieved.results.entries()) {
+        expect(result.description).to.eq(descriptionsNewestFirst[i]);
+      }
+    });
+
+    it('can page to last result', async () => {
+      let count = await votings.getProposalCount(contract);
+      let results = await votings.getProposalInfos(contract, count);
+
+      expect(results.totalCount).to.eq(numOfProposals);
+      expect(results.results.length).to.eq(Math.min(numOfProposals, results.totalCount));
+      for (let [i, result] of results.results.entries()) {
+        expect(result.description).to.eq(descriptionsNewestFirst[i]);
+      }
     });
   });
 });

@@ -32,6 +32,8 @@ import {
   LoggerOptions,
 } from '@evan.network/dbcp';
 
+import { NameResolver } from '../name-resolver';
+
 
 const nullAddress = '0x0000000000000000000000000000000000000000';
 const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
@@ -44,7 +46,7 @@ const defaultProposalOptions = {
 /**
  * info about a member of the voting contract
  */
- export interface MemberInfo {
+export interface MemberInfo {
   /**
    * accountId of member
    */
@@ -57,7 +59,7 @@ const defaultProposalOptions = {
     * date of joining votings contract
     */
    memberSince: string;
- }
+}
 
 /**
  * options for membership on voting contract
@@ -112,6 +114,20 @@ export interface ProposalInfo {
 }
 
 /**
+ * result set for paging through proposals
+ */
+export interface ProposalInfos {
+  /**
+   * proposals of current page (length is 10)
+   */
+  results: ProposalInfo[],
+  /**
+   * total number of results
+   */
+  totalCount: number,
+}
+
+/**
  * options for creating a proposal
  */
 export interface ProposalOptions {
@@ -160,6 +176,7 @@ export interface VotingsContractOptions {
 export interface VotingsOptions extends LoggerOptions {
   contractLoader: ContractLoader;
   executor: Executor;
+  nameResolver: NameResolver;
 }
 
 /**
@@ -305,6 +322,19 @@ export class Votings extends Logger {
   }
 
   /**
+   * get number of proposals in votings contract
+   *
+   * @param      {string|any}       contract  web3 voting contract instance or contract address
+   * @return     {Promise<number>}  number of proposals
+   */
+  public async getProposalCount(contract: string|any): Promise<number> {
+    return parseInt(await this.options.executor.executeContractCall(
+      this.ensureContract(contract),
+      'numProposals',
+    ), 10);
+  }
+
+  /**
    * gets info about a given proposal in contract
    *
    * @param      {string|any}             contract  web3 voting contract instance or contract
@@ -328,6 +358,41 @@ export class Votings extends Logger {
       proposalPassed: fromContract.proposalPassed,
       to: fromContract.recipient,
       value: fromContract.amount,
+    };
+  }
+
+  /**
+   * get multiple proposals from votings contract
+   *
+   * @param      {string|any}              contract  web3 voting contract instance or
+   *                                                 contractaddress
+   * @param      {number}                  count     number of items to retrieve
+   * @param      {number}                  offset    skip this many entries
+   * @param      {boolean}                 reverse   fetch entries, starting with last entry
+   * @return     {Promise<ProposalInfos>}  proposals listing
+   */
+  public async getProposalInfos(
+      contract: string|any,
+      count = 10,
+      offset = 0,
+      reverse = true): Promise<ProposalInfos> {
+    let totalCountString;
+    const votingsContract = this.ensureContract(contract);
+    const results = await this.options.nameResolver.getArrayFromUintMapping(
+      votingsContract,
+      async () => {
+        totalCountString = await this.options.executor.executeContractCall(
+          votingsContract, 'numProposals');
+        return totalCountString;
+      },
+      (i) => this.getProposalInfo(votingsContract, i),
+      count,
+      offset,
+      reverse,
+    );
+    return {
+      results: results.filter(result => !!result.minExecutionDate),
+      totalCount: parseInt(totalCountString, 10),
     };
   }
 
