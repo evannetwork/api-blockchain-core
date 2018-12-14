@@ -32,13 +32,13 @@ import chaiAsPromised = require('chai-as-promised');
 import {
   DfsInterface,
   Executor,
-  Ipfs,
   NameResolver,
 } from '@evan.network/dbcp';
 
 import { accounts } from '../test/accounts';
 import { config } from '../config';
 import { CryptoProvider } from '../encryption/crypto-provider';
+import { Ipfs } from '../dfs/ipfs';
 import { Sharing } from './sharing';
 import { sampleContext, TestUtils } from '../test/test-utils';
 
@@ -412,72 +412,6 @@ describe('Sharing handler', function() {
         const key = await sharing.getKey(contract.options.address, accounts[1], '*', 0, sharingIds[i]);
         expect(key).to.eq(randomSecrets[i]);
       }
-    });
-  });
-
-  describe('for ENS descriptions', function() {
-    beforeEach(async () => {
-      // empty description
-      await description.setDescriptionToEns(
-        testAddress, {
-          public: {
-            name: 'sharing test',
-            description: 'sharing test',
-            author: 'sharing author',
-            version: '0.0.1',
-          },
-        },
-        accounts[1]
-      );
-    });
-
-    it('should be able to add a sharing', async () => {
-      const randomSecret = `super secret; ${Math.random()}`;
-      await sharing.addSharing(testAddress, accounts[1], accounts[0], '*', 0, randomSecret);
-    });
-
-    it('should be able to get a sharing key', async () => {
-      const randomSecret = `super secret; ${Math.random()}`;
-      await sharing.addSharing(testAddress, accounts[1], accounts[0], '*', 0, randomSecret);
-      const key = await sharing.getKey(testAddress, accounts[0], '*', 0);
-      expect(key).to.eq(randomSecret);
-    });
-
-    it('should be able to list all sharings', async () => {
-      const randomSecret = `super secret; ${Math.random()}`;
-      await sharing.addSharing(testAddress, accounts[1], accounts[0], '*', 0, randomSecret);
-      const sharings = await sharing.getSharings(testAddress);
-      expect(sharings).not.to.be.undefined;
-    });
-
-    it('should be able to remove a sharing', async () => {
-      const randomSecret = `super secret; ${Math.random()}`;
-      await sharing.addSharing(testAddress, accounts[1], accounts[0], '*', 0, randomSecret);
-      let sharings = await sharing.getSharings(testAddress);
-      expect(Object.keys(sharings).length).to.eq(1);
-      expect(sharings[nameResolver.soliditySha3(accounts[0])][nameResolver.soliditySha3('*')][0]).to.eq(randomSecret);
-      await sharing.removeSharing(testAddress, accounts[1], accounts[0], '*');
-      sharings = await sharing.getSharings(testAddress);
-      expect(Object.keys(sharings).length).to.eq(0);
-      const key1 = await sharing.getKey(testAddress, accounts[0], '*', 0);
-      expect(key1).to.be.undefined;
-    });
-
-    it('should be able to store sharings under a given context', async () => {
-      const randomSecret = `super secret; ${Math.random()}`;
-      await sharing.addSharing(testAddress, accounts[1], accounts[0], '*', 0, randomSecret, sampleContext);
-      const key = await sharing.getKey(testAddress, accounts[0], '*', 0);
-      expect(key).to.eq(randomSecret);
-
-      const unknownContext = 'I have not been added to any config';
-      let err;
-      try {
-        await sharing.addSharing(`foo${testAddress}`, accounts[1], accounts[0], '*', 0, randomSecret, unknownContext);
-        const notWorkingKey = await sharing.getKey(`foo${testAddress}`, accounts[0], '*', 0);
-      } catch (ex) {
-        err = ex;
-      }
-      expect(err).to.be.an('error');
     });
   });
 });

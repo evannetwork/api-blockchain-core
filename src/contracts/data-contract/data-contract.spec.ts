@@ -312,8 +312,11 @@ describe('DataContract', function() {
           }
           await dc.removeListEntry(contract, 'list_removable_by_owner', 2, accounts[0]);
           retrieved = await dc.getListEntries(contract, 'list_removable_by_owner', accounts[0], storeInDfs, encryptHashes);
-          for (let i = 0; i < (sampleValues.length - 1) ; i++) {
-            expect(retrieved[i]).to.eq(sampleValues[i]);
+          // handle array values like the datacontract
+          const modifiedSampleValues = sampleValues.slice(0);
+          modifiedSampleValues[2] = modifiedSampleValues[modifiedSampleValues.length - 1];
+          for (let i = 0; i < (modifiedSampleValues.length - 1) ; i++) {
+            expect(retrieved[i]).to.eq(modifiedSampleValues[i]);
           }
         });
         it('does not allow the member to remove list entries', async () => {
@@ -442,15 +445,15 @@ describe('DataContract', function() {
         it('allows to move an entry from one list to another', async () => {
           const contract = await createContract(storeInDfs);
           await dc.addListEntries(contract, ['list_removable_by_owner'], sampleValues, accounts[0], storeInDfs, encryptHashes);
-          expect(await dc.getListEntryCount(contract, 'list_removable_by_owner')).to.eq(3);
+          expect(await dc.getListEntryCount(contract, 'list_removable_by_owner')).to.eq(sampleValues.length);
           expect(await dc.getListEntryCount(contract, 'list_settable_by_member')).to.eq(0);
           expect(await dc.getListEntry(contract, 'list_removable_by_owner', 1, accounts[0], storeInDfs, encryptHashes)).to.eq(sampleValues[1]);
           // move item
           await dc.moveListEntry(contract, 'list_removable_by_owner', 1, ['list_settable_by_member'], accounts[0]);
-          expect(await dc.getListEntryCount(contract, 'list_removable_by_owner')).to.eq(2);
+          expect(await dc.getListEntryCount(contract, 'list_removable_by_owner')).to.eq(sampleValues.length -1);
           expect(await dc.getListEntryCount(contract, 'list_settable_by_member')).to.eq(1);
           // former last elements should have been moved to removed position
-          expect(await dc.getListEntry(contract, 'list_removable_by_owner', 1, accounts[0], storeInDfs, encryptHashes)).to.eq(sampleValues[2]);
+          expect(await dc.getListEntry(contract, 'list_removable_by_owner', 1, accounts[0], storeInDfs, encryptHashes)).to.eq(sampleValues[sampleValues.length - 1]);
           // new entry should have been added
           expect(await dc.getListEntry(contract, 'list_settable_by_member', 0, accounts[0], storeInDfs, encryptHashes)).to.eq(sampleValues[1]);
         });

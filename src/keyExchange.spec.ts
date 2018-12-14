@@ -34,7 +34,6 @@ use(chaiAsPromised);
 import BigNumber = require('bignumber.js');
 
 import {
-  Ipfs,
   NameResolver,
 } from '@evan.network/dbcp';
 
@@ -44,6 +43,7 @@ import { Profile } from './profile/profile';
 import { KeyExchange, KeyExchangeOptions } from './keyExchange';
 import { TestUtils } from './test/test-utils';
 import { Ipld } from './dfs/ipld';
+import { Ipfs } from './dfs/ipfs';
 
 describe('KeyExchange class', function() {
   this.timeout(600000);

@@ -30,11 +30,11 @@ import { expect } from 'chai';
 import BigNumber = require('bignumber.js');
 
 import {
-  Ipfs,
   NameResolver,
 } from '@evan.network/dbcp';
 
 import { accounts } from './test/accounts';
+import { Ipfs } from './dfs/ipfs';
 import { Ipld } from './dfs/ipld';
 import { Mail, Mailbox, MailboxOptions } from './mailbox';
 import { TestUtils } from './test/test-utils';

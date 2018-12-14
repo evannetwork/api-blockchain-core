@@ -29,7 +29,6 @@ import crypto = require('crypto-browserify');
 
 import {
   ContractLoader,
-  Ipfs,
   KeyProvider,
   Logger,
   LoggerOptions,
@@ -39,6 +38,7 @@ import {
 import { Aes } from './encryption/aes';
 import { CryptoProvider } from './encryption/crypto-provider';
 import { Ipld } from './dfs/ipld';
+import { Ipfs } from './dfs/ipfs';
 import { Mail, Mailbox } from './mailbox';
 
 

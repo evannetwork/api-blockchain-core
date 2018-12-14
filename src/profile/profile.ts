@@ -541,7 +541,7 @@ export class Profile extends Logger {
       throw new Error('no valid address given!');
     }
     this.ensureTree('bookmarkedDapps');
-    await this.ipld.remove(this.trees['bookmarkedDapps'], address);
+    await this.ipld.remove(this.trees['bookmarkedDapps'], `bookmarkedDapps/${address}`);
   }
 
   /**
@@ -569,12 +569,16 @@ export class Profile extends Logger {
    * @return     {Array<string>}  array of topics of claims that should be displayed
    */
   private async loadActiveClaims() {
+    const defaultClaims = [
+      '/onboarding/agbaccepted',
+    ];
+
     if (!this.trees[this.treeLabels.activeClaims]) {
       await this.loadForAccount(this.treeLabels.activeClaims);
     }
 
     return (await this.ipld.getLinkedGraph(this.trees[this.treeLabels.activeClaims],
-      this.treeLabels.activeClaims)) || [ ];
+      this.treeLabels.activeClaims)) || defaultClaims;
   }
 
   /**

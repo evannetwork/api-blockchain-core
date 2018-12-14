@@ -241,7 +241,7 @@ setClaim
 
 .. code-block:: typescript
 
-  claims.setClaim(issuer, subject, claimName[, claimValue]);
+  claims.setClaim(issuer, subject, claimName[, expirationDate, claimValue, descriptionDomain]);
 
 Sets or creates a claim; this requires the issuer to have permissions for the parent claim (if claim
 name seen as a path, the parent 'folder').
@@ -255,7 +255,7 @@ Parameters
 #. ``claimName`` - ``string``: name of the claim (full path)
 #. ``expirationDate`` - ``number`` (optional): expiration date, for the claim, defaults to ``0`` (does not expire)
 #. ``claimValue`` - ``string`` (optional): bytes32 hash of the claims value, will not be set if omitted
-#. ``descriptionDomain`` - ``string`` (optional): domain of the claim, this is a subdomain under 'claims.evan', so passing `sample` will link claims description to 'sample.claims.evan', unset if omitted
+#. ``descriptionDomain`` - ``string`` (optional): domain of the claim, this is a subdomain under 'claims.evan', so passing 'example' will link claims description to 'example.claims.evan', unset if omitted
 
 -------
 Returns
@@ -275,7 +275,7 @@ Example
   // accounts[0] issues claim '/company' for accounts[1], sets an expiration date
   // and links to description domain 'sample'
   const secondClaim = await claims.setClaim(
-    accounts[0], accounts[1], '/company', expirationDate, claimValue, 'sample');
+    accounts[0], accounts[1], '/company', expirationDate, claimValue, 'example');
 
 
 --------------------------------------------------------------------------------
@@ -317,14 +317,26 @@ Example
   [{
     creationDate: 1234567890,
     data: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    description: {
+      name: 'sample claim',
+      description: 'I\'m a sample claim',
+      author: 'evan.network',
+      version: '1.0.0',
+      dbcpVersion: 1,
+    },
+    expirationDate: 1234567890,
     id: '0x0000000000000000000000000000000000000000000000000000000000000000',
     issuer: '0x0000000000000000000000000000000000000001',
     name: '/company',
-    status: 1
+    rejectReason: {
+      "rejected": "rejection message"
+    },
+    signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    status: 0 (Issued) || 1 (Confirmed) || 2 (Rejected), 
     subject: '0x0000000000000000000000000000000000000002',
     uri: '',
     signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
-    valid: true,
+    valid: true
   }]
 
 
@@ -507,6 +519,45 @@ Example
 
 --------------------------------------------------------------------------------
 
+.. _claims_rejectClaim:
+
+rejectClaim
+================================================================================
+
+.. code-block:: typescript
+
+  claims.rejectClaim(subject, claimName, issuer, claimId, rejectReason?);
+
+Reject a Claim. This claim will be marked as rejected but not deleted. This is important for tracking reasons. You can also optionally add a reject reason as JSON object to track additional informations about the rejection. Issuer and Subject can reject a special claim. 
+
+----------
+Parameters
+----------
+
+#. ``subject`` - ``string``: the subject of the claim
+#. ``claimName`` - ``string``: name of the claim (full path)
+#. ``issuer`` - ``string``: issuer of the claim
+#. ``claimId`` - ``string``: id of a claim to delete
+#. ``rejectReason`` - ``object`` (optional): JSON Object of the rejection reason
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await claims.setClaim(accounts[0], accounts[1], '/company');
+  await claims.rejectClaim(accounts[0], '/company', accounts[1], { rejected: "because not valid anymore"});
+
+
+
+--------------------------------------------------------------------------------
 
 
 = Subjects =
@@ -564,7 +615,7 @@ setClaimDescription
 
 .. code-block:: typescript
 
-  claims.setClaimDescription(accountId, topic, domain);
+  claims.setClaimDescription(accountId, topic, domain, description);
 
 Set description for a claim under a domain owned by given account. This sets the description at the ENS endpoint for a claim.
 
@@ -586,7 +637,7 @@ Parameters
 
 #. ``accountId`` - ``string``: accountId, that performs the description update
 #. ``topic`` - ``string``: name of the claim (full path) to set description
-#. ``domain`` - ``string``: domain of the claim, this is a subdomain under 'claims.evan', so passing `example` will link claims description to 'sample.claims.evan'
+#. ``domain`` - ``string``: domain of the claim, this is a subdomain under 'claims.evan', so passing 'example' will link claims description to 'example.claims.evan'
 #. ``description`` - ``string``: DBCP description of the claim; can be an Envelope but only public properties are used
 
 -------

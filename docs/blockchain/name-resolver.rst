@@ -313,10 +313,9 @@ claimAddress
 
 .. code-block:: typescript
 
-  nameResolver.claimAddress(name, accountId[, domainOwnerId]);
+  nameResolver.claimAddress(name, accountId[, domainOwnerId, price]);
 
-Tries to claim node ownership from parent nodes owner, this assumes, that the parent node owner is a
-FIFS registar.
+Tries to claim node ownership from parent nodes owner, this assumes, that the parent node owner is a registar, that supports claiming address from it (FIFS registrar or PayableRegistrar).
 
 ----------
 Parameters
@@ -324,6 +323,51 @@ Parameters
 
 #. ``name`` - ``string``: domain name to set (plain text)
 #. ``accountId`` - ``string``: account, that executes the transaction
+#. ``domainOwnerId`` - ``string`` (optional): owner of the new domain, defaults to ``accountId``
+#. ``value`` - ``string|number`` (optional): value to send (if registrar is payable)
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // claim '123test.fifs.registrar.test.evan' with account[0] for account[1] from FIFS registrar
+  const domain = '123test.fifs.registrar.test.evan';
+  await nameResolver.claimAddress(domain, accounts[0], accounts[1]);
+
+  // claim '123test.payable.registrar.test.evan' with account[0] for account[1] from payable registrar
+  const domain = '123test.fifs.registrar.test.evan';
+  const price = await nameResolver.getPrice(domain);
+  await nameResolver.claimAddress(domain, accounts[0], accounts[1], price);
+
+
+
+--------------------------------------------------------------------------------
+
+.. _name_resolver_claimPermanentAddress:
+
+claimPermanentAddress
+================================================================================
+
+.. code-block:: typescript
+
+  nameResolver.claimPermanentAddress(name, accountId[, domainOwnerId]);
+
+Registers a permanent domain via registrar, can only be done by registrar owner.
+
+----------
+Parameters
+----------
+
+#. ``name`` - ``string``: domain name to set (plain text)
+#. ``accountId`` - ``string``: account, that executes the transaction, has to be registrar owner
 #. ``domainOwnerId`` - ``string`` (optional): owner of the new domain, defaults to ``accountId``
 
 -------
@@ -338,9 +382,204 @@ Example
 
 .. code-block:: typescript
 
-  // claim '123test.fifs.registrar.test.evan' with account[0] for account[1]
-  await nameResolver.claimAddress(
-    '123test.fifs.registrar.test.evan', accounts[0], accounts[1]);
+  // claim '123sample.evan' with account[0] for account[1] from registrar
+  const domain = '123sample.evan';
+  await nameResolver.claimPermanentAddress(domain, accounts[0], accounts[1]);
+
+
+
+--------------------------------------------------------------------------------
+
+.. _name_resolver_setPrice:
+
+setPrice
+================================================================================
+
+.. code-block:: typescript
+
+  nameResolver.setPrice(name, accountId, newPrice);
+
+Set price for a registrar at a domain.
+
+----------
+Parameters
+----------
+
+#. ``name`` - ``string``: ENS address of a domain owned by a registrar (e.g. 'sample.payable.test.evan')
+#. ``accountId`` - ``string``: account that performs the action (needs proper permisions for registrar)
+#. ``newPrice`` - ``number|string`` (optional): new price in Wei
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await nameResolver.setPrice(
+    'payable.registrar.test.evan',
+    '0x1111111111111111111111111111111111111111',
+    web3.utils.toWei('5', 'ether'),
+  );
+
+
+
+--------------------------------------------------------------------------------
+
+.. _name_resolver_getPrice:
+
+getPrice
+================================================================================
+
+.. code-block:: typescript
+
+  nameResolver.getPrice(name);
+
+Get price for domain (if domain is payable).
+
+----------
+Parameters
+----------
+
+#. ``name`` - ``string``: a domain to check price for (e.g. 'sample.payable.test.evan')
+
+-------
+Returns
+-------
+
+``Promise`` returns ``string``: price in Wei
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  console.log(await nameResolver.getPrice('payable.registrar.test.evan'));
+  // Output:
+  // 5000000000000000000
+
+
+
+--------------------------------------------------------------------------------
+
+.. _name_resolver_setValidUntil:
+
+setPrice
+================================================================================
+
+.. code-block:: typescript
+
+  nameResolver.setValidUntil(name, accountId, newPrice);
+
+Set duration, that an address is valid; resolval stops after this, depending on configuration of the ENS an extra period, where owner is still available, can be granted; notice that this can only be done by parent owner of given domain.
+
+----------
+Parameters
+----------
+
+#. ``name`` - ``string``: ENS address of a domain owned by a registrar (e.g. 'sample.payable.test.evan')
+#. ``accountId`` - ``string``: account that performs the action; must be parent owner of given domain
+#. ``validUntil`` - ``number|string``: js timestamp, when name resolution stops
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await nameResolver.setValidUntil(
+    'payable.registrar.test.evan',
+    '0x1111111111111111111111111111111111111111',
+    Date.now() + 60000,
+  );
+
+
+
+--------------------------------------------------------------------------------
+
+.. _name_resolver_getValidUntil:
+
+getValidUntil
+================================================================================
+
+.. code-block:: typescript
+
+  nameResolver.getValidUntil(name);
+
+Get timestamp, when domain will stop resolval.
+
+----------
+Parameters
+----------
+
+#. ``name`` - ``string``: domain to get valid until for
+
+-------
+Returns
+-------
+
+``Promise`` returns ``string``: js timestamp, when resolver lookup will expire
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  console.log(await nameResolver.getValidUntil('payable.registrar.test.evan'));
+  // Output:
+  // 1544630375417
+
+
+
+--------------------------------------------------------------------------------
+
+.. _name_resolver_claimFunds:
+
+claimFunds
+================================================================================
+
+.. code-block:: typescript
+
+  namerResolver.claimFunds(name, accountId);
+
+Claim funds for domain.
+
+----------
+Parameters
+----------
+
+#. ``name`` - ``string``: ENS address of a domain owned by a registrar (e.g. 'sample.payable.test.evan')
+#. ``accountId`` - ``string``: account that performs the action (needs proper permisions for registrar)
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await nameResolver.claimFunds(
+    'payable.registrar.test.evan',
+    '0x1111111111111111111111111111111111111111',
+  );
 
 
 
@@ -610,6 +849,7 @@ Returns
 -------
 
 ``string``:  converted address
+
 
 
 .. required for building markup

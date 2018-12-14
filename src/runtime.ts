@@ -31,7 +31,6 @@ import {
   DfsInterface,
   EventHub,
   Executor,
-  Ipfs,
   KeyProvider,
   Logger,
   SignerInterface,
@@ -43,10 +42,12 @@ import { Aes } from './encryption/aes';
 import { AesBlob } from './encryption/aes-blob';
 import { AesEcb } from './encryption/aes-ecb';
 import { BaseContract } from './contracts/base-contract/base-contract';
+import { Claims } from './claims/claims';
 import { config } from './config';
 import { CryptoProvider } from './encryption/crypto-provider';
 import { DataContract } from './contracts/data-contract/data-contract';
 import { Description } from './shared-description';
+import { Ipfs } from './dfs/ipfs';
 import { Ipld } from './dfs/ipld';
 import { KeyExchange } from './keyExchange';
 import { Mailbox } from './mailbox';
@@ -56,7 +57,7 @@ import { Profile } from './profile/profile';
 import { RightsAndRoles } from './contracts/rights-and-roles';
 import { ServiceContract } from './contracts/service-contract/service-contract';
 import { Sharing } from './contracts/sharing';
-import { Claims } from './claims/claims';
+import { Votings } from './votings/votings';
 
 
 /**
@@ -85,6 +86,7 @@ export interface Runtime {
   serviceContract: ServiceContract,
   sharing: Sharing,
   signer: SignerInterface,
+  votings: Votings,
   web3: any,
 };
 
@@ -323,6 +325,12 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     executor,
   });
 
+  const votings = new Votings({
+    contractLoader,
+    executor,
+    nameResolver,
+  });
+
   // return runtime object
   return {
     accountStore,
@@ -347,6 +355,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     serviceContract,
     sharing,
     signer,
+    votings,
     web3,
   };
 };

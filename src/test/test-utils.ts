@@ -25,6 +25,8 @@
   https://evan.network/license/
 */
 
+import crypto = require('crypto');
+
 import IpfsApi = require('ipfs-api');
 import smartContract = require('@evan.network/smart-contracts-core');
 import Web3 = require('web3');
@@ -35,7 +37,6 @@ import {
   DfsInterface,
   EventHub,
   Executor,
-  Ipfs,
   KeyProvider,
   Logger,
   SignerInternal,
@@ -53,6 +54,7 @@ import { CryptoProvider } from '../encryption/crypto-provider';
 import { DataContract } from '../contracts/data-contract/data-contract';
 import { ExecutorWallet } from '../contracts/executor-wallet';
 import { Ipld } from '../dfs/ipld';
+import { Ipfs } from '../dfs/ipfs';
 import { NameResolver } from '../name-resolver';
 import { Profile } from '../profile/profile';
 import { RightsAndRoles } from '../contracts/rights-and-roles';
@@ -60,6 +62,7 @@ import { ServiceContract } from '../contracts/service-contract/service-contract'
 import { setTimeout } from 'timers';
 import { Description } from '../shared-description';
 import { Sharing } from '../contracts/sharing';
+import { Votings } from '../votings/votings';
 import { Wallet } from '../contracts/wallet';
 
 
@@ -280,10 +283,14 @@ export class TestUtils {
   }
 
   static async getIpfs(): Promise<Ipfs> {
-    return new Promise<Ipfs>((resolve) => {
-      const remoteNode = IpfsApi({host: 'ipfs.evan.network', port: '443', protocol: 'https'})
-     resolve(new Ipfs({ remoteNode, accountId: accounts[0], accountStore: this.getAccountStore(null), web3: this.getWeb3()}));
+    const pk = await this.getAccountStore(null).getPrivateKey(accounts[0]);
+    const ipfs = new Ipfs({
+      dfsConfig: {host: 'ipfs.evan.network', port: '443', protocol: 'https'},
+      accountId: accounts[0],
+      privateKey: pk,
+      web3: this.getWeb3()
     });
+    return ipfs;
   }
 
   static getKeyProvider(requestedKeys?: string[]) {
@@ -339,6 +346,14 @@ export class TestUtils {
     return profile;
   }
 
+  static getRandomAddress(): string {
+    return helperWeb3.utils.toChecksumAddress(`0x${crypto.randomBytes(20).toString('hex')}`);
+  }
+
+  static getRandomBytes32(): string {
+    return `0x${crypto.randomBytes(32).toString('hex')}`;
+  }
+
   static async getRightsAndRoles(web3) {
     return new RightsAndRoles({
       contractLoader: await TestUtils.getContractLoader(web3),
@@ -379,6 +394,16 @@ export class TestUtils {
     });
   }
 
+  static async getVotings(web3): Promise<Votings> {
+    const executor = await TestUtils.getExecutor(web3);
+    executor.eventHub = await TestUtils.getEventHub(web3);
+    return new Votings({
+      contractLoader: await this.getContractLoader(web3),
+      executor,
+      nameResolver: await this.getNameResolver(web3),
+    });
+  }
+
   static async getWallet(web3, dfsParam?: DfsInterface): Promise<Wallet> {
     const dfs = dfsParam ? dfsParam : await TestUtils.getIpfs();
     const executor = await TestUtils.getExecutor(web3);
@@ -395,5 +420,13 @@ export class TestUtils {
   static getWeb3(provider = web3Provider) {
     // connect to web3
     return new Web3(new Web3.providers.WebsocketProvider(provider));
+  }
+
+  static async nextBlock(executor: Executor, accoutId: string): Promise<void> {
+    await executor.executeSend({ from: accoutId, value: 0, to: accoutId });
+  };
+
+  static async sleep(ms): Promise<void> {
+    await new Promise(s => setTimeout(() => s(), ms));
   }
 }

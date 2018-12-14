@@ -37,9 +37,9 @@ import {
   Logger,
   LoggerOptions,
   NameResolver,
-  DfsInterface,
-  Ipfs
+  DfsInterface
 } from '@evan.network/dbcp';
+import { Ipfs } from '../dfs/ipfs';
 
 
 const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
@@ -53,7 +53,11 @@ export enum ClaimsStatus {
   /**
    * issued by a non-issuer parent claim holder, self issued state is 0
    */
-  Confirmed
+  Confirmed,
+  /**
+   * claim rejected status
+   */
+  Rejected
 }
 
 
@@ -72,7 +76,7 @@ export interface ClaimsOptions extends LoggerOptions {
 /**
  * Claims helper
  *
- * @class      Sharing (name)
+ * @class      Claims (name)
  */
 export class Claims extends Logger {
   contracts: any = { };
@@ -136,7 +140,7 @@ export class Claims extends Logger {
 
     // create Identity contract
     const identityContract = await this.options.executor.createContract(
-      'OriginIdentity', [], { from: accountId, gas: 2000000, });
+      'OriginIdentity', [], { from: accountId, gas: 3000000, });
 
     const identityStorage = this.contracts.storage.options.address !== nullAddress ?
       this.options.contractLoader.loadContract('V00_UserRegistry', this.contracts.storage.options.address) : null;
@@ -207,7 +211,7 @@ export class Claims extends Logger {
         subject
       );
 
-      if (!identity) {
+      if (identity === nullAddress) {
         const msg = `trying to get claim ${claimName} with account ${subject}, ` +
           `but the idendity for account ${subject} does not exist`;
         this.log(msg, 'error');
@@ -250,6 +254,11 @@ export class Claims extends Logger {
         'getClaimExpirationDate',
         claimId
       );
+      const claimrejectedP = this.options.executor.executeContractCall(
+        identityContract,
+        'isClaimRejected',
+        claimId
+      );
       const claimDescriptionP = (async () => {
         const descriptionNodeHash = await this.options.executor.executeContractCall(
           identityContract,
@@ -262,12 +271,16 @@ export class Claims extends Logger {
         } else {
           const resolverAddress = await this.options.executor.executeContractCall(
             this.options.nameResolver.ensContract, 'resolver', descriptionNodeHash);
-          const resolver =
-            this.options.contractLoader.loadContract('PublicResolver', resolverAddress);
-          const descriptionHash =
-            await this.options.executor.executeContractCall(resolver, 'content', descriptionNodeHash);
-          const envelope = (await this.options.dfs.get(descriptionHash)).toString(this.encodingEnvelope);
-          return JSON.parse(envelope).public;
+          if (resolverAddress === nullAddress) {
+            return null;
+          } else {
+            const resolver =
+              this.options.contractLoader.loadContract('PublicResolver', resolverAddress);
+            const descriptionHash =
+              await this.options.executor.executeContractCall(resolver, 'content', descriptionNodeHash);
+            const envelope = (await this.options.dfs.get(descriptionHash)).toString(this.encodingEnvelope);
+            return JSON.parse(envelope).public;
+          }
         }
       })();
       let [
@@ -277,6 +290,7 @@ export class Claims extends Logger {
         creationDate,
         expirationDate,
         description,
+        rejected,
         ] = await Promise.all([
           claimP,
           claimStatusP,
@@ -284,11 +298,28 @@ export class Claims extends Logger {
           claimCreationP,
           claimexpirationDateP,
           claimDescriptionP,
+          claimrejectedP
         ])
       ;
 
       if (claim.issuer === nullAddress) {
         return false;
+      }
+
+      let claimFlag = claimStatus ? ClaimsStatus.Confirmed : ClaimsStatus.Issued;
+      let rejectReason;
+      if(rejected.rejected) {
+        claimFlag = ClaimsStatus.Rejected;
+      }
+
+      if(rejected.rejectReason !== nullBytes32) {
+        try {
+          const ipfsResponse = await this.options.dfs.get(rejected.rejectReason);
+          rejectReason = JSON.parse(ipfsResponse.toString());
+        } catch (e) {
+          const msg = `error parsing rejectReason -> ${e.message}`;
+          this.log(msg, 'info');
+        }
       }
 
       return {
@@ -300,12 +331,13 @@ export class Claims extends Logger {
         id: claimId,
         issuer: (<any>claim).issuer,
         name: claimName,
+        rejectReason,
         signature: (<any>claim).signature,
-        status: claimStatus ? ClaimsStatus.Confirmed : ClaimsStatus.Issued,
+        status: claimFlag,
         subject,
         topic: claim.topic,
         uri: (<any>claim).uri,
-        valid: await this.validateClaim(claimId, subject, isIdentity),
+        valid: await this.validateClaim(claimId, subject, isIdentity)
       };
     }));
 
@@ -363,6 +395,58 @@ export class Claims extends Logger {
   }
 
   /**
+   * rejects a claim; this can be done, if a claim has been issued for a subject and the subject
+   * wants to confirm it
+   *
+   * @param      {string}         subject       account, that rejects the claim
+   * @param      {string}         claimName     name of the claim (full path)
+   * @param      {string}         issuer        The issuer which has signed the claim
+   * @param      {string}         claimId       id of a claim to confirm
+   * @param      {any}            rejectReason  (optional) rejectReason object
+   * @return     {Promise<void>}  resolved when done
+   */
+  public async rejectClaim(
+      subject: string, claimName: string, issuer: string, claimId: string, rejectReason?: any): Promise<void> {
+    await this.ensureStorage();
+
+    const identity = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'users',
+      subject
+    );
+
+    const issuerIdentity = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'users',
+      issuer
+    );
+
+    const identityContract = this.options.contractLoader.loadContract('OriginIdentity', identity);
+    const sha3ClaimId = claimId;
+
+    if (rejectReason) {
+      try {
+        const stringified = JSON.stringify(rejectReason);
+        const stateMd5 = crypto.createHash('md5').update(stringified).digest('hex');
+        rejectReason = await this.options.dfs.add(stateMd5, Buffer.from(stringified));
+      } catch (e) {
+        const msg = `error parsing claimValue -> ${e.message}`;
+        this.log(msg, 'info');
+      }
+    } else {
+      rejectReason = nullBytes32;
+    }
+
+    await this.options.executor.executeContractTransaction(
+      identityContract,
+      'rejectClaim',
+      { from: subject, },
+      claimId,
+      rejectReason
+    );
+  }
+
+  /**
    * sets or creates a claim to a given subject identity
    *
    * @param      {string}           issuer             issuer of the claim
@@ -370,12 +454,12 @@ export class Claims extends Logger {
    *                                                   claim node
    * @param      {string}           claimName          name of the claim (full path)
    * @param      {number}           expirationDate     expiration date, for the claim, defaults to
-   *                                                   ``0`` (does not expire)
+   *                                                   `0` (does not expire)
    * @param      {object}           claimValue         json object which will be stored in the claim
    * @param      {string}           descriptionDomain  domain of the claim, this is a subdomain
-   *                                                   under 'claims.evan', so passing `example`
+   *                                                   under 'claims.evan', so passing 'example'
    *                                                   will link claims description to
-   *                                                   'sample.claims.evan'
+   *                                                   'example.claims.evan'
    * @return     {Promise<string>}  claimId
    */
   public async setClaim(
@@ -467,7 +551,7 @@ export class Claims extends Logger {
    * @param      {string}         topic        name of the claim (full path) to set description
    * @param      {string}         domain       domain of the claim, this is a subdomain under
    *                                           'claims.evan', so passing `example` will link claims
-   *                                           description to 'sample.claims.evan'
+   *                                           description to 'example.claims.evan'
    * @param      {any}            description  description of the claim; can be an Envelope but
    *                                           only public properties are used
    * @return     {Promise<void>}  resolved when done

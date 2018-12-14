@@ -103,12 +103,13 @@ describe('Description handler', function() {
     executor.eventHub = await TestUtils.getEventHub(web3);
     loader = await TestUtils.getContractLoader(web3);
     cryptoProvider = await TestUtils.getCryptoProvider();
+    dfs = await TestUtils.getIpfs();
     sharing = new Sharing({
       contractLoader: await TestUtils.getContractLoader(web3),
       cryptoProvider,
       description: description,
       executor: await TestUtils.getExecutor(web3),
-      dfs: description.dfs,
+      dfs,
       keyProvider: TestUtils.getKeyProvider(),
       nameResolver: await TestUtils.getNameResolver(web3),
       defaultCryptoAlgo: 'aes',
@@ -197,7 +198,7 @@ describe('Description handler', function() {
     it('should be able to set and get encrypted content for ENS addresses', async () => {
       const keyConfig = {};
       keyConfig[nameResolver.soliditySha3(accounts[1])] = sampleKey;
-      const keyProvider = new KeyProvider(keyConfig);
+      const keyProvider = new KeyProvider({keys: keyConfig});
       description.keyProvider = keyProvider;
       const cryptor = new Aes();
       const cryptoConfig = {};

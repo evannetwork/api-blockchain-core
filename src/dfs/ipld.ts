@@ -34,12 +34,13 @@ import {
   CryptoInfo,
   Cryptor,
   Envelope,
-  Ipfs,
   KeyProviderInterface,
   Logger,
   LoggerOptions,
   NameResolver,
 } from '@evan.network/dbcp';
+
+import { Ipfs } from '../dfs/ipfs';
 
 import { CryptoProvider } from '../encryption/crypto-provider';
 
