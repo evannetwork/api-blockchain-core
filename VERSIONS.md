@@ -14,7 +14,6 @@
 ### Fixes
 ### Deprecations
 
-
 ## Version 1.5.0
 ### Features
 - add description to claims
