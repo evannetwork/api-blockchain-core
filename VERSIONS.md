@@ -2,6 +2,16 @@
 
 ## Next Version
 ### Features
+### Fixes
+### Deprecations
+
+## Version 1.6.1
+### Fixes
+- remove web3 initialization within the `ServiceContract`
+- use 1.0.0-beta.33, beta.37 will cause Websocket errors in Edge browser
+
+## Version 1.6.0
+### Features
 - add own ipfs handler
 - add ipfs identification header to enable future ipfs payments
 - add `defaultClaims` to `Profile` `loadActiveClaims`
@@ -10,9 +20,6 @@
 - add support for ENS registries with time limited nodes
 - add support for permanent ENS address on payable registrar
 - add support for retrieving proposals paged
-
-### Fixes
-### Deprecations
 
 ## Version 1.5.0
 ### Features

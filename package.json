@@ -1,8 +1,8 @@
 {
   "author": "evan GmbH",
   "dependencies": {
-    "@evan.network/dbcp": "^1.4.2",
-    "@evan.network/smart-contracts-core": "^1.3.0",
+    "@evan.network/dbcp": "^1.4.4",
+    "@evan.network/smart-contracts-core": "^1.4.0",
     "@types/node": "8.0.53",
     "ajv": "^5.5.1",
     "babel-plugin-transform-es3-property-literals": "^6.22.0",
@@ -16,7 +16,7 @@
     "ipld-graph-builder": "1.3.7",
     "lodash": "4.17.5",
     "prottle": "^1.0.3",
-    "web3": "1.0.0-beta.37"
+    "web3": "1.0.0-beta.33"
   },
   "description": "blockchain interaction core library",
   "devDependencies": {
@@ -79,5 +79,5 @@
     "testunitbrk": "env-cmd ./.env.local npm run build && env-cmd ./.env.local mocha --exit --inspect-brk -r ts-node/register $*"
   },
   "types": "./dist/index.d.ts",
-  "version": "1.5.0"
+  "version": "1.6.1"
 }

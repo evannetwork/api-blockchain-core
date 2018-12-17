@@ -239,6 +239,19 @@ describe('Claims handler', function() {
     expect(claimsForAccount[oldLength]).to.have.deep.property('rejectReason', { reason: 'denied' });
   });
 
+  it('can reject a claim with a reason from the issuer side', async () => {
+    const oldLength = (await claims.getClaims('/company/b-s-s/employee/swo4', accounts[1])).length;
+    await claims.setClaim(accounts[0], accounts[0], '/company');
+    await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
+    await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
+    const claimId = await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo4');
+    await claims.rejectClaim(accounts[0], '/company/b-s-s/employee/swo4', accounts[0], claimId, { reason: 'denied' });
+    const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo4', accounts[1]);
+    expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
+    expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Rejected);
+    expect(claimsForAccount[oldLength]).to.have.deep.property('rejectReason', { reason: 'denied' });
+  });
+
   it('can not re accept a rejected claim', async () => {
     const oldLength = (await claims.getClaims('/company/b-s-s/employee/swo4', accounts[1])).length;
     await claims.setClaim(accounts[0], accounts[0], '/company');

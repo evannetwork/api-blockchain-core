@@ -211,7 +211,7 @@ export class Claims extends Logger {
         subject
       );
 
-      if (!identity) {
+      if (identity === nullAddress) {
         const msg = `trying to get claim ${claimName} with account ${subject}, ` +
           `but the idendity for account ${subject} does not exist`;
         this.log(msg, 'error');
