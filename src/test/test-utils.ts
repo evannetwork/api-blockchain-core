@@ -56,6 +56,7 @@ import { ExecutorWallet } from '../contracts/executor-wallet';
 import { Ipld } from '../dfs/ipld';
 import { Ipfs } from '../dfs/ipfs';
 import { NameResolver } from '../name-resolver';
+import { Payments } from '../payments';
 import { Profile } from '../profile/profile';
 import { RightsAndRoles } from '../contracts/rights-and-roles';
 import { ServiceContract } from '../contracts/service-contract/service-contract';
@@ -330,6 +331,19 @@ export class TestUtils {
 
     return nameResolver;
   }
+
+  static async getPayments(web3, accountId) : Promise<Payments> {
+    const executor = await TestUtils.getExecutor(web3);
+    const eventHub = await TestUtils.getEventHub(web3);
+    executor.eventHub = eventHub;
+    const payments = new Payments({
+      web3,
+      contractLoader: await TestUtils.getContractLoader(web3),
+      executor,
+    });
+    return payments;
+  }
+
 
   static async getProfile(web3, ipfs?, ipld?, accountId?): Promise<Profile> {
     const executor = await TestUtils.getExecutor(web3);
