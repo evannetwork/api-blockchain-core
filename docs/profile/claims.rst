@@ -129,9 +129,9 @@ createIdentity
 
 .. code-block:: typescript
 
-  claims.createIdentity(accountId);
+  claims.createIdentity(accountId[, contractId]);
 
-Creates a new identity for Account and registers them on the storage
+Creates a new identity for account or contract and registers them on the storage. Returned identity is either a 40B contract address (for account identities) or a 32B idenity hash contract identities.
 
 ----------
 Parameters
@@ -151,7 +151,7 @@ Example
 
 .. code-block:: typescript
 
-  await claims.createIdentity(accounts[0]);
+  const identity = await claims.createIdentity(accounts[0]);
 
 
 
@@ -165,7 +165,7 @@ identityAvailable
 
   claims.identityAvailable(subject);
 
-Checks if a account has already a identity contract.
+Checks if a account has already an identity contract.
 
 ----------
 Parameters
@@ -208,7 +208,7 @@ getIdentityForAccount
 
   claims.getIdentityForAccount(subject);
 
-Gets the identity contract for a given account id.
+Gets the identity contract for a given account id or contract.
 
 ----------
 Parameters
@@ -243,8 +243,7 @@ setClaim
 
   claims.setClaim(issuer, subject, claimName[, expirationDate, claimValue, descriptionDomain]);
 
-Sets or creates a claim; this requires the issuer to have permissions for the parent claim (if claim
-name seen as a path, the parent 'folder').
+Sets or creates a claim; this requires the issuer to have permissions for the parent claim (if claim name seen as a path, the parent 'folder').
 
 ----------
 Parameters
@@ -287,9 +286,9 @@ getClaims
 
 .. code-block:: typescript
 
-  claims.getClaims(claimName, subject, isIdentity);
+  claims.getClaims(claimName, subject[, isIdentity]);
 
-gets claim informations for a claim name from a given account
+Gets claim information for a claim name from a given account; results has the following properties: creationBlock, creationDate, data, description, expirationDate, id, issuer, name, signature, status, subject, topic, uri, valid.
 
 ----------
 Parameters
@@ -297,13 +296,13 @@ Parameters
 
 #. ``claimName`` - ``string``: name (/path) of a claim
 #. ``subject`` - ``string``: subject of the claims
-#. ``isIdentity`` - ``string`` (optional): indicates if the subject is already a identity address
+#. ``isIdentity`` - ``string`` (optional): indicates if the subject is already an identity 
 
 -------
 Returns
 -------
 
-``Promise`` returns ``any``: claim info array, contains: issuer, name, status, subject, data, uri, signature, creationDate
+``Promise`` returns ``any[]``: claim info array, contains: issuer, name, status, subject, data, uri, signature, creationDate
 
 -------
 Example
@@ -487,17 +486,16 @@ deleteClaim
 
 .. code-block:: typescript
 
-  claims.deleteClaim(subject, claimName, issuer);
+  claims.deleteClaim(subject, accountId, claimId);
 
-Delete a claim. This requires the **issuer** to have permissions for the parent claim (if claim name seen as a path, the parent 'folder'). Subjects of a claim may only delete it, if they are the issuer as well. If not, they can only react to it by confirming or rejecting the claim.
+Delete a claim. This requires the **accountId** to have permissions for the parent claim (if claim name seen as a path, the parent 'folder'). Subjects of a claim may only delete it, if they are the issuer as well. If not, they can only react to it by confirming or rejecting the claim.
 
 ----------
 Parameters
 ----------
 
 #. ``subject`` - ``string``: the subject of the claim
-#. ``claimName`` - ``string``: name of the claim (full path)
-#. ``issuer`` - ``string``: issuer of the claim
+#. ``accountid`` - ``string``: account, that performs the action
 #. ``claimId`` - ``string``: id of a claim to delete
 
 -------
@@ -512,8 +510,8 @@ Example
 
 .. code-block:: typescript
 
-  await claims.setClaim(accounts[0], accounts[1], '/company');
-  await claims.deleteClaim(accounts[0], '/company', accounts[1]);
+  const claimId = await claims.setClaim(accounts[0], accounts[1], '/company');
+  await claims.deleteClaim(accounts[1], accounts[0], claimId);
 
 
 
@@ -535,8 +533,7 @@ Parameters
 ----------
 
 #. ``subject`` - ``string``: the subject of the claim
-#. ``claimName`` - ``string``: name of the claim (full path)
-#. ``issuer`` - ``string``: issuer of the claim
+#. ``accountid`` - ``string``: account, that performs the action
 #. ``claimId`` - ``string``: id of a claim to delete
 #. ``rejectReason`` - ``object`` (optional): JSON Object of the rejection reason
 
@@ -552,8 +549,8 @@ Example
 
 .. code-block:: typescript
 
-  await claims.setClaim(accounts[0], accounts[1], '/company');
-  await claims.rejectClaim(accounts[0], '/company', accounts[1], { rejected: "because not valid anymore"});
+  const claimId = await claims.setClaim(accounts[0], accounts[1], '/company');
+  await claims.rejectClaim(accounts[1], accounts[0], claimId, { rejected: "because not valid anymore"});
 
 
 
@@ -572,17 +569,16 @@ confirmClaim
 
 .. code-block:: typescript
 
-  claims.confirmClaim(subject, claimName[, claimValue]);
+  claims.confirmClaim(subject, accountId, claimId);
 
-Confirms a claim; this can be done, it a claim has been issued for a subject and the subject wants to confirms it.
+Confirms a claim; this can be done, if a claim has been issued for a subject and the subject wants to confirms it.
 
 ----------
 Parameters
 ----------
 
-#. ``subject`` - ``string``: account, that approves the claim
-#. ``claimName`` - ``string``: name of the claim (full path)
-#. ``issuer`` - ``string``: The issuer which has signed the claim
+#. ``subject`` - ``string``: claim subject
+#. ``accointId`` - ``string``: account, that performs the action
 #. ``claimId`` - ``string``: id of a claim to confirm
 
 -------
@@ -598,7 +594,7 @@ Example
 .. code-block:: typescript
 
   const newClaim = await claims.setClaim(accounts[0], accounts[1], '/company');
-  await claims.confirmClaim(accounts[1], '/company', accounts[0], newClaim);
+  await claims.confirmClaim(accounts[1], accounts[0], newClaim);
 
 
 

@@ -115,10 +115,13 @@ export class Claims extends Logger {
   }
 
   /**
-   * Creates a new identity for an account
+   * Creates a new identity for account or contract and registers them on the storage. Returned
+   * identity is either a 40B contract address (for account identities) or a 32B idenity hash
+   * contract identities
    *
-   * @param      {string}        accountId  The account identifier
-   * @return     {Promise<any>}  resolves when done
+   * @param      {string}           accountId   The account identifier
+   * @param      {<type>}           contractId  The contract identifier
+   * @return     {Promise<string>}  new identity
    */
   public async createIdentity(accountId: string, contractId?: string): Promise<string> {
     let identity;
@@ -157,7 +160,7 @@ export class Claims extends Logger {
   }
 
   /**
-   * delete a claim. This requires the issuer to have permissions for the parent claim (if claim
+   * delete a claim. This requires the accountId to have permissions for the parent claim (if claim
    * name seen as a path, the parent 'folder'). Subjects of a claim may only delete it, if they are
    * the issuer as well. If not, they can only react to it by confirming or rejecting the claim.
    *
@@ -182,10 +185,11 @@ export class Claims extends Logger {
    * signature, status, subject, topic, uri, valid
    *
    * @param      {string}        claimName   name (/path) of a claim
-   * @param      {string}        subject     the target subject
-   * @return     {Promise<any>}  claim info array
+   * @param      {string}        subject     subject of the claims
+   * @param      {boolean}       isIdentity  (optional) indicates if the subject is already an identity
+   * @return     {Promise<any[]>}  claim info array
    */
-  public async getClaims(claimName: string, subject: string, isIdentity?: boolean): Promise<any> {
+  public async getClaims(claimName: string, subject: string, isIdentity?: boolean): Promise<any[]> {
     const sha3ClaimName = this.options.nameResolver.soliditySha3(claimName);
     const uint256ClaimName = new BigNumber(sha3ClaimName).toString(10);
 
@@ -268,18 +272,17 @@ export class Claims extends Logger {
       };
     }));
 
-    return claims.filter(function (el) {
-      return el;
-    });
+    // drop null values
+    return claims.filter(el => el);
   }
 
   /**
-   * gets the identity contract for a given account id
+   * gets the identity contract for a given account id or contract
    *
    * @param      {string}        subject  the subject for the identity contract
    * @return     {Promise<any>}  the identity contract instance
    */
-  public async getIdentityForAccount(subject: string) {
+  public async getIdentityForAccount(subject: string): Promise<any> {
     if (!this.cachedIdentities[subject]) {
       await this.ensureStorage();
 
@@ -325,8 +328,9 @@ export class Claims extends Logger {
   }
 
   /**
-   * rejects a claim; this can be done, if a claim has been issued for a subject and the subject
-   * wants to confirm it
+   * reject a Claim. This claim will be marked as rejected but not deleted. This is important for
+   * tracking reasons. You can also optionally add a reject reason as JSON object to track
+   * additional informations about the rejection. Issuer and Subject can reject a special claim.
    *
    * @param      {string}         subject       account, that rejects the claim
    * @param      {string}         accountId     account, that performs the action
@@ -359,7 +363,8 @@ export class Claims extends Logger {
   }
 
   /**
-   * sets or creates a claim to a given subject identity
+   * Sets or creates a claim; this requires the issuer to have permissions for the parent claim (if
+   * claim name seen as a path, the parent 'folder').
    *
    * @param      {string}           issuer             issuer of the claim
    * @param      {string}           subject            subject of the claim and the owner of the
@@ -474,7 +479,8 @@ export class Claims extends Logger {
    *                                           only public properties are used
    * @return     {Promise<void>}  resolved when done
    */
-  public async setClaimDescription(accountId: string, topic: string, domain: string, description: any) {
+  public async setClaimDescription(
+      accountId: string, topic: string, domain: string, description: any): Promise<void> {
     let toSet = JSON.parse(JSON.stringify(description));
     if (!toSet.hasOwnProperty('public')) {
       toSet = { public: toSet };
@@ -492,7 +498,8 @@ export class Claims extends Logger {
    *                                             identity
    * @return     {Promise<boolean>}  resolves with true if the claim is valid, otherwise false
    */
-  public async validateClaim(claimId: string, subject: string, isIdentity?: boolean) {
+  public async validateClaim(
+      claimId: string, subject: string, isIdentity?: boolean): Promise<boolean> {
     await this.ensureStorage();
 
     let subjectIdentity = isIdentity ? subject : await this.getIdentityForAccount(subject);
@@ -520,7 +527,7 @@ export class Claims extends Logger {
   }
 
   /**
-   * validates a whole claim tree if the path is valid (called recursive)
+   * validates a whole claim tree if the path is valid (called recursively)
    *
    * @param      {string}          claimLabel  claim topic of a claim to build the tree for
    * @param      {string}          subject     subject of the claim and the owner of the claim node
