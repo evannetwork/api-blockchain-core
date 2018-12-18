@@ -106,78 +106,78 @@ describe('Claims handler', function() {
 
   describe('when using external account based identities', () => {
     it('can add a claim', async () => {
-      const oldLength = (await claims.getClaims('/company', accounts[1])).length;
+      const oldLength = (await claims.getClaims(accounts[1], '/company')).length;
       await claims.setClaim(accounts[0], accounts[1], '/company');
-      const claimsForAccount = await claims.getClaims('/company', accounts[1]);
+      const claimsForAccount = await claims.getClaims(accounts[1], '/company');
       expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
       expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Issued);
     });
 
     it('can add a claim with specific data', async () => {
-      const oldLength = (await claims.getClaims('/company', accounts[1])).length;
+      const oldLength = (await claims.getClaims(accounts[1], '/company')).length;
       await claims.setClaim(accounts[0], accounts[1], '/company', null, {foo: 'bar'});
-      const claimsForAccount = await claims.getClaims('/company', accounts[1]);
+      const claimsForAccount = await claims.getClaims(accounts[1], '/company');
       expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
       expect(claimsForAccount[oldLength]).to.have.property('uri', 'https://ipfs.evan.network/ipfs/Qmbjig3cZbUUufWqCEFzyCppqdnmQj3RoDjJWomnqYGy1f');
     });
 
     it('can add a claim with specific expirationDate', async () => {
-      const oldLength = (await claims.getClaims('/company', accounts[1])).length;
+      const oldLength = (await claims.getClaims(accounts[1], '/company')).length;
       const now = Math.floor(new Date().getTime() / 1000);
       await claims.setClaim(accounts[0], accounts[1], '/company', now);
-      const claimsForAccount = await claims.getClaims('/company', accounts[1]);
+      const claimsForAccount = await claims.getClaims(accounts[1], '/company');
       expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
       expect(claimsForAccount[oldLength]).to.have.property('expirationDate', now.toString());
     });
 
     it('can add a claim and validate the integrity', async () => {
-      const oldLength = (await claims.getClaims('/company', accounts[1])).length;
+      const oldLength = (await claims.getClaims(accounts[1], '/company')).length;
       await claims.setClaim(accounts[0], accounts[1], '/company');
-      const claimsForAccount = await claims.getClaims('/company', accounts[1]);
+      const claimsForAccount = await claims.getClaims(accounts[1], '/company');
       expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
-      await claims.validateClaim(claimsForAccount[oldLength].id, accounts[1]);
+      await claims.validateClaim(accounts[1], claimsForAccount[oldLength].id);
       expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Issued);
     });
 
     it('can add subclaim paths and validate it', async () => {
-      const oldLength = (await claims.getClaims('/company', accounts[1])).length;
+      const oldLength = (await claims.getClaims(accounts[1], '/company')).length;
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
       await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo');
       const identity = await claims.getIdentityForAccount(accounts[1]);
-      const claimTree = await claims.validateClaimTree('/company/b-s-s/employee/swo', identity.options.address);
+      const claimTree = await claims.validateClaimTree(identity.options.address, '/company/b-s-s/employee/swo');
       expect(claimTree).to.have.lengthOf(4);
     });
 
     it('can add subclaim paths and don\'t have the needed root claims.', async () => {
-      const oldLength = (await claims.getClaims('/company', accounts[1])).length;
+      const oldLength = (await claims.getClaims(accounts[1], '/company')).length;
       await claims.setClaim(accounts[0], accounts[0], '/company/evan/employee');
       await claims.setClaim(accounts[0], accounts[1], '/company/evan/employee/swo2');
       const identity = await claims.getIdentityForAccount(accounts[1]);
-      const claimTree = await claims.validateClaimTree('/company/evan/employee/swo2', identity.options.address);
+      const claimTree = await claims.validateClaimTree(identity.options.address, '/company/evan/employee/swo2');
       expect(claimTree).to.have.lengthOf(2);
     });
 
     it('can add subclaim paths', async () => {
-      const oldLength = (await claims.getClaims('/company/b-s-s/employee/swo3', accounts[1])).length;
+      const oldLength = (await claims.getClaims(accounts[1], '/company/b-s-s/employee/swo3')).length;
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
       await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo3');
-      const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo3', accounts[1]);
+      const claimsForAccount = await claims.getClaims(accounts[1], '/company/b-s-s/employee/swo3');
       expect(claimsForAccount).to.have.lengthOf(1);
       expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Issued);
     });
 
     it('can confirm a subclaim paths with the subject user', async () => {
-      const oldLength = (await claims.getClaims('/company/b-s-s/employee/swo4', accounts[1])).length;
+      const oldLength = (await claims.getClaims(accounts[1], '/company/b-s-s/employee/swo4')).length;
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
       const claimId = await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo4');
       await claims.confirmClaim(accounts[1], accounts[1], claimId);
-      const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo4', accounts[1]);
+      const claimsForAccount = await claims.getClaims(accounts[1], '/company/b-s-s/employee/swo4');
       expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
       expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Confirmed);
     });
@@ -188,7 +188,7 @@ describe('Claims handler', function() {
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
       const claimId = await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo6');
       await claims.deleteClaim(accounts[1], accounts[1], claimId);
-      const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo6', accounts[1]);
+      const claimsForAccount = await claims.getClaims(accounts[1], '/company/b-s-s/employee/swo6');
       expect(claimsForAccount).to.have.lengthOf(0);
     });
 
@@ -196,7 +196,7 @@ describe('Claims handler', function() {
       const before = Date.now() / 1000;
       await claims.setClaim(accounts[0], accounts[1], '/company');
       const after = Date.now() / 1000;
-      const claimsForAccount = await claims.getClaims('/company', accounts[1]);
+      const claimsForAccount = await claims.getClaims(accounts[1], '/company');
       const last = claimsForAccount.length - 1;
       expect(claimsForAccount[last]).to.have.property('status', ClaimsStatus.Issued);
       expect(claimsForAccount[last]).to.have.property('creationDate');
@@ -208,7 +208,7 @@ describe('Claims handler', function() {
       const before = await web3.eth.getBlockNumber();
       await claims.setClaim(accounts[0], accounts[1], '/company');
       const after = await web3.eth.getBlockNumber();
-      const claimsForAccount = await claims.getClaims('/company', accounts[1]);
+      const claimsForAccount = await claims.getClaims(accounts[1], '/company');
       const last = claimsForAccount.length - 1;
       expect(claimsForAccount[last]).to.have.property('status', ClaimsStatus.Issued);
       expect(claimsForAccount[last]).to.have.property('creationBlock');
@@ -228,7 +228,7 @@ describe('Claims handler', function() {
       };
       await claims.setClaimDescription(accounts[0], sampleClaimTopic, sampleClaimsDomain, sampleDescription);
       await claims.setClaim(accounts[0], accounts[1], sampleClaimTopic, null, null, sampleClaimsDomain);
-      const claimsForAccount = await claims.getClaims(sampleClaimTopic, accounts[1]);
+      const claimsForAccount = await claims.getClaims(accounts[1], sampleClaimTopic);
       const last = claimsForAccount.length - 1;
       expect(claimsForAccount[last]).to.have.property('status', ClaimsStatus.Issued);
       expect(claimsForAccount[last]).to.have.property('creationBlock');
@@ -236,45 +236,45 @@ describe('Claims handler', function() {
     });
 
     it('can reject a claim', async () => {
-      const oldLength = (await claims.getClaims('/company/b-s-s/employee/swo4', accounts[1])).length;
+      const oldLength = (await claims.getClaims(accounts[1], '/company/b-s-s/employee/swo4')).length;
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
       const claimId = await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo4');
       await claims.rejectClaim(accounts[1], accounts[1], claimId);
-      const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo4', accounts[1]);
+      const claimsForAccount = await claims.getClaims(accounts[1], '/company/b-s-s/employee/swo4');
       expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
       expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Rejected);
     });
 
     it('can reject a claim with a reason', async () => {
-      const oldLength = (await claims.getClaims('/company/b-s-s/employee/swo4', accounts[1])).length;
+      const oldLength = (await claims.getClaims(accounts[1], '/company/b-s-s/employee/swo4')).length;
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
       const claimId = await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo4');
       await claims.rejectClaim(accounts[1], accounts[1], claimId, { reason: 'denied' });
-      const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo4', accounts[1]);
+      const claimsForAccount = await claims.getClaims(accounts[1], '/company/b-s-s/employee/swo4');
       expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
       expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Rejected);
       expect(claimsForAccount[oldLength]).to.have.deep.property('rejectReason', { reason: 'denied' });
     });
 
     it('can reject a claim with a reason from the issuer side', async () => {
-      const oldLength = (await claims.getClaims('/company/b-s-s/employee/swo4', accounts[1])).length;
+      const oldLength = (await claims.getClaims(accounts[1], '/company/b-s-s/employee/swo4')).length;
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
       const claimId = await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo4');
-      await claims.rejectClaim(accounts[1], accounts[0], claimId, { reason: 'denied' });
-      const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo4', accounts[1]);
+      await claims.rejectClaim(accounts[0], accounts[1], claimId, { reason: 'denied' });
+      const claimsForAccount = await claims.getClaims(accounts[1], '/company/b-s-s/employee/swo4');
       expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
       expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Rejected);
       expect(claimsForAccount[oldLength]).to.have.deep.property('rejectReason', { reason: 'denied' });
     });
 
     it('can not re accept a rejected claim', async () => {
-      const oldLength = (await claims.getClaims('/company/b-s-s/employee/swo4', accounts[1])).length;
+      const oldLength = (await claims.getClaims(accounts[1], '/company/b-s-s/employee/swo4')).length;
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
@@ -320,78 +320,78 @@ describe('Claims handler', function() {
     });
 
     it('can add a claim', async () => {
-      const oldLength = (await claims.getClaims('/company', contractId)).length;
+      const oldLength = (await claims.getClaims(contractId, '/company')).length;
       await claims.setClaim(accounts[0], contractId, '/company');
-      const claimsForAccount = await claims.getClaims('/company', contractId);
+      const claimsForAccount = await claims.getClaims(contractId, '/company');
       expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
       expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Issued);
     });
 
     it('can add a claim with specific data', async () => {
-      const oldLength = (await claims.getClaims('/company', contractId)).length;
+      const oldLength = (await claims.getClaims(contractId, '/company')).length;
       await claims.setClaim(accounts[0], contractId, '/company', null, {foo: 'bar'});
-      const claimsForAccount = await claims.getClaims('/company', contractId);
+      const claimsForAccount = await claims.getClaims(contractId, '/company');
       expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
       expect(claimsForAccount[oldLength]).to.have.property('uri', 'https://ipfs.evan.network/ipfs/Qmbjig3cZbUUufWqCEFzyCppqdnmQj3RoDjJWomnqYGy1f');
     });
 
     it('can add a claim with specific expirationDate', async () => {
-      const oldLength = (await claims.getClaims('/company', contractId)).length;
+      const oldLength = (await claims.getClaims(contractId, '/company')).length;
       const now = Math.floor(new Date().getTime() / 1000);
       await claims.setClaim(accounts[0], contractId, '/company', now);
-      const claimsForAccount = await claims.getClaims('/company', contractId);
+      const claimsForAccount = await claims.getClaims(contractId, '/company');
       expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
       expect(claimsForAccount[oldLength]).to.have.property('expirationDate', now.toString());
     });
 
     it('can add a claim and validate the integrity', async () => {
-      const oldLength = (await claims.getClaims('/company', contractId)).length;
+      const oldLength = (await claims.getClaims(contractId, '/company')).length;
       await claims.setClaim(accounts[0], contractId, '/company');
-      const claimsForAccount = await claims.getClaims('/company', contractId);
+      const claimsForAccount = await claims.getClaims(contractId, '/company');
       expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
-      await claims.validateClaim(claimsForAccount[oldLength].id, contractId);
+      await claims.validateClaim(contractId, claimsForAccount[oldLength].id);
       expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Issued);
     });
 
     it('can add subclaim paths and validate it', async () => {
-      const oldLength = (await claims.getClaims('/company', contractId)).length;
+      const oldLength = (await claims.getClaims(contractId, '/company')).length;
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
       await claims.setClaim(accounts[0], contractId, '/company/b-s-s/employee/swo');
       const identity = await claims.getIdentityForAccount(contractId);
-      const claimTree = await claims.validateClaimTree('/company/b-s-s/employee/swo', identity);
+      const claimTree = await claims.validateClaimTree(identity, '/company/b-s-s/employee/swo');
       expect(claimTree).to.have.lengthOf(4);
     });
 
     it('can add subclaim paths and don\'t have the needed root claims.', async () => {
-      const oldLength = (await claims.getClaims('/company', contractId)).length;
+      const oldLength = (await claims.getClaims(contractId, '/company')).length;
       await claims.setClaim(accounts[0], accounts[0], '/company/evan/employee');
       await claims.setClaim(accounts[0], contractId, '/company/evan/employee/swo2');
       const identity = await claims.getIdentityForAccount(contractId);
-      const claimTree = await claims.validateClaimTree('/company/evan/employee/swo2', identity);
+      const claimTree = await claims.validateClaimTree(identity, '/company/evan/employee/swo2');
       expect(claimTree).to.have.lengthOf(2);
     });
 
     it('can add subclaim paths', async () => {
-      const oldLength = (await claims.getClaims('/company/b-s-s/employee/swo3', contractId)).length;
+      const oldLength = (await claims.getClaims(contractId, '/company/b-s-s/employee/swo3')).length;
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
       await claims.setClaim(accounts[0], contractId, '/company/b-s-s/employee/swo3');
-      const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo3', contractId);
+      const claimsForAccount = await claims.getClaims(contractId, '/company/b-s-s/employee/swo3');
       expect(claimsForAccount).to.have.lengthOf(1);
       expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Issued);
     });
 
     it('can confirm a subclaim paths with the subject user', async () => {
-      const oldLength = (await claims.getClaims('/company/b-s-s/employee/swo4', contractId)).length;
+      const oldLength = (await claims.getClaims(contractId, '/company/b-s-s/employee/swo4')).length;
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
       const claimId = await claims.setClaim(accounts[0], contractId, '/company/b-s-s/employee/swo4');
-      await claims.confirmClaim(contractId, accounts[0], claimId);
-      const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo4', contractId);
+      await claims.confirmClaim(accounts[0], contractId, claimId);
+      const claimsForAccount = await claims.getClaims(contractId, '/company/b-s-s/employee/swo4');
       expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
       expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Confirmed);
     });
@@ -401,8 +401,8 @@ describe('Claims handler', function() {
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
       const claimId = await claims.setClaim(accounts[0], contractId, '/company/b-s-s/employee/swo6');
-      await claims.deleteClaim(contractId, accounts[0], claimId);
-      const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo6', contractId);
+      await claims.deleteClaim(accounts[0], contractId, claimId);
+      const claimsForAccount = await claims.getClaims(contractId, '/company/b-s-s/employee/swo6');
       expect(claimsForAccount).to.have.lengthOf(0);
     });
 
@@ -410,7 +410,7 @@ describe('Claims handler', function() {
       const before = Date.now() / 1000;
       await claims.setClaim(accounts[0], contractId, '/company');
       const after = Date.now() / 1000;
-      const claimsForAccount = await claims.getClaims('/company', contractId);
+      const claimsForAccount = await claims.getClaims(contractId, '/company');
       const last = claimsForAccount.length - 1;
       expect(claimsForAccount[last]).to.have.property('status', ClaimsStatus.Issued);
       expect(claimsForAccount[last]).to.have.property('creationDate');
@@ -422,7 +422,7 @@ describe('Claims handler', function() {
       const before = await web3.eth.getBlockNumber();
       await claims.setClaim(accounts[0], contractId, '/company');
       const after = await web3.eth.getBlockNumber();
-      const claimsForAccount = await claims.getClaims('/company', contractId);
+      const claimsForAccount = await claims.getClaims(contractId, '/company');
       const last = claimsForAccount.length - 1;
       expect(claimsForAccount[last]).to.have.property('status', ClaimsStatus.Issued);
       expect(claimsForAccount[last]).to.have.property('creationBlock');
@@ -442,7 +442,7 @@ describe('Claims handler', function() {
       };
       await claims.setClaimDescription(accounts[0], sampleClaimTopic, sampleClaimsDomain, sampleDescription);
       await claims.setClaim(accounts[0], contractId, sampleClaimTopic, null, null, sampleClaimsDomain);
-      const claimsForAccount = await claims.getClaims(sampleClaimTopic, contractId);
+      const claimsForAccount = await claims.getClaims(contractId, sampleClaimTopic);
       const last = claimsForAccount.length - 1;
       expect(claimsForAccount[last]).to.have.property('status', ClaimsStatus.Issued);
       expect(claimsForAccount[last]).to.have.property('creationBlock');
@@ -450,48 +450,48 @@ describe('Claims handler', function() {
     });
 
     it('can reject a claim', async () => {
-      const oldLength = (await claims.getClaims('/company/b-s-s/employee/swo4', contractId)).length;
+      const oldLength = (await claims.getClaims(contractId, '/company/b-s-s/employee/swo4')).length;
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
       const claimId = await claims.setClaim(accounts[0], contractId, '/company/b-s-s/employee/swo4');
-      await claims.rejectClaim(contractId, accounts[0], claimId);
-      const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo4', contractId);
+      await claims.rejectClaim(accounts[0], contractId, claimId);
+      const claimsForAccount = await claims.getClaims(contractId, '/company/b-s-s/employee/swo4');
       expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
       expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Rejected);
     });
 
     it('can reject a claim with a reason', async () => {
-      const oldLength = (await claims.getClaims('/company/b-s-s/employee/swo4', contractId)).length;
+      const oldLength = (await claims.getClaims(contractId, '/company/b-s-s/employee/swo4')).length;
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
       const claimId = await claims.setClaim(accounts[0], contractId, '/company/b-s-s/employee/swo4');
-      await claims.rejectClaim(contractId, accounts[0], claimId, { reason: 'denied' });
-      const claimsForAccount = await claims.getClaims('/company/b-s-s/employee/swo4', contractId);
+      await claims.rejectClaim(accounts[0], contractId, claimId, { reason: 'denied' });
+      const claimsForAccount = await claims.getClaims(contractId, '/company/b-s-s/employee/swo4');
       expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
       expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Rejected);
       expect(claimsForAccount[oldLength]).to.have.deep.property('rejectReason', { reason: 'denied' });
     });
 
     it('can not re accept a rejected claim', async () => {
-      const oldLength = (await claims.getClaims('/company/b-s-s/employee/swo4', contractId)).length;
+      const oldLength = (await claims.getClaims(contractId, '/company/b-s-s/employee/swo4')).length;
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
       const claimId = await claims.setClaim(accounts[0], contractId, '/company/b-s-s/employee/swo4');
-      await claims.rejectClaim(contractId, accounts[0], claimId);
-      const reacceptedP = claims.confirmClaim(contractId, accounts[0], claimId);
+      await claims.rejectClaim(accounts[0], contractId, claimId);
+      const reacceptedP = claims.confirmClaim(accounts[0], contractId, claimId);
       await expect(reacceptedP).to.be.rejected;
     });
 
     it('cannot have other users approve claims of a contract of another user', async () => {
-      const oldLength = (await claims.getClaims('/company/b-s-s/employee/swo4', contractId)).length;
+      const oldLength = (await claims.getClaims(contractId, '/company/b-s-s/employee/swo4')).length;
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
       const claimId = await claims.setClaim(accounts[0], contractId, '/company/b-s-s/employee/swo4');
-      await expect(claims.confirmClaim(contractId, accounts[1], claimId)).to.be.rejected;
+      await expect(claims.confirmClaim(accounts[1], contractId, claimId)).to.be.rejected;
     });
   });
 });
