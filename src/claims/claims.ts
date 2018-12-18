@@ -99,13 +99,13 @@ export class Claims extends Logger {
    * confirms a claim; this can be done, if a claim has been issued for a subject and the subject
    * wants to confirm it
    *
-   * @param      {string}         subject    claim subject
    * @param      {string}         accountId  account, that performs the action
+   * @param      {string}         subject    claim subject
    * @param      {string}         claimId    id of a claim to confirm
    * @return     {Promise<void>}  resolved when done
    */
   public async confirmClaim(
-      subject: string, accountId: string, claimId: string): Promise<void> {
+      accountId: string, subject: string, claimId: string): Promise<void> {
     await this.executeOnIdentity(
       subject,
       'approveClaim',
@@ -164,13 +164,13 @@ export class Claims extends Logger {
    * name seen as a path, the parent 'folder'). Subjects of a claim may only delete it, if they are
    * the issuer as well. If not, they can only react to it by confirming or rejecting the claim.
    *
-   * @param      {string}         subject    the subject of the claim
    * @param      {string}         accountId  account, that performs the action
+   * @param      {string}         subject    the subject of the claim
    * @param      {string}         claimId    id of a claim to delete
    * @return     {Promise<void>}  resolved when done
    */
   public async deleteClaim(
-      subject: string, accountId: string, claimId: string): Promise<void> {
+      accountId: string, subject: string, claimId: string): Promise<void> {
     await this.executeOnIdentity(
       subject,
       'removeClaim',
@@ -184,12 +184,12 @@ export class Claims extends Logger {
    * properties: creationBlock, creationDate, data, description, expirationDate, id, issuer, name,
    * signature, status, subject, topic, uri, valid
    *
-   * @param      {string}        claimName   name (/path) of a claim
    * @param      {string}        subject     subject of the claims
+   * @param      {string}        claimName   name (/path) of a claim
    * @param      {boolean}       isIdentity  (optional) indicates if the subject is already an identity
    * @return     {Promise<any[]>}  claim info array
    */
-  public async getClaims(claimName: string, subject: string, isIdentity?: boolean): Promise<any[]> {
+  public async getClaims(subject: string, claimName: string, isIdentity?: boolean): Promise<any[]> {
     const sha3ClaimName = this.options.nameResolver.soliditySha3(claimName);
     const uint256ClaimName = new BigNumber(sha3ClaimName).toString(10);
 
@@ -268,7 +268,7 @@ export class Claims extends Logger {
         subject,
         topic: claim.topic,
         uri: (<any>claim).uri,
-        valid: await this.validateClaim(claimId, subject, isIdentity)
+        valid: await this.validateClaim(subject, claimId, isIdentity)
       };
     }));
 
@@ -332,14 +332,14 @@ export class Claims extends Logger {
    * tracking reasons. You can also optionally add a reject reason as JSON object to track
    * additional informations about the rejection. Issuer and Subject can reject a special claim.
    *
-   * @param      {string}         subject       account, that rejects the claim
    * @param      {string}         accountId     account, that performs the action
+   * @param      {string}         subject       account, that rejects the claim
    * @param      {string}         claimId       id of a claim to reject
    * @param      {any}            rejectReason  (optional) rejectReason object
    * @return     {Promise<void>}  resolved when done
    */
   public async rejectClaim(
-      subject: string, accountId: string, claimId: string, rejectReason?: any): Promise<void> {
+      accountId: string, subject: string, claimId: string, rejectReason?: any): Promise<void> {
     if (rejectReason) {
       try {
         const stringified = JSON.stringify(rejectReason);
@@ -492,14 +492,14 @@ export class Claims extends Logger {
   /**
    * validates a given claimId in case of integrity
    *
-   * @param      {string}            claimId     claim identifier
    * @param      {string}            subject     the subject of the claim
+   * @param      {string}            claimId     claim identifier
    * @param      {boolean}           isIdentity  optional indicates if the subject is already an
    *                                             identity
    * @return     {Promise<boolean>}  resolves with true if the claim is valid, otherwise false
    */
   public async validateClaim(
-      claimId: string, subject: string, isIdentity?: boolean): Promise<boolean> {
+      subject: string, claimId: string, isIdentity?: boolean): Promise<boolean> {
     await this.ensureStorage();
 
     let subjectIdentity = isIdentity ? subject : await this.getIdentityForAccount(subject);
@@ -529,14 +529,14 @@ export class Claims extends Logger {
   /**
    * validates a whole claim tree if the path is valid (called recursively)
    *
-   * @param      {string}          claimLabel  claim topic of a claim to build the tree for
    * @param      {string}          subject     subject of the claim and the owner of the claim node
+   * @param      {string}          claimLabel  claim topic of a claim to build the tree for
    * @param      {array}           treeArr     (optional) result tree array, used for recursion
    * @return     {Promise<any[]>}  Array with all resolved claims for the tree
    */
-  public async validateClaimTree(claimLabel: string, subject: string, treeArr = []) {
+  public async validateClaimTree(subject: string, claimLabel: string, treeArr = []) {
     const splittedClaimLabel = claimLabel.split('/');
-    const claims = await this.getClaims(claimLabel, subject, true);
+    const claims = await this.getClaims(subject, claimLabel, true);
     // TODO: -> Add validation of more than one claim if there are more claims for the label
     if (claims.length > 0) {
       // check at the moment the first claim
@@ -544,7 +544,7 @@ export class Claims extends Logger {
       if (splittedClaimLabel.length > 1) {
         splittedClaimLabel.pop();
         const subClaim = splittedClaimLabel.join('/');
-        await this.validateClaimTree(subClaim, claims[0].issuer, treeArr);
+        await this.validateClaimTree(claims[0].issuer, subClaim, treeArr);
       }
     } else {
       return treeArr;
