@@ -602,12 +602,30 @@ export class Claims extends Logger {
       );
     } else if (subjectType === 'account') {
       // account identity
-      return this.options.executor.executeContractTransaction(
-        await this.getIdentityForAccount(subject),
-        fun,
-        options,
-        ...args,
+      const targetIdentity = await this.getIdentityForAccount(subject);
+      const userIdentity = this.options.contractLoader.loadContract(
+        'ClaimHolder',
+        targetIdentity.options.address
       );
+
+      const abi = userIdentity.methods[fun].apply(
+        userIdentity.methods[fun],
+        args
+      ).encodeABI();
+
+      if(options.event) {
+        options.event.targetAddress = targetIdentity.options.address;
+      }
+
+      const ret = await this.options.executor.executeContractTransaction(
+        await this.getIdentityForAccount(options.from),
+        'execute',
+        options,
+        targetIdentity.options.address, 
+        0, 
+        abi,
+      );
+      return ret;
     }
   }
 
