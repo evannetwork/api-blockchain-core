@@ -107,7 +107,8 @@ describe('Claims handler', function() {
   describe('when using external account based identities', () => {
     it('can add a claim', async () => {
       const oldLength = (await claims.getClaims(accounts[1], '/company')).length;
-      await claims.setClaim(accounts[0], accounts[1], '/company');
+      const claimId = await claims.setClaim(accounts[0], accounts[1], '/company');
+      expect(claimId).to.be.ok;
       const claimsForAccount = await claims.getClaims(accounts[1], '/company');
       expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
       expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Issued);

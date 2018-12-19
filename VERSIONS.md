@@ -2,8 +2,11 @@
 
 ## Next Version
 ### Features
+- update `setClaims` to use issuers identity for setting claims on subject
+
 ### Fixes
 ### Deprecations
+
 
 ## Version 1.6.1
 ### Fixes

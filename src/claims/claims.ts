@@ -615,24 +615,56 @@ export class Claims extends Logger {
         targetIdentity.options.address
       );
 
+      // get encoded abi for passing it to identity tx
       const abi = userIdentity.methods[fun].apply(
         userIdentity.methods[fun],
         args
       ).encodeABI();
 
-      if(options.event) {
-        options.event.targetAddress = targetIdentity.options.address;
-      }
+      // backup orignal event data and set event data for handling identity tx
+      const originalEvent = options.event;
+      const originalGetEventResult = options.getEventResult;
+      options.event = {
+        // event Approved(uint256 indexed executionId, bool approved);
+        eventName: 'Approved',
+        target: 'KeyHolderLibrary', // ClaimsRegistryLibrary
+      };
+      options.getEventResult = (event, eventArgs) => {
+        return [eventArgs.executionId, event.blockNumber];
+      };
 
-      const ret = await this.options.executor.executeContractTransaction(
-        await this.getIdentityForAccount(options.from),
-        'execute',
-        options,
-        targetIdentity.options.address, 
-        0, 
-        abi,
-      );
-      return ret;
+      const identity = await this.getIdentityForAccount(options.from);
+      const [executionId, blockNumber] = await this.options.executor.executeContractTransaction(
+        identity, 'execute', options, targetIdentity.options.address, 0, abi);
+      const keyHolderLibrary = this.options.contractLoader.loadContract(
+        'KeyHolderLibrary', identity.options.address);
+      const [ executed, failed ] = await Promise.all([
+        // event Executed(uint256 indexed executionId, address indexed to, uint256 indexed value, bytes data);
+        keyHolderLibrary.getPastEvents('Executed', { fromBlock: blockNumber, toBlock: blockNumber }),
+        // event ExecutionFailed(uint256 indexed executionId, address indexed to, uint256 indexed value, bytes data);
+        keyHolderLibrary.getPastEvents('ExecutionFailed', { fromBlock: blockNumber, toBlock: blockNumber }),
+      ]);
+      // flatten and filter events on exection id from identity tx
+      const filtered = [ ...executed, ...failed ].filter(
+        event => event.returnValues && event.returnValues.executionId === executionId);
+      if (filtered.length && filtered[0].event === 'Executed') {
+        // if execution was successfull
+        if (originalEvent) {
+          // if original options had an event property for retrieving evnet results
+          const targetIdentityEvents = await targetIdentity.getPastEvents(
+            originalEvent.eventName, { fromBlock: blockNumber, toBlock: blockNumber });
+          if (targetIdentityEvents.length) {
+            return originalGetEventResult(targetIdentityEvents[0], targetIdentityEvents[0].returnValues);
+          }
+        }
+      } else if (filtered.length && filtered[0].event === 'ExecutionFailed') {
+        const values = filtered[0].returnValues;
+        throw new Error('executeOnIdentity failed; ExecutionFailed event was triggered: ' +
+          `executionId: "${values.executionId}", to: "${values.to}", value: "${values.value}"`);
+      } else {
+        throw new Error('executeOnIdentity failed; subject type was \'account\', ' +
+          'but no proper identity tx status event could be retrieved');
+      }
     }
   }
 
