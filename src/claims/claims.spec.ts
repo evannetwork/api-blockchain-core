@@ -311,7 +311,7 @@ describe('Claims handler', function() {
             description: 'I\'m a sample claim',
             author: 'evan.network',
             version: '1.0.0',
-            dbcpVersion: 1,
+            dbcpVersion: 2,
           },
         },
         accounts[0],
@@ -494,5 +494,50 @@ describe('Claims handler', function() {
       const claimId = await claims.setClaim(accounts[0], contractId, '/company/b-s-s/employee/swo4');
       await expect(claims.confirmClaim(accounts[1], contractId, claimId)).to.be.rejected;
     });
+
+    it('does not return claim data, when identity and contract id mismatch', async () => {
+      const businessCenterDomain = nameResolver.getDomainName(config.nameResolver.domains.businessCenter);
+      // create two contracts with a claim
+      const [ contractId1, contractId2 ] = await Promise.all([...Array(2)].map(async () => {
+        const localContractId = await baseContract.createUninitialized(
+        'testdatacontract',
+        accounts[0],
+        businessCenterDomain,
+        );
+        await description.setDescriptionToContract(
+          localContractId,
+          {
+            public: {
+              name: 'sample claim',
+              description: 'I\'m a sample claim',
+              author: 'evan.network',
+              version: '1.0.0',
+              dbcpVersion: 2,
+            },
+          },
+          accounts[0],
+        );
+        const identity = await claims.createIdentity(accounts[0], localContractId);
+        await claims.setClaim(accounts[0], localContractId, '/company');
+
+        // each contract should have one claim
+        const contractClaims = await claims.getClaims(localContractId, '/company');
+        expect(contractClaims).to.have.lengthOf(1);
+        expect(contractClaims[0]).to.have.property('status', ClaimsStatus.Issued);
+
+        return localContractId;
+      }));
+
+      // point contract1s description to contract2s identity
+      const description1 = await description.getDescription(contractId1, accounts[0]);
+      const description2 = await description.getDescription(contractId2, accounts[0]);
+      description1.public.identity = description2.public.identity;
+      await description.setDescriptionToContract(contractId1, description1, accounts[0]);
+
+      claims.cachedIdentities = {};
+      claims.subjectTypes = {};
+      await expect(claims.getClaims(contractId1, '/company')).to.be.rejected;
+    });
   });
 });
+

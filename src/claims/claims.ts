@@ -142,6 +142,7 @@ export class Claims extends Logger {
       );
       identity = identityContract.options.address;
     } else {
+      // create identity hash from registry
       identity = await this.options.executor.executeContractTransaction(
         this.contracts.registry,
         'createIdentity',
@@ -152,9 +153,18 @@ export class Claims extends Logger {
           getEventResult: (_, args) => args.identity,
         },
       );
+      // write identity to description
       const description = await this.options.description.getDescription(contractId, accountId);
       description.public.identity = identity;
       await this.options.description.setDescriptionToContract(contractId, description, accountId);
+      // write identity to contract
+      await this.options.executor.executeContractTransaction(
+        this.contracts.registry,
+        'linkIdentity',
+        { from: accountId },
+        identity,
+        contractId,
+      );
     }
     return identity;
   }
@@ -293,13 +303,30 @@ export class Claims extends Logger {
         subject,
       );
       // check if target identity exists
-      if (subject === nullAddress) {
-        const msg = `target identity for account ${subject} does not exist`;
-        this.log(msg, 'error');
-        throw new Error(msg);
-      }
+      if (targetIdentity !== nullAddress) {
+        this.subjectTypes[subject] = 'account';
+        this.cachedIdentities[subject] = this.options.contractLoader.loadContract('OriginIdentity', targetIdentity);
+      } else {
+        const description = await this.options.description.getDescription(subject, null);
+        if (description && description.public && description.public.identity) {
+          // we got an identity from description, now check, that contract id matches linked address
+          const linked = await this.options.executor.executeContractCall(
+            this.contracts.registry, 'getLink', description.public.identity);
+          if (linked !== subject) {
+            const msg = `subject description of "${subject}" points to identity ` +
+              `"${description.public.identity}", but this identity is linked to address "${linked}"`;
+            this.log(msg, 'error');
+            throw new Error(msg);
+          }
+          this.subjectTypes[subject] = 'contract';
+          this.cachedIdentities[subject] = description.public.identity;
+        } else {
+          const msg = `could not find identity for "${subject}"`;
+          this.log(msg, 'error');
+          throw new Error(msg);
+        }
 
-      this.cachedIdentities[subject] = this.options.contractLoader.loadContract('OriginIdentity', targetIdentity);
+      }
     }
     return this.cachedIdentities[subject];
   }
@@ -659,7 +686,7 @@ export class Claims extends Logger {
         // event ExecutionFailed(uint256 indexed executionId, address indexed to, uint256 indexed value, bytes data);
         keyHolderLibrary.getPastEvents('ExecutionFailed', { fromBlock: blockNumber, toBlock: blockNumber }),
       ]);
-      // flatten and filter events on exection id from identity tx
+      // flatten and filter eventso n exection id from identity tx
       const filtered = [ ...executed, ...failed ].filter(
         event => event.returnValues && event.returnValues.executionId === executionId);
       if (filtered.length && filtered[0].event === 'Executed') {
@@ -707,22 +734,8 @@ export class Claims extends Logger {
     } else if (isIdentity && subject.length === 42) {
       return 'account';
     } else if (!this.subjectTypes[subject]) {
-      const targetIdentity = await this.options.executor.executeContractCall(
-        this.contracts.storage,
-        'users',
-        subject,
-      );
-      if (targetIdentity !== nullAddress) {
-        this.subjectTypes[subject] = 'account';
-      } else {
-        const description = await this.options.description.getDescription(subject, null);
-        if (description && description.public && description.public.identity) {
-          this.subjectTypes[subject] = 'contract';
-          this.cachedIdentities[subject] = description.public.identity;
-        } else {
-          throw new Error(`could not find identity for "${subject}"`);
-        }
-      }
+      // fills subject type upon retrieval
+      await this.getIdentityForAccount(subject);
     }
     return this.subjectTypes[subject];
   }

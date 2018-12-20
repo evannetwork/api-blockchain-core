@@ -3,6 +3,7 @@
 ## Next Version
 ### Features
 - update `setClaims` to use issuers identity for setting claims on subject
+- add linking and checks for contract identities
 
 ### Fixes
 ### Deprecations
