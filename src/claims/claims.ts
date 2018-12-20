@@ -586,6 +586,21 @@ export class Claims extends Logger {
   }
 
   /**
+   * Checks if a storage was initialized before, if not, load the default one.
+   *
+   * @return     {Promise<void>}  resolved when storage exists or storage was loaded
+   */
+  private async ensureStorage() {
+    if (!this.contracts.storage) {
+      const storageAddress = await this.options.nameResolver
+        .getAddress(`identities.${ this.options.nameResolver.config.labels.ensRoot }`);
+
+      this.contracts.storage = this.options.contractLoader.loadContract('V00_UserRegistry',
+        storageAddress);
+    }
+  }
+
+  /**
    * execute contract transaction on identity, checks if account or contract identity is used and if
    * given subject is alraedy an identity
    *
@@ -669,18 +684,14 @@ export class Claims extends Logger {
   }
 
   /**
-   * Checks if a storage was initialized before, if not, load the default one.
+   * returns full domain for description
    *
-   * @return     {Promise<void>}  resolved when storage exists or storage was loaded
+   * @param      {string}  topic              claim topic
+   * @param      {string}  descriptionDomain  domain of description
+   * @return     {string}  full domain
    */
-  private async ensureStorage() {
-    if (!this.contracts.storage) {
-      const storageAddress = await this.options.nameResolver
-        .getAddress(`identities.${ this.options.nameResolver.config.labels.ensRoot }`);
-
-      this.contracts.storage = this.options.contractLoader.loadContract('V00_UserRegistry',
-        storageAddress);
-    }
+  private getFullDescriptionDomainWithHash(topic: string, descriptionDomain: string): string {
+    return `${this.options.nameResolver.soliditySha3(topic).substr(2)}.${descriptionDomain}.claims.evan`;
   }
 
   /**
@@ -714,16 +725,5 @@ export class Claims extends Logger {
       }
     }
     return this.subjectTypes[subject];
-  }
-
-  /**
-   * returns full domain for description
-   *
-   * @param      {string}  topic              claim topic
-   * @param      {string}  descriptionDomain  domain of description
-   * @return     {string}  full domain
-   */
-  private getFullDescriptionDomainWithHash(topic: string, descriptionDomain: string): string {
-    return `${this.options.nameResolver.soliditySha3(topic).substr(2)}.${descriptionDomain}.claims.evan`;
   }
 }
