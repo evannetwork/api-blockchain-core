@@ -70,7 +70,7 @@ import { Wallet } from '../contracts/wallet';
 export const publicMailBoxExchange = 'mailboxKeyExchange';
 export const sampleContext = 'context sample';
 
-const web3Provider = 'wss://testcore.evan.network/ws';
+const web3Provider = 'ws://localhost:8546';
 const helperWeb3 = new Web3(null);
 const sampleKeys = {};
 // dataKeys

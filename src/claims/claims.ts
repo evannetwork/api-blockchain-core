@@ -555,14 +555,14 @@ export class Claims extends Logger {
    * @param      {any}            description  description of the claim; can be an Envelope but
    *                                           only public properties are used
    * @return     {Promise<void>}  resolved when done
-   */ 
-  public async setClaimDescription(accountId: string, topic: string, domain: string, description: any) {  
-    let toSet = JSON.parse(JSON.stringify(description));  
-    if (!toSet.hasOwnProperty('public')) {  
-      toSet = { public: toSet };  
-    }  
-    const domainWithHash = this.getFullDescriptionDomainWithHash(topic, domain);  
-    await this.options.description.setDescription(domainWithHash, toSet, accountId);  
+   */
+  public async setClaimDescription(accountId: string, topic: string, domain: string, description: any) {
+    let toSet = JSON.parse(JSON.stringify(description));
+    if (!toSet.hasOwnProperty('public')) {
+      toSet = { public: toSet };
+    }
+    const domainWithHash = this.getFullDescriptionDomainWithHash(topic, domain);
+    await this.options.description.setDescription(domainWithHash, toSet, accountId);
   }
 
   /**

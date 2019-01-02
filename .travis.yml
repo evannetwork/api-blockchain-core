@@ -6,51 +6,57 @@ matrix:
   include:
   - name: "non-blockchain specific tests"
     node_js: "8.11.3"
-    env: 
-      - ACCOUNT_MAP='{"0xC2ee94f6cf046B02D530cf1cd16A2b32b8A4340d":"EF7012DD4D5DD6A78765C511F452F8CA641378F0DF071F9C32D506F45F31B22C","0xac46D762f0aB316105C5Cf4375bb8e380Be88658":"E29C1E4A683CC629E39CE219CFB1F35BBA898605E1B197162F0EECF0F1139630","0x35f8220bC83577458aEa4a1085A8b832DEa79b7a":"340BA316637FD01A1AFD54D4491A899F6D8EA0FB89A1D7BA94682F7D68B21B20"}'
+    env:
+      - ACCOUNT_MAP='{"0x001De828935e8c7e4cb56Fe610495cAe63fb2612":"01734663843202e2245e5796cb120510506343c67915eb4f9348ac0d8c2cf22a","0x0030C5e7394585400B1FB193DdbCb45a37Ab916E":"7d09c0873e3f8dc0c7282bb7c2ba76bfd432bff53c38ace06193d1e4faa977e7","0x00D1267B27C3A80080f9E1B6Ba01DE313b53Ab58":"a76a2b068fb715830d042ca40b1a4dab8d088b217d11af91d15b972a7afaf202"}'
       - TESTSPECS='src/encryption/*.spec.ts src/dfs/*.spec.ts'
+      - ENS_ADDRESS='0x9f8063ac44D23C99E943eA3DE3E1bb6Ab7678df0'
+      - ENS_RESOLVER='0xc6b9F181BFa9eFA7679a3B3a786aB582AeE79dad'
     script:
       - npm run testunit $TESTSPECS
 
   - name: "services contracts tests"
     node_js: "8.11.3"
-    env: 
-      - ACCOUNT_MAP='{"0xC2ee94f6cf046B02D530cf1cd16A2b32b8A4340d":"EF7012DD4D5DD6A78765C511F452F8CA641378F0DF071F9C32D506F45F31B22C","0xac46D762f0aB316105C5Cf4375bb8e380Be88658":"E29C1E4A683CC629E39CE219CFB1F35BBA898605E1B197162F0EECF0F1139630","0x35f8220bC83577458aEa4a1085A8b832DEa79b7a":"340BA316637FD01A1AFD54D4491A899F6D8EA0FB89A1D7BA94682F7D68B21B20"}'
-      - TESTSPECS='src/claims/*.spec.ts src/profile/*.spec.ts src/*.spec.ts !src/name-resolver.spec.ts'
+    env:
+      - ACCOUNT_MAP='{"0x001De828935e8c7e4cb56Fe610495cAe63fb2612":"01734663843202e2245e5796cb120510506343c67915eb4f9348ac0d8c2cf22a","0x0030C5e7394585400B1FB193DdbCb45a37Ab916E":"7d09c0873e3f8dc0c7282bb7c2ba76bfd432bff53c38ace06193d1e4faa977e7","0x00D1267B27C3A80080f9E1B6Ba01DE313b53Ab58":"a76a2b068fb715830d042ca40b1a4dab8d088b217d11af91d15b972a7afaf202"}'
+      - TESTSPECS='src/claims/*.spec.ts src/profile/*.spec.ts src/*.spec.ts'
+      - ENS_ADDRESS='0x9f8063ac44D23C99E943eA3DE3E1bb6Ab7678df0'
+      - ENS_RESOLVER='0xc6b9F181BFa9eFA7679a3B3a786aB582AeE79dad'
     script:
-      - npm run testunit $TESTSPECS
+      - npm run testunit $TESTSPECS -- --exclude src/name-resolver.spec.ts
 
   - name: "data contract (encryption) tests"
     node_js: "8.11.3"
-    env: 
-      - ACCOUNT_MAP='{"0x0e10fa0aa2273F074F51a09F2eC95890816FD6d6":"4943D3A1D1457E627537D5C1DD6846B718807D11431283B659AED9F2988F3694","0xb0646ee7b728B72bc9F73D0f9DDAf00D1a981fa0":"D9734AFE9168C37481A977C91FE25B9C7D814789F515D78DC084A27BD2137E14","0x04B1Ee1b9D5283B2694B739DA5b49DBC88199750":"68475374AC69364D64F94A47D66410936F63971FE5EEAEFDF85913D153799EE5"}'
+    env:
+      - ACCOUNT_MAP='{"0x001De828935e8c7e4cb56Fe610495cAe63fb2612":"01734663843202e2245e5796cb120510506343c67915eb4f9348ac0d8c2cf22a","0x0030C5e7394585400B1FB193DdbCb45a37Ab916E":"7d09c0873e3f8dc0c7282bb7c2ba76bfd432bff53c38ace06193d1e4faa977e7","0x00D1267B27C3A80080f9E1B6Ba01DE313b53Ab58":"a76a2b068fb715830d042ca40b1a4dab8d088b217d11af91d15b972a7afaf202"}'
       - TESTSPECS="src/contracts/data-contract/*.spec.ts"
+      - ENS_ADDRESS='0x9f8063ac44D23C99E943eA3DE3E1bb6Ab7678df0'
+      - ENS_RESOLVER='0xc6b9F181BFa9eFA7679a3B3a786aB582AeE79dad'
     script:
       - npm run testunit $TESTSPECS -- --grep 'when working encrypted DFS files'
 
   - name: "data contract tests"
     node_js: "8.11.3"
-    env: 
-      - ACCOUNT_MAP='{"0x13c9c6ECFA485A74a0A8773856c21a215CbE571A":"ece5780d73ce564f641224c68a12c313bf5cfe0bc5b3ab116be1a573280d1a2a","0x5F67b2134B89Cad2FDAFe6C72D8BEDeF4072cb6b":"b7847096f0bf10996ea70feae73211b7236e9a2317943400fecf8807cd542563","0x2B144A2C8055535A48582c1d0bA11A2Ff10769b2":"ce03f7cd8992ba36687de0d942870286128d379a6fc08aab96dbbde7268e6871"}'
+    env:
+      - ACCOUNT_MAP='{"0x001De828935e8c7e4cb56Fe610495cAe63fb2612":"01734663843202e2245e5796cb120510506343c67915eb4f9348ac0d8c2cf22a","0x0030C5e7394585400B1FB193DdbCb45a37Ab916E":"7d09c0873e3f8dc0c7282bb7c2ba76bfd432bff53c38ace06193d1e4faa977e7","0x00D1267B27C3A80080f9E1B6Ba01DE313b53Ab58":"a76a2b068fb715830d042ca40b1a4dab8d088b217d11af91d15b972a7afaf202"}'
       - TESTSPECS="src/contracts/data-contract/*.spec.ts"
+      - ENS_ADDRESS='0x9f8063ac44D23C99E943eA3DE3E1bb6Ab7678df0'
+      - ENS_RESOLVER='0xc6b9F181BFa9eFA7679a3B3a786aB582AeE79dad'
     script:
       - npm run testunit $TESTSPECS -- --grep 'when working encrypted DFS files' --invert
 
   - name: "service/base/businesscenter contract tests"
     node_js: "8.11.3"
-    env: 
+    env:
       - ACCOUNT_MAP='{"0x001De828935e8c7e4cb56Fe610495cAe63fb2612":"01734663843202e2245e5796cb120510506343c67915eb4f9348ac0d8c2cf22a","0x0030C5e7394585400B1FB193DdbCb45a37Ab916E":"7d09c0873e3f8dc0c7282bb7c2ba76bfd432bff53c38ace06193d1e4faa977e7","0x00D1267B27C3A80080f9E1B6Ba01DE313b53Ab58":"a76a2b068fb715830d042ca40b1a4dab8d088b217d11af91d15b972a7afaf202"}'
       - TESTSPECS='src/contracts/*.spec.ts src/contracts/base-contract/*.spec.ts src/contracts/business-center/*.spec.ts src/contracts/service-contract/*.spec.ts'
+      - ENS_ADDRESS='0x9f8063ac44D23C99E943eA3DE3E1bb6Ab7678df0'
+      - ENS_RESOLVER='0xc6b9F181BFa9eFA7679a3B3a786aB582AeE79dad'
     script:
       - npm run testunit $TESTSPECS
 
-  - name: "nameresolver contract tests"
-    node_js: "8.11.3"
-    env: 
-      - ACCOUNT_MAP='{"0x3Be2E8D1A93139A981dc0dFe5E21B53fD6768FA6":"f42d8b97d89636b9c49d765e471f89b465df1bbb59ced554387ba4c38789fe31","0xfe825e67A8F8a0fB31496280173a3de4a6ddEc43":"5e0dbef7deafe54becbcac51f970307fe1679797cbe40f18f5dc55c9740b8d4d","0x4e61A980F2081fCAc3E1777d667B66DF0516d264":"44367a662acc6267065ce64b83a88949f5adc0249ba1cbf55309877117c2e954"}'
-      - TESTSPECS='src/name-resolver.spec.ts'
-    script:
-      - npm run testunit $TESTSPECS
+services:
+  - docker
+
 addons:
   apt:
     sources:
@@ -62,9 +68,10 @@ addons:
 before_install:
   - export CXX="g++-4.8"
   - npm install -g npm@latest
-
+  - docker pull evannetwork/parity_testchain
+  - docker run -d -p 127.0.0.1:8546:8546 -p 127.0.0.1:8545:8545 -u root --entrypoint /home/parity/bin/parity evannetwork/parity_testchain --chain /root/parity/spec.json --jsonrpc-interface all --unsafe-expose
 install:
-  - npm install 
+  - npm install
   - cd node_modules/@evan.network && rm -rf dbcp && git clone https://github.com/evannetwork/dbcp.git && cd dbcp && git checkout develop && npm i && npm run build && cd ../../../
   - cd node_modules/@evan.network && rm -rf smart-contracts-core && git clone https://github.com/evannetwork/smart-contracts-core.git && cd smart-contracts-core && git checkout develop && npm i && cd ../../../
   - rm node_modules/web3/*.d.ts
