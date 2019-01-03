@@ -12,7 +12,7 @@ matrix:
       - ENS_ADDRESS='0x9f8063ac44D23C99E943eA3DE3E1bb6Ab7678df0'
       - ENS_RESOLVER='0xc6b9F181BFa9eFA7679a3B3a786aB582AeE79dad'
     script:
-      - npm run testunit $TESTSPECS
+      - npm run testunitcoverage
 
   - name: "services contracts tests"
     node_js: "8.11.3"
@@ -22,7 +22,7 @@ matrix:
       - ENS_ADDRESS='0x9f8063ac44D23C99E943eA3DE3E1bb6Ab7678df0'
       - ENS_RESOLVER='0xc6b9F181BFa9eFA7679a3B3a786aB582AeE79dad'
     script:
-      - npm run testunit $TESTSPECS -- --exclude src/name-resolver.spec.ts
+      - npm run testunitcoverage -- --exclude src/name-resolver.spec.ts
 
   - name: "data contract (encryption) tests"
     node_js: "8.11.3"
@@ -32,7 +32,7 @@ matrix:
       - ENS_ADDRESS='0x9f8063ac44D23C99E943eA3DE3E1bb6Ab7678df0'
       - ENS_RESOLVER='0xc6b9F181BFa9eFA7679a3B3a786aB582AeE79dad'
     script:
-      - npm run testunit $TESTSPECS -- --grep 'when working encrypted DFS files'
+      - npm run testunitcoverage -- --grep 'when working encrypted DFS files'
 
   - name: "data contract tests"
     node_js: "8.11.3"
@@ -42,7 +42,7 @@ matrix:
       - ENS_ADDRESS='0x9f8063ac44D23C99E943eA3DE3E1bb6Ab7678df0'
       - ENS_RESOLVER='0xc6b9F181BFa9eFA7679a3B3a786aB582AeE79dad'
     script:
-      - npm run testunit $TESTSPECS -- --grep 'when working encrypted DFS files' --invert
+      - npm run testunitcoverage -- --grep 'when working encrypted DFS files' --invert
 
   - name: "service/base/businesscenter contract tests"
     node_js: "8.11.3"
@@ -52,7 +52,7 @@ matrix:
       - ENS_ADDRESS='0x9f8063ac44D23C99E943eA3DE3E1bb6Ab7678df0'
       - ENS_RESOLVER='0xc6b9F181BFa9eFA7679a3B3a786aB582AeE79dad'
     script:
-      - npm run testunit $TESTSPECS
+      - npm run testunitcoverage
 
 services:
   - docker

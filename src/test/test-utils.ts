@@ -338,6 +338,7 @@ export class TestUtils {
     executor.eventHub = eventHub;
     const payments = new Payments({
       web3,
+      accountStore: this.getAccountStore({}),
       contractLoader: await TestUtils.getContractLoader(web3),
       executor,
     });

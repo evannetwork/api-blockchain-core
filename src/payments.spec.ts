@@ -39,19 +39,22 @@ import { Mailbox } from './mailbox';
 import { Profile } from './profile/profile';
 import { TestUtils } from './test/test-utils';
 
+import * as BigNumber from 'bignumber.js';
 
 describe('Payment Channels', function() {
   this.timeout(600000);
   let nameResolver;
-  let payments;
+  let payments1;
+  let payments2;
   let executor;
   let web3;
-
+  let initialChannel;
+  let proof;
   before(async () => {
     web3 = TestUtils.getWeb3();
     executor = await TestUtils.getExecutor(web3);
-    payments = await TestUtils.getPayments(web3, accounts[0]);
-    
+    payments1 = await TestUtils.getPayments(web3, accounts[0]);
+    payments2 = await TestUtils.getPayments(web3, accounts[1]);
   });
 
 
@@ -61,13 +64,74 @@ describe('Payment Channels', function() {
       [500, []],
       { from: accounts[0], gas: 3000000, }
     );
-    payments.setChannelManager(channelManager.options.address);
+    payments1.setChannelManager(channelManager.options.address);
+    payments2.setChannelManager(channelManager.options.address);
     console.dir(channelManager.options.address);
   });
 
   it('should open a new channel to a other account', async () => {
+    initialChannel = await payments1.openChannel(accounts[0], accounts[1], 5);
+    payments2.setChannel(initialChannel);
+  });
 
-    const channel = await payments.openChannel(accounts[0], accounts[1], 5);
-    console.dir(channel);
+  it('should reload a channel to a other account, when loading from blockchain', async () => {
+    const channel = await payments1.loadChannelFromBlockchain(accounts[0], accounts[1]);
+    expect(channel.block).to.equal(initialChannel.block);
+  });
+
+  it('should sign a new payment from the target', async () => {
+    proof = await payments1.incrementBalanceAndSign(1);
+    payments1.confirmPayment(proof);
+    payments2.channel.proof = proof;
+    expect(proof.balance.eq(1));
+  });
+
+  it('should top up a channel with new eves', async () => {
+    const closingSig = await payments1.topUpChannel(10);
+    const info = await payments1.getChannelInfo();
+    expect(info.deposit.eq(new BigNumber(15))).to.be.true;
+  });
+
+  it('should close a channel cooperative from the receiver side', async () => {
+    const closingSig = await payments2.getClosingSig(accounts[1], proof);
+
+    // store balance before closing
+    const balanceReceiverBefore = new BigNumber(await web3.eth.getBalance(accounts[1]));
+    await payments2.closeChannel(closingSig);
+
+    let result = await payments2.getChannelInfo();
+    expect(result).to.have.all.keys('state', 'block', 'deposit', 'withdrawn');
+    expect(result.state).to.be.equal('settled');
+    expect(result.deposit.eq(new BigNumber(0))).to.be.true;
+
+    const balanceReceiverAfter = new BigNumber(await web3.eth.getBalance(accounts[1]));
+    expect(balanceReceiverAfter.eq(balanceReceiverBefore.add(1)));
+  });
+
+  it('should close a channel cooperative from the sender side', async () => {
+    initialChannel = await payments1.openChannel(accounts[0], accounts[1], 5);
+    payments2.setChannel(initialChannel);
+    proof = await payments1.incrementBalanceAndSign(1);
+    payments1.confirmPayment(proof);
+    payments2.channel.proof = proof;
+    const closingSig = await payments2.getClosingSig(accounts[1], proof);
+
+    // store balance before closing
+    const balanceReceiverBefore = new BigNumber(await web3.eth.getBalance(accounts[1]));
+
+    await payments1.closeChannel(closingSig);
+
+    let result = await payments1.getChannelInfo();
+    expect(result).to.have.all.keys('state', 'block', 'deposit', 'withdrawn');
+    expect(result.state).to.be.equal('settled');
+    expect(result.deposit.eq(new BigNumber(0))).to.be.true;
+
+    const balanceReceiverAfter = new BigNumber(await web3.eth.getBalance(accounts[1]));
+    expect(balanceReceiverAfter.eq(balanceReceiverBefore.add(1)));
+  });
+
+   it.skip('should close a channel un-cooperative from the receiver side', async () => {
+    const closingSig = await payments2.getClosingSig(accounts[1], proof);
+    await payments2.closeChannel(closingSig);
   });
 });
