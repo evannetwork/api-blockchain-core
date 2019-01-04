@@ -16,6 +16,7 @@ Blockchain
     description
     wallet
     votings
+    payments
 
 This section contains modules, that deal with basic blockchain interactions, like
 

@@ -55,3 +55,4 @@ export { RightsAndRoles, ModificationType, PropertyType } from './contracts/righ
 export { ServiceContract, Answer, AnswerResult, Call, CallResult } from './contracts/service-contract/service-contract';
 export { Sharing } from './contracts/sharing';
 export { Votings, MemberOptions, ProposalInfo, ProposalInfos, ProposalOptions, VotingsContractOptions } from './votings/votings';
+export { Payments } from './payments';
