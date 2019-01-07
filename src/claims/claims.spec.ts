@@ -97,7 +97,11 @@ describe('Claims handler', function() {
     const storage = await executor.createContract(
       'V00_UserRegistry', [], { from: accounts[0], gas: 3000000, });
     claims.contracts.storage = storage;
-    console.dir({keyHolderLib: keyHolderLib.options.address, claimHolderLib: claimHolderLib.options.address});
+    console.dir({
+      keyHolderLib: keyHolderLib.options.address,
+      claimHolderLib: claimHolderLib.options.address,
+      claimsRegistryLib: claimsRegistryLib.options.address,
+    });
   })
 
   it('can create identities', async () => {
