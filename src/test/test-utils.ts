@@ -69,7 +69,7 @@ import { Wallet } from '../contracts/wallet';
 export const publicMailBoxExchange = 'mailboxKeyExchange';
 export const sampleContext = 'context sample';
 
-const web3Provider = 'ws://localhost:8546';
+const web3Provider = 'wss://testcore.evan.network/ws';
 const helperWeb3 = new Web3(null);
 const sampleKeys = {};
 // dataKeys
@@ -113,8 +113,11 @@ export class TestUtils {
   }
 
   static async getBaseContract(web3): Promise<BaseContract> {
+    const eventHub = await this.getEventHub(web3);
+    const executor = await this.getExecutor(web3);
+    executor.eventHub = eventHub;
     return new BaseContract({
-      executor: await TestUtils.getExecutor(web3),
+      executor,
       loader: await TestUtils.getContractLoader(web3),
       log: Logger.getDefaultLog(),
       nameResolver: await TestUtils.getNameResolver(web3),

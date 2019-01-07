@@ -2,8 +2,12 @@
 
 ## Next Version
 ### Features
+- update `setClaims` to use issuers identity for setting claims on subject
+- add linking and checks for contract identities
+
 ### Fixes
 ### Deprecations
+
 
 ## Version 1.6.1
 ### Fixes
@@ -20,6 +24,7 @@
 - add support for ENS registries with time limited nodes
 - add support for permanent ENS address on payable registrar
 - add support for retrieving proposals paged
+- add support for setting claims on contracts
 
 ## Version 1.5.0
 ### Features
