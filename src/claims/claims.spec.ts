@@ -50,14 +50,11 @@ describe('Claims handler', function() {
 
   before(async () => {
     web3 = TestUtils.getWeb3();
-    console.log(web3.version)
     executor = await TestUtils.getExecutor(web3);
     contractLoader = await TestUtils.getContractLoader(web3);
     dfs = await TestUtils.getIpfs();
     claims = await TestUtils.getClaims(web3, dfs);
     nameResolver = await TestUtils.getNameResolver(web3);
-    await claims.createIdentity(accounts[0]);
-    await claims.createIdentity(accounts[1]);
   });
 
   after(async () => {
@@ -65,24 +62,48 @@ describe('Claims handler', function() {
   });
 
   // can be used for creating new libraries, but disabled by default
-  // it.only('can deploy a new structure', async () => {
-  //   const keyHolderLib = await executor.createContract(
-  //     'KeyHolderLibrary', [], { from: accounts[0], gas: 3000000, });
-  //   contractLoader.contracts['ClaimHolderLibrary'].bytecode = linker.linkBytecode(
-  //     contractLoader.contracts['ClaimHolderLibrary'].bytecode,
-  //     { 'claims/KeyHolderLibrary.sol:KeyHolderLibrary': keyHolderLib.options.address }
-  //   );
-  //   const claimHolderLib = await executor.createContract(
-  //     'ClaimHolderLibrary', [], { from: accounts[0], gas: 3000000, });
-  //   contractLoader.contracts['OriginIdentity'].bytecode = linker.linkBytecode(
-  //   contractLoader.contracts['OriginIdentity'].bytecode,
-  //     {
-  //       'claims/ClaimHolderLibrary.sol:ClaimHolderLibrary': claimHolderLib.options.address,
-  //       'claims/KeyHolderLibrary.sol:KeyHolderLibrary': keyHolderLib.options.address,
-  //     },
-  //   )
-  //   console.dir({keyHolderLib: keyHolderLib.options.address, claimHolderLib: claimHolderLib.options.address});
-  // })
+  it('can deploy a new structure', async () => {
+    const keyHolderLib = await executor.createContract(
+      'KeyHolderLibrary', [], { from: accounts[0], gas: 3000000, });
+    contractLoader.contracts['ClaimHolderLibrary'].bytecode = linker.linkBytecode(
+      contractLoader.contracts['ClaimHolderLibrary'].bytecode,
+      { 'claims/KeyHolderLibrary.sol:KeyHolderLibrary': keyHolderLib.options.address }
+    );
+
+
+    const claimHolderLib = await executor.createContract(
+      'ClaimHolderLibrary', [], { from: accounts[0], gas: 3000000, });
+    contractLoader.contracts['OriginIdentity'].bytecode = linker.linkBytecode(
+    contractLoader.contracts['OriginIdentity'].bytecode,
+      {
+        'claims/ClaimHolderLibrary.sol:ClaimHolderLibrary': claimHolderLib.options.address,
+        'claims/KeyHolderLibrary.sol:KeyHolderLibrary': keyHolderLib.options.address,
+      },
+    );
+
+    const claimsRegistryLib = await executor.createContract(
+      'ClaimsRegistryLibrary', [], { from: accounts[0], gas: 3000000, });
+    contractLoader.contracts['ClaimsRegistry'].bytecode = linker.linkBytecode(
+    contractLoader.contracts['ClaimsRegistry'].bytecode,
+      {
+        'claims/ClaimsRegistryLibrary.sol:ClaimsRegistryLibrary': claimsRegistryLib.options.address
+      },
+    );
+    (<any>claims.options.executor.signer).contractLoader.contracts['ClaimHolderLibrary'].bytecode = (<any>claims.options.executor.signer).contractLoader.contracts['ClaimHolderLibrary'].bytecode.replace(/3Cf1679B2BA2a70693F55289bf6c81a0097497a6/g, keyHolderLib.options.address.slice(2));
+    (<any>claims.options.executor.signer).contractLoader.contracts['OriginIdentity'].bytecode = (<any>claims.options.executor.signer).contractLoader.contracts['OriginIdentity'].bytecode.replace(/3Cf1679B2BA2a70693F55289bf6c81a0097497a6/g, keyHolderLib.options.address.slice(2));
+    (<any>claims.options.executor.signer).contractLoader.contracts['OriginIdentity'].bytecode = (<any>claims.options.executor.signer).contractLoader.contracts['OriginIdentity'].bytecode.replace(/674a12Acae46c1E29e5EC124AB698081775C5803/g, claimHolderLib.options.address.slice(2));
+    (<any>claims.options.executor.signer).contractLoader.contracts['ClaimsRegistry'].bytecode = (<any>claims.options.executor.signer).contractLoader.contracts['ClaimsRegistry'].bytecode.replace(/d7d62072c409A29a187F81dDd8aCd50bFc070546/g, claimsRegistryLib.options.address.slice(2));
+
+    const storage = await executor.createContract(
+      'V00_UserRegistry', [], { from: accounts[0], gas: 3000000, });
+    claims.contracts.storage = storage;
+    console.dir({keyHolderLib: keyHolderLib.options.address, claimHolderLib: claimHolderLib.options.address});
+  })
+
+  it('can create identities', async () => {
+    await claims.createIdentity(accounts[0]);
+    await claims.createIdentity(accounts[1]);
+  });
 
   it('can add a claim', async () => {
     const oldLength = (await claims.getClaims('/company', accounts[1])).length;
@@ -172,9 +193,9 @@ describe('Claims handler', function() {
   });
 
   it('can track the creation date', async() => {
-    const before = Date.now() / 1000;
+    const before = Math.floor(Date.now() / 1000);
     await claims.setClaim(accounts[0], accounts[1], '/company');
-    const after = Date.now() / 1000;
+    const after = Math.floor(Date.now() / 1000);
     const claimsForAccount = await claims.getClaims('/company', accounts[1]);
     const last = claimsForAccount.length - 1;
     expect(claimsForAccount[last]).to.have.property('status', ClaimsStatus.Issued);
