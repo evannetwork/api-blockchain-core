@@ -179,7 +179,7 @@ Example
 validateDescription
 ===================
 
-Descriptions are validated when setting them. A list of known DBCP definition schemas is maintained in `description.schema.ts <https://github.com/evannetwork/dbcp/blob/master/src/description.schemas.ts>`_ . If a description is set, its property `dbcpVersion` will be used for validating the description, if `dbcpVersion` is not provided, the latest version known to the API is used.
+Descriptions are validated when setting them. A list of known DBCP definition schemas is maintained in `description.schema.ts <https://github.com/evannetwork/dbcp/blob/master/src/description.schemas.ts>`_ . If a description is set, its property `dbcpVersion` will be used for validating the description, if `dbcpVersion` is not provided, version 1 is used and a warning is logged.
 
 Descriptions can be checked against the validator before setting them.
 
