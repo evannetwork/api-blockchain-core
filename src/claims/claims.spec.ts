@@ -320,7 +320,7 @@ describe('Claims handler', function() {
     });
   });
 
-  describe.only('when using identities for contracts', () => {
+  describe('when using identities for contracts', () => {
     let claimsRegistry;
     let contractId;
 
