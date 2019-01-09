@@ -12,11 +12,16 @@
       "origin": "QmVGiU7qp4jUtT3jXAnMUMZL6xBU1o5LQALsmhEGNk6ifC",
       "type": "library"
     },
+    "dbcpVersion": 2,
     "description": "Contractus for loading ens entries and it's data...",
+    "license": {
+      "file": "https://ipfs.evan.network/ipns/QmT1FwnYyURjLj7nKMwEuTPUBc5uJ6z1zAVsYnKfUL1X1q/AGPL-3.0-only.txt",
+      "type": "AGPL-3.0-only"
+    },
     "name": "bcc",
     "tags": [
-      "dapp",
       "contractus",
+      "dapp",
       "library"
     ],
     "version": "1.6.0",
@@ -34,7 +39,6 @@
       "1.4.0": "QmVv35DzcryDQnbmTVHJChD1enG459cUGKmqZj6xE74nHX",
       "1.5.0": "QmQnmbZJcUf6j6u6nsJh5jiqxwAfsBybZWPk65tVN8HZ3P",
       "1.6.0": "QmTHvUrZEKUQ3KkoHVs6SmnPFw437bPpXuSqji5Pb67gJg"
-    },
-    "dbcpVersion": 1
+    }
   }
 }
