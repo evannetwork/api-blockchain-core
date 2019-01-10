@@ -82,8 +82,8 @@ describe('Claims handler', function() {
 
     const claimHolderLib = await executor.createContract(
       'ClaimHolderLibrary', [], { from: accounts[0], gas: 3000000, });
-    contractLoader.contracts['OriginIdentity'].bytecode = linker.linkBytecode(
-    contractLoader.contracts['OriginIdentity'].bytecode,
+    contractLoader.contracts['ClaimHolder'].bytecode = linker.linkBytecode(
+    contractLoader.contracts['ClaimHolder'].bytecode,
       {
         'claims/ClaimHolderLibrary.sol:ClaimHolderLibrary': claimHolderLib.options.address,
         'claims/KeyHolderLibrary.sol:KeyHolderLibrary': keyHolderLib.options.address,
@@ -99,8 +99,8 @@ describe('Claims handler', function() {
       },
     );
     (<any>claims.options.executor.signer).contractLoader.contracts['ClaimHolderLibrary'].bytecode = (<any>claims.options.executor.signer).contractLoader.contracts['ClaimHolderLibrary'].bytecode.replace(/3Cf1679B2BA2a70693F55289bf6c81a0097497a6/g, keyHolderLib.options.address.slice(2));
-    (<any>claims.options.executor.signer).contractLoader.contracts['OriginIdentity'].bytecode = (<any>claims.options.executor.signer).contractLoader.contracts['OriginIdentity'].bytecode.replace(/3Cf1679B2BA2a70693F55289bf6c81a0097497a6/g, keyHolderLib.options.address.slice(2));
-    (<any>claims.options.executor.signer).contractLoader.contracts['OriginIdentity'].bytecode = (<any>claims.options.executor.signer).contractLoader.contracts['OriginIdentity'].bytecode.replace(/674a12Acae46c1E29e5EC124AB698081775C5803/g, claimHolderLib.options.address.slice(2));
+    (<any>claims.options.executor.signer).contractLoader.contracts['ClaimHolder'].bytecode = (<any>claims.options.executor.signer).contractLoader.contracts['ClaimHolder'].bytecode.replace(/3Cf1679B2BA2a70693F55289bf6c81a0097497a6/g, keyHolderLib.options.address.slice(2));
+    (<any>claims.options.executor.signer).contractLoader.contracts['ClaimHolder'].bytecode = (<any>claims.options.executor.signer).contractLoader.contracts['ClaimHolder'].bytecode.replace(/674a12Acae46c1E29e5EC124AB698081775C5803/g, claimHolderLib.options.address.slice(2));
     (<any>claims.options.executor.signer).contractLoader.contracts['ClaimsRegistry'].bytecode = (<any>claims.options.executor.signer).contractLoader.contracts['ClaimsRegistry'].bytecode.replace(/d7d62072c409A29a187F81dDd8aCd50bFc070546/g, claimsRegistryLib.options.address.slice(2));
 
     const storage = await executor.createContract(

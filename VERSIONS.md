@@ -6,6 +6,8 @@
 - add linking and checks for contract identities
 
 ### Fixes
+- remove `OriginIdentity`, as `ClaimHolder` is used for identities 
+
 ### Deprecations
 
 

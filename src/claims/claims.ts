@@ -129,7 +129,7 @@ export class Claims extends Logger {
       // create Identity contract
       await this.ensureStorage();
       const identityContract = await this.options.executor.createContract(
-        'OriginIdentity', [], { from: accountId, gas: 3000000, });
+        'ClaimHolder', [], { from: accountId, gas: 3000000, });
 
       const identityStorage = this.contracts.storage.options.address !== nullAddress ?
         this.options.contractLoader.loadContract('V00_UserRegistry', this.contracts.storage.options.address) : null;
@@ -305,7 +305,7 @@ export class Claims extends Logger {
       // check if target identity exists
       if (targetIdentity !== nullAddress) {
         this.subjectTypes[subject] = 'account';
-        this.cachedIdentities[subject] = this.options.contractLoader.loadContract('OriginIdentity', targetIdentity);
+        this.cachedIdentities[subject] = this.options.contractLoader.loadContract('ClaimHolder', targetIdentity);
       } else {
         const description = await this.options.description.getDescription(subject, null);
         if (description && description.public && description.public.identity) {
@@ -543,7 +543,7 @@ export class Claims extends Logger {
 
     const dataHash = this.options.nameResolver.soliditySha3(subjectIdentity, claim.topic, claim.data).replace('0x', '');
     const recoveredAddress = this.options.executor.web3.eth.accounts.recover(dataHash, claim.signature);
-    const issuerContract = this.options.contractLoader.loadContract('OriginIdentity', claim.issuer);
+    const issuerContract = this.options.contractLoader.loadContract('ClaimHolder', claim.issuer);
     const keyHasPurpose = await this.options.executor.executeContractCall(
       issuerContract,
       'keyHasPurpose',
@@ -604,7 +604,7 @@ export class Claims extends Logger {
       // account identity
       return this.options.executor.executeContractCall(
         isIdentity ?
-          this.options.contractLoader.loadContract('OriginIdentity', subject) :
+          this.options.contractLoader.loadContract('ClaimHolder', subject) :
           await this.getIdentityForAccount(subject),
         fun,
         ...args,
