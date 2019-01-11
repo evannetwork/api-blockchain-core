@@ -129,7 +129,7 @@ export class Claims extends Logger {
       // create Identity contract
       await this.ensureStorage();
       const identityContract = await this.options.executor.createContract(
-        'ClaimHolder', [], { from: accountId, gas: 3000000, });
+        'ClaimHolder', [ accountId ], { from: accountId, gas: 3000000, });
 
       const identityStorage = this.contracts.storage.options.address !== nullAddress ?
         this.options.contractLoader.loadContract('V00_UserRegistry', this.contracts.storage.options.address) : null;

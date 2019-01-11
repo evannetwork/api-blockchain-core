@@ -9,6 +9,7 @@
 - remove `OriginIdentity`, as `ClaimHolder` is used for identities 
 
 ### Deprecations
+- add accountId argument to `ClaimHolder` constructor
 
 
 ## Version 1.6.1
