@@ -470,7 +470,7 @@ Example
 
 .. _name_resolver_setValidUntil:
 
-setPrice
+setValidUntil
 ================================================================================
 
 .. code-block:: typescript

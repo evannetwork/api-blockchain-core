@@ -349,8 +349,8 @@ describe('NameResolver class', function() {
 
         // wait for timeout
         await TestUtils.sleep(timeValidMs);
+        await TestUtils.sleep(2000);
         await TestUtils.nextBlock(executor, domainOwner);
-
         // check again
         expect(await nameResolverTimed.getAddress(domain)).to.eq(null);
       });
@@ -380,6 +380,7 @@ describe('NameResolver class', function() {
 
         // wait for timeout
         await TestUtils.sleep(timeValidMs);
+        await TestUtils.sleep(2000);
         await TestUtils.nextBlock(executor, domainOwner);
 
         // check again
@@ -427,6 +428,7 @@ describe('NameResolver class', function() {
 
           // wait for resolval to stop
           await TestUtils.sleep(timeValidMs);
+          await TestUtils.sleep(2000);
           await TestUtils.nextBlock(executor, domainOwner);
 
           // check again, resolver should have stopped
@@ -478,6 +480,7 @@ describe('NameResolver class', function() {
 
           // wait for resolval to be available
           await TestUtils.sleep(timeValidMs + timeValidPreExpireWindowMs);
+          await TestUtils.sleep(2000);
           await TestUtils.nextBlock(executor, domainOwner);
 
           // address is still up
@@ -509,6 +512,7 @@ describe('NameResolver class', function() {
 
           // wait for resolval to be available and extra owner lock has passed
           await TestUtils.sleep(timeValidMs);
+          await TestUtils.sleep(2000);
           await TestUtils.nextBlock(executor, domainOwner);
 
           // address is not up anymore
@@ -571,6 +575,7 @@ describe('NameResolver class', function() {
 
           // wait for resolval to be available (plus 1s to be sure, that we surpassed validity)
           await TestUtils.sleep(timeValidMs);
+          await TestUtils.sleep(2000);
           await TestUtils.nextBlock(executor, domainOwner);
 
           // address is not up anymore
@@ -620,6 +625,7 @@ describe('NameResolver class', function() {
 
           // wait for resolval to be available (plus 1s to be sure, that we surpassed validity)
           await TestUtils.sleep(timeValidMs + timeValidPostExpireWindowMs);
+          await TestUtils.sleep(2000);
           await TestUtils.nextBlock(executor, domainOwner);
 
           // owner is still up
@@ -733,6 +739,7 @@ describe('NameResolver class', function() {
 
           // wait for resolval to be available and extra owner lock has passed
           await TestUtils.sleep(timeValidMs);
+          await TestUtils.sleep(2000);
           await TestUtils.nextBlock(executor, domainOwner);
 
           // address is not up anymore
@@ -761,6 +768,7 @@ describe('NameResolver class', function() {
 
           // wait for resolval to be available (plus 1s to be sure, that we surpassed validity)
           await TestUtils.sleep(timeValidMs + timeValidPostExpireWindowMs);
+          await TestUtils.sleep(2000);
           await TestUtils.nextBlock(executor, domainOwner);
 
           // address is not up anymore

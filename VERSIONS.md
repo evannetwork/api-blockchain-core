@@ -5,6 +5,18 @@
 ### Fixes
 ### Deprecations
 
+## Version 1.7.0
+### Features
+- update `setClaims` to use issuers identity for setting claims on subject
+- add linking and checks for contract identities
+- add missing dbcpVersion to dbcp files
+- add licenses to dbcp files
+
+### Fixes
+- remove `OriginIdentity`, as `ClaimHolder` is used for identities 
+
+### Deprecations
+
 ## Version 1.6.1
 ### Fixes
 - remove web3 initialization within the `ServiceContract`
@@ -20,6 +32,7 @@
 - add support for ENS registries with time limited nodes
 - add support for permanent ENS address on payable registrar
 - add support for retrieving proposals paged
+- add support for setting claims on contracts
 
 ## Version 1.5.0
 ### Features
