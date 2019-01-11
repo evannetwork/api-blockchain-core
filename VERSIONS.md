@@ -2,6 +2,11 @@
 
 ## Next Version
 ### Features
+### Fixes
+### Deprecations
+
+## Version 1.7.0
+### Features
 - update `setClaims` to use issuers identity for setting claims on subject
 - add linking and checks for contract identities
 - add missing dbcpVersion to dbcp files
@@ -11,7 +16,6 @@
 - remove `OriginIdentity`, as `ClaimHolder` is used for identities 
 
 ### Deprecations
-
 
 ## Version 1.6.1
 ### Fixes
