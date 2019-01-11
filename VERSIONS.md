@@ -3,7 +3,10 @@
 ## Next Version
 ### Features
 ### Fixes
+- add ignoring of missing keys when decrypting unencrypted data
+
 ### Deprecations
+
 
 ## Version 1.7.0
 ### Features
