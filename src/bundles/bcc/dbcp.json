@@ -3,7 +3,7 @@
     "author": "evan GmbH",
     "dapp": {
       "dependencies": {
-        "smartcontracts": "^1.5.1"
+        "smartcontracts": "^1.5.2"
       },
       "entrypoint": "bcc.js",
       "files": [
