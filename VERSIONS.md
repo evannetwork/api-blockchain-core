@@ -5,6 +5,11 @@
 ### Fixes
 ### Deprecations
 
+## Version 1.7.1
+### Fixes
+- add ignoring of missing keys when decrypting unencrypted data
+
+
 ## Version 1.7.0
 ### Features
 - update `setClaims` to use issuers identity for setting claims on subject
