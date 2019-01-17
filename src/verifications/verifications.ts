@@ -45,23 +45,23 @@ import { Ipfs } from '../dfs/ipfs';
 const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const nullAddress = '0x0000000000000000000000000000000000000000';
 
-export enum ClaimsStatus {
+export enum VerificationsStatus {
   /**
-   * issued by a non-issuer parent claim holder, self issued state is 0
+   * issued by a non-issuer parent verification holder, self issued state is 0
    */
   Issued,
   /**
-   * issued by a non-issuer parent claim holder, self issued state is 0
+   * issued by a non-issuer parent verification holder, self issued state is 0
    */
   Confirmed,
   /**
-   * claim rejected status
+   * verification rejected status
    */
   Rejected
 }
 
 
-export interface ClaimsOptions extends LoggerOptions {
+export interface VerificationsOptions extends LoggerOptions {
   accountStore: AccountStore;
   config: any;
   contractLoader: ContractLoader;
@@ -74,18 +74,18 @@ export interface ClaimsOptions extends LoggerOptions {
 
 
 /**
- * Claims helper
+ * Verifications helper
  *
- * @class      Claims (name)
+ * @class      Verifications (name)
  */
-export class Claims extends Logger {
+export class Verifications extends Logger {
   cachedIdentities: any = { };
   contracts: any = { };
   encodingEnvelope = 'binary';
-  options: ClaimsOptions;
+  options: VerificationsOptions;
   subjectTypes: any = { };
 
-  constructor(options: ClaimsOptions) {
+  constructor(options: VerificationsOptions) {
     super(options);
     this.options = options;
 
@@ -96,21 +96,21 @@ export class Claims extends Logger {
   }
 
   /**
-   * confirms a claim; this can be done, if a claim has been issued for a subject and the subject
+   * confirms a verification; this can be done, if a verification has been issued for a subject and the subject
    * wants to confirm it
    *
    * @param      {string}         accountId  account, that performs the action
-   * @param      {string}         subject    claim subject
-   * @param      {string}         claimId    id of a claim to confirm
+   * @param      {string}         subject    verification subject
+   * @param      {string}         verificationId    id of a verification to confirm
    * @return     {Promise<void>}  resolved when done
    */
-  public async confirmClaim(
-      accountId: string, subject: string, claimId: string): Promise<void> {
+  public async confirmVerification(
+      accountId: string, subject: string, verificationId: string): Promise<void> {
     await this.executeOnIdentity(
       subject,
-      'approveClaim',
+      'approveVerification',
       { from: accountId },
-      claimId,
+      verificationId,
     );
   }
 
@@ -129,7 +129,7 @@ export class Claims extends Logger {
       // create Identity contract
       await this.ensureStorage();
       const identityContract = await this.options.executor.createContract(
-        'ClaimHolder', [], { from: accountId, gas: 3000000, });
+        'VerificationHolder', [], { from: accountId, gas: 3000000, });
 
       const identityStorage = this.contracts.storage.options.address !== nullAddress ?
         this.options.contractLoader.loadContract('V00_UserRegistry', this.contracts.storage.options.address) : null;
@@ -170,57 +170,57 @@ export class Claims extends Logger {
   }
 
   /**
-   * delete a claim. This requires the accountId to have permissions for the parent claim (if claim
-   * name seen as a path, the parent 'folder'). Subjects of a claim may only delete it, if they are
-   * the issuer as well. If not, they can only react to it by confirming or rejecting the claim.
+   * delete a verification. This requires the accountId to have permissions for the parent verification (if verification
+   * name seen as a path, the parent 'folder'). Subjects of a verification may only delete it, if they are
+   * the issuer as well. If not, they can only react to it by confirming or rejecting the verification.
    *
    * @param      {string}         accountId  account, that performs the action
-   * @param      {string}         subject    the subject of the claim
-   * @param      {string}         claimId    id of a claim to delete
+   * @param      {string}         subject    the subject of the verification
+   * @param      {string}         verificationId    id of a verification to delete
    * @return     {Promise<void>}  resolved when done
    */
-  public async deleteClaim(
-      accountId: string, subject: string, claimId: string): Promise<void> {
+  public async deleteVerification(
+      accountId: string, subject: string, verificationId: string): Promise<void> {
     await this.executeOnIdentity(
       subject,
-      'removeClaim',
+      'removeVerification',
       { from: accountId },
-      claimId,
+      verificationId,
     );
   }
 
   /**
-   * gets claim information for a claim name from a given account; results has the following
+   * gets verification information for a verification name from a given account; results has the following
    * properties: creationBlock, creationDate, data, description, expirationDate, id, issuer, name,
    * signature, status, subject, topic, uri, valid
    *
-   * @param      {string}        subject     subject of the claims
-   * @param      {string}        claimName   name (/path) of a claim
+   * @param      {string}        subject     subject of the verifications
+   * @param      {string}        verificationName   name (/path) of a verification
    * @param      {boolean}       isIdentity  (optional) indicates if the subject is already an identity
-   * @return     {Promise<any[]>}  claim info array
+   * @return     {Promise<any[]>}  verification info array
    */
-  public async getClaims(subject: string, claimName: string, isIdentity?: boolean): Promise<any[]> {
-    const sha3ClaimName = this.options.nameResolver.soliditySha3(claimName);
-    const uint256ClaimName = new BigNumber(sha3ClaimName).toString(10);
+  public async getVerifications(subject: string, verificationName: string, isIdentity?: boolean): Promise<any[]> {
+    const sha3VerificationName = this.options.nameResolver.soliditySha3(verificationName);
+    const uint256VerificationName = new BigNumber(sha3VerificationName).toString(10);
 
-    const claimsForTopic = await this.callOnIdentity(
+    const verificationsForTopic = await this.callOnIdentity(
       subject,
       isIdentity,
-      'getClaimIdsByTopic',
-      uint256ClaimName,
+      'getVerificationIdsByTopic',
+      uint256VerificationName,
     );
 
-    const claims = await Promise.all(claimsForTopic.map(async (claimId) => {
-      const claimDetails = [
-        'getClaim',
-        'isClaimApproved',
-        'claimCreationBlock',
-        'claimCreationDate',
-        'getClaimExpirationDate',
-        'isClaimRejected',
-      ].map(fun => this.callOnIdentity(subject, isIdentity, fun, claimId));
-      claimDetails.push((async () => {
-        const descriptionNodeHash = await this.callOnIdentity(subject, isIdentity, 'getClaimDescription', claimId);
+    const verifications = await Promise.all(verificationsForTopic.map(async (verificationId) => {
+      const verificationDetails = [
+        'getVerification',
+        'isVerificationApproved',
+        'verificationCreationBlock',
+        'verificationCreationDate',
+        'getVerificationExpirationDate',
+        'isVerificationRejected',
+      ].map(fun => this.callOnIdentity(subject, isIdentity, fun, verificationId));
+      verificationDetails.push((async () => {
+        const descriptionNodeHash = await this.callOnIdentity(subject, isIdentity, 'getVerificationDescription', verificationId);
         let parsedDescription;
         if (descriptionNodeHash === nullBytes32) {
           return null;
@@ -240,17 +240,17 @@ export class Claims extends Logger {
         }
       })());
 
-      let [claim, claimStatus, creationBlock, creationDate, expirationDate, rejected, description] =
-        await Promise.all(claimDetails);
+      let [verification, verificationStatus, creationBlock, creationDate, expirationDate, rejected, description] =
+        await Promise.all(verificationDetails);
 
-      if (claim.issuer === nullAddress) {
+      if (verification.issuer === nullAddress) {
         return false;
       }
 
-      let claimFlag = claimStatus ? ClaimsStatus.Confirmed : ClaimsStatus.Issued;
+      let verificationFlag = verificationStatus ? VerificationsStatus.Confirmed : VerificationsStatus.Issued;
       let rejectReason;
       if (rejected.rejected) {
-        claimFlag = ClaimsStatus.Rejected;
+        verificationFlag = VerificationsStatus.Rejected;
       }
 
       if (rejected.rejectReason !== nullBytes32) {
@@ -266,24 +266,24 @@ export class Claims extends Logger {
       return {
         creationBlock,
         creationDate,
-        data: (<any>claim).data,
+        data: (<any>verification).data,
         description,
         expirationDate: expirationDate == 0 ? null : expirationDate,
-        id: claimId,
-        issuer: (<any>claim).issuer,
-        name: claimName,
+        id: verificationId,
+        issuer: (<any>verification).issuer,
+        name: verificationName,
         rejectReason,
-        signature: (<any>claim).signature,
-        status: claimFlag,
+        signature: (<any>verification).signature,
+        status: verificationFlag,
         subject,
-        topic: claim.topic,
-        uri: (<any>claim).uri,
-        valid: await this.validateClaim(subject, claimId, isIdentity)
+        topic: verification.topic,
+        uri: (<any>verification).uri,
+        valid: await this.validateVerification(subject, verificationId, isIdentity)
       };
     }));
 
     // drop null values
-    return claims.filter(el => el);
+    return verifications.filter(el => el);
   }
 
   /**
@@ -305,7 +305,7 @@ export class Claims extends Logger {
       // check if target identity exists
       if (targetIdentity !== nullAddress) {
         this.subjectTypes[subject] = 'account';
-        this.cachedIdentities[subject] = this.options.contractLoader.loadContract('ClaimHolder', targetIdentity);
+        this.cachedIdentities[subject] = this.options.contractLoader.loadContract('VerificationHolder', targetIdentity);
       } else {
         const description = await this.options.description.getDescription(subject, null);
         if (description && description.public && description.public.identity) {
@@ -355,25 +355,25 @@ export class Claims extends Logger {
   }
 
   /**
-   * reject a Claim. This claim will be marked as rejected but not deleted. This is important for
+   * reject a Verification. This verification will be marked as rejected but not deleted. This is important for
    * tracking reasons. You can also optionally add a reject reason as JSON object to track
-   * additional informations about the rejection. Issuer and Subject can reject a special claim.
+   * additional informations about the rejection. Issuer and Subject can reject a special verification.
    *
    * @param      {string}         accountId     account, that performs the action
-   * @param      {string}         subject       account, that rejects the claim
-   * @param      {string}         claimId       id of a claim to reject
+   * @param      {string}         subject       account, that rejects the verification
+   * @param      {string}         verificationId       id of a verification to reject
    * @param      {any}            rejectReason  (optional) rejectReason object
    * @return     {Promise<void>}  resolved when done
    */
-  public async rejectClaim(
-      accountId: string, subject: string, claimId: string, rejectReason?: any): Promise<void> {
+  public async rejectVerification(
+      accountId: string, subject: string, verificationId: string, rejectReason?: any): Promise<void> {
     if (rejectReason) {
       try {
         const stringified = JSON.stringify(rejectReason);
         const stateMd5 = crypto.createHash('md5').update(stringified).digest('hex');
         rejectReason = await this.options.dfs.add(stateMd5, Buffer.from(stringified));
       } catch (e) {
-        const msg = `error parsing claimValue -> ${e.message}`;
+        const msg = `error parsing verificationValue -> ${e.message}`;
         this.log(msg, 'info');
       }
     } else {
@@ -382,36 +382,36 @@ export class Claims extends Logger {
 
     await this.executeOnIdentity(
       subject,
-      'rejectClaim',
+      'rejectVerification',
       { from: accountId },
-      claimId,
+      verificationId,
       rejectReason,
     );
   }
 
   /**
-   * Sets or creates a claim; this requires the issuer to have permissions for the parent claim (if
-   * claim name seen as a path, the parent 'folder').
+   * Sets or creates a verification; this requires the issuer to have permissions for the parent verification (if
+   * verification name seen as a path, the parent 'folder').
    *
-   * @param      {string}           issuer             issuer of the claim
-   * @param      {string}           subject            subject of the claim and the owner of the
-   *                                                   claim node
-   * @param      {string}           claimName          name of the claim (full path)
-   * @param      {number}           expirationDate     expiration date, for the claim, defaults to
+   * @param      {string}           issuer             issuer of the verification
+   * @param      {string}           subject            subject of the verification and the owner of the
+   *                                                   verification node
+   * @param      {string}           verificationName          name of the verification (full path)
+   * @param      {number}           expirationDate     expiration date, for the verification, defaults to
    *                                                   `0` (does not expire)
-   * @param      {object}           claimValue         json object which will be stored in the claim
-   * @param      {string}           descriptionDomain  domain of the claim, this is a subdomain
-   *                                                   under 'claims.evan', so passing 'example'
-   *                                                   will link claims description to
-   *                                                   'example.claims.evan'
-   * @return     {Promise<string>}  claimId
+   * @param      {object}           verificationValue         json object which will be stored in the verification
+   * @param      {string}           descriptionDomain  domain of the verification, this is a subdomain
+   *                                                   under 'verifications.evan', so passing 'example'
+   *                                                   will link verifications description to
+   *                                                   'example.verifications.evan'
+   * @return     {Promise<string>}  verificationId
    */
-  public async setClaim(
+  public async setVerification(
       issuer: string,
       subject: string,
-      claimName: string,
+      verificationName: string,
       expirationDate = 0 ,
-      claimValue?: any,
+      verificationValue?: any,
       descriptionDomain?: string,
       ): Promise<string> {
     await this.ensureStorage();
@@ -434,33 +434,33 @@ export class Claims extends Logger {
     );
     // check if target and source identity are existing
     if (!targetIdentity || targetIdentity === nullAddress) {
-      const msg = `trying to set claim ${claimName} with account ${issuer}, ` +
+      const msg = `trying to set verification ${verificationName} with account ${issuer}, ` +
         `but target identity for account ${subject} does not exist`;
       this.log(msg, 'error');
       throw new Error(msg);
     }
 
-    // convert the claim name to a uint256
-    const sha3ClaimName = this.options.nameResolver.soliditySha3(claimName);
-    const uint256ClaimName = new BigNumber(sha3ClaimName).toString(10);
+    // convert the verification name to a uint256
+    const sha3VerificationName = this.options.nameResolver.soliditySha3(verificationName);
+    const uint256VerificationName = new BigNumber(sha3VerificationName).toString(10);
 
-    let claimData = nullBytes32;
-    let claimDataUrl = '';
-    if (claimValue) {
+    let verificationData = nullBytes32;
+    let verificationDataUrl = '';
+    if (verificationValue) {
       try {
-        const stringified = JSON.stringify(claimValue);
+        const stringified = JSON.stringify(verificationValue);
         const stateMd5 = crypto.createHash('md5').update(stringified).digest('hex');
-        claimData = await this.options.dfs.add(stateMd5, Buffer.from(stringified));
-        claimDataUrl = `https://ipfs.evan.network/ipfs/${Ipfs.bytes32ToIpfsHash(claimData)}`;
+        verificationData = await this.options.dfs.add(stateMd5, Buffer.from(stringified));
+        verificationDataUrl = `https://ipfs.evan.network/ipfs/${Ipfs.bytes32ToIpfsHash(verificationData)}`;
       } catch (e) {
-        const msg = `error parsing claimValue -> ${e.message}`;
+        const msg = `error parsing verificationValue -> ${e.message}`;
         this.log(msg, 'info');
       }
     }
 
-    // create the signature for the claim
+    // create the signature for the verification
     const signedSignature = await this.options.executor.web3.eth.accounts.sign(
-      this.options.nameResolver.soliditySha3(targetIdentity, uint256ClaimName, claimData).replace('0x', ''),
+      this.options.nameResolver.soliditySha3(targetIdentity, uint256VerificationName, verificationData).replace('0x', ''),
       '0x' + await this.options.accountStore.getPrivateKey(issuer)
     );
 
@@ -468,45 +468,45 @@ export class Claims extends Logger {
     let ensFullNodeHash;
     if (descriptionDomain) {
       ensFullNodeHash = this.options.nameResolver.namehash(
-        this.getFullDescriptionDomainWithHash(claimName, descriptionDomain));
+        this.getFullDescriptionDomainWithHash(verificationName, descriptionDomain));
     }
 
-    // add the claim to the target identity
+    // add the verification to the target identity
     return await this.executeOnIdentity(
       subject,
-      'addClaimWithMetadata',
+      'addVerificationWithMetadata',
       {
         from: issuer,
         event: {
-          target: subjectType === 'contract' ? 'ClaimsRegistryLibrary' : 'ClaimHolderLibrary',
-          eventName: 'ClaimAdded',
+          target: subjectType === 'contract' ? 'VerificationsRegistryLibrary' : 'VerificationHolderLibrary',
+          eventName: 'VerificationAdded',
         },
-        getEventResult: (_, args) => { return args.claimId; },
+        getEventResult: (_, args) => { return args.verificationId; },
       },
-      uint256ClaimName,
+      uint256VerificationName,
       '1',
       sourceIdentity,
       signedSignature.signature,
-      claimData,
-      claimDataUrl,
+      verificationData,
+      verificationDataUrl,
       expirationDate || 0,
       ensFullNodeHash || nullBytes32,
     );
   }
 
   /**
-   * set description for a claim under a domain owned by given account
+   * set description for a verification under a domain owned by given account
    *
    * @param      {string}         accountId    accountId, that performs the description update
-   * @param      {string}         topic        name of the claim (full path) to set description
-   * @param      {string}         domain       domain of the claim, this is a subdomain under
-   *                                           'claims.evan', so passing `example` will link claims
-   *                                           description to 'example.claims.evan'
-   * @param      {any}            description  description of the claim; can be an Envelope but
+   * @param      {string}         topic        name of the verification (full path) to set description
+   * @param      {string}         domain       domain of the verification, this is a subdomain under
+   *                                           'verifications.evan', so passing `example` will link verifications
+   *                                           description to 'example.verifications.evan'
+   * @param      {any}            description  description of the verification; can be an Envelope but
    *                                           only public properties are used
    * @return     {Promise<void>}  resolved when done
    */
-  public async setClaimDescription(
+  public async setVerificationDescription(
       accountId: string, topic: string, domain: string, description: any): Promise<void> {
     let toSet = JSON.parse(JSON.stringify(description));
     if (!toSet.hasOwnProperty('public')) {
@@ -517,16 +517,16 @@ export class Claims extends Logger {
   }
 
   /**
-   * validates a given claimId in case of integrity
+   * validates a given verificationId in case of integrity
    *
-   * @param      {string}            subject     the subject of the claim
-   * @param      {string}            claimId     claim identifier
+   * @param      {string}            subject     the subject of the verification
+   * @param      {string}            verificationId     verification identifier
    * @param      {boolean}           isIdentity  optional indicates if the subject is already an
    *                                             identity
-   * @return     {Promise<boolean>}  resolves with true if the claim is valid, otherwise false
+   * @return     {Promise<boolean>}  resolves with true if the verification is valid, otherwise false
    */
-  public async validateClaim(
-      subject: string, claimId: string, isIdentity?: boolean): Promise<boolean> {
+  public async validateVerification(
+      subject: string, verificationId: string, isIdentity?: boolean): Promise<boolean> {
     await this.ensureStorage();
 
     let subjectIdentity = isIdentity ? subject : await this.getIdentityForAccount(subject);
@@ -534,16 +534,16 @@ export class Claims extends Logger {
       subjectIdentity = subjectIdentity.options.address;
     }
 
-    const claim = await this.callOnIdentity(
+    const verification = await this.callOnIdentity(
       subject,
       isIdentity,
-      'getClaim',
-      claimId
+      'getVerification',
+      verificationId
     );
 
-    const dataHash = this.options.nameResolver.soliditySha3(subjectIdentity, claim.topic, claim.data).replace('0x', '');
-    const recoveredAddress = this.options.executor.web3.eth.accounts.recover(dataHash, claim.signature);
-    const issuerContract = this.options.contractLoader.loadContract('ClaimHolder', claim.issuer);
+    const dataHash = this.options.nameResolver.soliditySha3(subjectIdentity, verification.topic, verification.data).replace('0x', '');
+    const recoveredAddress = this.options.executor.web3.eth.accounts.recover(dataHash, verification.signature);
+    const issuerContract = this.options.contractLoader.loadContract('VerificationHolder', verification.issuer);
     const keyHasPurpose = await this.options.executor.executeContractCall(
       issuerContract,
       'keyHasPurpose',
@@ -554,24 +554,24 @@ export class Claims extends Logger {
   }
 
   /**
-   * validates a whole claim tree if the path is valid (called recursively)
+   * validates a whole verification tree if the path is valid (called recursively)
    *
-   * @param      {string}          subject     subject of the claim and the owner of the claim node
-   * @param      {string}          claimLabel  claim topic of a claim to build the tree for
+   * @param      {string}          subject     subject of the verification and the owner of the verification node
+   * @param      {string}          verificationLabel  verification topic of a verification to build the tree for
    * @param      {array}           treeArr     (optional) result tree array, used for recursion
-   * @return     {Promise<any[]>}  Array with all resolved claims for the tree
+   * @return     {Promise<any[]>}  Array with all resolved verifications for the tree
    */
-  public async validateClaimTree(subject: string, claimLabel: string, treeArr = []) {
-    const splittedClaimLabel = claimLabel.split('/');
-    const claims = await this.getClaims(subject, claimLabel, true);
-    // TODO: -> Add validation of more than one claim if there are more claims for the label
-    if (claims.length > 0) {
-      // check at the moment the first claim
-      treeArr.push(claims[0]);
-      if (splittedClaimLabel.length > 1) {
-        splittedClaimLabel.pop();
-        const subClaim = splittedClaimLabel.join('/');
-        await this.validateClaimTree(claims[0].issuer, subClaim, treeArr);
+  public async validateVerificationTree(subject: string, verificationLabel: string, treeArr = []) {
+    const splittedVerificationLabel = verificationLabel.split('/');
+    const verifications = await this.getVerifications(subject, verificationLabel, true);
+    // TODO: -> Add validation of more than one verification if there are more verifications for the label
+    if (verifications.length > 0) {
+      // check at the moment the first verification
+      treeArr.push(verifications[0]);
+      if (splittedVerificationLabel.length > 1) {
+        splittedVerificationLabel.pop();
+        const subVerification = splittedVerificationLabel.join('/');
+        await this.validateVerificationTree(verifications[0].issuer, subVerification, treeArr);
       }
     } else {
       return treeArr;
@@ -587,7 +587,7 @@ export class Claims extends Logger {
    * @param      {boolean}       isIdentity  true if given subject is an identity
    * @param      {string}        fun         function to call
    * @param      {any[]}         args        arguments for function (exluding the identity (for
-   *                                         ClaimsRegistry functions))
+   *                                         VerificationsRegistry functions))
    * @return     {Promise<any>}  result of called function
    */
   private async callOnIdentity(subject: string, isIdentity: boolean, fun: string, ...args): Promise<any> {
@@ -604,7 +604,7 @@ export class Claims extends Logger {
       // account identity
       return this.options.executor.executeContractCall(
         isIdentity ?
-          this.options.contractLoader.loadContract('ClaimHolder', subject) :
+          this.options.contractLoader.loadContract('VerificationHolder', subject) :
           await this.getIdentityForAccount(subject),
         fun,
         ...args,
@@ -635,7 +635,7 @@ export class Claims extends Logger {
    * @param      {string}        fun      function to call
    * @param      {any}           options  options for transaction
    * @param      {any[]}         args     arguments for function (exluding the identity (for
-   *                                      ClaimsRegistry functions))
+   *                                      VerificationsRegistry functions))
    * @return     {Promise<any>}  result of called function
    */
   private async executeOnIdentity(subject: string, fun: string, options: any, ...args): Promise<any> {
@@ -653,7 +653,7 @@ export class Claims extends Logger {
       // account identity
       const targetIdentity = await this.getIdentityForAccount(subject);
       const userIdentity = this.options.contractLoader.loadContract(
-        'ClaimHolder',
+        'VerificationHolder',
         targetIdentity.options.address
       );
 
@@ -669,7 +669,7 @@ export class Claims extends Logger {
       options.event = {
         // event Approved(uint256 indexed executionId, bool approved);
         eventName: 'Approved',
-        target: 'KeyHolderLibrary', // ClaimsRegistryLibrary
+        target: 'KeyHolderLibrary', // VerificationsRegistryLibrary
       };
       options.getEventResult = (event, eventArgs) => {
         return [eventArgs.executionId, event.blockNumber];
@@ -713,18 +713,18 @@ export class Claims extends Logger {
   /**
    * returns full domain for description
    *
-   * @param      {string}  topic              claim topic
+   * @param      {string}  topic              verification topic
    * @param      {string}  descriptionDomain  domain of description
    * @return     {string}  full domain
    */
   private getFullDescriptionDomainWithHash(topic: string, descriptionDomain: string): string {
-    return `${this.options.nameResolver.soliditySha3(topic).substr(2)}.${descriptionDomain}.claims.evan`;
+    return `${this.options.nameResolver.soliditySha3(topic).substr(2)}.${descriptionDomain}.verifications.evan`;
   }
 
   /**
    * checks if given given subject belongs to an account to a contract
    *
-   * @param      {string}           subject     claim subject
+   * @param      {string}           subject     verification subject
    * @param      {boolean}          isIdentity  true if given subject is an identity
    * @return     {Promise<string>}  resolves to 'account' or 'contract'
    */

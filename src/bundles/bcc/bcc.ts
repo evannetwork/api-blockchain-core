@@ -56,7 +56,7 @@ import {
 import { Aes } from '../../encryption/aes';
 import { AesBlob } from '../../encryption/aes-blob';
 import { AesEcb } from '../../encryption/aes-ecb';
-import { Claims } from '../../claims/claims';
+import { Verifications } from '../../verifications/verifications';
 import { BusinessCenterProfile } from '../../profile/business-center-profile';
 import { CryptoProvider } from '../../encryption/crypto-provider';
 import { BaseContract } from '../../contracts/base-contract/base-contract';
@@ -186,7 +186,7 @@ export interface ProfileBundleOptions {
 
 export interface ProfileInstance {
   // profile exports
-  claims: Claims,
+  verifications: Verifications,
   dataContract: DataContract,
   ipldInstance: Ipld,
   keyExchange: KeyExchange,
@@ -493,7 +493,7 @@ const create = function(options: ProfileBundleOptions): ProfileInstance {
     logLogLevel
   });
 
-  const claims = new Claims({
+  const verifications = new Verifications({
     accountStore: accountStore,
     config: options.coreOptions.config,
     contractLoader: coreInstance.contractLoader,
@@ -511,7 +511,7 @@ const create = function(options: ProfileBundleOptions): ProfileInstance {
 
   return {
     // profile exports
-    claims,
+    verifications,
     dataContract,
     ipldInstance,
     keyExchange,
@@ -683,7 +683,7 @@ export {
   BaseContract,
   BCRuntime,
   buffer,
-  Claims,
+  Verifications,
   ContractLoader,
   CoreRuntime,
   create,

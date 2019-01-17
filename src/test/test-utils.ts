@@ -48,7 +48,7 @@ import { accounts } from './accounts';
 import { Aes } from '../encryption/aes';
 import { AesEcb } from '../encryption/aes-ecb';
 import { BaseContract } from '../contracts/base-contract/base-contract';
-import { Claims } from '../claims/claims';
+import { Verifications } from '../verifications/verifications';
 import { config } from './../config';
 import { CryptoProvider } from '../encryption/crypto-provider';
 import { DataContract } from '../contracts/data-contract/data-contract';
@@ -124,11 +124,11 @@ export class TestUtils {
     });
   };
 
-  static async getClaims(web3, dfs): Promise<Claims> {
+  static async getVerifications(web3, dfs): Promise<Verifications> {
     const eventHub = await this.getEventHub(web3);
     const executor = await this.getExecutor(web3);
     executor.eventHub = eventHub;
-    return new Claims({
+    return new Verifications({
       contractLoader: await TestUtils.getContractLoader(web3),
       config,
       description: await TestUtils.getDescription(web3, dfs),
