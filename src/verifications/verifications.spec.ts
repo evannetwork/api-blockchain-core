@@ -71,14 +71,13 @@ describe('Verifications handler', function() {
   });
 
   // can be used for creating new libraries, but disabled by default
-  it('can deploy a new structure', async () => {
+  it.only('can deploy a new structure', async () => {
     const keyHolderLib = await executor.createContract(
       'KeyHolderLibrary', [], { from: accounts[0], gas: 3000000, });
     contractLoader.contracts['VerificationHolderLibrary'].bytecode = linker.linkBytecode(
       contractLoader.contracts['VerificationHolderLibrary'].bytecode,
       { 'verifications/KeyHolderLibrary.sol:KeyHolderLibrary': keyHolderLib.options.address }
     );
-
 
     const verificationHolderLib = await executor.createContract(
       'VerificationHolderLibrary', [], { from: accounts[0], gas: 3000000, });
@@ -98,10 +97,15 @@ describe('Verifications handler', function() {
         'verifications/VerificationsRegistryLibrary.sol:VerificationsRegistryLibrary': verificationsRegistryLib.options.address
       },
     );
-    (<any>verifications.options.executor.signer).contractLoader.contracts['VerificationHolderLibrary'].bytecode = (<any>verifications.options.executor.signer).contractLoader.contracts['VerificationHolderLibrary'].bytecode.replace(/3Cf1679B2BA2a70693F55289bf6c81a0097497a6/g, keyHolderLib.options.address.slice(2));
-    (<any>verifications.options.executor.signer).contractLoader.contracts['VerificationHolder'].bytecode = (<any>verifications.options.executor.signer).contractLoader.contracts['VerificationHolder'].bytecode.replace(/3Cf1679B2BA2a70693F55289bf6c81a0097497a6/g, keyHolderLib.options.address.slice(2));
-    (<any>verifications.options.executor.signer).contractLoader.contracts['VerificationHolder'].bytecode = (<any>verifications.options.executor.signer).contractLoader.contracts['VerificationHolder'].bytecode.replace(/674a12Acae46c1E29e5EC124AB698081775C5803/g, verificationHolderLib.options.address.slice(2));
-    (<any>verifications.options.executor.signer).contractLoader.contracts['VerificationsRegistry'].bytecode = (<any>verifications.options.executor.signer).contractLoader.contracts['VerificationsRegistry'].bytecode.replace(/d7d62072c409A29a187F81dDd8aCd50bFc070546/g, verificationsRegistryLib.options.address.slice(2));
+
+    const verificationExecutorContracts = (<any>verifications.options.executor.signer).contractLoader.contracts;
+    verificationExecutorContracts['VerificationHolderLibrary'].bytecode = verificationExecutorContracts['VerificationHolderLibrary'].bytecode.replace(/53943BD308f3CB0E79Cb4811288dB1AB2AaFa6b2/g, keyHolderLib.options.address.slice(2));
+    verificationExecutorContracts['VerificationHolder'].bytecode = verificationExecutorContracts['VerificationHolder'].bytecode.replace(/FDb2b28f481D9FEbB55Cea18131C8d96b18D16bB/g, verificationHolderLib.options.address.slice(2));
+    verificationExecutorContracts['VerificationHolder'].bytecode = verificationExecutorContracts['VerificationHolder'].bytecode.replace(/53943BD308f3CB0E79Cb4811288dB1AB2AaFa6b2/g, keyHolderLib.options.address.slice(2));
+    verificationExecutorContracts['KeyHolder'].bytecode = verificationExecutorContracts['KeyHolder'].bytecode.replace(/53943BD308f3CB0E79Cb4811288dB1AB2AaFa6b2/g, keyHolderLib.options.address.slice(2));
+    verificationExecutorContracts['VerificationsRegistry'].bytecode = verificationExecutorContracts['VerificationsRegistry'].bytecode.replace(/b1621be2ef1F2dC5153B2487600CcC1E4Fa7ee27/g, verificationsRegistryLib.options.address.slice(2));
+
+    debugger;
 
     const storage = await executor.createContract(
       'V00_UserRegistry', [], { from: accounts[0], gas: 3000000, });
