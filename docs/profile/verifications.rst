@@ -241,7 +241,7 @@ setVerification
 
 .. code-block:: typescript
 
-  verifications.setVerification(issuer, subject, verificationName[, expirationDate, verificationValue, descriptionDomain]);
+  verifications.setVerification(issuer, subject, topic, expirationDate, verificationValue, descriptionDomain]);
 
 Sets or creates a verification; this requires the issuer to have permissions for the parent verification (if verification name seen as a path, the parent 'folder').
 
@@ -251,7 +251,7 @@ Parameters
 
 #. ``issuer`` - ``string``: issuer of the verification
 #. ``subject`` - ``string``: subject of the verification and the owner of the verification node
-#. ``verificationName`` - ``string``: name of the verification (full path)
+#. ``topic`` - ``string``: name of the verification (full path)
 #. ``expirationDate`` - ``number`` (optional): expiration date, for the verification, defaults to ``0`` (does not expire)
 #. ``verificationValue`` - ``string`` (optional): bytes32 hash of the verifications value, will not be set if omitted
 #. ``descriptionDomain`` - ``string`` (optional): domain of the verification, this is a subdomain under 'verifications.evan', so passing 'example' will link verifications description to 'example.verifications.evan', unset if omitted
@@ -286,7 +286,7 @@ getVerifications
 
 .. code-block:: typescript
 
-  verifications.getVerifications(subject, verificationName[, isIdentity]);
+  verifications.getVerifications(subject, topic, isIdentity]);
 
 Gets verification information for a verification name from a given account; results has the following properties: creationBlock, creationDate, data, description, expirationDate, id, issuer, name, signature, status, subject, topic, uri, valid.
 
@@ -295,7 +295,7 @@ Parameters
 ----------
 
 #. ``subject`` - ``string``: subject of the verifications
-#. ``verificationName`` - ``string``: name (/path) of a verification
+#. ``topic`` - ``string``: name (/path) of a verification
 #. ``isIdentity`` - ``string`` (optional): indicates if the subject is already an identity 
 
 -------
@@ -338,6 +338,168 @@ Example
     valid: true
   }]
 
+--------------------------------------------------------------------------------
+getNestedVerifications
+================================================================================
+
+.. code-block:: typescript
+
+  getNestedVerifications(subject, topic, isIdentity);
+
+Get all the verifications for a specific subject, including all nested verifications for a deep integrity check.
+
+----------
+Parameters
+----------
+
+#. ``subject`` - ``string``: subject to load the verifications for.
+#. ``topic`` - ``string``: topic to load the verifications for.
+#. ``isIdentity`` - ``boolean``: optional indicates if the subject is already a identity
+
+-------
+Returns
+-------
+
+``Promise`` returns ``Array<any>``: all the verifications with the following properties.
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const nestedVerifications = await getNestedVerifications('0x123...', '/test')
+
+  // will return 
+  [
+    {
+      // creator of the verification
+      issuer: '0x1813587e095cDdfd174DdB595372Cb738AA2753A',
+      // topic of the verification
+      name: '/company/b-s-s/employee/swo',
+      // -1: Not issued => no verification was issued
+      // 0: Issued => issued by a non-issuer parent verification holder, self issued state is 0
+      // 1: Confirmed => issued by both, self issued state is 2, values match
+      status: 2,
+      // verification for account id / contract id
+      subject: subject,
+      // ???
+      value: '',
+      // ???
+      uri: '',
+      // ???
+      signature: ''
+      // icon for cards display
+      icon: 'icon to display',
+      
+      // warnings
+      [
+        'issued', // verification.status === 0
+        'missing', // no verification exists
+        'expired', // is the verification expired?
+        'selfIssued' // issuer === subject
+        'invalid', // signature is manipulated
+        'parentMissing',  // parent path does not exists
+        'parentUntrusted',  // root path (/) is not issued by evan
+        'notEnsRootOwner' // invalid ens root owner when check topic is /
+      ],
+      parents: [ ... ],
+      parentComputed: [ ... ]
+    }
+  ]
+
+--------------------------------------------------------------------------------
+
+computeVerifications
+================================================================================
+
+.. code-block:: typescript
+
+  bcService.computeVerifications(topic, verifications);
+
+Takes an array of verifications and combines all the states for one quick view.
+
+----------
+Parameters
+----------
+
+#. ``topic`` - ``string``: topic of all the verifications
+#. ``verifications`` - ``Array<any>``: all verifications of a specific topic
+
+-------
+Returns
+-------
+
+``any``: computed verification including latest creationDate,  displayName
+
+-------
+Example
+-------
+.. code-block:: typescript
+
+  // load all sub verifications
+  verification.parents = await verifications.getNestedVerifications(verification.issuerAccount, verification.parent || '/', false);
+
+  // use all the parents and create a viewable computed tree
+  const computed = verifications.computeVerifications(verification.topic, verification.parents)
+
+  // returns =>
+  //   const computed:any = {
+  //     verifications: verifications,
+  //     creationDate: null,
+  //     displayName: topic.split('/').pop() || 'evan',
+  //     loading: verifications.filter(verification => verification.loading).length > 0,
+  //     name: topic,
+  //     status: -1,
+  //     subjects: [ ],
+  //     warnings: [ ],
+  //   }
+
+
+--------------------------------------------------------------------------------
+
+getComputedVerification
+================================================================================
+
+.. code-block:: typescript
+
+  getComputedVerification(subject, topic, isIdentity);
+
+Loads a list of verifications for a topic and a subject and combines to a single view for a simple verification status check, by combining ``getNestedVerifications`` with ``computeVerifications``.
+
+----------
+Parameters
+----------
+
+#. ``subject`` - ``string``: subject to load the verifications for.
+#. ``topic`` - ``string``: topic to load the verifications for.
+#. ``isIdentity`` - ``boolean``: optional indicates if the subject is already a identity
+
+-------
+Returns
+-------
+
+``any``: computed verification including latest creationDate,  displayName
+
+-------
+Example
+-------
+.. code-block:: typescript
+
+  // use all the parents and create a viewable computed tree
+  const computed = verifications.getComputedVerification(subject, topic)
+
+  // returns =>
+  //   const computed:any = {
+  //     verifications: verifications,
+  //     creationDate: null,
+  //     displayName: topic.split('/').pop() || 'evan',
+  //     loading: verifications.filter(verification => verification.loading).length > 0,
+  //     name: topic,
+  //     status: -1,
+  //     subjects: [ ],
+  //     warnings: [ ],
+  //   }
 
 
 --------------------------------------------------------------------------------
@@ -387,7 +549,7 @@ validateVerification
 
 .. code-block:: typescript
 
-  verifications.validateVerification(subject, verificationId[, isIdentity]);
+  verifications.validateVerification(subject, verificationId, isIdentity]);
 
 validates a given verificationId in case of integrity
 
@@ -417,65 +579,6 @@ Example
   );
   // Output:
   true
-
-
-
---------------------------------------------------------------------------------
-
-.. _verifications_validateVerificationTree:
-
-validateVerificationTree
-================================================================================
-
-.. code-block:: typescript
-
-  verifications.validateVerificationTree(subject, verificationLabel, treeArr);
-
-validates a whole verification tree if the path is valid (called recursively)
-
-----------
-Parameters
-----------
-
-#. ``subject`` - ``string``: subject of the verifications
-#. ``verificationLabel`` - ``string``: verification topic of a verification to build the tree for
-#. ``treeArr`` - ``array`` (optional): result tree array, used for recursion, defaults to ``[]``
-
--------
-Returns
--------
-
-``Promise`` returns ``any[]``: Array with all resolved verifications for the tree
-
--------
-Example
--------
-
-.. code-block:: typescript
-
-  console.dir(await verifications.validateVerificationTree(accounts[1], '/company/test/foo'));
-  // Output:
-  [{ issuer: '0x0000000000000000000000000000000000000001',
-    name: '/company/test/foo',
-    status: 1
-    subject: '0x0000000000000000000000000000000000000002',
-    data: '0x0000000000000000000000000000000000000000000000000000000000000000',
-    uri: '',
-    signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
-    creationDate: 1234567890,
-    id: '0x0000000000000000000000000000000000000000000000000000000000000000',
-    valid: true },
-    { issuer: '0x0000000000000000000000000000000000000001',
-    name: '/company/test',
-    status: 1
-    subject: '0x0000000000000000000000000000000000000002',
-    data: '0x0000000000000000000000000000000000000000000000000000000000000000',
-    uri: '',
-    signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
-    creationDate: 1234567890,
-    id: '0x0000000000000000000000000000000000000000000000000000000000000000',
-    valid: true }]
-
 
 --------------------------------------------------------------------------------
 
@@ -671,7 +774,64 @@ Example
   //   dbcpVersion: 1,
   // }
 
+--------------------------------------------------------------------------------
 
+.. _verifications_getVerificationEnsAddress:
+
+getVerificationEnsAddress
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.getVerificationEnsAddress(topic);
+
+Map the topic of a verification to it's default ens domain.
+  
+----------
+Parameters
+----------
+
+#. ``topic`` - ``string``: verification topic
+
+-------
+Returns
+-------
+
+``string``: The verification ens address
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const ensAddress = verifications.getVerificationEnsAddress('/evan/test');
+  // will return test.verifications.evan
+
+--------------------------------------------------------------------------------
+
+ensureVerificationDescription
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.ensureVerificationDescription(verification);
+
+Gets and sets the default description for a verification if it does not exists.
+  
+----------
+Parameters
+----------
+
+#. ``verification`` - ``any``: verification topic
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  verifications.ensureVerificationDescription(verification);
 
 --------------------------------------------------------------------------------
 

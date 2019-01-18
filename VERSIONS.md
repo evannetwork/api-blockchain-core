@@ -5,6 +5,8 @@
 ### Fixes
 ### Deprecations
 - add accountId argument to `ClaimHolder` constructor
+- rename `Claims` to `Verifications`
+
 
 ## Version 1.7.1
 ### Fixes

@@ -217,17 +217,18 @@ export class Verifications extends Logger {
   }
 
   /**
-   * gets verification information for a verification name from a given account; results has the following
-   * properties: creationBlock, creationDate, data, description, expirationDate, id, issuer, name,
-   * signature, status, subject, topic, uri, valid
+   * gets verification information for a verification name from a given account; results has the
+   * following properties: creationBlock, creationDate, data, description, expired, expirationDate,
+   * id, issuer, name, signature, status, subject, topic, uri, valid
    *
-   * @param      {string}        subject     subject of the verifications
-   * @param      {string}        verificationName   name (/path) of a verification
-   * @param      {boolean}       isIdentity  (optional) indicates if the subject is already an identity
+   * @param      {string}          subject     subject of the verifications
+   * @param      {string}          topic       name (/path) of a verification
+   * @param      {boolean}         isIdentity  (optional) indicates if the subject is already an
+   *                                           identity
    * @return     {Promise<any[]>}  verification info array
    */
-  public async getVerifications(subject: string, verificationName: string, isIdentity?: boolean): Promise<any[]> {
-    const sha3VerificationName = this.options.nameResolver.soliditySha3(verificationName);
+  public async getVerifications(subject: string, topic: string, isIdentity?: boolean): Promise<any[]> {
+    const sha3VerificationName = this.options.nameResolver.soliditySha3(topic);
     const uint256VerificationName = new BigNumber(sha3VerificationName).toString(10);
 
     const verificationsForTopic = await this.callOnIdentity(
@@ -296,21 +297,343 @@ export class Verifications extends Logger {
         data: (<any>verification).data,
         description,
         expirationDate: expirationDate == 0 ? null : expirationDate,
+        expired: expirationDate == 0 ? false : expirationDate * 1000 < Date.now(),
         id: verificationId,
         issuer: (<any>verification).issuer,
-        name: verificationName,
+        name: topic,
         rejectReason,
         signature: (<any>verification).signature,
         status: verificationFlag,
         subject,
         topic: verification.topic,
         uri: (<any>verification).uri,
-        valid: await this.validateVerification(subject, verificationId, isIdentity)
+        valid: await this.validateVerification(subject, verificationId, isIdentity),
       };
     }));
 
     // drop null values
     return verifications.filter(el => el);
+  }
+
+  /**
+   * Get all the verifications for a specific subject.
+   *
+   * @param      {string}      subject     subject to load the verifications for.
+   * @param      {string}      topic       topic to load the verifications for.
+   * @param      {boolean}     isIdentity  optional indicates if the subject is already a identity
+   * @return     {Promise<Array<any>>}  all the verifications with the following properties.
+   *   {
+   *     // creator of the verification
+   *     issuer: '0x1813587e095cDdfd174DdB595372Cb738AA2753A',
+   *     // topic of the verification
+   *     name: '/company/b-s-s/employee/swo',
+   *     // -1: Not issued => no verification was issued
+   *     // 0: Issued => issued by a non-issuer parent verification holder, self issued state is 0
+   *     // 1: Confirmed => issued by both, self issued state is 2, values match
+   *     // 2: Rejected => reject by the creator / subject
+   *     status: 2,
+   *     // verification for account id / contract id
+   *     subject: subject,
+   *     // ???
+   *     value: '',
+   *     // ???
+   *     uri: '',
+   *     // ???
+   *     signature: ''
+   *     // icon for cards display
+   *     icon: 'icon to display',
+   *     
+   *     // warnings
+   *     [
+   *       'issued', // verification.status === 0
+   *       'missing', // no verification exists
+   *       'expired', // is the verification expired?
+   *       'selfIssued' // issuer === subject
+   *       'invalid', // signature is manipulated
+   *       'parentMissing',  // parent path does not exists
+   *       'parentUntrusted',  // root path (/) is not issued by evan
+   *       'notEnsRootOwner' // invalid ens root owner when check topic is /
+   *     ],
+   *     parents: [ ... ],
+   *     parentComputed: [ ... ]
+   *   }
+   */
+  public async getNestedVerifications(subject: string, topic: string, isIdentity?: boolean) {
+    // prepent starting slash if it does not exists
+    if (topic.indexOf('/') !== 0) {
+      topic = '/' + topic;
+    }
+
+    // if no storage was ensured before, run it only once
+    await this.ensureStorage();
+
+    // if no cache is found, set it
+    this.verificationCache[topic] = this.verificationCache[topic] || { };
+    if (!this.verificationCache[topic][subject]) {
+      // load the verifications and store promise within the verification cache object
+      this.verificationCache[topic][subject] = (async () => {
+        const isValidAddress = this.options.executor.web3.utils.isAddress(subject);
+        let verifications = [ ];
+
+        // only load verifications for correct contract / accoun id's
+        if (isValidAddress) {
+          try {
+            const identity = await this.options.executor.executeContractCall(
+              this.contracts.storage, 'users', subject);
+
+            if (identity !== '0x0000000000000000000000000000000000000000') {
+              verifications = await this.getVerifications(subject, topic, isIdentity);
+            }
+          } catch (ex) {
+            verifications = [ ];
+          }
+        }
+
+        if (verifications.length > 0) {
+          // build display name for verifications and apply computed states for ui status
+          await prottle(10, verifications.map(verification => async () => {
+            const splitName = verification.name.split('/');
+
+            verification.displayName = splitName.pop();
+            verification.parent = splitName.join('/');
+            verification.warnings = [ ];
+            verification.creationDate = verification.creationDate * 1000;
+
+            // if expiration date is given, format the unix timestamp
+            if (verification.expirationDate) {
+              verification.expirationDate = verification.expirationDate * 1000;
+            }
+
+            // recover the original account id for the identity issuer
+            verification.subjectIdentity = await this.options.executor.executeContractCall(
+              this.contracts.storage, 'users', verification.subject);
+            const dataHash = this.options.nameResolver
+              .soliditySha3(verification.subjectIdentity, verification.topic, verification.data).replace('0x', '');
+            verification.issuerAccount = this.options.executor.web3.eth.accounts
+              .recover(dataHash, verification.signature);
+
+            // ensure, that the description was loaded
+            await this.ensureVerificationDescription(verification);
+
+            if (verification.status === 0) {
+              verification.warnings.push('issued');
+            }
+
+            if (verification.status === 2) {
+              verification.warnings.unshift('rejected');
+            }
+
+            // if signature is not valid
+            if (!verification.valid) {
+              verification.warnings.push('invalid');
+            }
+
+            // if isser === subject and only if a parent is passed, so if the root one is empty and no
+            // slash is available
+            if (verification.issuerAccount === verification.subject && verification.parent) {
+              verification.warnings.push('selfIssued');
+            }
+
+            if (verification.expirationDate && verification.expirationDate < Date.now()) {
+              verification.warnings.push('expired');
+            }
+
+            if (verification.parent) {
+              // load all sub verifications
+              verification.parents = await this.getNestedVerifications(verification.issuerAccount,
+                verification.parent, false);
+
+              // load the computed status of all parent verifications, to check if the parent tree is valid
+              verification.parentComputed = await this.computeVerifications(verification.parent,
+                verification.parents);
+              if (verification.parentComputed.status === -1) {
+                verification.warnings.push('parentMissing');
+              } else if (verification.parentComputed.status === 0) {
+                verification.warnings.push('parentUntrusted');
+              }
+            } else {
+              verification.parents = [ ];
+
+              if (verification.name === '/evan' &&
+                 (verification.issuerAccount !== this.ensRootOwner || verification.subject !== this.ensRootOwner)) {
+                verification.warnings = [ 'notEnsRootOwner' ];
+              } else {
+                verification.status = 1;
+                verification.warnings = [ ];
+              }
+            }
+
+            if (verification.status !== 2) {
+              // set computed status
+              verification.status = verification.warnings.length > 0 ? 0 : 1;
+            }
+          }));
+
+          // calculate the computed level around all verifications, so we can check all verifications for this user
+          // (used for issueing)
+          const computed = await this.computeVerifications(topic, verifications);
+          verifications.forEach(verification => verification.levelComputed = computed);
+        }
+
+        // if no verifications are available the status would be "no verification issued"
+        if (verifications.length === 0) {
+          verifications.push({
+            displayName: topic.split('/').pop() || 'evan',
+            name: topic,
+            parents: [ ],
+            status: -1,
+            subject: subject,
+            tree: [ ],
+            warnings: [ 'missing' ],
+            subjectIdentity: isValidAddress ?
+              await this.options.executor.executeContractCall(
+                this.contracts.storage, 'users', subject) :
+              '0x0000000000000000000000000000000000000000',
+          });
+
+          if (!verifications[0].subjectIdentity ||
+              verifications[0].subjectIdentity === '0x0000000000000000000000000000000000000000') {
+            verifications[0].warnings.unshift('noIdentity');
+          }
+
+          await this.ensureVerificationDescription(verifications[0]);
+        }
+
+        return verifications;
+      })();
+    }
+
+    return await this.verificationCache[topic][subject];
+  }
+
+  /**
+   * Takes an array of verifications and combines all the states for one quick view.
+   *
+   * @param      {string}      topic          topic of all the verifications
+   * @param      {Array<any>}  verifications  all verifications of a specific topic
+   * @return     {any}         computed verification including latest creationDate, combined color,
+   *                           displayName
+   */
+  public async computeVerifications(topic: string, verifications: Array<any>) {
+    const computed:any = {
+      verifications: verifications,
+      creationDate: null,
+      displayName: topic.split('/').pop() || 'evan',
+      loading: verifications.filter(verification => verification.loading).length > 0,
+      name: topic,
+      status: -1,
+      subjects: [ ],
+      warnings: [ ],
+    };
+
+    // load the description for the given topic
+    await this.ensureVerificationDescription(computed);
+
+    // keep creationDates of all verifications, so we can check after the final combined status was set,
+    // which creation date should be used
+    const creationDates = { '-1': [ ], '0': [ ], '1': [ ], '2': [ ]};
+    const expirationDates = { '-1': [ ], '0': [ ], '1': [ ], '2': [ ]};
+
+    // iterate through all verifications and check for warnings and the latest creation date of an verification
+    for (let verification of verifications) {
+      // concadinate all warnings
+      computed.warnings = computed.warnings.concat(verification.warnings);
+
+      // use the highest status (-1 missing, 0 issued, 1 valid, 2 rejected)
+      if (verification.status === 2) {
+        if (computed.status === -1) {
+          computed.status = 2;
+        }
+      } else {
+        if (computed.status === 2) {
+          computed.status = verification.status;
+        } else {
+          computed.status = computed.status < verification.status ? verification.status : computed.status;
+        }
+      }
+
+      // search one subject of all
+      if (computed.subjects.indexOf(verification.subject) === -1) {
+        computed.subjects.push(verification.subject);
+      }
+      
+      // save all creation dates for later usage
+      if (typeof verification.creationDate !== 'undefined') {
+        creationDates[verification.status].push(verification.creationDate);
+      }
+
+      // save all creation dates for later usage
+      if (typeof verification.expirationDate !== 'undefined') {
+        expirationDates[verification.status].push(verification.expirationDate);
+      }
+    }
+
+    // use the latest creationDate for the specific status
+    if (creationDates[computed.status].length > 0) {
+      computed.creationDate = creationDates[computed.status].sort()[0];
+    }
+
+    // use the latest creationDate for the specific status
+    if (expirationDates[computed.status].length > 0) {
+      const curExpiration = expirationDates[computed.status].sort();
+      computed.expirationDate = curExpiration[curExpiration.length - 1];
+    }
+
+    return computed;
+  }
+
+  /**
+   * Loads a list of verifications for a topic and a subject and combines to a single view for a
+   * simple verification status check.
+   *
+   * @param      {string}   subject     subject, that performs the description loading
+   * @param      {string}   topic       topic of all the verifications
+   * @param      {boolean}  isIdentity  optional indicates if the subject is already a identity
+   * @return     {any}      computed verification including latest creationDate, combined color,
+   *                        displayName
+   */
+  public async getComputedVerification(subject: string, topic: string, isIdentity?: boolean) {
+    return await this.computeVerifications(
+      topic,
+      await this.getNestedVerifications(subject, topic, isIdentity)
+    );
+  }
+
+  /**
+   * validates a given verificationId in case of integrity
+   *
+   * @param      {string}            subject     the subject of the verification
+   * @param      {string}            verificationId     verification identifier
+   * @param      {boolean}           isIdentity  optional indicates if the subject is already an
+   *                                             identity
+   * @return     {Promise<boolean>}  resolves with true if the verification is valid, otherwise false
+   */
+  public async validateVerification(
+      subject: string, verificationId: string, isIdentity?: boolean): Promise<boolean> {
+    await this.ensureStorage();
+
+    let subjectIdentity = isIdentity ? subject : await this.getIdentityForAccount(subject);
+    if (subjectIdentity.options) {
+      subjectIdentity = subjectIdentity.options.address;
+    }
+
+    const verification = await this.callOnIdentity(
+      subject,
+      isIdentity,
+      'getVerification',
+      verificationId
+    );
+
+    const dataHash = this.options.nameResolver.soliditySha3(subjectIdentity, verification.topic, verification.data).replace('0x', '');
+    const recoveredAddress = this.options.executor.web3.eth.accounts.recover(dataHash, verification.signature);
+    const issuerContract = this.options.contractLoader.loadContract('VerificationHolder', verification.issuer);
+    const keyHasPurpose = await this.options.executor.executeContractCall(
+      issuerContract,
+      'keyHasPurpose',
+      this.options.nameResolver.soliditySha3(recoveredAddress),
+      '1'
+    );
+    return keyHasPurpose;
   }
 
   /**
@@ -382,14 +705,15 @@ export class Verifications extends Logger {
   }
 
   /**
-   * reject a Verification. This verification will be marked as rejected but not deleted. This is important for
-   * tracking reasons. You can also optionally add a reject reason as JSON object to track
-   * additional informations about the rejection. Issuer and Subject can reject a special verification.
+   * reject a Verification. This verification will be marked as rejected but not deleted. This is
+   * important for tracking reasons. You can also optionally add a reject reason as JSON object to
+   * track additional informations about the rejection. Issuer and Subject can reject a special
+   * verification.
    *
-   * @param      {string}         accountId     account, that performs the action
-   * @param      {string}         subject       account, that rejects the verification
-   * @param      {string}         verificationId       id of a verification to reject
-   * @param      {any}            rejectReason  (optional) rejectReason object
+   * @param      {string}         accountId       account, that performs the action
+   * @param      {string}         subject         account, that rejects the verification
+   * @param      {string}         verificationId  id of a verification to reject
+   * @param      {any}            rejectReason    (optional) rejectReason object
    * @return     {Promise<void>}  resolved when done
    */
   public async rejectVerification(
@@ -417,26 +741,27 @@ export class Verifications extends Logger {
   }
 
   /**
-   * Sets or creates a verification; this requires the issuer to have permissions for the parent verification (if
-   * verification name seen as a path, the parent 'folder').
+   * Sets or creates a verification; this requires the issuer to have permissions for the parent
+   * verification (if verification name seen as a path, the parent 'folder').
    *
    * @param      {string}           issuer             issuer of the verification
-   * @param      {string}           subject            subject of the verification and the owner of the
-   *                                                   verification node
-   * @param      {string}           verificationName          name of the verification (full path)
-   * @param      {number}           expirationDate     expiration date, for the verification, defaults to
-   *                                                   `0` (does not expire)
-   * @param      {object}           verificationValue         json object which will be stored in the verification
-   * @param      {string}           descriptionDomain  domain of the verification, this is a subdomain
-   *                                                   under 'verifications.evan', so passing 'example'
-   *                                                   will link verifications description to
-   *                                                   'example.verifications.evan'
+   * @param      {string}           subject            subject of the verification and the owner of
+   *                                                   the verification node
+   * @param      {string}           topic              name of the verification (full path)
+   * @param      {number}           expirationDate     expiration date, for the verification,
+   *                                                   defaults to `0` (does not expire)
+   * @param      {object}           verificationValue  json object which will be stored in the
+   *                                                   verification
+   * @param      {string}           descriptionDomain  domain of the verification, this is a
+   *                                                   subdomain under 'verifications.evan', so
+   *                                                   passing 'example' will link verifications
+   *                                                   description to 'example.verifications.evan'
    * @return     {Promise<string>}  verificationId
    */
   public async setVerification(
       issuer: string,
       subject: string,
-      verificationName: string,
+      topic: string,
       expirationDate = 0 ,
       verificationValue?: any,
       descriptionDomain?: string,
@@ -461,14 +786,14 @@ export class Verifications extends Logger {
     );
     // check if target and source identity are existing
     if (!targetIdentity || targetIdentity === nullAddress) {
-      const msg = `trying to set verification ${verificationName} with account ${issuer}, ` +
+      const msg = `trying to set verification ${topic} with account ${issuer}, ` +
         `but target identity for account ${subject} does not exist`;
       this.log(msg, 'error');
       throw new Error(msg);
     }
 
     // convert the verification name to a uint256
-    const sha3VerificationName = this.options.nameResolver.soliditySha3(verificationName);
+    const sha3VerificationName = this.options.nameResolver.soliditySha3(topic);
     const uint256VerificationName = new BigNumber(sha3VerificationName).toString(10);
 
     let verificationData = nullBytes32;
@@ -495,7 +820,7 @@ export class Verifications extends Logger {
     let ensFullNodeHash;
     if (descriptionDomain) {
       ensFullNodeHash = this.options.nameResolver.namehash(
-        this.getFullDescriptionDomainWithHash(verificationName, descriptionDomain));
+        this.getFullDescriptionDomainWithHash(topic, descriptionDomain));
     }
 
     // add the verification to the target identity
@@ -522,6 +847,17 @@ export class Verifications extends Logger {
   }
 
   /**
+   * returns full domain for description
+   *
+   * @param      {string}  topic              verification topic
+   * @param      {string}  descriptionDomain  domain of description
+   * @return     {string}  full domain
+   */
+  private getFullDescriptionDomainWithHash(topic: string, descriptionDomain: string): string {
+    return `${this.options.nameResolver.soliditySha3(topic).substr(2)}.${descriptionDomain}.verifications.evan`;
+  }
+
+  /**
    * set description for a verification under a domain owned by given account
    *
    * @param      {string}         accountId    accountId, that performs the description update
@@ -544,66 +880,95 @@ export class Verifications extends Logger {
   }
 
   /**
-   * validates a given verificationId in case of integrity
+   * Map the topic of a verification to it's default ens domain
    *
-   * @param      {string}            subject     the subject of the verification
-   * @param      {string}            verificationId     verification identifier
-   * @param      {boolean}           isIdentity  optional indicates if the subject is already an
-   *                                             identity
-   * @return     {Promise<boolean>}  resolves with true if the verification is valid, otherwise false
+   * @param      {string}  topic   the verification name / topic
+   * @return     {string}  The verification ens address
    */
-  public async validateVerification(
-      subject: string, verificationId: string, isIdentity?: boolean): Promise<boolean> {
-    await this.ensureStorage();
+  public getVerificationEnsAddress(topic: string) {
+    // remove starting evan, /evan and / to get the correct domain
+    const clearedTopic = topic.replace(/^(?:(?:\/)?(?:evan)?)(?:\/)?/gm, '');
 
-    let subjectIdentity = isIdentity ? subject : await this.getIdentityForAccount(subject);
-    if (subjectIdentity.options) {
-      subjectIdentity = subjectIdentity.options.address;
+    // if a reverse domain is available, add it and seperate using a dot
+    let domain = 'verifications.evan';
+    if (clearedTopic.length > 0) {
+      domain = `${ clearedTopic.split('/').reverse().join('.') }.${ domain }`;
+    } else if (topic.indexOf('/evan') === 0 || topic.indexOf('evan') === 0) {
+      domain = `evan.${ domain }`;
     }
 
-    const verification = await this.callOnIdentity(
-      subject,
-      isIdentity,
-      'getVerification',
-      verificationId
-    );
-
-    const dataHash = this.options.nameResolver.soliditySha3(subjectIdentity, verification.topic, verification.data).replace('0x', '');
-    const recoveredAddress = this.options.executor.web3.eth.accounts.recover(dataHash, verification.signature);
-    const issuerContract = this.options.contractLoader.loadContract('VerificationHolder', verification.issuer);
-    const keyHasPurpose = await this.options.executor.executeContractCall(
-      issuerContract,
-      'keyHasPurpose',
-      this.options.nameResolver.soliditySha3(recoveredAddress),
-      '1'
-    );
-    return keyHasPurpose;
+    return domain;
   }
 
   /**
-   * validates a whole verification tree if the path is valid (called recursively)
+   * Gets and sets the default description for a verification if it does not exists.
    *
-   * @param      {string}          subject     subject of the verification and the owner of the verification node
-   * @param      {string}          verificationLabel  verification topic of a verification to build the tree for
-   * @param      {array}           treeArr     (optional) result tree array, used for recursion
-   * @return     {Promise<any[]>}  Array with all resolved verifications for the tree
+   * @param      {any}     verification  the verification that should be checked
    */
-  public async validateVerificationTree(subject: string, verificationLabel: string, treeArr = []) {
-    const splittedVerificationLabel = verificationLabel.split('/');
-    const verifications = await this.getVerifications(subject, verificationLabel, true);
-    // TODO: -> Add validation of more than one verification if there are more verifications for the label
-    if (verifications.length > 0) {
-      // check at the moment the first verification
-      treeArr.push(verifications[0]);
-      if (splittedVerificationLabel.length > 1) {
-        splittedVerificationLabel.pop();
-        const subVerification = splittedVerificationLabel.join('/');
-        await this.validateVerificationTree(verifications[0].issuer, subVerification, treeArr);
+  public async ensureVerificationDescription(verification: any) {
+    // map the topic to the verification ens name and extract the top level verifications domain to check, if
+    // the user can set the verification tree
+    const ensAddress = this.getVerificationEnsAddress(verification.name);
+    const topLevelDomain = ensAddress.split('.').splice(-3, 3).join('.');
+
+    // if no description was set, use the latest one or load it
+    if (!verification.description) {
+      // if the description could not be loaded, the cache will set to false, so we do not need to load again
+      if (!this.verificationDescriptions[ensAddress] && this.verificationDescriptions[ensAddress] !== false) {
+        this.verificationDescriptions[ensAddress] = (async () => {
+          try {
+            // load the description
+            return await this.options.description.getDescriptionFromEns(ensAddress);
+          } catch (ex) {
+            return false;
+          }
+        })();
+      }
+
+      verification.description = await this.verificationDescriptions[ensAddress];
+    }
+
+    if (verification.description) {
+      // map the properties to a flat description
+      if (verification.description.public) {
+        verification.description = verification.description.public;
+      }
+
+      // move the img to the basic verification
+      if (verification.description.imgSquare) {
+        verification.icon = verification.description.imgSquare;
       }
     } else {
-      return treeArr;
+      verification.description = {
+        author: nullAddress,
+        dbcpVersion: 1,
+        description: verification.name,
+        name: verification.name,
+        version: '1.0.0',
+      };
     }
-    return treeArr;
+
+    verification.description.i18n = verification.description.i18n || { };
+    verification.description.i18n.name = verification.description.i18n.name || { };
+    verification.description.i18n.name.en = verification.description.i18n.name.en || verification.name.split('/').pop();
+
+    // try to load a clear name
+    try {
+      verification.displayName = verification.description.i18n.name.en;
+    } catch (ex) { }
+
+    // if the top level ens owner was not loaded before, load it!
+    if (!this.ensOwners[topLevelDomain]) {
+      this.ensOwners[topLevelDomain] = (async () => {
+        // transform the ens domain into a namehash and load the ens top level topic owner
+        const namehash = this.options.nameResolver.namehash(topLevelDomain);
+        return await this.options.executor.executeContractCall(
+          this.options.nameResolver.ensContract, 'owner', namehash);
+      })();
+    }
+
+    verification.ensAddress = ensAddress;
+    verification.topLevelEnsOwner = await this.ensOwners[topLevelDomain];
   }
 
   /**
@@ -646,6 +1011,7 @@ export class Verifications extends Logger {
    */
   private async ensureStorage() {
     if (!this.contracts.storage) {
+      // only load the storage once at a time (this function could be called quickly several times)
       if (!this.storageEnsuring) {
         this.storageEnsuring = this.options.nameResolver
           .getAddress(`identities.${ this.options.nameResolver.config.labels.ensRoot }`);
@@ -741,17 +1107,6 @@ export class Verifications extends Logger {
   }
 
   /**
-   * returns full domain for description
-   *
-   * @param      {string}  topic              verification topic
-   * @param      {string}  descriptionDomain  domain of description
-   * @return     {string}  full domain
-   */
-  private getFullDescriptionDomainWithHash(topic: string, descriptionDomain: string): string {
-    return `${this.options.nameResolver.soliditySha3(topic).substr(2)}.${descriptionDomain}.verifications.evan`;
-  }
-
-  /**
    * checks if given given subject belongs to an account to a contract
    *
    * @param      {string}           subject     verification subject
@@ -770,374 +1125,14 @@ export class Verifications extends Logger {
     return this.subjectTypes[subject];
   }
 
-
   /**
-   * Get all the verifications for a specific address.
+   * Delete a single entry from the verification cache object using subject and topic
    *
-   * @param      {string}      address     address to load the verifications for.
-   * @param      {string}      topic       topic to load the verifications for.
-   * @param      {boolean}     isIdentity  optional indicates if the subject is already a identity
-   * @return     {Promise<Array<any>>}  all the verifications with the following properties.
-   *   {
-   *     // creator of the verification
-   *     issuer: '0x1813587e095cDdfd174DdB595372Cb738AA2753A',
-   *     // topic of the verification
-   *     name: '/company/b-s-s/employee/swo',
-   *     // -1: Not issued => no verification was issued
-   *     // 0: Issued => issued by a non-issuer parent verification holder, self issued state is 0
-   *     // 1: Confirmed => issued by both, self issued state is 2, values match
-   *     // 2: Rejected => reject by the creator / subject
-   *     status: 2,
-   *     // verification for account id / contract id
-   *     subject: address,
-   *     // ???
-   *     value: '',
-   *     // ???
-   *     uri: '',
-   *     // ???
-   *     signature: ''
-   *     // icon for cards display
-   *     icon: 'icon to display',
-   *     
-   *     // warnings
-   *     [
-   *       'issued', // verification.status === 0
-   *       'missing', // no verification exists
-   *       'expired', // is the verification expired?
-   *       'selfIssued' // issuer === subject
-   *       'invalid', // signature is manipulated
-   *       'parentMissing',  // parent path does not exists
-   *       'parentUntrusted',  // root path (/) is not issued by evan
-   *       'notEnsRootOwner' // invalid ens root owner when check topic is /
-   *     ]
-   *     parents: [ ... ],
-   *     parentComputed: [ ... ]
-   *   }
-   */
-  public async getNestedVerifications(address: string, topic: string, isIdentity?: boolean) {
-    // prepent starting slash if it does not exists
-    if (topic.indexOf('/') !== 0) {
-      topic = '/' + topic;
-    }
-
-    // if no storage was ensured before, run it only once
-    await this.ensureStorage();
-
-    // if no cache is found, set it
-    this.verificationCache[topic] = this.verificationCache[topic] || { };
-    if (!this.verificationCache[topic][address]) {
-      // load the verifications and store promise within the verification cache object
-      this.verificationCache[topic][address] = (async () => {
-        const isValidAddress = this.options.executor.web3.utils.isAddress(address);
-        let verifications = [ ];
-
-        // only load verifications for correct contract / accoun id's
-        if (isValidAddress) {
-          try {
-            const identity = await this.options.executor.executeContractCall(
-              this.contracts.storage, 'users', address);
-
-            if (identity !== '0x0000000000000000000000000000000000000000') {
-              verifications = await this.getVerifications(address, topic, isIdentity);
-            }
-          } catch (ex) {
-            verifications = [ ];
-          }
-        }
-
-        if (verifications.length > 0) {
-          // build display name for verifications and apply computed states for ui status
-          await prottle(10, verifications.map(verification => async () => {
-            const splitName = verification.name.split('/');
-
-            verification.displayName = splitName.pop();
-            verification.parent = splitName.join('/');
-            verification.warnings = [ ];
-            verification.creationDate = verification.creationDate * 1000;
-
-            // if expiration date is given, format the unix timestamp
-            if (verification.expirationDate) {
-              verification.expirationDate = verification.expirationDate * 1000;
-            }
-
-            // recover the original account id for the identity issuer
-            verification.subjectIdentity = await this.options.executor.executeContractCall(
-              this.contracts.storage, 'users', verification.subject);
-            const dataHash = this.options.nameResolver
-              .soliditySha3(verification.subjectIdentity, verification.topic, verification.data).replace('0x', '');
-            verification.issuerAccount = this.options.executor.web3.eth.accounts
-              .recover(dataHash, verification.signature);
-
-            // ensure, that the description was loaded
-            await this.ensureVerificationDescription(verification);
-
-            if (verification.status === 0) {
-              verification.warnings.push('issued');
-            }
-
-            if (verification.status === 2) {
-              verification.warnings.unshift('rejected');
-            }
-
-            // if signature is not valid
-            if (!verification.valid) {
-              verification.warnings.push('invalid');
-            }
-
-            // if isser === subject and only if a parent is passed, so if the root one is empty and no
-            // slash is available
-            if (verification.issuerAccount === verification.subject && verification.parent) {
-              verification.warnings.push('selfIssued');
-            }
-
-            if (verification.expirationDate && verification.expirationDate < Date.now()) {
-              verification.warnings.push('expired');
-            }
-
-            if (verification.parent) {
-              // load all sub verifications
-              verification.parents = await this.getVerifications(verification.issuerAccount, verification.parent, false);
-
-              // load the computed status of all parent verifications, to check if the parent tree is valid
-              verification.parentComputed = await this.getComputedVerification(verification.parent,
-                verification.parents);
-              if (verification.parentComputed.status === -1) {
-                verification.warnings.push('parentMissing');
-              } else if (verification.parentComputed.status === 0) {
-                verification.warnings.push('parentUntrusted');
-              }
-            } else {
-              verification.parents = [ ];
-
-              if (verification.name === '/evan' &&
-                 (verification.issuerAccount !== this.ensRootOwner || verification.subject !== this.ensRootOwner)) {
-                verification.warnings = [ 'notEnsRootOwner' ];
-              } else {
-                verification.status = 1;
-                verification.warnings = [ ];
-              }
-            }
-
-            if (verification.status !== 2) {
-              // set computed status
-              verification.status = verification.warnings.length > 0 ? 0 : 1;
-            }
-          }));
-
-          // calculate the computed level around all verifications, so we can check all verifications for this user
-          // (used for issueing)
-          const computed = await this.getComputedVerification(topic, verifications);
-          verifications.forEach(verification => verification.levelComputed = computed);
-        }
-
-        // if no verifications are available the status would be "no verification issued"
-        if (verifications.length === 0) {
-          verifications.push({
-            displayName: topic.split('/').pop() || 'evan',
-            name: topic,
-            parents: [ ],
-            status: -1,
-            subject: address,
-            tree: [ ],
-            warnings: [ 'missing' ],
-            subjectIdentity: isValidAddress ?
-              await this.options.executor.executeContractCall(
-                this.contracts.storage, 'users', address) :
-              '0x0000000000000000000000000000000000000000',
-          });
-
-          if (!verifications[0].subjectIdentity ||
-              verifications[0].subjectIdentity === '0x0000000000000000000000000000000000000000') {
-            verifications[0].warnings.unshift('noIdentity');
-          }
-
-          await this.ensureVerificationDescription(verifications[0]);
-        }
-
-        return verifications;
-      })();
-    }
-
-    return await this.verificationCache[topic][address];
-  }
-
-  /**
-   * Map the topic of a verification to it's default ens domain
-   *
-   * @param      {string}  topic   the verification name / topic
-   * @return     {string}  The verification ens address
-   */
-  public getVerificationEnsAddress(topic: string) {
-    // remove starting evan, /evan and / to get the correct domain
-    const clearedTopic = topic.replace(/^(?:(?:\/)?(?:evan)?)(?:\/)?/gm, '');
-
-    // if a reverse domain is available, add it and seperate using a dot
-    let domain = 'verifications.evan';
-    if (clearedTopic.length > 0) {
-      domain = `${ clearedTopic.split('/').reverse().join('.') }.${ domain }`;
-    } else if (topic.indexOf('/evan') === 0 || topic.indexOf('evan') === 0) {
-      domain = `evan.${ domain }`;
-    }
-
-    return domain;
-  }
-
-  /**
-   * Gets the default description for a verification if it does not exists.
-   *
-   * @param      {any}     verification  the verification that should be checked
-   */
-  public async ensureVerificationDescription(verification: any) {
-    // map the topic to the verification ens name and extract the top level verifications domain to check, if
-    // the user can set the verification tree
-    const ensAddress = this.getVerificationEnsAddress(verification.name);
-    const topLevelDomain = ensAddress.split('.').splice(-3, 3).join('.');
-
-    // if no description was set, use the latest one or load it
-    if (!verification.description) {
-      // if the description could not be loaded, the cache will set to false, so we do not need to load again
-      if (!this.verificationDescriptions[ensAddress] && this.verificationDescriptions[ensAddress] !== false) {
-        this.verificationDescriptions[ensAddress] = (async () => {
-          try {
-            // load the description
-            return await this.options.description.getDescriptionFromEns(ensAddress);
-          } catch (ex) {
-            return false;
-          }
-        })();
-      }
-
-      verification.description = await this.verificationDescriptions[ensAddress];
-    }
-
-    if (verification.description) {
-      // map the properties to a flat description
-      if (verification.description.public) {
-        verification.description = verification.description.public;
-      }
-
-      // move the img to the basic verification
-      if (verification.description.imgSquare) {
-        verification.icon = verification.description.imgSquare;
-      }
-    } else {
-      verification.description = {
-        author: nullAddress,
-        dbcpVersion: 1,
-        description: verification.name,
-        name: verification.name,
-        version: '1.0.0',
-      };
-    }
-
-    verification.description.i18n = verification.description.i18n || { };
-    verification.description.i18n.name = verification.description.i18n.name || { };
-    verification.description.i18n.name.en = verification.description.i18n.name.en || verification.name.split('/').pop();
-
-    // try to load a clear name
-    try {
-      verification.displayName = verification.description.i18n.name.en;
-    } catch (ex) { }
-
-    // if the top level ens owner was not loaded before, load it!
-    if (!this.ensOwners[topLevelDomain]) {
-      this.ensOwners[topLevelDomain] = (async () => {
-        // transform the ens domain into a namehash and load the ens top level topic owner
-        const namehash = this.options.nameResolver.namehash(topLevelDomain);
-        return await this.options.executor.executeContractCall(
-          this.options.nameResolver.ensContract, 'owner', namehash);
-      })();
-    }
-
-    verification.ensAddress = ensAddress;
-    verification.topLevelEnsOwner = await this.ensOwners[topLevelDomain];
-  }
-
-  /**
-   * Takes an array of verifications and combines all the states for one quick view.
-   *
-   * @param      {string}      accountId      accountId, that performs the description loading
-   * @param      {string}      topic          topic of all the verifications
-   * @param      {Array<any>}  verifications  all verifications of a specific topic
-   * @return     {any}         computed verification including latest creationDate, combined color,
-   *                           displayName
-   */
-  public async getComputedVerification(topic: string, verifications: Array<any>) {
-    const computed:any = {
-      verifications: verifications,
-      creationDate: null,
-      displayName: topic.split('/').pop() || 'evan',
-      loading: verifications.filter(verification => verification.loading).length > 0,
-      name: topic,
-      status: -1,
-      subjects: [ ],
-      warnings: [ ],
-    };
-
-    // load the description for the given topic
-    await this.ensureVerificationDescription(computed);
-
-    // keep creationDates of all verifications, so we can check after the final combined status was set,
-    // which creation date should be used
-    const creationDates = { '-1': [ ], '0': [ ], '1': [ ], '2': [ ]};
-    const expirationDates = { '-1': [ ], '0': [ ], '1': [ ], '2': [ ]};
-
-    // iterate through all verifications and check for warnings and the latest creation date of an verification
-    for (let verification of verifications) {
-      // concadinate all warnings
-      computed.warnings = computed.warnings.concat(verification.warnings);
-
-      // use the highest status (-1 missing, 0 issued, 1 valid, 2 rejected)
-      if (verification.status === 2) {
-        if (computed.status === -1) {
-          computed.status = 2;
-        }
-      } else {
-        if (computed.status === 2) {
-          computed.status = verification.status;
-        } else {
-          computed.status = computed.status < verification.status ? verification.status : computed.status;
-        }
-      }
-
-      // search one subject of all
-      if (computed.subjects.indexOf(verification.subject) === -1) {
-        computed.subjects.push(verification.subject);
-      }
-      
-      // save all creation dates for later usage
-      if (typeof verification.creationDate !== 'undefined') {
-        creationDates[verification.status].push(verification.creationDate);
-      }
-
-      // save all creation dates for later usage
-      if (typeof verification.expirationDate !== 'undefined') {
-        expirationDates[verification.status].push(verification.expirationDate);
-      }
-    }
-
-    // use the latest creationDate for the specific status
-    if (creationDates[computed.status].length > 0) {
-      computed.creationDate = creationDates[computed.status].sort()[0];
-    }
-
-    // use the latest creationDate for the specific status
-    if (expirationDates[computed.status].length > 0) {
-      const curExpiration = expirationDates[computed.status].sort();
-      computed.expirationDate = curExpiration[curExpiration.length - 1];
-    }
-
-    return computed;
-  }
-
-  /**
-   * Delete a single entry from the verification cache object using address and topic
-   *
-   * @param      {string}  address  the address that should be removed
+   * @param      {string}  subject  the subject that should be removed
    * @param      {string}  topic    the topic that should be removed
    * @return     {void}  
    */
-  public deleteFromVerificationCache(address: string, topic: string) {
+  public deleteFromVerificationCache(subject: string, topic: string) {
     // prepent starting slash if it does not exists
     if (topic.indexOf('/') !== 0) {
       topic = '/' + topic;
@@ -1146,12 +1141,12 @@ export class Verifications extends Logger {
     // search for all parents, that could have links to the topic, so remove them
     Object.keys(this.verificationCache).forEach(key => {
       // if the key is equal to the topic that should be checked, delete only the cache for the
-      // given address
+      // given subject
       if (key === topic) {
-        // delete all related addresses for the given topic, or remove all, when address is a
+        // delete all related subjectes for the given topic, or remove all, when subject is a
         // wildcard
-        if (this.verificationCache[topic] && (this.verificationCache[topic][address] || address === '*')) {
-          delete this.verificationCache[topic][address];
+        if (this.verificationCache[topic] && (this.verificationCache[topic][subject] || subject === '*')) {
+          delete this.verificationCache[topic][subject];
         }
 
         return;
