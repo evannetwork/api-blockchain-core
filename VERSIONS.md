@@ -6,6 +6,7 @@
 ### Deprecations
 - add accountId argument to `ClaimHolder` constructor
 - rename `Claims` to `Verifications`
+- add nested verification functions and deep validity checks
 
 
 ## Version 1.7.1

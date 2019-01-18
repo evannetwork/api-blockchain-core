@@ -123,12 +123,12 @@ export class Verifications extends Logger {
   }
 
   /**
-   * confirms a verification; this can be done, if a verification has been issued for a subject and the subject
-   * wants to confirm it
+   * confirms a verification; this can be done, if a verification has been issued for a subject and
+   * the subject wants to confirm it
    *
-   * @param      {string}         accountId  account, that performs the action
-   * @param      {string}         subject    verification subject
-   * @param      {string}         verificationId    id of a verification to confirm
+   * @param      {string}         accountId       account, that performs the action
+   * @param      {string}         subject         verification subject
+   * @param      {string}         verificationId  id of a verification to confirm
    * @return     {Promise<void>}  resolved when done
    */
   public async confirmVerification(
@@ -139,6 +139,9 @@ export class Verifications extends Logger {
       { from: accountId },
       verificationId,
     );
+
+    // clear cache for this verification
+    this.deleteFromVerificationCache(subject, '/');
   }
 
   /**
@@ -183,6 +186,12 @@ export class Verifications extends Logger {
       // write identity to description
       const description = await this.options.description.getDescription(contractId, accountId);
       description.public.identity = identity;
+
+      // update to dbcpVersion 2 if 1 is selected, to support the new identity property
+      if (!description.public.dbcpVersion || description.public.dbcpVersion === 1) {
+        description.public.dbcpVersion = 2;
+      }
+
       await this.options.description.setDescriptionToContract(contractId, description, accountId);
       // write identity to contract
       await this.options.executor.executeContractTransaction(
@@ -193,6 +202,10 @@ export class Verifications extends Logger {
         contractId,
       );
     }
+
+    // clear cache for this account
+    this.deleteFromVerificationCache(accountId, '/');
+
     return identity;
   }
 
@@ -214,6 +227,9 @@ export class Verifications extends Logger {
       { from: accountId },
       verificationId,
     );
+
+    // clear cache for this verification
+    this.deleteFromVerificationCache(subject, '/');
   }
 
   /**
@@ -323,12 +339,13 @@ export class Verifications extends Logger {
    * @param      {boolean}     isIdentity  optional indicates if the subject is already a identity
    * @return     {Promise<Array<any>>}  all the verifications with the following properties.
    *   {
+   *     id: '...',
    *     // creator of the verification
    *     issuer: '0x1813587e095cDdfd174DdB595372Cb738AA2753A',
    *     // topic of the verification
    *     name: '/company/b-s-s/employee/swo',
    *     // -1: Not issued => no verification was issued
-   *     // 0: Issued => issued by a non-issuer parent verification holder, self issued state is 0
+   *     // 0: Issued => status = 0, warning.length > 0
    *     // 1: Confirmed => issued by both, self issued state is 2, values match
    *     // 2: Rejected => reject by the creator / subject
    *     status: 2,
@@ -342,17 +359,24 @@ export class Verifications extends Logger {
    *     signature: ''
    *     // icon for cards display
    *     icon: 'icon to display',
-   *     
+   *     // if the verification was rejected, a reject reason could be applied
+   *     rejectReason: '' || { },
+   *     // subjec type
+   *     subjectType: 'account' || 'contract',
+   *     // if it's a contract, it can be an contract
+   *     subjectOwner: 'account' || 'contract',
    *     // warnings
    *     [
    *       'issued', // verification.status === 0
    *       'missing', // no verification exists
    *       'expired', // is the verification expired?
+   *       'rejected', // rejected
    *       'selfIssued' // issuer === subject
    *       'invalid', // signature is manipulated
    *       'parentMissing',  // parent path does not exists
    *       'parentUntrusted',  // root path (/) is not issued by evan
-   *       'notEnsRootOwner' // invalid ens root owner when check topic is /
+   *       'notEnsRootOwner', // invalid ens root owner when check topic is
+   *       'noIdentity', // checked subject has no identity
    *     ],
    *     parents: [ ... ],
    *     parentComputed: [ ... ]
@@ -374,14 +398,14 @@ export class Verifications extends Logger {
       this.verificationCache[topic][subject] = (async () => {
         const isValidAddress = this.options.executor.web3.utils.isAddress(subject);
         let verifications = [ ];
+        let subjectIdentity;
 
         // only load verifications for correct contract / accoun id's
         if (isValidAddress) {
           try {
-            const identity = await this.options.executor.executeContractCall(
-              this.contracts.storage, 'users', subject);
+            subjectIdentity = await this.getIdentityForAccount(subject, true);
 
-            if (identity !== '0x0000000000000000000000000000000000000000') {
+            if (subjectIdentity !== '0x0000000000000000000000000000000000000000') {
               verifications = await this.getVerifications(subject, topic, isIdentity);
             }
           } catch (ex) {
@@ -405,8 +429,18 @@ export class Verifications extends Logger {
             }
 
             // recover the original account id for the identity issuer
-            verification.subjectIdentity = await this.options.executor.executeContractCall(
-              this.contracts.storage, 'users', verification.subject);
+            verification.subjectIdentity = subjectIdentity;
+
+            if (this.subjectTypes[subject] === 'contract') {
+              verification.subjectType = 'contract';
+              verification.subjectOwner = await this.options.executor.executeContractCall(
+                await this.options.contractLoader.loadContract('BaseContract', subject),
+                'owner'
+              );
+            } else {
+              verification.subjectType = 'account';
+            }
+
             const dataHash = this.options.nameResolver
               .soliditySha3(verification.subjectIdentity, verification.topic, verification.data).replace('0x', '');
             verification.issuerAccount = this.options.executor.web3.eth.accounts
@@ -458,8 +492,12 @@ export class Verifications extends Logger {
                  (verification.issuerAccount !== this.ensRootOwner || verification.subject !== this.ensRootOwner)) {
                 verification.warnings = [ 'notEnsRootOwner' ];
               } else {
-                verification.status = 1;
-                verification.warnings = [ ];
+                const whitelistWarnings = [ 'expired', 'rejected', 'invalid', 'noIdentity' ];
+
+                // if it's a root verification, remove parent, selfIssued and issued warnings
+                verification.warnings = verification.warnings.filter(warning => 
+                  whitelistWarnings.indexOf('warning') !== -1
+                );
               }
             }
 
@@ -491,6 +529,16 @@ export class Verifications extends Logger {
               '0x0000000000000000000000000000000000000000',
           });
 
+          if (this.subjectTypes[subject] === 'contract') {
+            verifications[0].subjectType = 'contract';
+            verifications[0].subjectOwner = await this.options.executor.executeContractCall(
+              await this.options.contractLoader.loadContract('BaseContract', subject),
+              'owner'
+            );
+          } else {
+            verifications[0].subjectType = 'account';
+          }
+
           if (!verifications[0].subjectIdentity ||
               verifications[0].subjectIdentity === '0x0000000000000000000000000000000000000000') {
             verifications[0].warnings.unshift('noIdentity');
@@ -508,6 +556,17 @@ export class Verifications extends Logger {
 
   /**
    * Takes an array of verifications and combines all the states for one quick view.
+   * 
+   * {
+   *   verifications: verifications,
+   *   creationDate: null,
+   *   displayName: topic.split('/').pop() || 'evan',
+   *   loading: verifications.filter(verification => verification.loading).length > 0,
+   *   name: topic,
+   *   status: -1,
+   *   subjects: [ ],
+   *   warnings: [ ], // have a look at getNestedVerifications
+   * }
    *
    * @param      {string}      topic          topic of all the verifications
    * @param      {Array<any>}  verifications  all verifications of a specific topic
@@ -612,10 +671,7 @@ export class Verifications extends Logger {
       subject: string, verificationId: string, isIdentity?: boolean): Promise<boolean> {
     await this.ensureStorage();
 
-    let subjectIdentity = isIdentity ? subject : await this.getIdentityForAccount(subject);
-    if (subjectIdentity.options) {
-      subjectIdentity = subjectIdentity.options.address;
-    }
+    let subjectIdentity = isIdentity ? subject : await this.getIdentityForAccount(subject, true);
 
     const verification = await this.callOnIdentity(
       subject,
@@ -639,10 +695,11 @@ export class Verifications extends Logger {
   /**
    * gets the identity contract for a given account id or contract
    *
-   * @param      {string}        subject  the subject for the identity contract
+   * @param      {string}        subject      the subject for the identity contract
+   * @param      {boolean}       onlyAddress  should only the identity address
    * @return     {Promise<any>}  the identity contract instance
    */
-  public async getIdentityForAccount(subject: string): Promise<any> {
+  public async getIdentityForAccount(subject: string, onlyAddress?: boolean): Promise<any> {
     if (!this.cachedIdentities[subject]) {
       await this.ensureStorage();
 
@@ -658,27 +715,41 @@ export class Verifications extends Logger {
         this.cachedIdentities[subject] = this.options.contractLoader.loadContract('VerificationHolder', targetIdentity);
       } else {
         const description = await this.options.description.getDescription(subject, null);
-        if (description && description.public && description.public.identity) {
-          // we got an identity from description, now check, that contract id matches linked address
-          const linked = await this.options.executor.executeContractCall(
-            this.contracts.registry, 'getLink', description.public.identity);
-          if (linked !== subject) {
-            const msg = `subject description of "${subject}" points to identity ` +
-              `"${description.public.identity}", but this identity is linked to address "${linked}"`;
-            this.log(msg, 'error');
-            throw new Error(msg);
-          }
+
+        // if the subject has an description, it it's an contract, so we can set the subjectType
+        if (description && description.public) {
           this.subjectTypes[subject] = 'contract';
-          this.cachedIdentities[subject] = description.public.identity;
-        } else {
+
+          // if an identity is available, try to resolve it!
+          if (description.public.identity) {
+            // we got an identity from description, now check, that contract id matches linked address
+            const linked = await this.options.executor.executeContractCall(
+              this.contracts.registry, 'getLink', description.public.identity);
+            if (linked !== subject) {
+              const msg = `subject description of "${subject}" points to identity ` +
+                `"${description.public.identity}", but this identity is linked to address "${linked}"`;
+              this.log(msg, 'error');
+              throw new Error(msg);
+            }
+
+            this.cachedIdentities[subject] = description.public.identity;
+          }
+        }
+
+        // if no description could be loaded for a contract, throw it
+        if (!(description && description.public && description.public.identity)) {
           const msg = `could not find identity for "${subject}"`;
           this.log(msg, 'error');
           throw new Error(msg);
         }
-
       }
     }
-    return this.cachedIdentities[subject];
+
+    if (onlyAddress && this.cachedIdentities[subject].options) {
+      return this.cachedIdentities[subject].options.address;
+    } else {
+      return this.cachedIdentities[subject];
+    }
   }
 
   /**
@@ -738,6 +809,9 @@ export class Verifications extends Logger {
       verificationId,
       rejectReason,
     );
+
+    // clear cache for this verification
+    this.deleteFromVerificationCache(subject, '/');
   }
 
   /**
@@ -823,6 +897,9 @@ export class Verifications extends Logger {
         this.getFullDescriptionDomainWithHash(topic, descriptionDomain));
     }
 
+    // clear cache for this verification
+    this.deleteFromVerificationCache(subject, topic);
+
     // add the verification to the target identity
     return await this.executeOnIdentity(
       subject,
@@ -877,6 +954,9 @@ export class Verifications extends Logger {
     }
     const domainWithHash = this.getFullDescriptionDomainWithHash(topic, domain);
     await this.options.description.setDescription(domainWithHash, toSet, accountId);
+
+    // clear cache for verifications using this description ens address
+    this.deleteFromVerificationCache('*', topic);
   }
 
   /**
@@ -1013,13 +1093,20 @@ export class Verifications extends Logger {
     if (!this.contracts.storage) {
       // only load the storage once at a time (this function could be called quickly several times)
       if (!this.storageEnsuring) {
-        this.storageEnsuring = this.options.nameResolver
-          .getAddress(`identities.${ this.options.nameResolver.config.labels.ensRoot }`);
+        this.storageEnsuring = Promise.all([
+          this.options.nameResolver 
+            .getAddress(`identities.${ this.options.nameResolver.config.labels.ensRoot }`),
+          this.options.nameResolver 
+            .getAddress(`contractidentities.${ this.options.nameResolver.config.labels.ensRoot }`),
+        ]);
       }
 
-      const storageAddress = await this.storageEnsuring;
+      // await storage address
+      const [ identityStorage, contractIdentityStorage ]= await this.storageEnsuring;
       this.contracts.storage = this.options.contractLoader.loadContract('V00_UserRegistry',
-        storageAddress);
+        identityStorage);
+      this.contracts.registry = this.options.contractLoader.loadContract('VerificationsRegistry',
+        contractIdentityStorage);
     }
   }
 
