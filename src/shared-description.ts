@@ -94,7 +94,10 @@ export class Description extends Dbcp.Description {
     } else {
       const content: Envelope = Object.assign({}, envelope);
       // add dbcp version
-      content.public.dbcpVersion = content.public.dbcpVersion || this.dbcpVersion;
+      if (!content.public.dbcpVersion) {
+        this.log('dbcpVersion not set, using fallback of version 1', 'warning');
+        content.public.dbcpVersion = content.public.dbcpVersion || 1;
+      }
       const validation = this.validateDescription(content);
       if (validation !== true) {
         throw new Error(`description invalid: ${JSON.stringify(validation)}`);

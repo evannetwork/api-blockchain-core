@@ -253,7 +253,7 @@ export class DataContract extends BaseContract {
     if (envelope.cryptoInfo) {
       const cryptor = this.options.cryptoProvider.getCryptorByCryptoInfo(envelope.cryptoInfo);
       const contentKey = await this.options.sharing.getKey(dataContract.options.address, accountId, propertyName, envelope.cryptoInfo.block);
-      if (!contentKey) {
+      if (!contentKey && envelope.cryptoInfo.algorithm !== 'unencrypted') {
         throw new Error(`no content key found for contract "${dataContract.options.address}" and account "${accountId}"`);
       }
       const decryptedBuffer = await cryptor.decrypt(
