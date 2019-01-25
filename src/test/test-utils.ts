@@ -255,7 +255,7 @@ export class TestUtils {
       config: {},
       web3,
     });
-    const executor = new ExecutorWallet({ config, signer, wallet, web3, });
+    const executor = new ExecutorWallet({ config, contractLoader, signer, wallet, web3, });
     await executor.init({});
 
     return executor;

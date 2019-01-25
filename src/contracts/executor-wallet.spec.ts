@@ -164,5 +164,22 @@ describe('Signer Wallet', function() {
       await executorWallet.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[0], autoGas: 1.1, }, accounts[1]);
       expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[1]);
     });
+
+    it('can create new contracts', async () => {
+      // create new contract
+      const { result: testContractAddress } = await executorWallet.createContract(
+        'Owned', [], { from: accounts[0], autoGas: 1.1, });
+      expect(testContractAddress).to.match(/0x[0-9a-f]{40}/ig);
+
+      // current owner is wallet
+      const testContract = contractLoader.loadContract('Owned', testContractAddress);
+      expect(await executor.executeContractCall(testContract, 'owner'))
+        .to.eq(wallet.walletContract.options.address);
+
+      // transfer owner
+      await executorWallet.executeContractTransaction(
+        testContract, 'transferOwnership', { from: accounts[0], autoGas: 1.1, }, accounts[1]);
+      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[1]);
+    });
   });
 });
