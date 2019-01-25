@@ -2,8 +2,12 @@
 
 ## Next Version
 ### Features
+- add support for contract creation to `executor-wallet`
+- add support for handling multiple confirmations to `executor-wallet` and `wallet`
+
 ### Fixes
 ### Deprecations
+
 
 ## Version 1.7.1
 ### Fixes
