@@ -77,16 +77,6 @@ before_install:
   - docker run -d -p 127.0.0.1:8546:8546 -p 127.0.0.1:8545:8545 -u root --entrypoint /home/parity/bin/parity evannetwork/parity_testchain --chain /root/parity/spec.json --jsonrpc-interface all --unsafe-expose
 install:
   - npm install
-  - rm -rf node_modules/@evan.network/dbcp &&\
-    git clone https://github.com/evannetwork/dbcp.git ../dbcp &&\
-    cd ../dbcp &&\
-    git checkout develop &&\
-    npm i &&\
-    npm run build &&\
-    cd ../api-blockchain-core &&\
-    mv ../dbcp ./node_modules/@evan.network &&\
-    rm node_modules/web3-eth-abi/types/*.d.ts &&\
-    cd node_modules/web3-utils && npm i @babel/runtime && cd ../.. &&\
-    cd node_modules/web3-eth-abi && npm i @babel/runtime && cd ../..
+  - rm -rf node_modules/@evan.network/dbcp && git clone https://github.com/evannetwork/dbcp.git ../dbcp && cd ../dbcp && git checkout develop && npm i && npm run build && cd ../api-blockchain-core && mv ../dbcp ./node_modules/@evan.network && rm node_modules/web3-eth-abi/types/*.d.ts && cd node_modules/web3-utils && npm i @babel/runtime && cd ../.. && cd node_modules/web3-eth-abi && npm i @babel/runtime && cd ../..
   - cd node_modules/@evan.network && rm -rf smart-contracts-core && git clone https://github.com/evannetwork/smart-contracts-core.git && cd smart-contracts-core && git checkout develop && npm i && cd ../../../
   - rm node_modules/web3/*.d.ts
