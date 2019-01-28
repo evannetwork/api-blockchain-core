@@ -11,6 +11,7 @@ matrix:
       - TESTSPECS='src/encryption/*.spec.ts src/dfs/*.spec.ts'
       - ENS_ADDRESS='0x9f8063ac44D23C99E943eA3DE3E1bb6Ab7678df0'
       - ENS_RESOLVER='0xc6b9F181BFa9eFA7679a3B3a786aB582AeE79dad'
+      - CHAIN_ENDPOINT='ws://localhost:8546'
     script:
       - npm run testunit $TESTSPECS
 
@@ -21,6 +22,7 @@ matrix:
       - TESTSPECS='src/claims/*.spec.ts src/profile/*.spec.ts src/*.spec.ts'
       - ENS_ADDRESS='0x9f8063ac44D23C99E943eA3DE3E1bb6Ab7678df0'
       - ENS_RESOLVER='0xc6b9F181BFa9eFA7679a3B3a786aB582AeE79dad'
+      - CHAIN_ENDPOINT='ws://localhost:8546'
     script:
       - npm run testunit $TESTSPECS -- --exclude src/name-resolver.spec.ts
 
@@ -31,6 +33,7 @@ matrix:
       - TESTSPECS="src/contracts/data-contract/*.spec.ts"
       - ENS_ADDRESS='0x9f8063ac44D23C99E943eA3DE3E1bb6Ab7678df0'
       - ENS_RESOLVER='0xc6b9F181BFa9eFA7679a3B3a786aB582AeE79dad'
+      - CHAIN_ENDPOINT='ws://localhost:8546'
     script:
       - npm run testunit $TESTSPECS -- --grep 'when working encrypted DFS files'
 
@@ -41,6 +44,7 @@ matrix:
       - TESTSPECS="src/contracts/data-contract/*.spec.ts"
       - ENS_ADDRESS='0x9f8063ac44D23C99E943eA3DE3E1bb6Ab7678df0'
       - ENS_RESOLVER='0xc6b9F181BFa9eFA7679a3B3a786aB582AeE79dad'
+      - CHAIN_ENDPOINT='ws://localhost:8546'
     script:
       - npm run testunit $TESTSPECS -- --grep 'when working encrypted DFS files' --invert
 
@@ -51,6 +55,7 @@ matrix:
       - TESTSPECS='src/contracts/*.spec.ts src/contracts/base-contract/*.spec.ts src/contracts/business-center/*.spec.ts src/contracts/service-contract/*.spec.ts'
       - ENS_ADDRESS='0x9f8063ac44D23C99E943eA3DE3E1bb6Ab7678df0'
       - ENS_RESOLVER='0xc6b9F181BFa9eFA7679a3B3a786aB582AeE79dad'
+      - CHAIN_ENDPOINT='ws://localhost:8546'
     script:
       - npm run testunit $TESTSPECS
 
