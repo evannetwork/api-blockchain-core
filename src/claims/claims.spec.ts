@@ -98,10 +98,12 @@ describe('Claims handler', function() {
         'claims/ClaimsRegistryLibrary.sol:ClaimsRegistryLibrary': claimsRegistryLib.options.address
       },
     );
-    (<any>claims.options.executor.signer).contractLoader.contracts['ClaimHolderLibrary'].bytecode = (<any>claims.options.executor.signer).contractLoader.contracts['ClaimHolderLibrary'].bytecode.replace(/3Cf1679B2BA2a70693F55289bf6c81a0097497a6/g, keyHolderLib.options.address.slice(2));
-    (<any>claims.options.executor.signer).contractLoader.contracts['ClaimHolder'].bytecode = (<any>claims.options.executor.signer).contractLoader.contracts['ClaimHolder'].bytecode.replace(/3Cf1679B2BA2a70693F55289bf6c81a0097497a6/g, keyHolderLib.options.address.slice(2));
-    (<any>claims.options.executor.signer).contractLoader.contracts['ClaimHolder'].bytecode = (<any>claims.options.executor.signer).contractLoader.contracts['ClaimHolder'].bytecode.replace(/674a12Acae46c1E29e5EC124AB698081775C5803/g, claimHolderLib.options.address.slice(2));
-    (<any>claims.options.executor.signer).contractLoader.contracts['ClaimsRegistry'].bytecode = (<any>claims.options.executor.signer).contractLoader.contracts['ClaimsRegistry'].bytecode.replace(/d7d62072c409A29a187F81dDd8aCd50bFc070546/g, claimsRegistryLib.options.address.slice(2));
+
+    const contracts = (<any>claims.options.executor.signer).contractLoader.contracts;
+    contracts['ClaimHolderLibrary'].bytecode = contracts['ClaimHolderLibrary'].bytecode.replace(/53943BD308f3CB0E79Cb4811288dB1AB2AaFa6b2/g, keyHolderLib.options.address.slice(2));
+    contracts['ClaimHolder'].bytecode = contracts['ClaimHolder'].bytecode.replace(/53943BD308f3CB0E79Cb4811288dB1AB2AaFa6b2/g, keyHolderLib.options.address.slice(2));
+    contracts['ClaimHolder'].bytecode = contracts['ClaimHolder'].bytecode.replace(/FDb2b28f481D9FEbB55Cea18131C8d96b18D16bB/g, claimHolderLib.options.address.slice(2));
+    contracts['ClaimsRegistry'].bytecode = contracts['ClaimsRegistry'].bytecode.replace(/b1621be2ef1F2dC5153B2487600CcC1E4Fa7ee27/g, claimsRegistryLib.options.address.slice(2));
 
     const storage = await executor.createContract(
       'V00_UserRegistry', [], { from: accounts[0], gas: 3000000, });
