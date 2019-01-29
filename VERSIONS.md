@@ -4,6 +4,7 @@
 ### Features
 - add support for contract creation to `executor-wallet`
 - add support for handling multiple confirmations to `executor-wallet` and `wallet`
+- use root level wallet factory (`wallet.factory.evan`) instead of a business center scoped wallet factory
 
 ### Fixes
 ### Deprecations

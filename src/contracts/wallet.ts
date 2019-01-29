@@ -123,10 +123,11 @@ export class Wallet extends Logger {
   public async create(accountId: string, manager: string, owners: string[], confirmations = 1):
      Promise<void> {
     // get factory
-    const factoryDomain = this.options.nameResolver.getDomainName(
-      this.options.nameResolver.config.domains.factory,
+    const factoryDomain = [
       this.options.nameResolver.config.labels.wallet,
-    );
+      this.options.nameResolver.config.labels.factory,
+      this.options.nameResolver.config.labels.ensRoot,
+    ].join('.');
     const factoryAddress = await this.options.nameResolver.getAddress(factoryDomain);
     if (!factoryAddress) {
       throw new Error(`factory '${factoryDomain}' for creating wallets not found in ` +
