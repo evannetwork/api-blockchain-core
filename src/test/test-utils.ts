@@ -70,7 +70,7 @@ import { Wallet } from '../contracts/wallet';
 export const publicMailBoxExchange = 'mailboxKeyExchange';
 export const sampleContext = 'context sample';
 
-const web3Provider = <any>process.env.CHAIN_ENDPOINT || 'wss://testcore.evan.net/ws';
+const web3Provider = <any>process.env.CHAIN_ENDPOINT || 'wss://testcore.evan.network/ws';
 const helperWeb3 = new Web3(null);
 const sampleKeys = {};
 // dataKeys
@@ -256,7 +256,7 @@ export class TestUtils {
       config: {},
       web3,
     });
-    const executor = new ExecutorWallet({ config, signer, wallet, web3, });
+    const executor = new ExecutorWallet({ config, contractLoader, signer, wallet, web3, });
     await executor.init({});
 
     return executor;
@@ -291,7 +291,7 @@ export class TestUtils {
     const ipfs = new Ipfs({
       dfsConfig: {host: 'ipfs.evan.network', port: '443', protocol: 'https'},
       accountId: accounts[0],
-      privateKey: '0x' + pk,
+      privateKey: `0x${pk}`,
       web3: this.getWeb3()
     });
     return ipfs;

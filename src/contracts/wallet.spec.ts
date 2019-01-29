@@ -131,4 +131,69 @@ describe('Wallet handler', function() {
       await expect(promise).to.be.rejected;
     });
   });
+
+  describe('when submitting transactions on wallets for multiple accounts', () => {
+    async function createContract() {
+      const contract = await executor.createContract(
+        'Owned', [], { from: accounts[0], gas: 200000, });
+      await executor.executeContractTransaction(
+        contract,
+        'transferOwnership',
+        { from: accounts[0], },
+        wallet.walletContract.options.address,
+      );
+      return contract;
+    }
+
+    before(async () => {
+      // setup wallet that needs 2 confirmations
+      await wallet.create(accounts[0], accounts[0], [accounts[0], accounts[1]], 2);
+    });
+
+    it('allows any member to submit transactions', async () => {
+      const testContract = await createContract();
+      // test with account1
+      await expect(wallet.submitTransaction(
+        testContract, 'transferOwnership', { from: accounts[0], }, accounts[1])).not.to.be.rejected;
+      // test with account2
+      await expect(wallet.submitTransaction(
+        testContract, 'transferOwnership', { from: accounts[1], }, accounts[0])).not.to.be.rejected;
+    });
+
+    it('returns txinfo upon submitting a tx and missing confirmations', async () => {
+      const testContract = await createContract();
+      const txInfo = await wallet.submitTransaction(
+        testContract, 'transferOwnership', { from: accounts[0], }, accounts[1]);
+      expect(txInfo).to.be.ok;
+      expect(txInfo.result).to.be.ok;
+      expect(txInfo.result.status).to.eq('pending');
+      expect(txInfo.result.transactionId).to.match(/\d+/);
+
+      // still owned by wallet
+      expect(await executor.executeContractCall(testContract, 'owner'))
+        .to.eq(wallet.walletContract.options.address);
+    });
+
+    it('executes tx when submitting the final confirmation', async () => {
+      const testContract = await createContract();
+      const txInfo = await wallet.submitTransaction(
+        testContract, 'transferOwnership', { from: accounts[0], }, accounts[1]);
+
+      // still owned by wallet
+      expect(await executor.executeContractCall(testContract, 'owner'))
+        .to.eq(wallet.walletContract.options.address);
+
+      await wallet.confirmTransaction(accounts[1], txInfo.result.transactionId);
+
+      // ownership has changed
+      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[1]);
+    });
+
+    it.skip('returns new contract ids as well when submitting the final confirmation', async () => {
+      const testContract = await createContract();
+      await expect(wallet.submitTransaction(
+        testContract, 'transferOwnership', { from: accounts[0], }, accounts[1])).not.to.be.rejected;
+      throw new Error('test not finalized');
+    });
+  });
 });
