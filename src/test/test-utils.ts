@@ -422,7 +422,9 @@ export class TestUtils {
 
   static getWeb3(provider = web3Provider) {
     // connect to web3
-    return new Web3(new Web3.providers.WebsocketProvider(provider));
+    const wsp = new Web3.providers.WebsocketProvider(
+      provider, { clientConfig: { keepalive: true, keepaliveInterval: 5000 } });
+    return new Web3(wsp);
   }
 
   static async nextBlock(executor: Executor, accoutId: string): Promise<void> {

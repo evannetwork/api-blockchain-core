@@ -8,6 +8,8 @@
 - add support for sending funds with transactions in `wallet`
 
 ### Fixes
+- add `keepaliveInterval` to `web3` in `test-utils`
+
 ### Deprecations
 
 
