@@ -115,9 +115,11 @@ export class Wallet extends Logger {
   /**
    * create a new wallet contract and uses it as its wallet contract
    *
-   * @param      {string}         accountId  account id, that creates the wallet
-   * @param      {string}         manager    account, that will be able to manage the new wallet
-   * @param      {string[]}       owners     wallet owners
+   * @param      {string}         accountId      account id, that creates the wallet
+   * @param      {string}         manager        account, that will be able to manage the new wallet
+   * @param      {string[]}       owners         wallet owners
+   * @param      {number}         confirmations  number of confirmations required to complete a
+   *                                             transaction, defaults to 1
    * @return     {Promise<void>}  resolved when done
    */
   public async create(accountId: string, manager: string, owners: string[], confirmations = 1):
@@ -225,19 +227,15 @@ export class Wallet extends Logger {
   }
 
   private encodeFunctionParams(functionName: string, contractInstance: any, params: any[]) {
-    if (params.length) {
-      return contractInstance.options.jsonInterface
-        .filter(json => json.name === functionName && json.inputs.length === params.length)
-        .map(json => [
-          json.inputs.map(input => input.type),
-          this.options.executor.web3.eth.abi.encodeFunctionSignature(json),
-        ])
-        .map(([types, signature]) =>
-          `${signature}${coder.encodeParameters(types, params).replace('0x', '')}`)[0]
-      ;
-    } else {
-      return '0x';
-    }
+    return contractInstance.options.jsonInterface
+      .filter(json => json.name === functionName && json.inputs.length === params.length)
+      .map(json => [
+        json.inputs.map(input => input.type),
+        this.options.executor.web3.eth.abi.encodeFunctionSignature(json),
+      ])
+      .map(([types, signature]) =>
+        `${signature}${coder.encodeParameters(types, params).replace('0x', '')}`)[0]
+    ;
   }
 
   private ensureContract(): any {
@@ -336,7 +334,13 @@ export class Wallet extends Logger {
               resolveIfPossible();
             }
           });
-
+          let value = 0;
+          if (options.value) {
+            this.log('wallet transaction has "value" set, removing this from tx options ' +
+              'and passing it as argument', 'debug');
+            value = options.value;
+            delete options.value;
+          }
           if (functionName === 'submitTransaction') {
             await this.options.executor.executeContractTransaction(
               walletInstance,
@@ -344,7 +348,7 @@ export class Wallet extends Logger {
               options,
               (target && target.options) ?
                 target.options.address : '0x0000000000000000000000000000000000000000',
-              inputOptions.value || 0,
+              value,
               ...functionArguments,
             );
           } else if (functionName === 'confirmTransaction') {

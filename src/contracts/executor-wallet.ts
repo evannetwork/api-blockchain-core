@@ -128,8 +128,9 @@ export class ExecutorWallet extends Executor {
     // Math.min(gasEstimated * autoGas, gasLimitCurrentBlock  * 255/256)
     this.log(`starting contract transaction "${functionName}"`, 'debug');
     if (inputOptions.value && parseInt(inputOptions.value, 10)) {
-      throw new Error('sending funds is not supported by the wallet based executor; ' +
-        `value has been set to ${inputOptions.value} for tx "${functionName}"`);
+      if (typeof inputOptions.value !== 'string') {
+        inputOptions.value = `0x${inputOptions.value.toString(16)}`
+      }
     }
     if (!this.signer) {
       throw new Error('signer is undefined');
@@ -315,10 +316,11 @@ export class ExecutorWallet extends Executor {
           }
         };
 
-        executeCallback = async (err, { receipt, result, status }) => {
+        executeCallback = async (err, packedResult) => {
           if (err) {
             return reject(`${functionName} failed: ${err}`);
           }
+          const { receipt } = packedResult;
           try {
             // keep transaction hash for checking agains it in event
             transactionHash = receipt && receipt.transactionHash ? receipt.transactionHash : '';
@@ -450,9 +452,14 @@ export class ExecutorWallet extends Executor {
     }
     // build bytecode and arguments for constructor
     const input = `0x${compiledContract.bytecode}` +
-      this.encodeConstructorParams(compiledContract.abi, functionArguments);
-    // submit tx; ContractCreated event is handled in submitRawTransaction, when target is null
-    return await this.options.wallet.submitRawTransaction(null, input, inputOptions);
+      this.encodeConstructorParams(JSON.parse(compiledContract.interface), functionArguments);
+    // submit tx; ContractCreated event is handled in submitRawTransaction, if target is null
+    const txInfo = await this.options.wallet.submitRawTransaction(null, input, inputOptions);
+    if (!txInfo.result) {
+      throw new Error(`contract creation failed; txInfo: ${txInfo}`)
+    } else {
+      return this.options.contractLoader.loadContract(contractName, txInfo.result);
+    }
   }
 
   /**

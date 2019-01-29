@@ -188,12 +188,67 @@ describe('Wallet handler', function() {
       // ownership has changed
       expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[1]);
     });
+  });
 
-    it.skip('returns new contract ids as well when submitting the final confirmation', async () => {
-      const testContract = await createContract();
-      await expect(wallet.submitTransaction(
-        testContract, 'transferOwnership', { from: accounts[0], }, accounts[1])).not.to.be.rejected;
-      throw new Error('test not finalized');
+  describe('when submitting funds alongside transactions', () => {
+    async function createContract(accountId) {
+      const contract = await executor.createContract(
+        'TestContract', [], { from: accounts[0], gas: 1000000, });
+      await executor.executeContractTransaction(
+        contract,
+        'transferOwnership',
+        { from: accounts[0], },
+        wallet.walletContract.options.address,
+      );
+      return contract;
+    }
+
+    it('allows to transfer funds to wallet', async () => {
+      await wallet.create(accounts[0], accounts[0], [accounts[0]]);
+      const walletAddress = wallet.walletContract.options.address;
+      const valueToSend = Math.floor(Math.random() * 10000);
+      const executeSendP = executor.executeSend(
+        { from: accounts[0], to: walletAddress, value: valueToSend });
+      await expect(executeSendP).not.to.be.rejected;
+      expect(await web3.eth.getBalance(walletAddress)).to.eq(valueToSend.toString());
+    });
+
+    it('intantly submits funds to target if instantly submitting transaction', async () => {
+      await wallet.create(accounts[0], accounts[0], [accounts[0]]);
+      const walletAddress = wallet.walletContract.options.address;
+
+      const valueToSend = Math.floor(Math.random() * 10000);
+      await executor.executeSend({ from: accounts[0], to: walletAddress, value: valueToSend });
+      expect(await web3.eth.getBalance(walletAddress)).to.eq(valueToSend.toString());
+
+      const testContract = await executor.createContract(
+        'TestContract', ['test'], { from: accounts[0], gas: 1000000, });
+      expect(await web3.eth.getBalance(testContract.options.address)).to.eq('0');
+
+      const txInfo = await wallet.submitTransaction(testContract, 'chargeFunds', { from: accounts[0], value: valueToSend, });
+      expect(await web3.eth.getBalance(testContract.options.address)).to.eq(valueToSend.toString());
+      expect(await web3.eth.getBalance(walletAddress)).to.eq('0');
+    });
+
+    it('waits for final confirmation to transfer funds, when multisigning transactions', async () => {
+      await wallet.create(accounts[0], accounts[0], [accounts[0], accounts[1]], 2);
+      const walletAddress = wallet.walletContract.options.address;
+
+      const valueToSend = Math.floor(Math.random() * 10000);
+      await executor.executeSend({ from: accounts[0], to: walletAddress, value: valueToSend });
+      expect(await web3.eth.getBalance(walletAddress)).to.eq(valueToSend.toString());
+
+      const testContract = await executor.createContract(
+        'TestContract', ['test'], { from: accounts[0], gas: 1000000, });
+      expect(await web3.eth.getBalance(testContract.options.address)).to.eq('0');
+
+      const txInfo = await wallet.submitTransaction(testContract, 'chargeFunds', { from: accounts[0], value: valueToSend, });
+      expect(await web3.eth.getBalance(testContract.options.address)).to.eq('0');
+      expect(await web3.eth.getBalance(walletAddress)).to.eq(valueToSend.toString());
+
+      await wallet.confirmTransaction(accounts[1], txInfo.result.transactionId);
+      expect(await web3.eth.getBalance(testContract.options.address)).to.eq(valueToSend.toString());
+      expect(await web3.eth.getBalance(walletAddress)).to.eq('0');
     });
   });
 });
