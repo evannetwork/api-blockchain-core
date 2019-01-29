@@ -70,7 +70,7 @@ import { Wallet } from '../contracts/wallet';
 export const publicMailBoxExchange = 'mailboxKeyExchange';
 export const sampleContext = 'context sample';
 
-const web3Provider = 'wss://testcore.evan.network/ws';
+const web3Provider = <any>process.env.CHAIN_ENDPOINT || 'wss://testcore.evan.net/ws';
 const helperWeb3 = new Web3(null);
 const sampleKeys = {};
 // dataKeys
@@ -291,7 +291,7 @@ export class TestUtils {
     const ipfs = new Ipfs({
       dfsConfig: {host: 'ipfs.evan.network', port: '443', protocol: 'https'},
       accountId: accounts[0],
-      privateKey: pk,
+      privateKey: '0x' + pk,
       web3: this.getWeb3()
     });
     return ipfs;

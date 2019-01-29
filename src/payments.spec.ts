@@ -33,11 +33,13 @@ import { KeyProvider } from '@evan.network/dbcp';
 import { accounts } from './test/accounts';
 import { config } from './config';
 import { KeyExchange } from './keyExchange';
+import { Ipfs }  from './dfs/ipfs';
 import { Ipld } from './dfs/ipld';
 import { InvitationMail, Onboarding } from './onboarding';
 import { Mailbox } from './mailbox';
 import { Profile } from './profile/profile';
 import { TestUtils } from './test/test-utils';
+
 
 import * as BigNumber from 'bignumber.js';
 
@@ -50,11 +52,13 @@ describe('Payment Channels', function() {
   let web3;
   let initialChannel;
   let proof;
+  let accountStore;
   before(async () => {
     web3 = TestUtils.getWeb3();
     executor = await TestUtils.getExecutor(web3);
     payments1 = await TestUtils.getPayments(web3, accounts[0]);
     payments2 = await TestUtils.getPayments(web3, accounts[1]);
+    accountStore = await TestUtils.getAccountStore({});
   });
 
 
@@ -66,7 +70,6 @@ describe('Payment Channels', function() {
     );
     payments1.setChannelManager(channelManager.options.address);
     payments2.setChannelManager(channelManager.options.address);
-    console.dir(channelManager.options.address);
   });
 
   it('should open a new channel to a other account', async () => {
@@ -87,7 +90,7 @@ describe('Payment Channels', function() {
   });
 
   it('should top up a channel with new eves', async () => {
-    const closingSig = await payments1.topUpChannel(10);
+    await payments1.topUpChannel(10);
     const info = await payments1.getChannelInfo();
     expect(info.deposit.eq(new BigNumber(15))).to.be.true;
   });

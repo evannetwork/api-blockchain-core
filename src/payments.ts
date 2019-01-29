@@ -182,7 +182,7 @@ export class Payments extends Logger {
         { closing_sig: closingSig },
       ));
     }
-    console.log(`Closing channel. Cooperative = ${closingSig}`);
+    this.log(`Closing channel. Cooperative = ${closingSig}`, 'debug');
 
 
     let proof: MicroProof;
@@ -370,7 +370,7 @@ export class Payments extends Logger {
       }
     }
     const recovered = this.options.web3.utils.toChecksumAddress(recoverTypedSignatureLegacy({ data: params, sig }));
-    console.log('signTypedData =', sig, recovered);
+    this.log(`signTypedData = ${sig} , ${recovered}`, 'debug');
     if (recovered !== account) {
       throw new Error(`Invalid recovered signature: ${recovered} != ${account}. Do your provider support eth_signTypedData?`);
     }
@@ -497,7 +497,7 @@ export class Payments extends Logger {
         openChannel = channel;
         break;
       } catch (err) {
-        console.log('Invalid channel', channel, err);
+        this.log(`Invalid channel ${channel}, ${err}`, 'error');
         continue;
       }
     }
@@ -520,13 +520,13 @@ export class Payments extends Logger {
    */
   async openChannel(account: string, receiver: string, deposit: BigNumber): Promise<MicroChannel> {
     if (this.isChannelValid()) {
-      console.warn('Already valid channel will be forgotten:', this.channel);
+      this.log(`Already valid channel will be forgotten: ${this.channel}`, 'warning');
     }
 
     // first, check if there's enough balance
 
     const balance = await this.options.web3.eth.getBalance(account);
-    if (!(balance >= deposit)) {
+    if (new BigNumber(balance).lt(new BigNumber(deposit))) {
       throw new Error(`Not enough tokens.
         Token balance = ${balance}, required = ${deposit}`);
     }
@@ -594,6 +594,36 @@ export class Payments extends Logger {
     }
   }
 
+
+  /**
+   * If channel was not cooperatively closed, and after settlement period,
+   * this function settles the channel, distributing the tokens to sender and
+   * receiver.
+   *
+   * @returns  Promise resolved when done
+   */
+  async settleChannel(): Promise<void> {
+    if (!this.isChannelValid()) {
+      throw new Error('No valid channelInfo');
+    }
+    const [ info, currentBlock ] = await Promise.all([
+      this.getChannelInfo(),
+      await this.options.web3.eth.getBlockNumber()
+    ]);
+    if (info.state !== 'closed') {
+      throw new Error(`Tried settling opened or settled channel: ${info.state}`);
+    } else if (this.challenge && currentBlock < info.block + this.challenge) {
+      throw new Error(`Tried settling inside challenge period: ${currentBlock} < ${info.block} + ${this.challenge}`);
+    }
+    await this.options.executor.executeContractTransaction(
+      this.channelManager,
+      'settle',
+      { from: this.channel.account },
+      this.channel.receiver,
+      this.channel.block,
+    );
+  }
+
   /**
    * Ask user for signing a channel balance
    *
@@ -613,7 +643,7 @@ export class Payments extends Logger {
     if (!this.isChannelValid()) {
       throw new Error('No valid channelInfo');
     }
-    console.log('signNewProof', proof);
+    this.log(`signNewProof ${proof}`, 'debug');
     if (!proof) {
       proof = this.channel.proof;
     }
@@ -630,21 +660,21 @@ export class Payments extends Logger {
         { data: params }
       );
 
-      if (result.error)
+      if (result.error) {
         throw result.error;
+      }
       sig = result;
     } catch (err) {
       if (err.message && err.message.includes('User denied')) {
         throw err;
       }
-      console.log('Error on signTypedData', err);
+      this.log(`Error on signTypedData ${err}`, 'error');
       const hash = typedSignatureHash(params);
       // ask for signing of the hash
       sig = await this.signMessage(hash);
     }
-    //debug
     const recovered = this.options.web3.utils.toChecksumAddress(recoverTypedSignatureLegacy({ data: params, sig }));
-    console.log('signTypedData =', sig, recovered);
+    this.log(`signTypedData = ${sig}, ${recovered}`, 'debug');
     if (recovered !== this.channel.account) {
       throw new Error(`Invalid recovered signature: ${recovered} != ${this.channel.account}. Do your provider support eth_signTypedData?`);
     }
@@ -679,11 +709,11 @@ export class Payments extends Logger {
       throw new Error('No valid channelInfo');
     }
     const hex = msg.startsWith('0x') ? msg : this.options.web3.utils.toHex(msg);
-    console.log(`Signing "${msg}" => ${hex}, account: ${this.channel.account}`);
+    this.log(`Signing "${msg}" => ${hex}, account: ${this.channel.account}`, 'debug');
     const privKey = await this.options.accountStore.getPrivateKey(this.channel.account)
     let sig = await this.options.web3.eth.accounts.sign(
       hex,
-      Buffer.from(privKey, 'hex')
+      Buffer.from('0x' + privKey, 'hex')
     );
     return sig;
   }
