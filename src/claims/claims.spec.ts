@@ -40,6 +40,10 @@ import { TestUtils } from '../test/test-utils';
 
 const linker = require('solc/linker');
 
+function timeout(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 use(chaiAsPromised);
 
 describe('Claims handler', function() {
@@ -129,7 +133,9 @@ describe('Claims handler', function() {
   describe('when using external account based identities', () => {
     it('can add a claim', async () => {
       const oldLength = (await claims.getClaims(accounts[1], '/company')).length;
+      await timeout(5000);
       const claimId = await claims.setClaim(accounts[0], accounts[1], '/company');
+      await timeout(5000);
       expect(claimId).to.be.ok;
       const claimsForAccount = await claims.getClaims(accounts[1], '/company');
       expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
@@ -147,7 +153,9 @@ describe('Claims handler', function() {
     it('can add a claim with specific expirationDate', async () => {
       const oldLength = (await claims.getClaims(accounts[1], '/company')).length;
       const now = Math.floor(new Date().getTime() / 1000);
+      await timeout(5000);
       await claims.setClaim(accounts[0], accounts[1], '/company', now);
+      await timeout(5000);
       const claimsForAccount = await claims.getClaims(accounts[1], '/company');
       expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
       expect(claimsForAccount[oldLength]).to.have.property('expirationDate', now.toString());
@@ -221,16 +229,18 @@ describe('Claims handler', function() {
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
+      await timeout(5000);
       const claimId = await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo6');
+      await timeout(5000);
       await claims.deleteClaim(accounts[1], accounts[1], claimId);
       const claimsForAccount = await claims.getClaims(accounts[1], '/company/b-s-s/employee/swo6');
       expect(claimsForAccount).to.have.lengthOf(0);
     });
 
     it('can track the creation date', async() => {
-      const before = Date.now() / 1000;
+      const before = Math.floor(Date.now() / 1000);
       await claims.setClaim(accounts[0], accounts[1], '/company');
-      const after = Date.now() / 1000;
+      const after = Math.floor(Date.now() / 1000);
       const claimsForAccount = await claims.getClaims(accounts[1], '/company');
       const last = claimsForAccount.length - 1;
       expect(claimsForAccount[last]).to.have.property('status', ClaimsStatus.Issued);
@@ -287,8 +297,11 @@ describe('Claims handler', function() {
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
+      await timeout(5000);
       const claimId = await claims.setClaim(accounts[0], accounts[1], '/company/b-s-s/employee/swo4');
+      await timeout(5000);
       await claims.rejectClaim(accounts[1], accounts[1], claimId, { reason: 'denied' });
+      await timeout(5000);
       const claimsForAccount = await claims.getClaims(accounts[1], '/company/b-s-s/employee/swo4');
       expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
       expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Rejected);
@@ -365,6 +378,7 @@ describe('Claims handler', function() {
     it('can add a claim with specific data', async () => {
       const oldLength = (await claims.getClaims(contractId, '/company')).length;
       await claims.setClaim(accounts[0], contractId, '/company', null, {foo: 'bar'});
+      await timeout(2000);
       const claimsForAccount = await claims.getClaims(contractId, '/company');
       expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
       expect(claimsForAccount[oldLength]).to.have.property('uri', 'https://ipfs.evan.network/ipfs/Qmbjig3cZbUUufWqCEFzyCppqdnmQj3RoDjJWomnqYGy1f');
@@ -380,6 +394,7 @@ describe('Claims handler', function() {
     });
 
     it('can add a claim and validate the integrity', async () => {
+      await timeout(2000);
       const oldLength = (await claims.getClaims(contractId, '/company')).length;
       await claims.setClaim(accounts[0], contractId, '/company');
       const claimsForAccount = await claims.getClaims(contractId, '/company');
@@ -442,9 +457,9 @@ describe('Claims handler', function() {
     });
 
     it('can track the creation date', async() => {
-      const before = Date.now() / 1000;
+      const before = Math.floor(Date.now() / 1000);
       await claims.setClaim(accounts[0], contractId, '/company');
-      const after = Date.now() / 1000;
+      const after = Math.floor(Date.now() / 1000);
       const claimsForAccount = await claims.getClaims(contractId, '/company');
       const last = claimsForAccount.length - 1;
       expect(claimsForAccount[last]).to.have.property('status', ClaimsStatus.Issued);
@@ -501,8 +516,11 @@ describe('Claims handler', function() {
       await claims.setClaim(accounts[0], accounts[0], '/company');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s');
       await claims.setClaim(accounts[0], accounts[0], '/company/b-s-s/employee');
+      await timeout(5000);
       const claimId = await claims.setClaim(accounts[0], contractId, '/company/b-s-s/employee/swo4');
+      await timeout(5000);
       await claims.rejectClaim(accounts[0], contractId, claimId, { reason: 'denied' });
+      await timeout(5000);
       const claimsForAccount = await claims.getClaims(contractId, '/company/b-s-s/employee/swo4');
       expect(claimsForAccount).to.have.lengthOf(oldLength + 1);
       expect(claimsForAccount[oldLength]).to.have.property('status', ClaimsStatus.Rejected);

@@ -165,7 +165,7 @@ describe('Signer Wallet', function() {
       expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[1]);
     });
 
-    it('can create new contracts', async () => {
+    it.skip('can create new contracts', async () => {
       // create new contract
       const { result: testContractAddress } = await executorWallet.createContract(
         'Owned', [], { from: accounts[0], autoGas: 1.1, });
