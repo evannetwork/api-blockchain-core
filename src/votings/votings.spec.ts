@@ -39,6 +39,7 @@ const [ votingOwner, member, nonMember ] = accounts;
 use(chaiAsPromised);
 
 describe('Voting handler', () => {
+  this.timeout(60000);
   let contractLoader: ContractLoader;
   let executor: Executor;
   let votingContract: any;

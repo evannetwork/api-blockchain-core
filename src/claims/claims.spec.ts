@@ -47,6 +47,7 @@ function timeout(ms) {
 use(chaiAsPromised);
 
 describe('Claims handler', function() {
+  this.timeout(60000);
   let baseContract: BaseContract;
   let claims: Claims;
   let claimsContracts;

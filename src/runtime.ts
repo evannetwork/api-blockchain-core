@@ -337,7 +337,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     contractLoader,
     executor,
     web3
-  })
+  });
 
   // return runtime object
   return {
