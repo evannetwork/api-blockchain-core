@@ -2,7 +2,7 @@
 Votings
 ================================================================================
 
-.. list-table:: 
+.. list-table::
    :widths: auto
    :stub-columns: 1
 
@@ -13,7 +13,7 @@ Votings
    * - Source
      - `votings.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/votings/votings.ts>`_
    * - Examples
-     - `votings.spec.ts <https://github.com/evannetwork/dbcp/tree/master/src/contracts/votings/votings.spec.ts>`_
+     - `votings.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/votings/votings.spec.ts>`_
 
 The votings helper allows to hold votes over decisions and execute them, if enough votes have been submitted.
 
@@ -58,7 +58,7 @@ Example
 -------
 
 .. code-block:: typescript
-  
+
   const votings = new Votings({
     contractLoader,
     executor,

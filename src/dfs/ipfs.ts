@@ -14,7 +14,6 @@
   limitations under the License.
 */
 
-import * as https from 'https';
 import { setTimeout, clearTimeout } from 'timers';
 import bs58 = require('bs58');
 import prottle = require('prottle');
@@ -30,7 +29,10 @@ import {
   LoggerOptions,
 } from '@evan.network/dbcp';
 
+import { Payments } from './../payments';
+
 import utils = require('./../common/utils');
+
 
 
 const IPFS_TIMEOUT = 120000;
@@ -38,7 +40,7 @@ const runFunctionAsPromise = utils.promisify;
 const requestWindowSize = 10;
 
 
-/** 
+/**
  * ipfs instance options
  */
 export interface IpfsOptions extends LoggerOptions {
@@ -46,6 +48,7 @@ export interface IpfsOptions extends LoggerOptions {
   cache: any;
   dfsConfig: any;
   accountId: string;
+  payments: Payments;
   privateKey: string;
   web3: any;
 }
@@ -58,6 +61,7 @@ export class Ipfs extends Logger implements DfsInterface {
   web3: any;
   dfsConfig: any;
   accountId: string;
+  payments: Payments;
   privateKey: string;
   cache: DfsCacheInterface;
 
@@ -95,18 +99,18 @@ export class Ipfs extends Logger implements DfsInterface {
 
   constructor(options) {
     super(options);
-
     this.accountId = options.accountId;
     this.web3 = options.web3;
     this.privateKey = options.privateKey;
+    this.payments = options.payments;
     if (options.cache) {
       this.cache = options.cache;
     }
-    if(options.remoteNode) {
+    if (options.remoteNode) {
       this.remoteNode = options.remoteNode;
-    } else if(options.dfsConfig) {
+    } else if (options.dfsConfig) {
       this.dfsConfig = options.dfsConfig;
-      if(this.accountId) {
+      if (this.accountId) {
         const signer = this.accountId.toLowerCase();
         const toSignedMessage = this.web3.utils.soliditySha3(new Date().getTime() + this.accountId).replace('0x', '');
         const hexMessage = this.web3.utils.utf8ToHex(toSignedMessage);
@@ -175,7 +179,7 @@ export class Ipfs extends Logger implements DfsInterface {
         this.cache.add(remoteFile.hash, files[i].content);
       }));
     }
-    await prottle(requestWindowSize, remoteFiles.map((fileHash) => () => this.pinFileHash(fileHash.hash)));
+    await prottle(requestWindowSize, remoteFiles.map((fileHash) => () => this.pinFileHash(fileHash)));
     return remoteFiles.map(remoteFile => Ipfs.ipfsHashToBytes32(remoteFile.hash));
   }
 
@@ -184,8 +188,8 @@ export class Ipfs extends Logger implements DfsInterface {
    *
    * @param      hash  filehash of the pinned item
    */
-  async pinFileHash(hash: string): Promise<any> {
-    await runFunctionAsPromise(this.remoteNode.pin, 'add', hash);
+  async pinFileHash(file: any): Promise<any> {
+    await runFunctionAsPromise(this.remoteNode.pin, 'add', file.hash);
   }
 
   /**
@@ -237,9 +241,9 @@ export class Ipfs extends Logger implements DfsInterface {
         const evanIdentity = Buffer.from(fileBuffer.slice(0, 18));
         const accIdBuf = Buffer.from(fileBuffer.slice(18, 38));
         const isAccountId = evanIdentity.toString() === '|||evanIdentity|||';
-        if(isAccountId) {
+        if (isAccountId) {
           fileBuffer = fileBuffer.slice(38);
-        }        
+        }
         const ret = fileBuffer.toString('binary');
         if (this.cache) {
           this.cache.add(ipfsHash, fileBuffer);
@@ -253,7 +257,7 @@ export class Ipfs extends Logger implements DfsInterface {
       .catch((ex: any) => {
         this.log(`error while getting ipfs hash ${ipfsHash}`);
       })
-    ; 
+    ;
     return Promise.race([
       getRemoteHash,
       timeout
@@ -268,6 +272,9 @@ export class Ipfs extends Logger implements DfsInterface {
    * @return     {Promise<any>}  resolved when done
    */
   async setAccountAndPrivateKey(accountId: string, privateKey: any) {
+    if(!this.dfsConfig) {
+      throw new Error('no dfsConfig set on ipfs instance')
+    }
     this.accountId = accountId;
     this.privateKey = privateKey;
     const signer = this.accountId.toLowerCase();
