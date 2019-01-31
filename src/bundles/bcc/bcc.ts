@@ -25,8 +25,6 @@
   https://evan.network/license/
 */
 
-require('babel-polyfill');
-
 // import to handle bundle from outside
 import IpfsRemoteConstructor = require('ipfs-api');
 import keystore = require('eth-lightwallet/lib/keystore');
