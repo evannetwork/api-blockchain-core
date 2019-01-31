@@ -69,14 +69,19 @@ const browserifyFile = async function(bundleName) {
       //parse all sub node_modules es5 to es6 
       global: true,
       //important! 
-      //  underscore gets broken when we try to parse it
-      ignore: [/[\/\\]core-js/, /@babel[\/\\]runtime/, /underscore/],
+      ignore: [
+        // underscore gets broken when we try to parse it
+        /underscore/,
+        // 
+        /[\/\\]core-js/,
+        /@babel[\/\\]runtime/
+      ],
       presets: [
-        '@babel/env',
+        '@babel/preset-env'
       ],
       plugins: [
+        '@babel/plugin-transform-runtime',
         'lodash',
-        '@babel/plugin-transform-runtime'
       ],
     })
     .plugin(commonShake, { /* options */ })

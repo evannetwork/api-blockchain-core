@@ -25,7 +25,9 @@
   https://evan.network/license/
 */
 
-import request = require('request');
+// import request = require('request');
+
+const request = function(test, test2) { }
 
 import {
   ContractLoader,
