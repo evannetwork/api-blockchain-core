@@ -50,6 +50,7 @@ use(chaiAsPromised);
 
 
 describe('Signer Wallet', function() {
+  this.timeout(60000);
   let dfs: DfsInterface;
   let contractLoader: ContractLoader;
   let executor: Executor;
