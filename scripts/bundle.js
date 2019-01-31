@@ -72,16 +72,17 @@ const browserifyFile = async function(bundleName) {
       ignore: [
         // underscore gets broken when we try to parse it
         /underscore/,
-        // 
+
+        // remove core-js and babel runtime,
+        // https://github.com/babel/babel/issues/8731#issuecomment-426522500
         /[\/\\]core-js/,
-        /@babel[\/\\]runtime/
+        /@babel[\/\\]runtime/,
       ],
       presets: [
-        '@babel/preset-env'
+        '@babel/env',
       ],
       plugins: [
-        '@babel/plugin-transform-runtime',
-        'lodash',
+        '@babel/plugin-transform-runtime'
       ],
     })
     .plugin(commonShake, { /* options */ })

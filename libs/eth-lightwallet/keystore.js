@@ -1,5 +1,4 @@
 var CryptoJS = require('crypto-js');
-var Transaction = require('ethereumjs-tx');
 var EC = require('elliptic').ec;
 var ec = new EC('secp256k1');
 var bitcore = require('bitcore-lib');

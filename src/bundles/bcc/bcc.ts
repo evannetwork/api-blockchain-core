@@ -31,7 +31,7 @@ import Mnemonic = require('bitcore-mnemonic');
 import Web3 = require('web3');
 import prottle = require('prottle');
 import crypto = require('crypto');
-import keystore = require('../../../libs/eth-lightwallet/keystore.js'); //let keystore = function() { }; // 
+let keystore = function() { }; // import keystore = require('../../../libs/eth-lightwallet/keystore.js'); //
 
 // used for building bundle
 import {

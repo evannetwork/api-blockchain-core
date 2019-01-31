@@ -12,7 +12,7 @@
     "crypto-browserify": "3.12.0",
     "eth-lightwallet": "git+https://github.com/ConsenSys/eth-lightwallet.git#251eda97f705dbfae5ef099479aa19160028ae80",
     "eth-sig-util": "^2.1.0",
-    "ethereumjs-tx": "1.3.1",
+    "ethereumjs-tx": "1.3.4",
     "gulp-replace": "^0.6.1",
     "ipld-graph-builder": "1.3.7",
     "lodash": "=4.17.11",
