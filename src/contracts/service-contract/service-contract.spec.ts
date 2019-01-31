@@ -48,7 +48,7 @@ use(chaiAsPromised);
 
 
 describe('ServiceContract', function() {
-  this.timeout(60000);
+  this.timeout(600000);
   let sc0: ServiceContract;
   let sc1: ServiceContract;
   let sc2: ServiceContract;
