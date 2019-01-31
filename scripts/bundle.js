@@ -82,7 +82,8 @@ const browserifyFile = async function(bundleName) {
         '@babel/env',
       ],
       plugins: [
-        '@babel/plugin-transform-runtime'
+        '@babel/plugin-transform-runtime',
+        'lodash'
       ],
     })
     .plugin(commonShake, { /* options */ })
