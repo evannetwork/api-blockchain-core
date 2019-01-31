@@ -136,11 +136,6 @@ describe('Description handler', function() {
     testAddressFoo = `${testAddressPrefix}.${nameResolver.getDomainName(config.nameResolver.domains.root)}`;
   });
 
-  after(async () => {
-    await description.dfs.stop();
-    web3.currentProvider.connection.close();
-  });
-
   describe('when validing used description', () => {
     it('should allow valid description', async () => {
       const contract = await executor.createContract('Described', [], {from: accounts[0], gas: 1000000, });

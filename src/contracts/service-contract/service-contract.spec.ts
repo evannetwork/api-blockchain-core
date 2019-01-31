@@ -285,11 +285,6 @@ describe('ServiceContract', function() {
     }
   });
 
-  after(async () => {
-    await ipfs.stop();
-    web3.currentProvider.connection.close();
-  });
-
   it('can be created', async () => {
     const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
     expect(contract).to.be.ok;

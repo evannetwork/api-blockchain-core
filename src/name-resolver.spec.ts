@@ -89,10 +89,6 @@ describe('NameResolver class', function() {
     // );
   });
 
-  after(() => {
-    web3.currentProvider.connection.close();
-  });
-
   describe('when working with the fifs registrar', () => {
     it('should be able to claim a new domain from a FIFS registrar', async () => {
       const data = prepareData(fifsRegistrarDomain);

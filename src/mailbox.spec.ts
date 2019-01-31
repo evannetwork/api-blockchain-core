@@ -82,11 +82,6 @@ describe('Mailbox class', function() {
     });
   });
 
-  after(async () => {
-    web3.currentProvider.connection.close();
-    await ipfs.stop();
-  });
-
   it('should be able to send a mail', async () => {
     const startTime = Date.now();
     await mailbox.sendMail(getTestMail(accounts[0]), accounts[0], accounts[0]);

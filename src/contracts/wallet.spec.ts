@@ -63,11 +63,6 @@ describe('Wallet handler', function() {
     contractLoader = await TestUtils.getContractLoader(web3);
   });
 
-  after(async () => {
-    await dfs.stop();
-    web3.currentProvider.connection.close();
-  });
-
   it('can create new wallets', async () => {
     await wallet.create(accounts[0], accounts[0], [accounts[0]]);
   });

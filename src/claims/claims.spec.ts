@@ -69,10 +69,6 @@ describe('Claims handler', function() {
     description = await TestUtils.getDescription(web3, dfs);
   });
 
-  after(async () => {
-    web3.currentProvider.connection.close();
-  });
-
   // can be used for creating new libraries, but disabled by default
   it('can deploy a new structure', async () => {
     const keyHolderLib = await executor.createContract(

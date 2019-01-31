@@ -76,10 +76,6 @@ describe.skip('Executor handler', function() {
     password = web3.utils.soliditySha3('fluffy cat is fluffy');
   });
 
-  after(() => {
-    web3.currentProvider.connection.close();
-  });
-
   it('should be able to call a contract method', async () => {
     const sampleContract = contractLoader.loadContract('AbstractENS', TestUtils.getConfig().nameResolver.ensAddress);
     const owner = await executor.executeContractCall(sampleContract, 'owner', ensDomain);

@@ -89,11 +89,6 @@ describe('Onboarding helper', function() {
 
   });
 
-  after(async () => {
-    web3.currentProvider.connection.close();
-    await ipfs.stop();
-  });
-
   it('should be able to send an invitation via smart agent', async () => {
     await onboarding.sendInvitation({
       fromAlias: 'example inviter',

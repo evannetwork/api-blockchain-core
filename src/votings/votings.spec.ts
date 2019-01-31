@@ -63,10 +63,6 @@ describe('Voting handler', function() {
     votings = await TestUtils.getVotings(web3);
   });
 
-  after(async () => {
-    web3.currentProvider.connection.close();
-  });
-
   it('can create a new voting contract', async() => {
     votingContract = await votings.createContract(
       votingOwner,

@@ -74,11 +74,6 @@ describe('Signer Wallet', function() {
     executorWallet.eventHub = eventHub;
   });
 
-  after(async () => {
-    await dfs.stop();
-    web3.currentProvider.connection.close();
-  });
-
   describe('when submitting transactions via wallet', () => {
     it('can instantly submit transactions', async () => {
       // create test contract and hand over to wallet
