@@ -26,12 +26,11 @@
 */
 
 // import to handle bundle from outside
-import IpfsRemoteConstructor = require('ipfs-api');
 import Mnemonic = require('bitcore-mnemonic');
 import Web3 = require('web3');
 import prottle = require('prottle');
 import crypto = require('crypto');
-let keystore = function() { }; // import keystore = require('../../../libs/eth-lightwallet/keystore.js'); //
+import keystore = require('../../../libs/eth-lightwallet/keystore.js');
 
 // used for building bundle
 import {
@@ -713,7 +712,6 @@ export {
   Executor,
   ExecutorAgent,
   Ipfs,
-  IpfsRemoteConstructor,
   Ipld,
   isAccountOnboarded,
   KeyExchange,

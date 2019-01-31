@@ -1,3 +1,11 @@
+/**
+ * Copied from 
+ * 
+ *  "https://github.com/ConsenSys/eth-lightwallet"
+ *  
+ * to reduce the full bundle size.
+ */
+
 var CryptoJS = require('crypto-js');
 var EC = require('elliptic').ec;
 var ec = new EC('secp256k1');
@@ -7,7 +15,7 @@ var Hash = bitcore.crypto.Hash;
 var Mnemonic = require('bitcore-mnemonic');
 var nacl = require('tweetnacl');
 var scrypt = require('scrypt-async');
-var Transaction = require("ethereumjs-tx")
+var Transaction = require("../../node_modules/ethereumjs-tx/index.js")
 var util = require("ethereumjs-util")
 
 var signTx = function (keystore, pwDerivedKey, rawTx, signingAddress) {

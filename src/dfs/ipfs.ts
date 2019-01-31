@@ -19,7 +19,7 @@ import bs58 = require('bs58');
 import prottle = require('prottle');
 import _ = require('lodash');
 import ipfsAPI = require('ipfs-api');
-
+//const ipfsAPI = function(test) { }
 
 import {
   FileToAdd,

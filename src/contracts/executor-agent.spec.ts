@@ -41,7 +41,7 @@ import { ExecutorAgent } from './executor-agent';
 import { TestUtils } from '../test/test-utils'
 
 
-const agentUser = '0xa60F5EAfBb782793d7589bc5F55BfA3a599B182d';
+const agentUser = '0x24Ac71311c9F9a6148944a921551686291aF5BC8';
 const ensDomain = '0xa4f4bc00d00f32992d5115ca850962b66537252c8367317a7d70a85c59cc1954';
 const ensMainAccount = '0x4a6723fC5a926FA150bAeAf04bfD673B056Ba83D';
 const randomAccount = `0x${Math.floor(Math.random() * 255 * 255 * 255).toString(16).padStart(40, '0')}`;
@@ -53,7 +53,7 @@ let web3;
 
 use(chaiAsPromised);
 
-describe.skip('Executor handler', function() {
+describe.only('Executor handler', function() {
   this.timeout(300000);
   let executor: ExecutorAgent;
 
