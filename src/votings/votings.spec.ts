@@ -278,7 +278,7 @@ describe('Voting handler', function() {
       '0.07838871652030921 is the most awesome random number ever',
       '0.98703823197063150 is the most awesome random number ever',
     ];
-    const descriptionsNewestFirst = descriptions.reverse();
+    const descriptionsNewestFirst = descriptions.slice(0).reverse();
     const numOfProposals = 27;
     let contract;
 
