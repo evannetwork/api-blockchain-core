@@ -53,24 +53,30 @@ describe('Signer Wallet', function() {
   let dfs: DfsInterface;
   let contractLoader: ContractLoader;
   let executor: Executor;
-  let executorWallet: ExecutorWallet;
+  let executorWallet0: ExecutorWallet;
+  let executorWallet1: ExecutorWallet;
   let nameResolver: NameResolver;
-  let wallet: Wallet;
+  let wallet0: Wallet;
+  let wallet1: Wallet;
   let web3: any;
 
   before(async () => {
     web3 = TestUtils.getWeb3();
     dfs = await TestUtils.getIpfs();
-    wallet = await TestUtils.getWallet(web3, dfs);
-    await wallet.create(accounts[0], accounts[0], [accounts[0]]);
+    wallet0 = await TestUtils.getWallet(web3, dfs);
+    await wallet0.create(accounts[0], accounts[0], [accounts[0]]);
+    wallet1 = await TestUtils.getWallet(web3, dfs);
+    await wallet1.create(accounts[1], accounts[1], [accounts[1]]);
     // wallet.load('0x581B4a37Ced787Ac93b54527E5A01158571759eB');
     executor = await TestUtils.getExecutor(web3);
     contractLoader = await TestUtils.getContractLoader(web3);
     nameResolver = await TestUtils.getNameResolver(web3);
-    executorWallet = await TestUtils.getExecutorWallet(web3, wallet, dfs);
     const eventHub = await TestUtils.getEventHub(web3);
     executor.eventHub = eventHub;
-    executorWallet.eventHub = eventHub;
+    executorWallet0 = await TestUtils.getExecutorWallet(web3, wallet0, accounts[0], dfs);
+    executorWallet0.eventHub = eventHub;
+    executorWallet1 = await TestUtils.getExecutorWallet(web3, wallet1, accounts[1], dfs);
+    executorWallet0.eventHub = eventHub;
   });
 
   after(async () => {
@@ -83,10 +89,10 @@ describe('Signer Wallet', function() {
       // create test contract and hand over to wallet
       const testContract = await executor.createContract('Owned', [], { from: accounts[0], gas: 200000, });
       expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[0]);
-      await executor.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[0], }, wallet.walletContract.options.address);
-      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(wallet.walletContract.options.address);
+      await executor.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[0], }, wallet0.walletAddress);
+      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(wallet0.walletAddress);
 
-      await executorWallet.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[0], autoGas: 1.1, }, accounts[1]);
+      await executorWallet0.executeContractTransaction(testContract, 'transferOwnership', { from: wallet0.walletAddress, autoGas: 1.1, }, accounts[1]);
       expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[1]);
     });
 
@@ -95,10 +101,10 @@ describe('Signer Wallet', function() {
       const testContract = await executor.createContract('Owned', [], { from: accounts[0], gas: 200000, });
       expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[0]);
 
-      await executor.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[0], autoGas: 1.1, }, wallet.walletContract.options.address);
-      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(wallet.walletContract.options.address);
+      await executor.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[0], autoGas: 1.1, }, wallet0.walletAddress);
+      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(wallet0.walletAddress);
 
-      const promise = executorWallet.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[1], }, accounts[1]);
+      const promise = executorWallet1.executeContractTransaction(testContract, 'transferOwnership', { from: wallet1.walletAddress, }, accounts[1]);
       await expect(promise).to.be.rejected;
     });
 
@@ -106,9 +112,9 @@ describe('Signer Wallet', function() {
       // create test contract and hand over to wallet
       const testContract = await executor.createContract('Owned', [], { from: accounts[0], gas: 200000, });
       expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[0]);
-      await executor.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[0], }, wallet.walletContract.options.address);
-      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(wallet.walletContract.options.address);
-      await executorWallet.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[0], autoGas: 1.1, }, accounts[1]);
+      await executor.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[0], }, wallet0.walletAddress);
+      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(wallet0.walletAddress);
+      await executorWallet0.executeContractTransaction(testContract, 'transferOwnership', { from: wallet0.walletAddress, autoGas: 1.1, }, accounts[1]);
       expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[1]);
     });
 
@@ -119,10 +125,10 @@ describe('Signer Wallet', function() {
       const businessCenterAddress = '0x0000000000000000000000000000000000000000';
 
       const data = `I like random numbers, for example: ${Math.random()}`;
-      const contractId = await executorWallet.executeContractTransaction(
+      const contractId = await executorWallet0.executeContractTransaction(
         factory,
         'createContract', {
-          from: accounts[0],
+          from: wallet0.walletAddress,
           event: { target: 'TestContractFactory', eventName: 'ContractCreated', },
           getEventResult: (event, args) => args.newAddress,
         },
@@ -140,10 +146,10 @@ describe('Signer Wallet', function() {
       const businessCenterAddress = '0x0000000000000000000000000000000000000000';
 
       const data = `I like random numbers, for example: ${Math.random()}`;
-      const contractId = await executorWallet.executeContractTransaction(
+      const contractId = await executorWallet0.executeContractTransaction(
         factory,
         'createContract', {
-          from: accounts[0],
+          from: wallet0.walletAddress,
           event: { target: 'TestContractFactory', eventName: 'ContractCreated', },
           getEventResult: (event, args) => args.newAddress,
         },
@@ -158,27 +164,26 @@ describe('Signer Wallet', function() {
       // create test contract and hand over to wallet
       const testContract = await executor.createContract('Owned', [], { from: accounts[0], gas: 200000, });
       expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[0]);
-      await executor.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[0], }, wallet.walletContract.options.address);
-      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(wallet.walletContract.options.address);
+      await executor.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[0], }, wallet0.walletAddress);
+      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(wallet0.walletAddress);
 
-      await executorWallet.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[0], autoGas: 1.1, }, accounts[1]);
+      await executorWallet0.executeContractTransaction(testContract, 'transferOwnership', { from: wallet0.walletAddress, autoGas: 1.1, }, accounts[1]);
       expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[1]);
     });
 
-    it.skip('can create new contracts', async () => {
+    it('can create new contracts', async () => {
       // create new contract
-      const { result: testContractAddress } = await executorWallet.createContract(
-        'Owned', [], { from: accounts[0], autoGas: 1.1, });
-      expect(testContractAddress).to.match(/0x[0-9a-f]{40}/ig);
+      const testContract = await executorWallet0.createContract(
+        'Owned', [], { from: wallet0.walletAddress, autoGas: 1.1, });
+      expect(testContract.options.address).to.match(/0x[0-9a-f]{40}/ig);
 
       // current owner is wallet
-      const testContract = contractLoader.loadContract('Owned', testContractAddress);
       expect(await executor.executeContractCall(testContract, 'owner'))
-        .to.eq(wallet.walletContract.options.address);
+        .to.eq(wallet0.walletAddress);
 
       // transfer owner
-      await executorWallet.executeContractTransaction(
-        testContract, 'transferOwnership', { from: accounts[0], autoGas: 1.1, }, accounts[1]);
+      await executorWallet0.executeContractTransaction(
+        testContract, 'transferOwnership', { from: wallet0.walletAddress, autoGas: 1.1, }, accounts[1]);
       expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[1]);
     });
   });

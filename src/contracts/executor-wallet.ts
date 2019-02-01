@@ -42,6 +42,7 @@ import coder = require('web3-eth-abi');
  */
 export interface ExecutorWalletOptions extends ExecutorOptions {
   contractLoader: ContractLoader;
+  accountId: string;
   wallet: Wallet;
 }
 
@@ -85,7 +86,8 @@ export class ExecutorWallet extends Executor {
     const input = `0x${compiledContract.bytecode}` +
       this.encodeConstructorParams(JSON.parse(compiledContract.interface), functionArguments);
     // submit tx; ContractCreated event is handled in submitRawTransaction, if target is null
-    const txInfo = await this.options.wallet.submitRawTransaction(null, input, inputOptions);
+    const txInfo = await this.options.wallet.submitRawTransaction(
+      null, input, Object.assign({}, inputOptions, { from: this.options.accountId }));
     if (!txInfo.result) {
       throw new Error(`contract creation failed; txInfo: ${txInfo}`)
     } else {
@@ -119,7 +121,7 @@ export class ExecutorWallet extends Executor {
       options = Object.assign(
         options || {},
         args[args.length - 1],
-        { from: this.options.wallet.walletContract.options.address, },
+        { from: this.options.wallet.walletAddress, },
       );
       return contract.methods[functionName].apply(
         contract.methods, args.slice(0, args.length - 1)).call(options);
@@ -305,7 +307,6 @@ export class ExecutorWallet extends Executor {
           } else {
             // execute contract function
             // recover original from, as estimate converts from to lower case
-            options.from = inputOptions.from;
             // overwrite given gas with estimation plus autoGas factor
             if (autoGas) {
               this.web3.eth.getBlock('latest', (error, result) => {
@@ -434,7 +435,7 @@ export class ExecutorWallet extends Executor {
         };
         // estimate tx with wallet accountid instead of users account id
         const estimateOptions = Object.assign(
-          {}, options, { from: this.options.wallet.walletContract.options.address, });
+          {}, options, { from: this.options.wallet.walletAddress, });
         contract.methods[functionName]
           .apply(contract.methods, initialArguments)
           .estimateGas(
@@ -498,10 +499,15 @@ export class ExecutorWallet extends Executor {
    */
   private signAndExecuteTransactionViaWallet (
       contract, functionName, functionArguments, options, handleTxResult): void {
-    this.log(`using wallet ${this.options.wallet.walletContract.options.address} ` +
+    this.log(`using wallet ${this.options.wallet.walletAddress} ` +
       `for making transaction "${functionName}"`, 'debug');
     this.options.wallet
-      .submitTransaction(contract, functionName, options, ...functionArguments)
+      .submitTransaction(
+        contract,
+        functionName,
+        Object.assign({}, options, { from: this.options.accountId }),
+        ...functionArguments,
+      )
       .then((result) => Promise.all([this.options.web3.eth.getTransactionReceipt(result.event.transactionHash), result]))
       .then(([receipt, result]) => { handleTxResult(null, { receipt, ...result }); })
       .catch((error) => { handleTxResult(error); })

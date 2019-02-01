@@ -106,13 +106,13 @@ describe('Wallet handler', function() {
       // create test contract and hand over to wallet
       const testContract = await executor.createContract('Owned', [], { from: accounts[0], gas: 200000, });
       expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[0]);
-      await executor.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[0], }, wallet.walletContract.options.address);
-      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(wallet.walletContract.options.address);
+      await executor.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[0], }, wallet.walletAddress);
+      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(wallet.walletAddress);
 
       await wallet.submitTransaction(testContract, 'transferOwnership', { from: accounts[0], }, accounts[1]);
       expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[1]);
 
-      await executor.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[1], }, wallet.walletContract.options.address);
+      await executor.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[1], }, wallet.walletAddress);
 
       await wallet.submitTransaction(testContract, 'transferOwnership', { from: accounts[1], }, accounts[0]);
       expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[0]);
@@ -124,8 +124,8 @@ describe('Wallet handler', function() {
       // create test contract and hand over to wallet
       const testContract = await executor.createContract('Owned', [], { from: accounts[0], gas: 200000, });
       expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[0]);
-      await executor.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[0], }, wallet.walletContract.options.address);
-      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(wallet.walletContract.options.address);
+      await executor.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[0], }, wallet.walletAddress);
+      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(wallet.walletAddress);
 
       const promise = wallet.submitTransaction(testContract, 'transferOwnership', { from: accounts[1], }, accounts[1]);
       await expect(promise).to.be.rejected;
@@ -140,7 +140,7 @@ describe('Wallet handler', function() {
         contract,
         'transferOwnership',
         { from: accounts[0], },
-        wallet.walletContract.options.address,
+        wallet.walletAddress,
       );
       return contract;
     }
@@ -171,7 +171,7 @@ describe('Wallet handler', function() {
 
       // still owned by wallet
       expect(await executor.executeContractCall(testContract, 'owner'))
-        .to.eq(wallet.walletContract.options.address);
+        .to.eq(wallet.walletAddress);
     });
 
     it('executes tx when submitting the final confirmation', async () => {
@@ -181,7 +181,7 @@ describe('Wallet handler', function() {
 
       // still owned by wallet
       expect(await executor.executeContractCall(testContract, 'owner'))
-        .to.eq(wallet.walletContract.options.address);
+        .to.eq(wallet.walletAddress);
 
       await wallet.confirmTransaction(accounts[1], txInfo.result.transactionId);
 
@@ -198,14 +198,14 @@ describe('Wallet handler', function() {
         contract,
         'transferOwnership',
         { from: accounts[0], },
-        wallet.walletContract.options.address,
+        wallet.walletAddress,
       );
       return contract;
     }
 
     it('allows to transfer funds to wallet', async () => {
       await wallet.create(accounts[0], accounts[0], [accounts[0]]);
-      const walletAddress = wallet.walletContract.options.address;
+      const walletAddress = wallet.walletAddress;
       const valueToSend = Math.floor(Math.random() * 10000);
       const executeSendP = executor.executeSend(
         { from: accounts[0], to: walletAddress, value: valueToSend });
@@ -215,7 +215,7 @@ describe('Wallet handler', function() {
 
     it('intantly submits funds to target if instantly submitting transaction', async () => {
       await wallet.create(accounts[0], accounts[0], [accounts[0]]);
-      const walletAddress = wallet.walletContract.options.address;
+      const walletAddress = wallet.walletAddress;
 
       const valueToSend = Math.floor(Math.random() * 10000);
       await executor.executeSend({ from: accounts[0], to: walletAddress, value: valueToSend });
@@ -232,7 +232,7 @@ describe('Wallet handler', function() {
 
     it('waits for final confirmation to transfer funds, when multisigning transactions', async () => {
       await wallet.create(accounts[0], accounts[0], [accounts[0], accounts[1]], 2);
-      const walletAddress = wallet.walletContract.options.address;
+      const walletAddress = wallet.walletAddress;
 
       const valueToSend = Math.floor(Math.random() * 10000);
       await executor.executeSend({ from: accounts[0], to: walletAddress, value: valueToSend });
