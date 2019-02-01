@@ -65,6 +65,35 @@ export class ExecutorWallet extends Executor {
   }
 
   /**
+   * will throw, as creating contracts directly is not supported by the walled based executor
+   *
+   * @param      {string}        contractName       contract name
+   * @param      {any[]}         functionArguments  arguments for contract creation, pass empty
+   *                                                Array if no arguments
+   * @param      {any}           inputOptions       transaction arguments, having at least .from and
+   *                                                .gas
+   * @return     {Promise<any>}  new contract
+   */
+  async createContract(contractName: string, functionArguments: any[], inputOptions: any):
+      Promise<any> {
+    this.log(`starting creation of contract "${contractName}"`, 'debug');
+    const compiledContract = this.options.contractLoader.getCompiledContract(contractName);
+    if (!compiledContract || !compiledContract.bytecode) {
+      throw new Error(`cannot find contract bytecode for contract "${contractName}"`);
+    }
+    // build bytecode and arguments for constructor
+    const input = `0x${compiledContract.bytecode}` +
+      this.encodeConstructorParams(JSON.parse(compiledContract.interface), functionArguments);
+    // submit tx; ContractCreated event is handled in submitRawTransaction, if target is null
+    const txInfo = await this.options.wallet.submitRawTransaction(null, input, inputOptions);
+    if (!txInfo.result) {
+      throw new Error(`contract creation failed; txInfo: ${txInfo}`)
+    } else {
+      return this.options.contractLoader.loadContract(contractName, txInfo.result);
+    }
+  }
+
+  /**
    * @brief      run the given call from contract
    *
    * @param      {any}           contract      the target contract
@@ -431,35 +460,6 @@ export class ExecutorWallet extends Executor {
    */
   async executeSend(inputOptions): Promise<void> {
     throw new Error(`sending funds is not supported by the walled based executor`);
-  }
-
-  /**
-   * will throw, as creating contracts directly is not supported by the walled based executor
-   *
-   * @param      {string}        contractName       contract name
-   * @param      {any[]}         functionArguments  arguments for contract creation, pass empty
-   *                                                Array if no arguments
-   * @param      {any}           inputOptions       transaction arguments, having at least .from and
-   *                                                .gas
-   * @return     {Promise<any>}  new contract
-   */
-  async createContract(contractName: string, functionArguments: any[], inputOptions: any):
-      Promise<any> {
-    this.log(`starting creation of contract "${contractName}"`, 'debug');
-    const compiledContract = this.options.contractLoader.getCompiledContract(contractName);
-    if (!compiledContract || !compiledContract.bytecode) {
-      throw new Error(`cannot find contract bytecode for contract "${contractName}"`);
-    }
-    // build bytecode and arguments for constructor
-    const input = `0x${compiledContract.bytecode}` +
-      this.encodeConstructorParams(JSON.parse(compiledContract.interface), functionArguments);
-    // submit tx; ContractCreated event is handled in submitRawTransaction, if target is null
-    const txInfo = await this.options.wallet.submitRawTransaction(null, input, inputOptions);
-    if (!txInfo.result) {
-      throw new Error(`contract creation failed; txInfo: ${txInfo}`)
-    } else {
-      return this.options.contractLoader.loadContract(contractName, txInfo.result);
-    }
   }
 
   /**
