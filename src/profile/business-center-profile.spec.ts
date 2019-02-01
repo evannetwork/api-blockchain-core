@@ -78,11 +78,6 @@ describe('BusinessCenterProfile helper', function() {
     }
   });
 
-  after(async () => {
-    web3.currentProvider.connection.close();
-    await ipld.ipfs.stop();
-  });
-
   it('should be able to set and load a profile for a given user in a business center', async () => {
     // use own key for test
     (<KeyProvider>ipld.keyProvider).keys[nameResolver.soliditySha3(businessCenterDomain)] = (<KeyProvider>ipld.keyProvider).keys[nameResolver.soliditySha3(accounts[0])];

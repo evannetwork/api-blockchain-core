@@ -150,11 +150,6 @@ describe('KeyExchange class', function() {
     await profile2.createProfile(keyExchange2.getDiffieHellmanKeys());
   });
 
-  after(async () => {
-    await ipfs.stop();
-    web3.currentProvider.connection.close();
-  });
-
   it('should be able to send an invitation mail and store new commKey', async () => {
     const foreignPubkey = await profile2.getPublicKey();
     const commKey = await keyExchange1.generateCommKey();
@@ -208,7 +203,7 @@ describe('KeyExchange class', function() {
     const keyExchangeOptions = {
       mailbox,
       cryptoProvider:  TestUtils.getCryptoProvider(),
-      defaultCryptoAlgo: 'aes',   
+      defaultCryptoAlgo: 'aes',
       account: accounts[2],
       keyProvider: TestUtils.getKeyProvider(),
     };

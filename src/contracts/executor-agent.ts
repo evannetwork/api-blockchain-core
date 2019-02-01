@@ -25,7 +25,45 @@
   https://evan.network/license/
 */
 
-import request = require('request');
+const https = require('https');
+const http = require('http');
+const querystring = require('querystring');
+
+/**
+ * Use this function instead of request node_module to reduce browser bundle file size.
+ *
+ * @param      {any}       requestOptions  options including normal request node_module options
+ * @param      {Function}  callback        callback function
+ */
+const request = (requestOptions: any) => {
+  return new Promise((resolve, reject) => {
+    const requestModule = requestOptions.url.startsWith('https') ? https : http;
+    let result = '';
+
+    // define request options
+    const options = {
+      method: requestOptions.method || 'POST',
+      headers: requestOptions.header || { 'Content-Type': 'application/json' }
+    };
+
+    // start the request
+    const req = requestModule.request(requestOptions.url, options, (res) => {
+      res.on('data', (d) => result += d);
+      res.on('end', () => {
+        const resultObj = JSON.parse(result);
+        if (resultObj.error) {
+          reject(resultObj.error);
+        } else {
+          resolve(resultObj.result);
+        }
+      });
+    });
+
+    req.on('error', (e) => reject(e));
+    req.write(JSON.stringify(requestOptions.body));
+    req.end();
+  });
+};
 
 import {
   ContractLoader,
@@ -97,18 +135,15 @@ export class ExecutorAgent extends Executor {
     }
 
     // submit to action
-    const contractId = await new Promise((resolve, reject) => {
-      request({
-        uri: `${this.agentUrl}/api/smart-agents/executor/createContract`,
-        method: 'POST',
-        json: true,
-        body: {
-          contractName,
-          functionArguments,
-          inputOptions,
-          token: this.token,
-        },
-      }, this.handleRequestResult.bind(this, resolve, reject))
+    const contractId = await request({
+      url: `${this.agentUrl}/api/smart-agents/executor/createContract`,
+      method: 'POST',
+      body: {
+        contractName,
+        functionArguments,
+        inputOptions,
+        token: this.token,
+      },
     });
     return this.contractLoader.loadContract(contractName, contractId as string);
   }
@@ -128,18 +163,15 @@ export class ExecutorAgent extends Executor {
     this.log(`starting contract call "${functionName}" via agent`, 'debug');
 
     // submit to action
-    return new Promise((resolve, reject) => {
-      request({
-        uri: `${this.agentUrl}/api/smart-agents/executor/executeContractCall`,
-        method: 'POST',
-        json: true,
-        body: {
-          contractId: contract.options.address,
-          functionSignature: contract.options.jsonInterface.filter(fun => fun.name === functionName)[0],
-          functionName,
-          functionArguments: args,
-        },
-      }, this.handleRequestResult.bind(this, resolve, reject))
+    return request({
+      url: `${this.agentUrl}/api/smart-agents/executor/executeContractCall`,
+      method: 'POST',
+      body: {
+        contractId: contract.options.address,
+        functionSignature: contract.options.jsonInterface.filter(fun => fun.name === functionName)[0],
+        functionName,
+        functionArguments: args,
+      },
     });
   }
 
@@ -168,20 +200,17 @@ export class ExecutorAgent extends Executor {
     }
 
     // submit to action
-    return new Promise((resolve, reject) => {
-      request({
-        uri: `${this.agentUrl}/api/smart-agents/executor/executeContractTransaction`,
-        method: 'POST',
-        json: true,
-        body: {
-          contractId: contract.options.address,
-          functionSignature: contract.options.jsonInterface.filter(fun => fun.name === functionName)[0],
-          functionName,
-          options: inputOptions,
-          functionArguments,
-          token: this.token,
-        },
-      }, this.handleRequestResult.bind(this, resolve, reject))
+    return request({
+      url: `${this.agentUrl}/api/smart-agents/executor/executeContractTransaction`,
+      method: 'POST',
+      body: {
+        contractId: contract.options.address,
+        functionSignature: contract.options.jsonInterface.filter(fun => fun.name === functionName)[0],
+        functionName,
+        options: inputOptions,
+        functionArguments,
+        token: this.token,
+      },
     });
   }
 
@@ -228,16 +257,14 @@ export class ExecutorAgent extends Executor {
       }
       return newFun;
     })
-    return new Promise((resolve, reject) => {
-      request({
-        uri: `${this.agentUrl}/api/smart-agents/executor/generateToken`,
-        method: 'POST',
-        json: true,
-        body: {
-          password,
-          functions: updatedFunctions,
-        },
-      }, this.handleRequestResult.bind(this, resolve, reject))
+    return request({
+      url: `${this.agentUrl}/api/smart-agents/executor/generateToken`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: {
+        password,
+        functions: updatedFunctions,
+      },
     }) as Promise<string>;
   }
 

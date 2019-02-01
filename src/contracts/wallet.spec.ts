@@ -48,6 +48,7 @@ use(chaiAsPromised);
 
 
 describe('Wallet handler', function() {
+  this.timeout(60000);
   let dfs: DfsInterface;
   let contractLoader: ContractLoader;
   let executor: Executor;
@@ -60,11 +61,6 @@ describe('Wallet handler', function() {
     wallet = await TestUtils.getWallet(web3, dfs);
     executor = await TestUtils.getExecutor(web3);
     contractLoader = await TestUtils.getContractLoader(web3);
-  });
-
-  after(async () => {
-    await dfs.stop();
-    web3.currentProvider.connection.close();
   });
 
   it('can create new wallets', async () => {

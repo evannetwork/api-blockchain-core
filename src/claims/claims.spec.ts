@@ -47,6 +47,7 @@ function timeout(ms) {
 use(chaiAsPromised);
 
 describe('Claims handler', function() {
+  this.timeout(60000);
   let baseContract: BaseContract;
   let claims: Claims;
   let claimsContracts;
@@ -66,10 +67,6 @@ describe('Claims handler', function() {
     nameResolver = await TestUtils.getNameResolver(web3);
     baseContract = await TestUtils.getBaseContract(web3);
     description = await TestUtils.getDescription(web3, dfs);
-  });
-
-  after(async () => {
-    web3.currentProvider.connection.close();
   });
 
   // can be used for creating new libraries, but disabled by default

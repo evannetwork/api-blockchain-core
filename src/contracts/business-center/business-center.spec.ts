@@ -55,10 +55,6 @@ describe('Business Center', function() {
     web3 = TestUtils.getWeb3();
   });
 
-  after(() => {
-    web3.currentProvider.connection.close();
-  });
-
   /**
    * create new busines center
    *

@@ -50,6 +50,7 @@ use(chaiAsPromised);
 
 
 describe('Signer Wallet', function() {
+  this.timeout(60000);
   let dfs: DfsInterface;
   let contractLoader: ContractLoader;
   let executor: Executor;
@@ -77,11 +78,6 @@ describe('Signer Wallet', function() {
     executorWallet0.eventHub = eventHub;
     executorWallet1 = await TestUtils.getExecutorWallet(web3, wallet1, accounts[1], dfs);
     executorWallet0.eventHub = eventHub;
-  });
-
-  after(async () => {
-    await dfs.stop();
-    web3.currentProvider.connection.close();
   });
 
   describe('when submitting transactions via wallet', () => {

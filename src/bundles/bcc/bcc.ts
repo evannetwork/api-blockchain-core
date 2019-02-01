@@ -25,15 +25,12 @@
   https://evan.network/license/
 */
 
-require('babel-polyfill');
-
 // import to handle bundle from outside
-import IpfsRemoteConstructor = require('ipfs-api');
-import keystore = require('eth-lightwallet/lib/keystore');
 import Mnemonic = require('bitcore-mnemonic');
 import Web3 = require('web3');
 import prottle = require('prottle');
 import crypto = require('crypto');
+import keystore = require('../../../libs/eth-lightwallet/keystore.js');
 
 // used for building bundle
 import {
@@ -74,6 +71,7 @@ import { Sharing } from '../../contracts/sharing';
 import { ServiceContract } from '../../contracts/service-contract/service-contract';
 import { createDefaultRuntime } from '../../runtime';
 import { ExecutorAgent } from '../../contracts/executor-agent';
+import { Payments } from '../../payments';
 
 /**************************************************************************************************/
 
@@ -124,7 +122,7 @@ export interface CoreBundle {
   Unencrypted: Unencrypted,
   CoreRuntime: CoreInstance,
   isAccountOnboarded: Function,
-  keystore: keystore,
+  keystore: any,
   Mnemonic: Mnemonic,
   KeyProviderInterface: KeyProviderInterface,
   KeyProvider: KeyProvider,
@@ -192,6 +190,7 @@ export interface ProfileInstance {
   keyExchange: KeyExchange,
   keyProvider: KeyProvider,
   mailbox: Mailbox,
+  payments: Payments,
   profile: Profile,
   serviceContract: ServiceContract,
   sharing: Sharing,
@@ -505,6 +504,15 @@ const create = function(options: ProfileBundleOptions): ProfileInstance {
     nameResolver: coreInstance.nameResolver,
   });
 
+  const payments = new Payments({
+    accountStore: accountStore,
+    contractLoader: coreInstance.contractLoader,
+    executor: executor,
+    web3: coreInstance.web3,
+    logLog,
+    logLogLevel,
+  });
+
   (<any>options.keyProvider).origin.init(profile);
 
   coreInstance.description.sharing = sharing;
@@ -517,6 +525,7 @@ const create = function(options: ProfileBundleOptions): ProfileInstance {
     keyExchange,
     keyProvider: options.keyProvider,
     mailbox,
+    payments,
     profile,
     serviceContract,
     sharing,
@@ -654,7 +663,7 @@ let createAndSetBC = function(options: BCBundleOptions): BCInstance {
 }
 
 /**
- * Check if a account is onboarded 
+ * Check if a account is onboarded
  *
  * @param      {string}   account  account id to test
  * @return     {boolean}  True if account onboarded, False otherwise
@@ -703,7 +712,6 @@ export {
   Executor,
   ExecutorAgent,
   Ipfs,
-  IpfsRemoteConstructor,
   Ipld,
   isAccountOnboarded,
   KeyExchange,

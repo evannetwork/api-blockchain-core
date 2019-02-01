@@ -10,6 +10,7 @@
 
 ### Fixes
 - add `keepaliveInterval` to `web3` in `test-utils`
+- remove `request` from `ExecutorAgent` and replace it with a build in https / http request
 
 ### Deprecations
 

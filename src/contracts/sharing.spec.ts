@@ -76,12 +76,6 @@ describe('Sharing handler', function() {
     testAddress = `barfoo.${nameResolver.getDomainName(config.nameResolver.domains.root)}`;
   });
 
-  after(async () => {
-    await dfs.stop();
-    web3.currentProvider.connection.close();
-  });
-
-
   function runContractTests(isMultiShared) {
     const contractName = !isMultiShared ? 'Shared' : 'MultiSharedTest';
     const sharingId = !isMultiShared ? null : `0x${Math.floor(Math.random() * 255 * 255 * 255).toString(16).padStart(64, '0')}`;
