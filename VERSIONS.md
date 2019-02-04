@@ -2,11 +2,21 @@
 
 ## Next Version
 ### Features
+- add support for contract creation to `executor-wallet`
+- add support for handling multiple confirmations to `executor-wallet` and `wallet`
+- use root level wallet factory (`wallet.factory.evan`) instead of a business center scoped wallet factory
+- add support for sending funds with transactions in `wallet`
+- `executor-wallet` now needs `accountId` option in constructor, which is used to execute internal transactions
+
 ### Fixes
+- add `keepaliveInterval` to `web3` in `test-utils`
+- remove `request` from `ExecutorAgent` and replace it with a build in https / http request
+
 ### Deprecations
 - add accountId argument to `ClaimHolder` constructor
 - rename `Claims` to `Verifications`
 - add nested verification functions and deep validity checks
+
 
 
 ## Version 1.7.1

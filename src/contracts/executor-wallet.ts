@@ -26,6 +26,7 @@
 */
 
 import {
+  ContractLoader,
   EventHub,
   Executor,
   ExecutorOptions,
@@ -33,12 +34,15 @@ import {
 } from '@evan.network/dbcp';
 
 import { Wallet } from './wallet';
+import coder = require('web3-eth-abi');
 
 
 /**
  * options for executor instance
  */
 export interface ExecutorWalletOptions extends ExecutorOptions {
+  contractLoader: ContractLoader;
+  accountId: string;
   wallet: Wallet;
 }
 
@@ -53,12 +57,42 @@ export class ExecutorWallet extends Executor {
   options: ExecutorWalletOptions;
 
   /**
-   * note, that the ExecutorWallet requires the "init" function to be called when intending to use the
+   * note, that the ExecutorWallet requires the "init" function to be called when intending to use
    * EventHub helper for transactions with event return values
    */
   constructor(options: ExecutorWalletOptions) {
     super(options);
     this.options = options;
+  }
+
+  /**
+   * will throw, as creating contracts directly is not supported by the walled based executor
+   *
+   * @param      {string}        contractName       contract name
+   * @param      {any[]}         functionArguments  arguments for contract creation, pass empty
+   *                                                Array if no arguments
+   * @param      {any}           inputOptions       transaction arguments, having at least .from and
+   *                                                .gas
+   * @return     {Promise<any>}  new contract
+   */
+  async createContract(contractName: string, functionArguments: any[], inputOptions: any):
+      Promise<any> {
+    this.log(`starting creation of contract "${contractName}"`, 'debug');
+    const compiledContract = this.options.contractLoader.getCompiledContract(contractName);
+    if (!compiledContract || !compiledContract.bytecode) {
+      throw new Error(`cannot find contract bytecode for contract "${contractName}"`);
+    }
+    // build bytecode and arguments for constructor
+    const input = `0x${compiledContract.bytecode}` +
+      this.encodeConstructorParams(JSON.parse(compiledContract.interface), functionArguments);
+    // submit tx; ContractCreated event is handled in submitRawTransaction, if target is null
+    const txInfo = await this.options.wallet.submitRawTransaction(
+      null, input, Object.assign({}, inputOptions, { from: this.options.accountId }));
+    if (!txInfo.result) {
+      throw new Error(`contract creation failed; txInfo: ${txInfo}`)
+    } else {
+      return this.options.contractLoader.loadContract(contractName, txInfo.result);
+    }
   }
 
   /**
@@ -87,9 +121,10 @@ export class ExecutorWallet extends Executor {
       options = Object.assign(
         options || {},
         args[args.length - 1],
-        { from: this.options.wallet.walletContract.options.address, },
+        { from: this.options.wallet.walletAddress, },
       );
-      return contract.methods[functionName].apply(contract.methods, args.slice(0, args.length - 1)).call(options);
+      return contract.methods[functionName].apply(
+        contract.methods, args.slice(0, args.length - 1)).call(options);
     } else if (options) {
       return contract.methods[functionName].apply(contract.methods, args).call(options);
     } else {
@@ -113,16 +148,20 @@ export class ExecutorWallet extends Executor {
    *                             given), the event (if event but no getEventResult was given), the
    *                             value returned by getEventResult(eventObject)
    */
-  async executeContractTransaction(contract: any, functionName: string, inputOptions: any, ...functionArguments: any[]): Promise<any> {
-    // autoGas 1.1 ==> if truthy, enables autoGas 1.1 ==> adds 10% to estimated value capped to current block
-    // maximum minus 4* the allowed derivation per block - The protocol allows the miner of a block
+  async executeContractTransaction(
+      contract: any, functionName: string, inputOptions: any, ...functionArguments: any[]):
+      Promise<any> {
+    // autoGas 1.1 ==> if truthy, enables autoGas 1.1 ==> adds 10% to estimated value capped to
+    // current block maximum minus 4* the allowed derivation per block -
+    // The protocol allows the miner of a block
     // to adjust the block gas limit by a factor of 1/1024 (0.0976%) in either direction.
     // (http://hudsonjameson.com/2017-06-27-accounts-transactions-gas-ethereum/) makes it
     // Math.min(gasEstimated * autoGas, gasLimitCurrentBlock  * 255/256)
     this.log(`starting contract transaction "${functionName}"`, 'debug');
     if (inputOptions.value && parseInt(inputOptions.value, 10)) {
-      throw new Error('sending funds is not supported by the wallet based executor; ' +
-        `value has been set to ${inputOptions.value} for tx "${functionName}"`);
+      if (typeof inputOptions.value !== 'string') {
+        inputOptions.value = `0x${inputOptions.value.toString(16)}`
+      }
     }
     if (!this.signer) {
       throw new Error('signer is undefined');
@@ -187,7 +226,8 @@ export class ExecutorWallet extends Executor {
             this.eventHub
               .unsubscribe({ subscription})
               .catch((ex) => {
-                this.log(`error occurred while unsubscribing from transaction event; ${ex.message || ex}${ex.stack || ''}`, 'error');
+                this.log('error occurred while unsubscribing from transaction event; ' +
+                  `${ex.message || ex}${ex.stack || ''}`, 'error');
               })
             ;
           } else {
@@ -236,7 +276,8 @@ export class ExecutorWallet extends Executor {
               )
               .then((result) => { subscription = result; })
               .catch((ex) => {
-                this.log(`error occurred while subscribing to transaction event; ${ex.message || ex}${ex.stack || ''}`, 'error');
+                this.log('error occurred while subscribing to transaction event; ' +
+                  `${ex.message || ex}; ${ex.stack || ''}`, 'error');
               })
             ;
           } else {
@@ -258,14 +299,14 @@ export class ExecutorWallet extends Executor {
           } else if (inputOptions.estimate) {
             await stopWatching();
             resolve(gasAmount);
-          } else if (!inputOptions.force && parseInt(inputOptions.gas, 10) === parseInt(gasAmount, 10)) {
+          } else if (!inputOptions.force &&
+              parseInt(inputOptions.gas, 10) === parseInt(gasAmount, 10)) {
             await stopWatching(true);
             logGas({ status: 'error', message: 'out of gas estimated' });
             reject(`transaction ${functionName} by ${options.from} would most likely fail`);
           } else {
             // execute contract function
             // recover original from, as estimate converts from to lower case
-            options.from = inputOptions.from;
             // overwrite given gas with estimation plus autoGas factor
             if (autoGas) {
               this.web3.eth.getBlock('latest', (error, result) => {
@@ -273,29 +314,54 @@ export class ExecutorWallet extends Executor {
                   reject(`could not get latest block for ${functionName}: ${error}; ${error.stack}`);
                 } else {
                   const currentLimit = result.gasLimit;
-                  const gas = Math.floor(Math.min(gasEstimated * autoGas, currentLimit * (255 / 256)));
-                  // const gas = Math.max(Math.floor(Math.min(gasEstimated * autoGas, currentLimit * (255 / 256))), 53528);
-                  logGas({ status: 'autoGas.estimation', gasEstimated: gasEstimated, gasGiven: gas, message: `estimated with ${autoGas}` });
+                  const gas = Math.floor(
+                    Math.min(gasEstimated * autoGas, currentLimit * (255 / 256)));
+                  logGas({
+                    status: 'autoGas.estimation',
+                    gasEstimated: gasEstimated,
+                    gasGiven: gas,
+                    message: `estimated with ${autoGas}`,
+                  });
                   options.gas = gas;
-                  this.signAndExecuteTransactionViaWallet(contract, functionName, functionArguments.slice(0, -1), Object.assign({}, options), (...args) => { executeCallback.apply(this, args).catch((ex) => { reject(ex); }); });
+                  this.signAndExecuteTransactionViaWallet(
+                    contract,
+                    functionName,
+                    functionArguments.slice(0, -1),
+                    Object.assign({}, options),
+                    (...args) => {
+                      executeCallback.apply(this, args).catch((ex) => { reject(ex); });
+                    },
+                  );
                 }
               });
             } else {
-              this.signAndExecuteTransactionViaWallet(contract, functionName, functionArguments.slice(0, -1), Object.assign({}, options), (...args) => { executeCallback.apply(this, args).catch((ex) => { reject(ex); }); });
+              this.signAndExecuteTransactionViaWallet(
+                contract,
+                functionName,
+                functionArguments.slice(0, -1),
+                Object.assign({}, options),
+                (...args) => { executeCallback.apply(this, args).catch((ex) => { reject(ex); }); },
+              );
             }
           }
         };
 
-        executeCallback = async (err, receipt) => {
+        executeCallback = async (err, packedResult) => {
           if (err) {
             return reject(`${functionName} failed: ${err}`);
           }
+          const { receipt } = packedResult;
           try {
             // keep transaction hash for checking agains it in event
             transactionHash = receipt && receipt.transactionHash ? receipt.transactionHash : '';
             if (err) {
               this.log(`${functionName} failed: ${err.message || err}`, 'error');
-              logGas({ status: 'error', message: 'transaction submit error', gasEstimated, transactionHash });
+              logGas({
+                status: 'error',
+                message: 'transaction submit error',
+                gasEstimated,
+                transactionHash,
+              });
               reject(err);
             } else {
               let optionsGas;
@@ -305,7 +371,12 @@ export class ExecutorWallet extends Executor {
                 optionsGas = parseInt(options.gas, 10);
               }
               if (optionsGas !== receipt.gasUsed) {
-                logGas({ status: 'success', gasUsed: receipt.gasUsed, gasEstimated, transactionHash });
+                logGas({
+                  status: 'success',
+                  gasUsed: receipt.gasUsed,
+                  gasEstimated,
+                  transactionHash,
+                });
                 // log autoGas entry
                 if (autoGas) {
                   logGas({
@@ -323,7 +394,11 @@ export class ExecutorWallet extends Executor {
                 } else if (eventResults[transactionHash]) {
                   await stopWatching();
                   if (inputOptions.getEventResult) {
-                    resolve(inputOptions.getEventResult(eventResults[transactionHash], eventResults[transactionHash].args ||  eventResults[transactionHash].returnValues));
+                    resolve(inputOptions.getEventResult(
+                      eventResults[transactionHash],
+                      eventResults[transactionHash].args ||
+                        eventResults[transactionHash].returnValues
+                    ));
                   } else {
                     resolve(eventResults[transactionHash]);
                   }
@@ -359,8 +434,15 @@ export class ExecutorWallet extends Executor {
           }
         };
         // estimate tx with wallet accountid instead of users account id
-        const estimateOptions = Object.assign({}, options, { from: this.options.wallet.walletContract.options.address, });
-        contract.methods[functionName].apply(contract.methods, initialArguments).estimateGas(estimateOptions, (...args) => { estimationCallback.apply(this, args).catch((ex) => { reject(ex); }); });
+        const estimateOptions = Object.assign(
+          {}, options, { from: this.options.wallet.walletAddress, });
+        contract.methods[functionName]
+          .apply(contract.methods, initialArguments)
+          .estimateGas(
+            estimateOptions,
+            (...args) => { estimationCallback.apply(this, args).catch((ex) => { reject(ex); }); },
+          )
+        ;
       } catch (ex) {
         this.log(`${functionName} failed: ${ex.message}`, 'error');
         await stopWatching(true);
@@ -382,21 +464,29 @@ export class ExecutorWallet extends Executor {
   }
 
   /**
-   * will throw, as creating contracts directly is not supported by the walled based executor
+   * Should be called to encode constructor params (taken from
+   * https://github.com/ethereum/web3.js/blob/develop/lib/web3/contract.js)
    *
-   * @param      {string}        contractName       contract name
-   * @param      {any[]}         functionArguments  arguments for contract creation, pass empty
-   *                                                Array if no arguments
-   * @param      {any}           inputOptions       transaction arguments, having at least .from and
-   *                                                .gas
-   * @return     {Promise<any>}  new contract
+   * @param      abi     The abi
+   * @param      params  The parameters
+   *
+   * @return     encoded params
    */
-  async createContract(contractName: string, functionArguments: any[], inputOptions: any): Promise<any> {
-    throw new Error(`creating contracts directly is not supported by the walled based executor`);
+  private encodeConstructorParams(abi: any[], params: any[]) {
+    if (params.length) {
+      return abi
+        .filter(json => json.type === 'constructor' && json.inputs.length === params.length)
+        .map(json => json.inputs.map(input => input.type))
+        .map(types => coder.encodeParameters(types, params))
+        .map(encodedParams => encodedParams.replace(/^0x/, ''))[0] || ''
+      ;
+    } else {
+      return '';
+    }
   }
 
   /**
-   * create, sing and submit a contract transaction with private key of options.from
+   * create, sign and submit a contract transaction with private key of options.from
    *
    * @param      {any}       contract           contract instance from api.eth.loadContract(...)
    * @param      {string}    functionName       function name
@@ -407,11 +497,19 @@ export class ExecutorWallet extends Executor {
    * @param      {function}  handleTxResult     callback(error, result)
    * @return     {void}
    */
-  private signAndExecuteTransactionViaWallet = (contract, functionName, functionArguments, options, handleTxResult): void => {
-    this.log(`using wallet ${this.options.wallet.walletContract.options.address} for making transaction "${functionName}"`, 'debug');
+  private signAndExecuteTransactionViaWallet (
+      contract, functionName, functionArguments, options, handleTxResult): void {
+    this.log(`using wallet ${this.options.wallet.walletAddress} ` +
+      `for making transaction "${functionName}"`, 'debug');
     this.options.wallet
-      .submitTransaction(contract, functionName, options, ...functionArguments)
-      .then((result) => { handleTxResult(null, result); })
+      .submitTransaction(
+        contract,
+        functionName,
+        Object.assign({}, options, { from: this.options.accountId }),
+        ...functionArguments,
+      )
+      .then((result) => Promise.all([this.options.web3.eth.getTransactionReceipt(result.event.transactionHash), result]))
+      .then(([receipt, result]) => { handleTxResult(null, { receipt, ...result }); })
       .catch((error) => { handleTxResult(error); })
     ;
   }

@@ -34,11 +34,16 @@ import { accounts } from '../test/accounts';
 import { TestUtils } from '../test/test-utils';
 import { Votings } from './votings';
 
+function timeout(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 const [ votingOwner, member, nonMember ] = accounts;
 
 use(chaiAsPromised);
 
-describe('Voting handler', () => {
+describe('Voting handler', function() {
+  this.timeout(600000);
   let contractLoader: ContractLoader;
   let executor: Executor;
   let votingContract: any;
@@ -56,10 +61,6 @@ describe('Voting handler', () => {
     contractLoader = await TestUtils.getContractLoader(web3);
     executor = await TestUtils.getExecutor(web3);
     votings = await TestUtils.getVotings(web3);
-  });
-
-  after(async () => {
-    web3.currentProvider.connection.close();
   });
 
   it('can create a new voting contract', async() => {
@@ -133,22 +134,31 @@ describe('Voting handler', () => {
   describe('when executing proposals', () => {
     it('allows votings owner to execute a proposal, if enough votes have been given', async () => {
       const proposal = await createProposal(createDescription());
+      await timeout(5000);
       await votings.vote(votingContract, votingOwner, proposal, true);
+      await timeout(5000);
       await votings.vote(votingContract, member, proposal, true);
+      await timeout(5000);
       await expect(votings.execute(votingContract, votingOwner, proposal)).not.to.be.rejected;
     });
 
     it('allows member to execute a proposal, if enough votes have been given', async () => {
       const proposal = await createProposal(createDescription());
+      await timeout(5000);
       await votings.vote(votingContract, votingOwner, proposal, true);
+      await timeout(5000);
       await votings.vote(votingContract, member, proposal, true);
+      await timeout(5000);
       await expect(votings.execute(votingContract, member, proposal)).not.to.be.rejected;
     });
 
     it('allows any account to execute a proposal, if enough votes have been given', async () => {
       const proposal = await createProposal(createDescription());
+      await timeout(5000);
       await votings.vote(votingContract, votingOwner, proposal, true);
+      await timeout(5000);
       await votings.vote(votingContract, member, proposal, true);
+      await timeout(5000);
       await expect(votings.execute(votingContract, nonMember, proposal)).not.to.be.rejected;
     });
 
@@ -176,13 +186,17 @@ describe('Voting handler', () => {
           to: testContract.options.address,
         }
       );
+      await timeout(5000);
       await votings.vote(votingContract, votingOwner, proposal, true);
+      await timeout(5000);
       await votings.vote(votingContract, member, proposal, true);
 
       // check before update
       expect(await executor.executeContractCall(testContract, 'data')).to.eq('abc');
+      await timeout(5000);
       // make new block to update time check in contract (for gas estimation)
       await nextBlock();
+      await timeout(5000);
       await expect(votings.execute(votingContract, votingOwner, proposal, setDataToDef)).not.to.be.rejected;
       expect(await executor.executeContractCall(testContract, 'data')).to.eq('def');
     });
@@ -264,25 +278,24 @@ describe('Voting handler', () => {
       '0.07838871652030921 is the most awesome random number ever',
       '0.98703823197063150 is the most awesome random number ever',
     ];
-    const descriptionsNewestFirst = descriptions.reverse();
+    const descriptionsNewestFirst = descriptions.slice(0).reverse();
     const numOfProposals = 27;
     let contract;
 
     before(async () => {
-      // // create new voting contract
-      // contract = await votings.createContract(
-      //   votingOwner,
-      //   {
-      //     minimumQuorumForProposals: 2,
-      //     minutesForDebate: 1,
-      //     marginOfVotesForMajority: 0,
-      //   },
-      // );
-      // console.dir(contract.options.address)
-      // for (let description of descriptions) {
-      //   await votings.createProposal(contract, votingOwner, { description });
-      // }
-      contract = contractLoader.loadContract('Congress', '0x9C1F4d7E75163D054A98700b1568347C5f687238');
+      // create new voting contract
+      contract = await votings.createContract(
+        votingOwner,
+        {
+          minimumQuorumForProposals: 2,
+          minutesForDebate: 1,
+          marginOfVotesForMajority: 0,
+        },
+      );
+      for (let description of descriptions) {
+        await votings.createProposal(contract, votingOwner, { description });
+      }
+      // contract = contractLoader.loadContract('Congress', '0x9C1F4d7E75163D054A98700b1568347C5f687238');
     });
 
     it('can retrieve a single page', async () => {

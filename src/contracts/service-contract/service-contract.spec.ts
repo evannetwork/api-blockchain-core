@@ -48,7 +48,7 @@ use(chaiAsPromised);
 
 
 describe('ServiceContract', function() {
-  this.timeout(60000);
+  this.timeout(600000);
   let sc0: ServiceContract;
   let sc1: ServiceContract;
   let sc2: ServiceContract;
@@ -283,11 +283,6 @@ describe('ServiceContract', function() {
     if (!await executor.executeContractCall(businessCenter, 'isMember', accounts[2], { from: accounts[2], })) {
       await executor.executeContractTransaction(businessCenter, 'join', { from: accounts[2], autoGas: 1.1, });
     }
-  });
-
-  after(async () => {
-    await ipfs.stop();
-    web3.currentProvider.connection.close();
   });
 
   it('can be created', async () => {

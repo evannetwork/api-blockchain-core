@@ -62,43 +62,31 @@ const browserifyFile = async function(bundleName) {
     .exclude('bcc')
     .exclude('@evan.network/smart-contracts-core')
     .transform("babelify", {
+      // compact everything
+      compact: true,
+      // remove comments
+      comments: false,
       //parse all sub node_modules es5 to es6 
       global: true,
-  
       //important! 
-      //  underscore gets broken when we try to parse it
-      ignore: /underscore/,
-  
-      //use babel to transform es6 to es5 babel to transform es6 to es5
-      presets: [
-        "babel-preset-es2015",
-        "babel-preset-stage-0",
-        "babel-preset-env"
-      ].map(require.resolve),
+      ignore: [
+        // underscore gets broken when we try to parse it
+        /underscore/,
 
+        // remove core-js and babel runtime,
+        // https://github.com/babel/babel/issues/8731#issuecomment-426522500
+        /[\/\\]core-js/,
+        /@babel[\/\\]runtime/,
+      ],
+      presets: [
+        '@babel/env',
+      ],
       plugins: [
-        "babel-plugin-transform-es2015-template-literals",
-        "babel-plugin-transform-es2015-literals",
-        "babel-plugin-transform-es2015-function-name",
-        "babel-plugin-transform-es2015-arrow-functions",
-        "babel-plugin-transform-es2015-block-scoped-functions",
-        "babel-plugin-transform-es2015-classes",
-        "babel-plugin-transform-es2015-object-super",
-        "babel-plugin-transform-es2015-shorthand-properties",
-        "babel-plugin-transform-es2015-computed-properties",
-        "babel-plugin-transform-es2015-for-of",
-        "babel-plugin-transform-es2015-sticky-regex",
-        "babel-plugin-transform-es2015-unicode-regex",
-        "babel-plugin-check-es2015-constants",
-        "babel-plugin-transform-es2015-spread",
-        "babel-plugin-transform-es2015-parameters",
-        "babel-plugin-transform-es2015-destructuring",
-        "babel-plugin-transform-es2015-block-scoping",
-        "babel-plugin-transform-object-rest-spread",
-        "babel-plugin-transform-es3-member-expression-literals",
-        "babel-plugin-transform-es3-property-literals",
-        "babel-plugin-remove-comments"
-      ].map(require.resolve)
+        '@babel/plugin-transform-runtime',
+        // include lodash plugin to pull all lodash functions and imports together and down size the
+        // bundle
+        'lodash'
+      ],
     })
     .plugin(commonShake, { /* options */ })
     .bundle()

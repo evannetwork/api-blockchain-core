@@ -81,13 +81,6 @@ describe('Rights and Roles handler', function() {
     sharing = await TestUtils.getSharing(web3, ipfs);
   });
 
-  after(async () => {
-    await ipfs.stop();
-    web3.currentProvider.connection.close();
-    // wait 5s before continuing
-    await new Promise((resolve) => { setTimeout(() => { resolve(); }, 5000); });
-  });
-
   it('should be able to retrieve all members', async () => {
      const contract = await dc.create('testdatacontract', accounts[0], businessCenterDomain);
      await dc.inviteToContract(businessCenterDomain, contract.options.address, accounts[0], accounts[1]);

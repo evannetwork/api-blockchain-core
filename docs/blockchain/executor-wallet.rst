@@ -15,7 +15,7 @@ ExecutorWallet
    * - Examples
      - `executor-wallet.spec.ts <https://github.com/evannetwork/dbcp/tree/master/src/contracts/executor-wallet.spec.ts>`_
 
-The ``ExecutorWallet`` module is designed to cover basically the same tasks as the |source executor|_ module. While the last one performs the transactions directly with an account, that is given as inputOptions, the ``ExecutorWallet`` module wraps those transactions by sumitting them to a configured wallet contract.
+The ``ExecutorWallet`` module is designed to cover basically the same tasks as the |source executor|_ module. While the last one performs the transactions directly with an account, that is given as inputOptions, the ``ExecutorWallet`` module wraps those transactions by submitting them to a configured wallet contract.
 
 .. figure::  ../_static/wallet_tx_transparent.png
    :align:   center
@@ -47,6 +47,7 @@ Parameters
 ----------
 
 #. ``options`` - ``ExecutorWalletOptions``: options for ServiceContract constructor.
+    * ``accountId`` - ``string``: account, that is used for making transactions against wallet contract
     * ``config`` - ``any``: configuration object for the executor instance
     * ``eventHub`` - |source eventHub|_: |source eventHub|_ instance
     * ``signer`` - |source signerInterface|_: |source signerInterface|_ instance
@@ -71,6 +72,7 @@ Example
 .. code-block:: typescript
   
   const executor = new ExecutorWallet({
+      accountId,
       config,
       eventHub,
       signer,

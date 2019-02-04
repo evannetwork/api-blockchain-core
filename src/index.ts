@@ -46,6 +46,7 @@ export { CryptoProvider } from './encryption/crypto-provider';
 export { DataContract } from './contracts/data-contract/data-contract';
 export { Description } from './shared-description';
 export { ExecutorAgent } from './contracts/executor-agent';
+export { ExecutorWallet } from './contracts/executor-wallet';
 export { Ipfs } from './dfs/ipfs';
 export { Ipld } from './dfs/ipld';
 export { KeyExchange } from './keyExchange';
@@ -55,3 +56,5 @@ export { RightsAndRoles, ModificationType, PropertyType } from './contracts/righ
 export { ServiceContract, Answer, AnswerResult, Call, CallResult } from './contracts/service-contract/service-contract';
 export { Sharing } from './contracts/sharing';
 export { Votings, MemberOptions, ProposalInfo, ProposalInfos, ProposalOptions, VotingsContractOptions } from './votings/votings';
+export { Payments } from './payments';
+export { Wallet } from './contracts/wallet';

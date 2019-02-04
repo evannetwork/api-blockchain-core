@@ -16,9 +16,9 @@ Wallet
      - `wallet.spec.ts <https://github.com/evannetwork/dbcp/tree/master/src/contracts/wallet.spec.ts>`_
 
 The ``Wallet`` module is a wrapper for the `MultiSigWallet <https://github.com/evannetwork/MultiSigWallet/blob/master/contracts/MultiSigWallet.sol>`_ and allows to create wallets, manage owners and execte transactions with it.
-The current api implementations allows only to set a required confirmation count of 1. This basically makes the wallets a multiowned account, where all parties are able to perform transactions on their own.
+One of the common use cases is setting confirmation count to 1 (which is the default value). This basically makes the wallets a multiowned account, where all parties are able to perform transactions on their own.
 
-The ``Wallet`` module is bound to a wallet contract instance. This instace can either be loaded, which requires an existing `MultiSigWallet <https://github.com/evannetwork/MultiSigWallet/blob/master/contracts/MultiSigWallet.sol>`_ contract and a user, that is able to work with it:
+The ``Wallet`` module is bound to a wallet contract instance. This instace can be loaded, which requires an existing `MultiSigWallet <https://github.com/evannetwork/MultiSigWallet/blob/master/contracts/MultiSigWallet.sol>`_ contract and a user, that is able to work with it:
 
 .. code-block:: typescript
   
@@ -142,6 +142,7 @@ Parameters
 #. ``accountId`` - ``string``: account id, that creates the wallet
 #. ``manager`` - ``string``: account, that will be able to manage the new wallet
 #. ``owners`` - ``string[]``: wallet owners
+#. ``confirmations`` - ``number`` (optional): number of confirmations required to complete a transaction, defaults to ``1``
 
 -------
 Returns
@@ -216,7 +217,7 @@ Parameters
 
 #. ``target`` - ``any``: contract of the submitted transaction
 #. ``functionName`` - ``string``: name of the contract function to call
-#. ``inputOptions`` - ``any``: currently supported: from, gas, event, getEventResult, eventTimeout, estimate, force
+#. ``inputOptions`` - ``any``: currently supported: from, gas, value, event, getEventResult, eventTimeout, estimate, force
 #. ``functionArguments`` - ``any[]``: optional arguments to pass to contract transaction
 
 -------

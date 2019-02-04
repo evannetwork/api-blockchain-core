@@ -56,7 +56,7 @@ export class Wallet extends Logger {
   defaultDescription: any = {
     'public': {
       'name': 'MultiSigWallet contract',
-      'description': 'allows multiple accounts to aggree on transactions',
+      'description': 'allows multiple accounts to agree on transactions',
       'author': 'evan.network GmbH',
       'version': '0.0.1',
       'dbcpVersion': 1,
@@ -64,6 +64,10 @@ export class Wallet extends Logger {
   };
   receipts = {};
   walletContract: any;
+
+  get walletAddress() {
+    return this.walletContract ? this.walletContract.options.address : null;
+  }
 
   constructor(options: WalletOptions) {
     super(options);
@@ -75,12 +79,19 @@ export class Wallet extends Logger {
     const signAndExecuteTransaction = this.options.executor.signer.signAndExecuteTransaction;
     this.options.executor.signer.signAndExecuteTransaction =
       function(contract, functionName, functionArguments, innerOptions, handleTxResult) {
-        signAndExecuteTransaction.call(that.options.executor.signer, contract, functionName, functionArguments, innerOptions, (error, receipt) => {
-          if (receipt) {
-            that.receipts[receipt.transactionHash] = receipt;
-          }
-          handleTxResult(error, receipt);
-        });
+        signAndExecuteTransaction.call(
+          that.options.executor.signer,
+          contract,
+          functionName,
+          functionArguments,
+          innerOptions,
+          (error, receipt) => {
+            if (receipt) {
+              that.receipts[receipt.transactionHash] = receipt;
+            }
+            handleTxResult(error, receipt);
+          },
+        );
       };
   }
 
@@ -100,20 +111,29 @@ export class Wallet extends Logger {
     );
   }
 
+  public async confirmTransaction(accountId: string, transactionId: string|number): Promise<any> {
+    return this.submitAndHandleConfirmation(
+      null, 'confirmTransaction', { from: accountId }, transactionId);
+  }
+
   /**
    * create a new wallet contract and uses it as its wallet contract
    *
-   * @param      {string}         accountId  account id, that creates the wallet
-   * @param      {string}         manager    account, that will be able to manage the new wallet
-   * @param      {string[]}       owners     wallet owners
+   * @param      {string}         accountId      account id, that creates the wallet
+   * @param      {string}         manager        account, that will be able to manage the new wallet
+   * @param      {string[]}       owners         wallet owners
+   * @param      {number}         confirmations  number of confirmations required to complete a
+   *                                             transaction, defaults to 1
    * @return     {Promise<void>}  resolved when done
    */
-  public async create(accountId: string, manager: string, owners: string[]): Promise<void> {
+  public async create(accountId: string, manager: string, owners: string[], confirmations = 1):
+     Promise<void> {
     // get factory
-    const factoryDomain = this.options.nameResolver.getDomainName(
-      this.options.nameResolver.config.domains.factory,
-      this.options.nameResolver.config.labels.wallet
-    );
+    const factoryDomain = [
+      this.options.nameResolver.config.labels.wallet,
+      this.options.nameResolver.config.labels.factory,
+      this.options.nameResolver.config.labels.ensRoot,
+    ].join('.');
     const factoryAddress = await this.options.nameResolver.getAddress(factoryDomain);
     if (!factoryAddress) {
       throw new Error(`factory '${factoryDomain}' for creating wallets not found in ` +
@@ -131,10 +151,11 @@ export class Wallet extends Logger {
       },
       manager,
       owners,
-      1,
+      confirmations,
     );
     // add description
-    await this.options.description.setDescriptionToContract(contractId, this.defaultDescription, accountId);
+    await this.options.description.setDescriptionToContract(
+      contractId, this.defaultDescription, accountId);
 
     this.walletContract = this.options.contractLoader.loadContract('MultiSigWallet', contractId);
   }
@@ -185,7 +206,51 @@ export class Wallet extends Logger {
    *                                                transaction
    * @return     {Promise<any>}  status information about transaction
    */
-  public async submitTransaction(target: any, functionName: string, inputOptions: any, ...functionArguments): Promise<any> {
+  public async submitRawTransaction(
+      target: any, encoded: string, inputOptions: any): Promise<any> {
+    return this.submitAndHandleConfirmation(
+      target, 'submitTransaction', inputOptions, encoded);
+  }
+
+  /**
+   * submit a transaction to a wallet
+   *
+   * @param      {any}           target             contract of the submitted transaction
+   * @param      {string}        functionName       name of the contract function to call
+   * @param      {any}           inputOptions       currently supported: from, gas, event,
+   *                                                getEventResult, eventTimeout, estimate, force
+   * @param      {any[]}         functionArguments  optional arguments to pass to contract
+   *                                                transaction
+   * @return     {Promise<any>}  status information about transaction
+   */
+  public async submitTransaction(
+      target: any, functionName: string, inputOptions: any, ...functionArguments): Promise<any> {
+    // serialize data
+    const encoded = this.encodeFunctionParams(functionName, target, functionArguments);
+    return this.submitRawTransaction(target, encoded, inputOptions);
+  }
+
+  private encodeFunctionParams(functionName: string, contractInstance: any, params: any[]) {
+    return contractInstance.options.jsonInterface
+      .filter(json => json.name === functionName && json.inputs.length === params.length)
+      .map(json => [
+        json.inputs.map(input => input.type),
+        this.options.executor.web3.eth.abi.encodeFunctionSignature(json),
+      ])
+      .map(([types, signature]) =>
+        `${signature}${coder.encodeParameters(types, params).replace('0x', '')}`)[0]
+    ;
+  }
+
+  private ensureContract(): any {
+    if (!this.walletContract) {
+      throw new Error('no wallet contract specified at wallet helper, load or create one');
+    }
+    return this.walletContract;
+  }
+
+  public async submitAndHandleConfirmation(
+      target: any, functionName: string, inputOptions: any, ...functionArguments): Promise<any> {
     const subscriptions = [];
     let receipt;
     try {
@@ -199,68 +264,105 @@ export class Wallet extends Logger {
             }
           }, 600000);
 
-          // serialize data
-          const encoded = this.encodeFunctionParams(functionName, target, functionArguments);
-
           // tx status variables
           let transactionHash;
           let walletTransactionId;
-          const transactionEvents = {};
-          const transactionEventResults = {};
+          const transactionResults = {};
 
           // helper functions
           const resolveIfPossible = () => {
-            if (transactionHash &&                          // from Submission event
-              walletTransactionId &&                        // from Submission event
-              this.receipts[transactionHash] &&             // from signer receipt fetching
-              transactionEvents[walletTransactionId]) {     // from Execution/ExecutionFailure
-                txResolved = true;
-                if (transactionEvents[walletTransactionId].event === 'ExecutionFailure') {
-                  return reject('ExecutionFailure');
-                }
-                resolve(this.receipts[transactionHash]);
+            if (transactionHash &&                                // from Confirmation event
+                walletTransactionId &&                            // from Confirmation event
+                this.receipts[transactionHash] &&                 // from signer receipt fetching
+                transactionResults[walletTransactionId].event) {  // from Execution/ExecutionFailure
+              txResolved = true;
+              if (transactionResults[walletTransactionId].event.event === 'ExecutionFailure') {
+                return reject('ExecutionFailure');
+              }
+              resolve(transactionResults[walletTransactionId]);
             }
           };
 
           // subscribe to events for status tracking
           const walletInstance = this.ensureContract();
-          // triggers on tx submission
-          // triggers on success
-          subscriptions.push(await this.options.eventHub.subscribe('MultiSigWallet', walletInstance.options.address, 'Execution', () => true,
-            (event) => {
-              this.log(`received MultiSigWallet Execution event with txid: ${event.returnValues.transactionId} ${event.transactionHash}`, 'debug');
-              transactionEvents[event.returnValues.transactionId] = event;
-              resolveIfPossible();
+          const handleConfirmation = async(event) => {
+            try {
+              // get all events from block
+              const events = {};
+              const eventNames = [];
+              let eventList = await walletInstance.getPastEvents(
+                { fromBlock: event.blockNumber, toBlock: event.blockNumber });
+              eventList = eventList.filter(ev => ev.transactionHash === event.transactionHash);
+              eventList.forEach((entry) => {
+                events[entry.event] = entry;
+                eventNames.push(entry.event);
+              });
+              transactionResults[event.returnValues.transactionId] = { event };
+              if (eventNames.includes('ContractCreated')) {
+                this.log('received MultiSigWallet ContractCreated event with txid: ' +
+                  `${event.returnValues.transactionId} ${event.transactionHash}`, 'debug');
+                transactionResults[event.returnValues.transactionId].result =
+                  eventList.filter(ev => ev.event === 'ContractCreated')[0].returnValues.contractId;
+              } else if (eventNames.includes('Execution')) {
+                this.log('received MultiSigWallet Execution event with txid: ' +
+                  `${event.returnValues.transactionId} ${event.transactionHash}`, 'debug');
+              } else if (eventNames.includes('ExecutionFailure')) {
+                this.log('received MultiSigWallet ExecutionFailure event with txid: ' +
+                  `${event.returnValues.transactionId} ${event.transactionHash}`, 'debug');
+              } else {
+                this.log('received MultiSigWallet Confirmation event with hash: ' +
+                  `${event.transactionHash} and txid: ${event.returnValues.transactionId}`, 'debug');
+                transactionResults[event.returnValues.transactionId].result = {
+                  status: 'pending',
+                  transactionId: event.returnValues.transactionId,
+                };
+              }
+            } catch (ex) {
+              const msg = 'handling of confirmation of ' +
+                (target ? `transaction to "${target.options.address}"` : 'constructor') +
+                ` with ${ex.message || ex}`;
+              this.log(msg, 'error');
+              throw new Error(msg);
             }
-          ));
-          // triggers on failure
-          subscriptions.push(await this.options.eventHub.subscribe('MultiSigWallet', walletInstance.options.address, 'ExecutionFailure', () => true,
-            (event) => {
-              this.log(`received MultiSigWallet ExecutionFailure event with txid: ${event.returnValues.transactionId} ${event.transactionHash}`, 'debug');
-              transactionEvents[event.returnValues.transactionId] = event;
-              resolveIfPossible();
-            }
-          ));
+          };
 
           // execute to contract
           const options = Object.assign(JSON.parse(JSON.stringify(inputOptions)), {
-            event: { target: 'MultiSigWallet', eventName: 'Submission', },
-            getEventResult: (event, args) => {
-              this.log(`received MultiSigWallet Submission event with hash: ${event.transactionHash} and txid: ${args.transactionId}`, 'debug');
+            event: { target: 'MultiSigWallet', eventName: 'Confirmation', },
+            getEventResult: async (event, args) => {
+              this.log('received MultiSigWallet Confirmation event with hash: ' +
+                `${event.transactionHash} and txid: ${args.transactionId}`, 'debug');
               transactionHash = event.transactionHash;
               walletTransactionId = args.transactionId;
+              await handleConfirmation(event);
               resolveIfPossible();
             }
           });
-          await this.options.executor.executeContractTransaction(
-            walletInstance,
-            'submitTransaction',
-            options,
-            target.options.address,
-            inputOptions.value || 0,
-            encoded,
-          );
-          resolveIfPossible();
+          let value = 0;
+          if (options.value) {
+            this.log('wallet transaction has "value" set, removing this from tx options ' +
+              'and passing it as argument', 'debug');
+            value = options.value;
+            delete options.value;
+          }
+          if (functionName === 'submitTransaction') {
+            await this.options.executor.executeContractTransaction(
+              walletInstance,
+              functionName,
+              options,
+              (target && target.options) ?
+                target.options.address : '0x0000000000000000000000000000000000000000',
+              value,
+              ...functionArguments,
+            );
+          } else if (functionName === 'confirmTransaction') {
+            await this.options.executor.executeContractTransaction(
+              walletInstance,
+              functionName,
+              options,
+              ...functionArguments,
+            );
+          }
         } catch (ex) {
           reject(ex);
         }
@@ -269,28 +371,10 @@ export class Wallet extends Logger {
       throw new Error(ex.message || ex);
     } finally {
       // cleanup subscriptions
-      await Promise.all(subscriptions.map(s => this.options.eventHub.unsubscribe({ subscription: s })));
+      await Promise.all(
+        subscriptions.map(s => this.options.eventHub.unsubscribe({ subscription: s })));
     }
 
     return receipt;
-  }
-
-  private encodeFunctionParams(functionName: string, contractInstance: any, params: any[]) {
-    if (params.length) {
-      return contractInstance.options.jsonInterface
-        .filter(json => json.name === functionName && json.inputs.length === params.length)
-        .map(json => [ json.inputs.map(input => input.type), this.options.executor.web3.eth.abi.encodeFunctionSignature(json) ])
-        .map(([types, signature]) => `${signature}${coder.encodeParameters(types, params).replace('0x', '')}`)[0]
-      ;
-    } else {
-      return '0x';
-    }
-  }
-
-  private ensureContract(): any {
-    if (!this.walletContract) {
-      throw new Error('no wallet contract specified at wallet helper, load or create one');
-    }
-    return this.walletContract;
   }
 }

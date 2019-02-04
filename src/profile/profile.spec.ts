@@ -114,11 +114,6 @@ describe('Profile helper', function() {
     rightsAndRoles = await TestUtils.getRightsAndRoles(web3);
   });
 
-  after(async () => {
-    web3.currentProvider.connection.close();
-    await ipld.ipfs.stop();
-  });
-
   it('should be able to be add contact keys', async () => {
     let profile = new Profile({
       nameResolver,

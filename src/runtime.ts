@@ -58,7 +58,7 @@ import { RightsAndRoles } from './contracts/rights-and-roles';
 import { ServiceContract } from './contracts/service-contract/service-contract';
 import { Sharing } from './contracts/sharing';
 import { Votings } from './votings/votings';
-
+import { Payments } from './payments';
 
 /**
  * runtime for interacting with dbcp, including helpers for transactions & co
@@ -81,6 +81,7 @@ export interface Runtime {
   mailbox: Mailbox,
   nameResolver: NameResolver,
   onboarding: Onboarding,
+  payments: Payments,
   profile: Profile,
   rightsAndRoles: RightsAndRoles,
   serviceContract: ServiceContract,
@@ -139,7 +140,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   // executor
   const accountStore = new AccountStore({ accounts: runtimeConfig.accountMap, });
   const signer = new SignerInternal({ accountStore, contractLoader, config: {}, web3, });
-  const executor = new Executor({ config, signer, web3, });
+  const executor = new Executor(Object.assign({ config, signer, web3, }, runtimeConfig.options ? runtimeConfig.options.Executor : {}));
   await executor.init({});
   const nameResolver = new NameResolver({
     config: runtimeConfig.nameResolver || config.nameResolver,
@@ -331,6 +332,13 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     nameResolver,
   });
 
+  const payments = new Payments({
+    accountStore,
+    contractLoader,
+    executor,
+    web3
+  });
+
   // return runtime object
   return {
     accountStore,
@@ -350,6 +358,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     mailbox,
     nameResolver,
     onboarding,
+    payments,
     profile,
     rightsAndRoles,
     serviceContract,
