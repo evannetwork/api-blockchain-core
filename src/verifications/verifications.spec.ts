@@ -108,6 +108,10 @@ describe('Verifications handler', function() {
   //   const storage = await executor.createContract(
   //     'V00_UserRegistry', [], { from: accounts[0], gas: 3000000, });
   //   verifications.contracts.storage = storage;
+
+  //   console.log(`keyHolderLib: ${ keyHolderLib.options.address.slice(2) }`);
+  //   console.log(`verificationHolderLib: ${ verificationHolderLib.options.address.slice(2) }`);
+  //   console.log(`verificationsRegistryLib: ${ verificationsRegistryLib.options.address.slice(2) }`);
   // })
 
   it('can create identities', async () => {
@@ -398,10 +402,26 @@ describe('Verifications handler', function() {
         computed = await verifications.getComputedVerification(accounts[1], topic);
         await expect(computed.warnings).to.include('notEnsRootOwner');
       });
+
+      it('sub verifications, where the parent verifications has the property has "disableSubVerifications" should be not valid', async () => {
+        let parentTopic = getRandomTopic('');
+        let topic = getRandomTopic(parentTopic);
+
+        // check issued case
+        await verifications.setVerification(accounts[0], accounts[0], parentTopic, null, null, null, true);
+        await verifications.setVerification(accounts[0], accounts[1], topic);
+
+        // load parent verifications and computed from child
+        const parentComputed = await verifications.getComputedVerification(accounts[0], parentTopic);
+        const computed = await verifications.getComputedVerification(accounts[1], topic);
+
+        await expect(parentComputed.disableSubVerifications).to.be.eq(true);
+        await expect(computed.warnings).to.include('disableSubVerifications');
+      });
     });
   });
 
-  describe.only('when using identities for contracts', () => {
+  describe('when using identities for contracts', () => {
     let verificationsRegistry;
     let contractId;
 
@@ -411,7 +431,7 @@ describe('Verifications handler', function() {
       verifications.contracts.registry = verificationsRegistry;
     });
 
-    it.only('can create a new identity for a contract', async() => {
+    it('can create a new identity for a contract', async() => {
       const businessCenterDomain = nameResolver.getDomainName(config.nameResolver.domains.businessCenter);
       contractId = await baseContract.createUninitialized(
         'testdatacontract',
@@ -767,6 +787,22 @@ describe('Verifications handler', function() {
         await verifications.setVerification(accounts[0], contractId, topic);
         computed = await verifications.getComputedVerification(contractId, topic);
         await expect(computed.warnings).to.include('notEnsRootOwner');
+      });
+
+      it('sub verifications, where the parent verifications has the property has "disableSubVerifications" should be not valid', async () => {
+        let parentTopic = getRandomTopic('');
+        let topic = getRandomTopic(parentTopic);
+
+        // check issued case
+        await verifications.setVerification(accounts[0], accounts[0], parentTopic, null, null, null, true);
+        await verifications.setVerification(accounts[0], contractId, topic);
+
+        // load parent verifications and computed from child
+        const parentComputed = await verifications.getComputedVerification(accounts[0], parentTopic);
+        const computed = await verifications.getComputedVerification(contractId, topic);
+
+        await expect(parentComputed.disableSubVerifications).to.be.eq(true);
+        await expect(computed.warnings).to.include('disableSubVerifications');
       });
     });
   });

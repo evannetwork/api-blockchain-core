@@ -485,6 +485,12 @@ export class Verifications extends Logger {
               } else if (verification.parentComputed.status === 0) {
                 verification.warnings.push('parentUntrusted');
               }
+
+              // is the sub verification creation is disabled?
+              if (verification.parentComputed.disableSubVerifications ||
+                  verification.parentComputed.warnings.indexOf('disableSubVerifications') !== -1) {
+                verification.warnings.push('disableSubVerifications');
+              }
             } else {
               verification.parents = [ ];
 
@@ -492,7 +498,8 @@ export class Verifications extends Logger {
                  (verification.issuerAccount !== this.ensRootOwner || verification.subject !== this.ensRootOwner)) {
                 verification.warnings = [ 'notEnsRootOwner' ];
               } else {
-                const whitelistWarnings = [ 'expired', 'rejected', 'invalid', 'noIdentity' ];
+                const whitelistWarnings = [ 'expired', 'rejected', 'invalid', 'noIdentity',
+                  'issued' ];
 
                 // if it's a root verification, remove parent, selfIssued and issued warnings
                 verification.warnings = verification.warnings.filter(warning => 
@@ -575,13 +582,14 @@ export class Verifications extends Logger {
    */
   public async computeVerifications(topic: string, verifications: Array<any>) {
     const computed:any = {
-      verifications: verifications,
       creationDate: null,
+      disableSubVerifications: verifications.filter(verification => verification.disableSubVerifications).length > 0,
       displayName: topic.split('/').pop() || 'evan',
       loading: verifications.filter(verification => verification.loading).length > 0,
       name: topic,
       status: -1,
       subjects: [ ],
+      verifications: verifications,
       warnings: [ ],
     };
 
@@ -836,10 +844,11 @@ export class Verifications extends Logger {
       issuer: string,
       subject: string,
       topic: string,
-      expirationDate = 0 ,
+      expirationDate = 0,
       verificationValue?: any,
       descriptionDomain?: string,
-      ): Promise<string> {
+      disabelSubVerifications?: boolean
+    ): Promise<string> {
     await this.ensureStorage();
     let targetIdentity;
     const subjectType = await this.getSubjectType(subject);

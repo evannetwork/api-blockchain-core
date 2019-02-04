@@ -7,6 +7,7 @@
 - use root level wallet factory (`wallet.factory.evan`) instead of a business center scoped wallet factory
 - add support for sending funds with transactions in `wallet`
 - `executor-wallet` now needs `accountId` option in constructor, which is used to execute internal transactions
+- add `disableSubVerifications` flags to verifications
 
 ### Fixes
 - add `keepaliveInterval` to `web3` in `test-utils`
