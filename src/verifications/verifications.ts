@@ -377,6 +377,7 @@ export class Verifications extends Logger {
    *       'parentUntrusted',  // root path (/) is not issued by evan
    *       'notEnsRootOwner', // invalid ens root owner when check topic is
    *       'noIdentity', // checked subject has no identity
+   *       'disableSubVerifications' // when sub verifications are disable on the parent
    *     ],
    *     parents: [ ... ],
    *     parentComputed: [ ... ]

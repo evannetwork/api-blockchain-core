@@ -241,7 +241,7 @@ setVerification
 
 .. code-block:: typescript
 
-  verifications.setVerification(issuer, subject, topic, expirationDate, verificationValue, descriptionDomain]);
+  verifications.setVerification(issuer, subject, topic, expirationDate, verificationValue, descriptionDomain, disableSubVerifications);
 
 Sets or creates a verification; this requires the issuer to have permissions for the parent verification (if verification name seen as a path, the parent 'folder').
 
@@ -255,6 +255,7 @@ Parameters
 #. ``expirationDate`` - ``number`` (optional): expiration date, for the verification, defaults to ``0`` (does not expire)
 #. ``verificationValue`` - ``string`` (optional): bytes32 hash of the verifications value, will not be set if omitted
 #. ``descriptionDomain`` - ``string`` (optional): domain of the verification, this is a subdomain under 'verifications.evan', so passing 'example' will link verifications description to 'example.verifications.evan', unset if omitted
+#. ``disableSubVerifications`` - ``boolean`` (optional): invalidate all verifications that gets issued as children of this claim (warning will include the disableSubVerifications warning)
 
 -------
 Returns
@@ -409,6 +410,7 @@ Example
         'parentUntrusted',  // root path (/) is not issued by evan
         'notEnsRootOwner', // invalid ens root owner when check topic is
         'noIdentity', // checked subject has no identity
+        'disableSubVerifications' // when sub verifications are disable on the parent
       ],
       parents: [ ... ],
       parentComputed: [ ... ]
