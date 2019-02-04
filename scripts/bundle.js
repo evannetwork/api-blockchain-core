@@ -83,6 +83,8 @@ const browserifyFile = async function(bundleName) {
       ],
       plugins: [
         '@babel/plugin-transform-runtime',
+        // include lodash plugin to pull all lodash functions and imports together and down size the
+        // bundle
         'lodash'
       ],
     })

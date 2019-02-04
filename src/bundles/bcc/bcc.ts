@@ -26,11 +26,13 @@
 */
 
 // import to handle bundle from outside
-import Mnemonic = require('bitcore-mnemonic');
 import Web3 = require('web3');
 import prottle = require('prottle');
 import crypto = require('crypto');
 import keystore = require('../../../libs/eth-lightwallet/keystore.js');
+// load adjusted bitcore mnemonic lib and do not load the full API specification to reduce bundle size
+// !Be careful by using all functionallities!
+import Mnemonic = require('../../../libs/bitcore-mnemonic/mnemonic.js');
 
 // used for building bundle
 import {
@@ -123,7 +125,7 @@ export interface CoreBundle {
   CoreRuntime: CoreInstance,
   isAccountOnboarded: Function,
   keystore: any,
-  Mnemonic: Mnemonic,
+  Mnemonic: any,
   KeyProviderInterface: KeyProviderInterface,
   KeyProvider: KeyProvider,
 }
