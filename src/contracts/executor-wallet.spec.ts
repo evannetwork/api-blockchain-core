@@ -65,11 +65,11 @@ describe('Signer Wallet', function() {
     web3 = TestUtils.getWeb3();
     dfs = await TestUtils.getIpfs();
     wallet0 = await TestUtils.getWallet(web3, dfs);
-    await wallet0.create(accounts[0], accounts[0], [accounts[0]]);
     wallet1 = await TestUtils.getWallet(web3, dfs);
+    await wallet0.create(accounts[0], accounts[0], [accounts[0]]);
     await wallet1.create(accounts[1], accounts[1], [accounts[1]]);
-    // wallet.load('0x581B4a37Ced787Ac93b54527E5A01158571759eB');
     executor = await TestUtils.getExecutor(web3);
+    executor.defaultOptions = { gasPrice: 110e9 };
     contractLoader = await TestUtils.getContractLoader(web3);
     nameResolver = await TestUtils.getNameResolver(web3);
     const eventHub = await TestUtils.getEventHub(web3);
@@ -77,7 +77,7 @@ describe('Signer Wallet', function() {
     executorWallet0 = await TestUtils.getExecutorWallet(web3, wallet0, accounts[0], dfs);
     executorWallet0.eventHub = eventHub;
     executorWallet1 = await TestUtils.getExecutorWallet(web3, wallet1, accounts[1], dfs);
-    executorWallet0.eventHub = eventHub;
+    executorWallet1.eventHub = eventHub;
   });
 
   describe('when submitting transactions via wallet', () => {
