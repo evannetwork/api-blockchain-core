@@ -245,7 +245,7 @@ export class TestUtils {
     }
   }
 
-  static async getExecutorWallet(web3, wallet, dfsParam?: DfsInterface): Promise<ExecutorWallet> {
+  static async getExecutorWallet(web3, wallet, accountId, dfsParam?: DfsInterface): Promise<ExecutorWallet> {
     const contracts = await this.getContracts();
     const contractLoader =  new ContractLoader({
       contracts,
@@ -258,7 +258,7 @@ export class TestUtils {
       config: {},
       web3,
     });
-    const executor = new ExecutorWallet({ config, contractLoader, signer, wallet, web3, });
+    const executor = new ExecutorWallet({ accountId, config, contractLoader, signer, wallet, web3, });
     await executor.init({});
 
     return executor;

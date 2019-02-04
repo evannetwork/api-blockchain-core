@@ -65,6 +65,10 @@ export class Wallet extends Logger {
   receipts = {};
   walletContract: any;
 
+  get walletAddress() {
+    return this.walletContract ? this.walletContract.options.address : null;
+  }
+
   constructor(options: WalletOptions) {
     super(options);
     this.options = options;
