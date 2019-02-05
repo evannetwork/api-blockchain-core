@@ -119,7 +119,7 @@ describe('Verifications handler', function() {
     await verifications.createIdentity(accounts[1]);
   });
 
-  it('can add a verification', async () => {
+  it.only('can add a verification', async () => {
     const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
     await verifications.setVerification(accounts[0], accounts[1], '/company');
     const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company');
