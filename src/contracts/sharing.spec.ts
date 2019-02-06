@@ -325,7 +325,7 @@ describe('Sharing handler', function() {
     });
 
     describe('when adding preloaded sharing hashes', () => {
-      it.only('should be able to work with correct added to the hash cache', async () => {
+      it('should be able to work with correct added to the hash cache', async () => {
         const randomSecret = `super secret; ${Math.random()}`;
         // create a contract with a sharing
         const contract = await executor.createContract(
