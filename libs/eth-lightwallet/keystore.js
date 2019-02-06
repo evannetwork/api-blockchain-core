@@ -9,10 +9,10 @@
 var CryptoJS = require('crypto-js');
 var EC = require('elliptic').ec;
 var ec = new EC('secp256k1');
-var bitcore = require('bitcore-lib');
-var Random = bitcore.crypto.Random;
-var Hash = bitcore.crypto.Hash;
-var Mnemonic = require('bitcore-mnemonic');
+var Hash = require('bitcore-lib/lib/crypto/hash.js');
+var Random = require('bitcore-lib/lib/crypto/random.js');
+var HDPrivateKey = require('bitcore-lib/lib/hdprivatekey.js');
+var Mnemonic = require('../bitcore-mnemonic/mnemonic');
 var nacl = require('tweetnacl');
 var scrypt = require('scrypt-async');
 var Transaction = require("../../node_modules/ethereumjs-tx/index.js")
@@ -109,7 +109,7 @@ KeyStore.prototype.init = function(mnemonic, pwDerivedKey, hdPathString, salt) {
     // `hdRoot/hdIndex`.
 
     var hdRoot = new Mnemonic(mnemonic).toHDPrivateKey().xprivkey;
-    var hdRootKey = new bitcore.HDPrivateKey(hdRoot);
+    var hdRootKey = new HDPrivateKey(hdRoot);
     var hdPathKey = hdRootKey.derive(hdPathString).xprivkey;
     this.encHdRootPriv = encryptString(hdPathKey, pwDerivedKey);
   }
@@ -145,7 +145,7 @@ KeyStore.createVault = function(opts, cb) {
 KeyStore.generateSalt = generateSalt;
 
 function generateSalt (byteCount) {
-  return bitcore.crypto.Random.getRandomBuffer(byteCount || 32).toString('base64');
+  return Random.getRandomBuffer(byteCount || 32).toString('base64');
 }
 
 KeyStore.prototype.isDerivedKeyCorrect = function(pwDerivedKey) {
@@ -248,7 +248,7 @@ KeyStore.prototype._generatePrivKeys = function(pwDerivedKey, n) {
 
   var keys = [];
   for (var i = 0; i < n; i++){
-    var hdprivkey = new bitcore.HDPrivateKey(hdRoot).derive(this.hdIndex++);
+    var hdprivkey = new HDPrivateKey(hdRoot).derive(this.hdIndex++);
     var privkeyBuf = hdprivkey.privateKey.toBuffer();
 
     var privkeyHex = privkeyBuf.toString('hex');

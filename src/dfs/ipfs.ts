@@ -276,7 +276,7 @@ export class Ipfs extends Logger implements DfsInterface {
    * @return     {Promise<any>}  resolved when done
    */
   async setAccountAndPrivateKey(accountId: string, privateKey: any) {
-    if(!this.dfsConfig) {
+    if (!this.dfsConfig) {
       throw new Error('no dfsConfig set on ipfs instance')
     }
     this.accountId = accountId;
