@@ -18,8 +18,6 @@ import { setTimeout, clearTimeout } from 'timers';
 import bs58 = require('bs58');
 import prottle = require('prottle');
 import _ = require('lodash');
-import ipfsAPI = require('ipfs-api');
-//const ipfsAPI = function(test) { }
 
 import {
   FileToAdd,
@@ -31,6 +29,7 @@ import {
 
 import { Payments } from './../payments';
 
+import { IpfsLib } from './ipfs-lib';
 import utils = require('./../common/utils');
 
 
@@ -50,6 +49,7 @@ export interface IpfsOptions extends LoggerOptions {
   accountId: string;
   payments: Payments;
   privateKey: string;
+  disablePin?: boolean;
   web3: any;
 }
 
@@ -60,6 +60,7 @@ export class Ipfs extends Logger implements DfsInterface {
   remoteNode: any;
   web3: any;
   dfsConfig: any;
+  disablePin: boolean;
   accountId: string;
   payments: Payments;
   privateKey: string;
@@ -103,6 +104,7 @@ export class Ipfs extends Logger implements DfsInterface {
     this.web3 = options.web3;
     this.privateKey = options.privateKey;
     this.payments = options.payments;
+    this.disablePin = options.disablePin || false;
     if (options.cache) {
       this.cache = options.cache;
     }
@@ -118,10 +120,10 @@ export class Ipfs extends Logger implements DfsInterface {
         options.dfsConfig.headers = {
           authorization: `EvanAuth ${this.accountId},EvanMessage ${hexMessage},EvanSignedMessage ${signedMessage.signature}`
         };
-        this.remoteNode = ipfsAPI(options.dfsConfig);
+        this.remoteNode = new IpfsLib(options.dfsConfig);
       } else {
         this.log('No accountId is given for IPFS api', 'warning');
-        this.remoteNode = ipfsAPI(options.dfsConfig);
+        this.remoteNode = new IpfsLib(options.dfsConfig);
       }
     } else {
       this.log('No IPFS config of ipfs remotenode are given', 'error');
@@ -159,7 +161,7 @@ export class Ipfs extends Logger implements DfsInterface {
   async addMultiple(files: FileToAdd[]): Promise<string[]> {
     let remoteFiles = [];
     try {
-      remoteFiles = await runFunctionAsPromise(this.remoteNode.files, 'add', files);
+      remoteFiles = await this.remoteNode.files.add(files);
       if (!remoteFiles.length) {
         throw new Error('no hash was returned');
       }
@@ -179,7 +181,9 @@ export class Ipfs extends Logger implements DfsInterface {
         this.cache.add(remoteFile.hash, files[i].content);
       }));
     }
-    await prottle(requestWindowSize, remoteFiles.map((fileHash) => () => this.pinFileHash(fileHash)));
+    if (!this.disablePin) {
+      await prottle(requestWindowSize, remoteFiles.map((fileHash) => () => this.pinFileHash(fileHash)));
+    }
     return remoteFiles.map(remoteFile => Ipfs.ipfsHashToBytes32(remoteFile.hash));
   }
 
@@ -189,7 +193,7 @@ export class Ipfs extends Logger implements DfsInterface {
    * @param      hash  filehash of the pinned item
    */
   async pinFileHash(file: any): Promise<any> {
-    await runFunctionAsPromise(this.remoteNode.pin, 'add', file.hash);
+    await this.remoteNode.pin.add(file.hash);
   }
 
   /**
@@ -235,7 +239,7 @@ export class Ipfs extends Logger implements DfsInterface {
         reject(new Error(`error while getting ipfs hash ${ipfsHash}: rejected after ${ IPFS_TIMEOUT }ms`));
       }, IPFS_TIMEOUT)
     });
-    const getRemoteHash = runFunctionAsPromise(this.remoteNode.files, 'cat', ipfsHash)
+    const getRemoteHash = this.remoteNode.files.cat(ipfsHash)
       .then((buffer: any) => {
         let fileBuffer = buffer;
         const evanIdentity = Buffer.from(fileBuffer.slice(0, 18));
@@ -284,6 +288,6 @@ export class Ipfs extends Logger implements DfsInterface {
     this.dfsConfig.headers = {
       authorization: `EvanAuth ${this.accountId},EvanMessage ${hexMessage},EvanSignedMessage ${signedMessage.signature}`
     };
-    this.remoteNode = ipfsAPI(this.dfsConfig);
+    this.remoteNode = new IpfsLib(this.dfsConfig);
   }
 }
