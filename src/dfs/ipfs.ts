@@ -259,7 +259,7 @@ export class Ipfs extends Logger implements DfsInterface {
         }
       })
       .catch((ex: any) => {
-        this.log(`error while getting ipfs hash ${ipfsHash}`);
+        throw new Error(`error while getting ipfs hash ${ipfsHash}`);
       })
     ;
     return Promise.race([

@@ -97,10 +97,14 @@ export class IpfsLib {
         });
         res.on('end', () => {
           const binary = Buffer.concat(data);
-          try {
-            resolve((opts.jsonParse ? JSON.parse(binary.toString()) : binary));
-          } catch (jsonError) {
-            reject(new Error(`error while parsing ipfs binary data: '${String(binary)}', error: ${String(jsonError)}'`));
+          if(res.statusCode >= 200 && res.statusCode < 400) {
+            try {
+              resolve((opts.jsonParse ? JSON.parse(binary.toString()) : binary));
+            } catch (jsonError) {
+              reject(new Error(`error while parsing ipfs binary data: '${String(binary)}', error: ${String(jsonError)}'`));
+            }
+          } else {
+            reject(new Error(`problem with IPFS request: ${String(binary)}'`));
           }
         });
       });
@@ -167,6 +171,7 @@ export class IpfsLib {
    * @param      {string}  ipfsHash  The ipfs hash
    */
   async cat(ipfsHash: string) {
+    console.dir(ipfsHash)
     return this.sendAsync({ uri: `/cat?arg=${ipfsHash}` });
   };
 

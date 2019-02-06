@@ -325,7 +325,7 @@ describe('Sharing handler', function() {
     });
 
     describe('when adding preloaded sharing hashes', () => {
-      it('should be able to work with correct added to the hash cache', async () => {
+      it.only('should be able to work with correct added to the hash cache', async () => {
         const randomSecret = `super secret; ${Math.random()}`;
         // create a contract with a sharing
         const contract = await executor.createContract(
@@ -349,8 +349,8 @@ describe('Sharing handler', function() {
           executor.executeContractCall(contract, 'multiSharings', sharingId) :
           executor.executeContractCall(contract, 'sharing')
         );
-        const sharings = await dfs.get('sharingHash');
-        newSharing.addHashToCache(contract.options.address, sharings, sharingId);
+        const sharings = await dfs.get(sharingHash);
+        newSharing.addHashToCache(contract.options.address, JSON.parse(sharings.toString(), sharingId);
         const key = await newSharing.getKey(contract.options.address, accounts[1], '*', 0, sharingId);
         expect(key).to.eq(randomSecret);
       });
