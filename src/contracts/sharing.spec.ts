@@ -350,7 +350,7 @@ describe('Sharing handler', function() {
           executor.executeContractCall(contract, 'sharing')
         );
         const sharings = await dfs.get(sharingHash);
-        newSharing.addHashToCache(contract.options.address, JSON.parse(sharings.toString(), sharingId);
+        newSharing.addHashToCache(contract.options.address, JSON.parse(sharings.toString()), sharingId);
         const key = await newSharing.getKey(contract.options.address, accounts[1], '*', 0, sharingId);
         expect(key).to.eq(randomSecret);
       });

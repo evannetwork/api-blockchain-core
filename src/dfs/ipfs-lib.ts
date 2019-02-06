@@ -171,7 +171,6 @@ export class IpfsLib {
    * @param      {string}  ipfsHash  The ipfs hash
    */
   async cat(ipfsHash: string) {
-    console.dir(ipfsHash)
     return this.sendAsync({ uri: `/cat?arg=${ipfsHash}` });
   };
 
