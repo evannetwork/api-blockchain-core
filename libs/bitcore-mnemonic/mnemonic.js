@@ -5,6 +5,7 @@ var pbkdf2 = require('./pbkdf2');
 var BN = require('bitcore-lib/lib/crypto/bn.js');
 var Hash = require('bitcore-lib/lib/crypto/hash.js');
 var Random = require('bitcore-lib/lib/crypto/random.js');
+var HDPrivateKey = require('bitcore-lib/lib/hdprivatekey.js');
 
 /**
  * This is an immutable class that represents a BIP39 Mnemonic code.
@@ -162,6 +163,31 @@ Mnemonic._getDictionary = function(mnemonic) {
     }
   }
   return null;
+};
+
+/**
+ *
+ * Generates a HD Private Key from a Mnemonic.
+ * Optionally receive a passphrase and bitcoin network.
+ *
+ * @param {String=} [passphrase]
+ * @param {Network|String|number=} [network] - The network: 'livenet' or 'testnet'
+ * @returns {HDPrivateKey}
+ */
+Mnemonic.prototype.toHDPrivateKey = function(passphrase, network) {
+  var seed = this.toSeed(passphrase);
+  return HDPrivateKey.fromSeed(seed, network);
+};
+
+/**
+ * Will generate a seed based on the mnemonic and optional passphrase.
+ *
+ * @param {String} [passphrase]
+ * @returns {Buffer}
+ */
+Mnemonic.prototype.toSeed = function(passphrase) {
+  passphrase = passphrase || '';
+  return pbkdf2(this.phrase, 'mnemonic' + passphrase, 2048, 64);
 };
 
 /**
