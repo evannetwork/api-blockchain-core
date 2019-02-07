@@ -107,11 +107,6 @@ export class Verifications extends Logger {
    */
   ensOwners: any = { };
 
-  /**
-   * owner of the evan root verification domain
-   */
-  public ensRootOwner: string = '0x4a6723fC5a926FA150bAeAf04bfD673B056Ba83D';
-
   constructor(options: VerificationsOptions) {
     super(options);
     this.options = options;
@@ -481,7 +476,8 @@ export class Verifications extends Logger {
               verification.parents = [ ];
 
               if (verification.name === '/evan' &&
-                 (verification.issuerAccount !== this.ensRootOwner || verification.subject !== this.ensRootOwner)) {
+                 (verification.issuerAccount !== this.options.config.ensRootOwner ||
+                   verification.subject !== this.options.config.ensRootOwner)) {
                 verification.warnings = [ 'notEnsRootOwner' ];
               } else {
                 const whitelistWarnings = [ 'expired', 'rejected', 'invalid', 'noIdentity',
