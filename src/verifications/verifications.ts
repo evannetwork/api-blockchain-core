@@ -256,7 +256,12 @@ export class Verifications extends Logger {
       );
       identity = identityContract.options.address;
     } else {
-      identity = await this.createContractIdentity(accountId);
+      identity = await this.executeAndHandleEventResult(
+        accountId,
+        this.contracts.registry.methods.createIdentity().encodeABI(),
+        { contract: this.contracts.registry, eventName: 'IdentityCreated' },
+        (_, args) => args.identity,
+      );
 
       // write identity to description
       const description = await this.options.description.getDescription(contractId, accountId);
@@ -267,7 +272,8 @@ export class Verifications extends Logger {
       }
       await this.options.description.setDescriptionToContract(contractId, description, accountId);
 
-      await this.linkContractIdentity(accountId, identity, contractId);
+      await this.executeAndHandleEventResult(
+        accountId, this.contracts.registry.methods.linkIdentity(identity, contractId).encodeABI());
     }
 
     // clear cache for this account
@@ -1098,16 +1104,6 @@ export class Verifications extends Logger {
     }
   }
 
-  private async createContractIdentity(accountId: string): Promise<any> {
-    let abiOnRegistry = this.contracts.registry.methods.createIdentity().encodeABI();
-    return this.executeAndHandleEventResult(
-      accountId,
-      abiOnRegistry,
-      { contract: this.contracts.registry, eventName: 'IdentityCreated' },
-      (_, args) => args.identity,
-    );
-  }
-
   /**
    * Checks if a storage was initialized before, if not, load the default one.
    *
@@ -1134,12 +1130,26 @@ export class Verifications extends Logger {
     }
   }
 
+  /**
+   * run given data (serialized contract tx) with given users identity
+   *
+   * @param      {string}        accountId        account execute given tx on own identity
+   * @param      {string}        data             serialized function data
+   * @param      {any}           eventInfo        (optional) object with properties: 'eventName' and
+   *                                              'contract' (web3 contract instance, that triggers
+   *                                              event)
+   * @param      {Function}      getEventResults  (optional) function with arguments event and
+   *                                              eventArges, that returns result of
+   *                                              `executeAndHandleEventResult` call
+   * @return     {Promise<any>}  if `eventInfo` and `getEventResults`, result of `getEventResults`,
+   *                             otherwise void
+   */
   private async executeAndHandleEventResult(
       accountId: string, data: string, eventInfo?: any, getEventResults?: Function): Promise<any> {
     // get users identity
     const userIdentity = await this.getIdentityForAccount(accountId);
 
-    // prepare sucess + result event handling
+    // prepare success + result event handling
     const options = {
       event: { eventName: 'Approved', target: 'KeyHolderLibrary' },
       from: accountId,
@@ -1160,15 +1170,17 @@ export class Verifications extends Logger {
       keyHolderLibrary.getPastEvents(
         'ExecutionFailed', { fromBlock: blockNumber, toBlock: blockNumber }),
     ]);
-    // flatten and filter eventso n exection id from identity tx
+    // flatten and filter events on execution id from identity tx
     const filtered = [ ...executed, ...failed ].filter(
       event => event.returnValues && event.returnValues.executionId === executionId);
     if (filtered.length && filtered[0].event === 'Executed') {
-      // if execution was successfull
+      // if execution was successful
       if (eventInfo) {
-        // if original options had an event property for retrieving evnet results
-        const targetIdentityEvents = await eventInfo.contract.getPastEvents(
+        // if original options had an event property for retrieving event results
+        let targetIdentityEvents = await eventInfo.contract.getPastEvents(
           eventInfo.eventName, { fromBlock: blockNumber, toBlock: blockNumber });
+        targetIdentityEvents = targetIdentityEvents.filter(
+          event => event.transactionHash === filtered[0].transactionHash);
         if (targetIdentityEvents.length) {
           return getEventResults(targetIdentityEvents[0], targetIdentityEvents[0].returnValues);
         }
@@ -1301,12 +1313,5 @@ export class Verifications extends Logger {
       await this.getIdentityForAccount(subject);
     }
     return this.subjectTypes[subject];
-  }
-
-  private async linkContractIdentity(
-      accountId: string, contractIdentity: string, contractAddress: string): Promise<void> {
-    let abiOnRegistry = this.contracts.registry.methods.linkIdentity(
-      contractIdentity, contractAddress).encodeABI();
-    return this.executeAndHandleEventResult(accountId, abiOnRegistry);
   }
 }
