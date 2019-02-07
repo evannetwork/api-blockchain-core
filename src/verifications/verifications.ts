@@ -172,35 +172,18 @@ export class Verifications extends Logger {
       );
       identity = identityContract.options.address;
     } else {
-      // create identity hash from registry
-      identity = await this.options.executor.executeContractTransaction(
-        this.contracts.registry,
-        'createIdentity',
-        {
-          from: accountId,
-          // event IdentityCreated(bytes32 indexed identity, address indexed owner);
-          event: { target: 'IdentityHolder', eventName: 'IdentityCreated' },
-          getEventResult: (_, args) => args.identity,
-        },
-      );
+      identity = await this.createContractIdentity(accountId);
+
       // write identity to description
       const description = await this.options.description.getDescription(contractId, accountId);
       description.public.identity = identity;
-
       // update to dbcpVersion 2 if 1 is selected, to support the new identity property
       if (!description.public.dbcpVersion || description.public.dbcpVersion === 1) {
         description.public.dbcpVersion = 2;
       }
-
       await this.options.description.setDescriptionToContract(contractId, description, accountId);
-      // write identity to contract
-      await this.options.executor.executeContractTransaction(
-        this.contracts.registry,
-        'linkIdentity',
-        { from: accountId },
-        identity,
-        contractId,
-      );
+
+      await this.linkContractIdentity(accountId, identity, contractId);
     }
 
     // clear cache for this account
@@ -260,6 +243,7 @@ export class Verifications extends Logger {
         'isVerificationApproved',
         'verificationCreationBlock',
         'verificationCreationDate',
+        'getDisableSubVerifications',
         'getVerificationExpirationDate',
         'isVerificationRejected',
       ].map(fun => this.callOnIdentity(subject, isIdentity, fun, verificationId));
@@ -284,7 +268,7 @@ export class Verifications extends Logger {
         }
       })());
 
-      let [verification, verificationStatus, creationBlock, creationDate, expirationDate, rejected, description] =
+      let [verification, verificationStatus, creationBlock, creationDate, disableSubVerifications, expirationDate, rejected, description] =
         await Promise.all(verificationDetails);
 
       if (verification.issuer === nullAddress) {
@@ -312,6 +296,7 @@ export class Verifications extends Logger {
         creationDate,
         data: (<any>verification).data,
         description,
+        disableSubVerifications,
         expirationDate: expirationDate == 0 ? null : expirationDate,
         expired: expirationDate == 0 ? false : expirationDate * 1000 < Date.now(),
         id: verificationId,
@@ -564,7 +549,7 @@ export class Verifications extends Logger {
 
   /**
    * Takes an array of verifications and combines all the states for one quick view.
-   * 
+   *
    * {
    *   verifications: verifications,
    *   creationDate: null,
@@ -848,7 +833,7 @@ export class Verifications extends Logger {
       expirationDate = 0,
       verificationValue?: any,
       descriptionDomain?: string,
-      disabelSubVerifications?: boolean
+      disabelSubVerifications = false
     ): Promise<string> {
     await this.ensureStorage();
     let targetIdentity;
@@ -930,6 +915,7 @@ export class Verifications extends Logger {
       verificationDataUrl,
       expirationDate || 0,
       ensFullNodeHash || nullBytes32,
+      disabelSubVerifications,
     );
   }
 
@@ -1104,15 +1090,15 @@ export class Verifications extends Logger {
       // only load the storage once at a time (this function could be called quickly several times)
       if (!this.storageEnsuring) {
         this.storageEnsuring = Promise.all([
-          this.options.nameResolver 
+          this.options.nameResolver
             .getAddress(`identities.${ this.options.nameResolver.config.labels.ensRoot }`),
-          this.options.nameResolver 
+          this.options.nameResolver
             .getAddress(`contractidentities.${ this.options.nameResolver.config.labels.ensRoot }`),
         ]);
       }
 
       // await storage address
-      const [ identityStorage, contractIdentityStorage ]= await this.storageEnsuring;
+      const [ identityStorage, contractIdentityStorage ] = await this.storageEnsuring;
       this.contracts.storage = this.options.contractLoader.loadContract('V00_UserRegistry',
         identityStorage);
       this.contracts.registry = this.options.contractLoader.loadContract('VerificationsRegistry',
@@ -1134,14 +1120,21 @@ export class Verifications extends Logger {
   private async executeOnIdentity(subject: string, fun: string, options: any, ...args): Promise<any> {
     const subjectType = await this.getSubjectType(subject, false);
     if (subjectType === 'contract') {
-      // contract identity
-      return this.options.executor.executeContractTransaction(
-        this.contracts.registry,
-        fun,
-        options,
-        await this.getIdentityForAccount(subject),
-        ...args,
-      );
+      let abiOnRegistry = this.contracts.registry.methods[fun](
+        await this.getIdentityForAccount(subject), ...args).encodeABI();
+      if (options.event) {
+        return this.executeAndHandleEventResult(
+          options.from,
+          abiOnRegistry,
+          {
+            contract: this.options.contractLoader.loadContract('VerificationsRegistryLibrary', this.contracts.registry.options.address),
+            eventName: options.event.eventName,
+          },
+          options.getEventResult,
+        );
+      } else {
+        return this.executeAndHandleEventResult(options.from, abiOnRegistry);
+      }
     } else if (subjectType === 'account') {
       // account identity
       const targetIdentity = await this.getIdentityForAccount(subject);
@@ -1252,5 +1245,71 @@ export class Verifications extends Logger {
         delete this.verificationCache[key];
       }
     });
+  }
+
+  private async createContractIdentity(accountId: string): Promise<any> {
+    let abiOnRegistry = this.contracts.registry.methods.createIdentity().encodeABI();
+    return this.executeAndHandleEventResult(
+      accountId,
+      abiOnRegistry,
+      { contract: this.contracts.registry, eventName: 'IdentityCreated' },
+      (_, args) => args.identity,
+    );
+  }
+
+  private async linkContractIdentity(
+      accountId: string, contractIdentity: string, contractAddress: string): Promise<void> {
+    let abiOnRegistry = this.contracts.registry.methods.linkIdentity(
+      contractIdentity, contractAddress).encodeABI();
+    return this.executeAndHandleEventResult(accountId, abiOnRegistry);
+  }
+
+  private async executeAndHandleEventResult(
+      accountId: string, data: string, eventInfo?: any, getEventResults?: Function): Promise<any> {
+    // get users identity
+    const userIdentity = await this.getIdentityForAccount(accountId);
+
+    // prepare sucess + result event handling
+    const options = {
+      event: { eventName: 'Approved', target: 'KeyHolderLibrary' },
+      from: accountId,
+      getEventResult: (event, eventArgs) => [eventArgs.executionId, event.blockNumber],
+    };
+
+    // run tx
+    const [executionId, blockNumber] = await this.options.executor.executeContractTransaction(
+      userIdentity, 'execute', options, this.contracts.registry.options.address, 0, data);
+
+    // fetch result from event
+    // load user identity as a library, to retrieve library events from users identity
+    const keyHolderLibrary = this.options.contractLoader.loadContract(
+      'KeyHolderLibrary', userIdentity.options.address);
+    const [ executed, failed ] = await Promise.all([
+      keyHolderLibrary.getPastEvents(
+        'Executed', { fromBlock: blockNumber, toBlock: blockNumber }),
+      keyHolderLibrary.getPastEvents(
+        'ExecutionFailed', { fromBlock: blockNumber, toBlock: blockNumber }),
+    ]);
+    // flatten and filter eventso n exection id from identity tx
+    const filtered = [ ...executed, ...failed ].filter(
+      event => event.returnValues && event.returnValues.executionId === executionId);
+    if (filtered.length && filtered[0].event === 'Executed') {
+      // if execution was successfull
+      if (eventInfo) {
+        // if original options had an event property for retrieving evnet results
+        const targetIdentityEvents = await eventInfo.contract.getPastEvents(
+          eventInfo.eventName, { fromBlock: blockNumber, toBlock: blockNumber });
+        if (targetIdentityEvents.length) {
+          return getEventResults(targetIdentityEvents[0], targetIdentityEvents[0].returnValues);
+        }
+      }
+    } else if (filtered.length && filtered[0].event === 'ExecutionFailed') {
+      const values = filtered[0].returnValues;
+      throw new Error('executeOnIdentity failed; ExecutionFailed event was triggered: ' +
+        `executionId: "${values.executionId}", to: "${values.to}", value: "${values.value}"`);
+    } else {
+      throw new Error('executeOnIdentity failed; subject type was \'account\', ' +
+        'but no proper identity tx status event could be retrieved');
+    }
   }
 }

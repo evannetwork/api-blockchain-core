@@ -70,49 +70,39 @@ describe('Verifications handler', function() {
     web3.currentProvider.connection.close();
   });
 
-  // can be used for creating new libraries, but disabled by default
-  // it('can deploy a new structure', async () => {
-  //   const keyHolderLib = await executor.createContract(
-  //     'KeyHolderLibrary', [], { from: accounts[0], gas: 3000000, });
-  //   contractLoader.contracts['VerificationHolderLibrary'].bytecode = linker.linkBytecode(
-  //     contractLoader.contracts['VerificationHolderLibrary'].bytecode,
-  //     { 'verifications/KeyHolderLibrary.sol:KeyHolderLibrary': keyHolderLib.options.address }
-  //   );
+  it('can deploy a new structure', async () => {
+    const libs = {};
+    const deploy = async (contractAndPath) => {
+      console.log(contractAndPath);
+      const contractName = /^[^:]*:(.*)$/g.exec(contractAndPath)[1];
+      const replace = (target, name, address) => {
+        contractLoader.contracts[target].bytecode =
+          contractLoader.contracts[target].bytecode.replace(
+            new RegExp(contractLoader.contracts[name]
+              .deployedAt.slice(2), 'g'), address.slice(2));
+      };
+      const updateBytecode = (librayName, libraryAddress) => {
+        Object.keys(contractLoader.contracts).map((contract) => {
+          const before = contractLoader.contracts[contract].bytecode;
+          replace(contract, librayName, libraryAddress);
+          if (before !== contractLoader.contracts[contract].bytecode) {
+            console.log(`updated: ${contract}`)
+          }
+        });
+      };
+      libs[contractAndPath] = (await executor.createContract(
+        contractName, [], { from: accounts[0], gas: 3000000 })).options.address;
+      updateBytecode(contractName, libs[contractAndPath]);
+    };
 
-  //   const verificationHolderLib = await executor.createContract(
-  //     'VerificationHolderLibrary', [], { from: accounts[0], gas: 3000000, });
-  //   contractLoader.contracts['VerificationHolder'].bytecode = linker.linkBytecode(
-  //   contractLoader.contracts['VerificationHolder'].bytecode,
-  //     {
-  //       'verifications/VerificationHolderLibrary.sol:VerificationHolderLibrary': verificationHolderLib.options.address,
-  //       'verifications/KeyHolderLibrary.sol:KeyHolderLibrary': keyHolderLib.options.address,
-  //     },
-  //   );
+    await deploy('verifications/KeyHolderLibrary.sol:KeyHolderLibrary');
+    await deploy('verifications/VerificationHolderLibrary.sol:VerificationHolderLibrary');
+    await deploy('verifications/VerificationsRegistryLibrary.sol:VerificationsRegistryLibrary');
 
-  //   const verificationsRegistryLib = await executor.createContract(
-  //     'VerificationsRegistryLibrary', [], { from: accounts[0], gas: 3000000, });
-  //   contractLoader.contracts['VerificationsRegistry'].bytecode = linker.linkBytecode(
-  //   contractLoader.contracts['VerificationsRegistry'].bytecode,
-  //     {
-  //       'verifications/VerificationsRegistryLibrary.sol:VerificationsRegistryLibrary': verificationsRegistryLib.options.address
-  //     },
-  //   );
-
-  //   const verificationExecutorContracts = (<any>verifications.options.executor.signer).contractLoader.contracts;
-  //   verificationExecutorContracts['VerificationHolderLibrary'].bytecode = verificationExecutorContracts['VerificationHolderLibrary'].bytecode.replace(/53943BD308f3CB0E79Cb4811288dB1AB2AaFa6b2/g, keyHolderLib.options.address.slice(2));
-  //   verificationExecutorContracts['VerificationHolder'].bytecode = verificationExecutorContracts['VerificationHolder'].bytecode.replace(/FDb2b28f481D9FEbB55Cea18131C8d96b18D16bB/g, verificationHolderLib.options.address.slice(2));
-  //   verificationExecutorContracts['VerificationHolder'].bytecode = verificationExecutorContracts['VerificationHolder'].bytecode.replace(/53943BD308f3CB0E79Cb4811288dB1AB2AaFa6b2/g, keyHolderLib.options.address.slice(2));
-  //   verificationExecutorContracts['KeyHolder'].bytecode = verificationExecutorContracts['KeyHolder'].bytecode.replace(/53943BD308f3CB0E79Cb4811288dB1AB2AaFa6b2/g, keyHolderLib.options.address.slice(2));
-  //   verificationExecutorContracts['VerificationsRegistry'].bytecode = verificationExecutorContracts['VerificationsRegistry'].bytecode.replace(/b1621be2ef1F2dC5153B2487600CcC1E4Fa7ee27/g, verificationsRegistryLib.options.address.slice(2));
-
-  //   const storage = await executor.createContract(
-  //     'V00_UserRegistry', [], { from: accounts[0], gas: 3000000, });
-  //   verifications.contracts.storage = storage;
-
-  //   console.log(`keyHolderLib: ${ keyHolderLib.options.address.slice(2) }`);
-  //   console.log(`verificationHolderLib: ${ verificationHolderLib.options.address.slice(2) }`);
-  //   console.log(`verificationsRegistryLib: ${ verificationsRegistryLib.options.address.slice(2) }`);
-  // })
+    for (let key of Object.keys(libs)) {
+      console.log(`${/[^:]:(.*)/g.exec(key)[1]}: ${libs[key].slice(2)}`);
+    }
+  });
 
   it('can create identities', async () => {
     await verifications.createIdentity(accounts[0]);
