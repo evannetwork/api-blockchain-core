@@ -155,12 +155,41 @@ export class TestUtils {
   }
 
   static async getContracts() {
+
     const solc = new smartContract.Solc({
       log: Logger.getDefaultLog(),
       config: { compileContracts: false, },
     });
     await solc.ensureCompiled();
-    return solc.getContracts();
+    const contracts = solc.getContracts();
+
+    if (process.env.CI) {
+      const replace = (target, name, address) => {
+        contracts[target].bytecode =
+          contracts[target].bytecode.replace(
+            new RegExp(contracts[name]
+              .deployedAt.slice(2), 'g'), address.slice(2));
+      };
+      const updateBytecode = (librayName, libraryAddress) => {
+        Object.keys(contracts).map((contract) => {
+          const before = contracts[contract].bytecode;
+          replace(contract, librayName, libraryAddress);
+          if (before !== contracts[contract].bytecode) {
+            console.log(`updated: ${contract}`)
+          }
+        });
+      };
+
+      updateBytecode('KeyHolderLibrary', '0x9B1a3c38A72CBb9a88425f96d6EFA6e49134c5d7');
+      updateBytecode('ClaimHolderLibrary', '0x615278C5bfc000DB98d330016c0cef924ad0Bd02');
+      updateBytecode('ClaimsRegistryLibrary', '0x26f4B90df27d41c5f3C174C12AB063f05DEB53eC');
+      updateBytecode('DSRolesPerContractLibrary', '0xFE5CdcA776D31Fc9AcE7dEd9Be62f9c3730cc81c');
+      updateBytecode('BaseContractZeroLibrary', '0x1C7eA92160dE3072d54083B39565f374f45986F4');
+      updateBytecode('DataContractLibrary', '0xd6A3d8c6A3081ec1E30C6A535505d5FAF10A4715');
+
+    }
+
+    return contracts;
   }
 
   static getCryptoProvider() {
@@ -292,6 +321,7 @@ export class TestUtils {
     const pk = await this.getAccountStore(null).getPrivateKey(accounts[0]);
     const ipfs = new Ipfs({
       dfsConfig: {host: 'ipfs.evan.network', port: '443', protocol: 'https'},
+      disablePin: true,
       accountId: accounts[0],
       privateKey: `0x${pk}`,
       web3: this.getWeb3()
