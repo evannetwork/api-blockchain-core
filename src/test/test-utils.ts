@@ -132,8 +132,8 @@ export class TestUtils {
     const executor = await this.getExecutor(web3);
     executor.eventHub = eventHub;
     return new Verifications({
-      contractLoader: await TestUtils.getContractLoader(web3),
       config,
+      contractLoader: await TestUtils.getContractLoader(web3),
       description: await TestUtils.getDescription(web3, dfs),
       executor,
       nameResolver: await this.getNameResolver(web3),

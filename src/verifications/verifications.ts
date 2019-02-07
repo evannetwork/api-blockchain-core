@@ -292,8 +292,8 @@ export class Verifications extends Logger {
         data: (<any>verification).data,
         description,
         disableSubVerifications,
-        expirationDate: expirationDate == 0 ? null : expirationDate,
-        expired: expirationDate == 0 ? false : expirationDate * 1000 < Date.now(),
+        expirationDate: `${expirationDate}` === '0' ? null : expirationDate,
+        expired: `${expirationDate}` === '0' ? false : expirationDate * 1000 < Date.now(),
         id: verificationId,
         issuer: (<any>verification).issuer,
         name: topic,
@@ -484,7 +484,7 @@ export class Verifications extends Logger {
                   'issued' ];
 
                 // if it's a root verification, remove parent, selfIssued and issued warnings
-                verification.warnings = verification.warnings.filter(warning => 
+                verification.warnings = verification.warnings.filter(warning =>
                   whitelistWarnings.indexOf('warning') !== -1
                 );
               }
@@ -563,7 +563,7 @@ export class Verifications extends Logger {
    *                           displayName
    */
   public async computeVerifications(topic: string, verifications: Array<any>) {
-    const computed:any = {
+    const computed: any = {
       creationDate: null,
       disableSubVerifications: verifications.filter(verification => verification.disableSubVerifications).length > 0,
       displayName: topic.split('/').pop() || 'evan',
@@ -605,7 +605,7 @@ export class Verifications extends Logger {
       if (computed.subjects.indexOf(verification.subject) === -1) {
         computed.subjects.push(verification.subject);
       }
-      
+
       // save all creation dates for later usage
       if (typeof verification.creationDate !== 'undefined') {
         creationDates[verification.status].push(verification.creationDate);
@@ -1216,7 +1216,7 @@ export class Verifications extends Logger {
    *
    * @param      {string}  subject  the subject that should be removed
    * @param      {string}  topic    the topic that should be removed
-   * @return     {void}  
+   * @return     {void}
    */
   public deleteFromVerificationCache(subject: string, topic: string) {
     // prepent starting slash if it does not exists
