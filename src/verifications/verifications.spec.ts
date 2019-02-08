@@ -43,6 +43,7 @@ const linker = require('solc/linker');
 use(chaiAsPromised);
 
 describe('Verifications handler', function() {
+  this.timeout(600000);
   let baseContract: BaseContract;
   let verifications: Verifications;
   let verificationsContracts;
@@ -64,10 +65,6 @@ describe('Verifications handler', function() {
     description = await TestUtils.getDescription(web3, dfs);
     await verifications.createIdentity(accounts[0]);
     await verifications.createIdentity(accounts[1]);
-  });
-
-  after(async () => {
-    web3.currentProvider.connection.close();
   });
 
   it('can deploy a new structure', async () => {
