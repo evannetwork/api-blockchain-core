@@ -42,7 +42,6 @@ import { Aes } from './encryption/aes';
 import { AesBlob } from './encryption/aes-blob';
 import { AesEcb } from './encryption/aes-ecb';
 import { BaseContract } from './contracts/base-contract/base-contract';
-import { Verifications } from './verifications/verifications';
 import { config } from './config';
 import { CryptoProvider } from './encryption/crypto-provider';
 import { DataContract } from './contracts/data-contract/data-contract';
@@ -53,12 +52,13 @@ import { KeyExchange } from './keyExchange';
 import { Mailbox } from './mailbox';
 import { NameResolver } from './name-resolver';
 import { Onboarding } from './onboarding';
+import { Payments } from './payments';
 import { Profile } from './profile/profile';
 import { RightsAndRoles } from './contracts/rights-and-roles';
 import { ServiceContract } from './contracts/service-contract/service-contract';
 import { Sharing } from './contracts/sharing';
+import { Verifications } from './verifications/verifications';
 import { Votings } from './votings/votings';
-import { Payments } from './payments';
 
 /**
  * runtime for interacting with dbcp, including helpers for transactions & co
@@ -67,7 +67,6 @@ export interface Runtime {
   accountStore: AccountStore,
   activeAccount: string,
   baseContract: BaseContract,
-  verifications: Verifications,
   contractLoader: ContractLoader,
   cryptoProvider: CryptoProvider,
   dataContract: DataContract,
@@ -87,6 +86,7 @@ export interface Runtime {
   serviceContract: ServiceContract,
   sharing: Sharing,
   signer: SignerInterface,
+  verifications: Verifications,
   votings: Votings,
   web3: any,
 };
@@ -344,7 +344,6 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     accountStore,
     activeAccount,
     baseContract,
-    verifications,
     contractLoader,
     cryptoProvider,
     dataContract,
@@ -364,6 +363,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     serviceContract,
     sharing,
     signer,
+    verifications,
     votings,
     web3,
   };
