@@ -63,8 +63,6 @@ describe('Verifications handler', function() {
     nameResolver = await TestUtils.getNameResolver(web3);
     baseContract = await TestUtils.getBaseContract(web3);
     description = await TestUtils.getDescription(web3, dfs);
-    await verifications.createIdentity(accounts[0]);
-    await verifications.createIdentity(accounts[1]);
   });
 
   it('can deploy a new structure', async () => {
