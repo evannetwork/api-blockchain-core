@@ -82,7 +82,7 @@ export class Profile extends Logger {
   profileContract: any;
   trees: any;
   treeLabels = {
-    activeClaims: 'activeClaims',
+    activeVerifications: 'activeVerifications',
     addressBook: 'addressBook',
     bookmarkedDapps: 'bookmarkedDapps',
     contracts: 'contracts',
@@ -564,41 +564,41 @@ export class Profile extends Logger {
   }
 
   /**
-   * Load all claims that should be displayed for this profile within the ui.
+   * Load all verifications that should be displayed for this profile within the ui.
    *
-   * @return     {Array<string>}  array of topics of claims that should be displayed
+   * @return     {Array<string>}  array of topics of verifications that should be displayed
    */
-  private async loadActiveClaims() {
-    const defaultClaims = [
+  private async loadActiveVerifications() {
+    const defaultVerifications = [
       '/evan/termsofuse',
     ];
 
-    if (!this.trees[this.treeLabels.activeClaims]) {
-      await this.loadForAccount(this.treeLabels.activeClaims);
+    if (!this.trees[this.treeLabels.activeVerifications]) {
+      await this.loadForAccount(this.treeLabels.activeVerifications);
     }
 
-    return (await this.ipld.getLinkedGraph(this.trees[this.treeLabels.activeClaims],
-      this.treeLabels.activeClaims)) || defaultClaims;
+    return (await this.ipld.getLinkedGraph(this.trees[this.treeLabels.activeVerifications],
+      this.treeLabels.activeVerifications)) || defaultVerifications;
   }
 
   /**
-   * Save an array of active claims to the profile.
+   * Save an array of active verifications to the profile.
    *
    * @param      {any}            bookmarks  bookmarks to set
    * @return     {Promise<void>}  resolved when done
    */
-  async setActiveClaims(claims: Array<string>): Promise<void> {
-    if (!claims) {
-      throw new Error('no claims are given');
+  async setActiveVerifications(verifications: Array<string>): Promise<void> {
+    if (!verifications) {
+      throw new Error('no verifications are given');
     }
     // ensure that the tree exists
-    this.ensureTree(this.treeLabels.activeClaims);
+    this.ensureTree(this.treeLabels.activeVerifications);
 
     // save it!
     await this.ipld.set(
-      this.trees[this.treeLabels.activeClaims],
-      this.treeLabels.activeClaims,
-      claims,
+      this.trees[this.treeLabels.activeVerifications],
+      this.treeLabels.activeVerifications,
+      verifications,
       true
     );
   }

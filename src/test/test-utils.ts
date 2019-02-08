@@ -48,7 +48,7 @@ import { accounts } from './accounts';
 import { Aes } from '../encryption/aes';
 import { AesEcb } from '../encryption/aes-ecb';
 import { BaseContract } from '../contracts/base-contract/base-contract';
-import { Claims } from '../claims/claims';
+import { Verifications } from '../verifications/verifications';
 import { config } from './../config';
 import { CryptoProvider } from '../encryption/crypto-provider';
 import { DataContract } from '../contracts/data-contract/data-contract';
@@ -127,13 +127,13 @@ export class TestUtils {
     });
   };
 
-  static async getClaims(web3, dfs): Promise<Claims> {
+  static async getVerifications(web3, dfs): Promise<Verifications> {
     const eventHub = await this.getEventHub(web3);
     const executor = await this.getExecutor(web3);
     executor.eventHub = eventHub;
-    return new Claims({
-      contractLoader: await TestUtils.getContractLoader(web3),
+    return new Verifications({
       config,
+      contractLoader: await TestUtils.getContractLoader(web3),
       description: await TestUtils.getDescription(web3, dfs),
       executor,
       nameResolver: await this.getNameResolver(web3),
@@ -180,9 +180,9 @@ export class TestUtils {
         });
       };
 
-      updateBytecode('KeyHolderLibrary', '0x9B1a3c38A72CBb9a88425f96d6EFA6e49134c5d7');
-      updateBytecode('ClaimHolderLibrary', '0x615278C5bfc000DB98d330016c0cef924ad0Bd02');
-      updateBytecode('ClaimsRegistryLibrary', '0x26f4B90df27d41c5f3C174C12AB063f05DEB53eC');
+      updateBytecode('KeyHolderLibrary', '0xddCABC3034611943E516912B1f5397ee01cE090b');
+      updateBytecode('VerificationHolderLibrary', '0x5608ff4E854E17269103b17ff8A817a20A96A937');
+      updateBytecode('VerificationsRegistryLibrary', '0xFFBC3d1551EDD6D2fE887dD5b9Eb95aad90de922');
       updateBytecode('DSRolesPerContractLibrary', '0xFE5CdcA776D31Fc9AcE7dEd9Be62f9c3730cc81c');
       updateBytecode('BaseContractZeroLibrary', '0x1C7eA92160dE3072d54083B39565f374f45986F4');
       updateBytecode('DataContractLibrary', '0xd6A3d8c6A3081ec1E30C6A535505d5FAF10A4715');
