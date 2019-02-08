@@ -1193,16 +1193,16 @@ Example
 
 ------------------------------------------------------------------------------
 
-.. _profile_loadActiveClaims:
+.. _profile_loadActiveVerifications:
 
-loadActiveClaims
+loadActiveVerifications
 ================================================================================
 
 .. code-block:: typescript
 
-  profile.loadActiveClaims();
+  profile.loadActiveVerifications();
 
-Load all claims that should be displayed for this profile within the ui.
+Load all verificationss that should be displayed for this profile within the ui.
 
 ----------
 Parameters
@@ -1214,7 +1214,7 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``Array<string>``: array of topics of claims that should be displayed (e.g. [ '/company/tuev', '/test/1234' ] )
+``Promise`` returns ``Array<string>``: array of topics of verificationss that should be displayed (e.g. [ '/company/tuev', '/test/1234' ] )
 
 -------
 Example
@@ -1222,20 +1222,20 @@ Example
 
 .. code-block:: typescript
 
-  const topics = await bcc.profile.loadActiveClaims();
+  const topics = await bcc.profile.loadActiveVerifications();
 
 ------------------------------------------------------------------------------
 
-.. _profile_setActiveClaims:
+.. _profile_setActiveVerifications:
 
-setActiveClaims
+setActiveVerifications
 ================================================================================
 
 .. code-block:: typescript
 
-  profile.setActiveClaims(bookmarks);
+  profile.setActiveVerifications(bookmarks);
 
-Save an array of active claims to the profile.
+Save an array of active verificationss to the profile.
 
 ----------
 Parameters
@@ -1255,7 +1255,7 @@ Example
 
 .. code-block:: typescript
 
-  await bcc.profile.setActiveClaims([ '/company/tuev', '/test/1234' ]);
+  await bcc.profile.setActiveVerifications([ '/company/tuev', '/test/1234' ]);
 
 
 .. required for building markup

@@ -42,7 +42,7 @@ import { Aes } from './encryption/aes';
 import { AesBlob } from './encryption/aes-blob';
 import { AesEcb } from './encryption/aes-ecb';
 import { BaseContract } from './contracts/base-contract/base-contract';
-import { Claims } from './claims/claims';
+import { Verifications } from './verifications/verifications';
 import { config } from './config';
 import { CryptoProvider } from './encryption/crypto-provider';
 import { DataContract } from './contracts/data-contract/data-contract';
@@ -67,7 +67,7 @@ export interface Runtime {
   accountStore: AccountStore,
   activeAccount: string,
   baseContract: BaseContract,
-  claims: Claims,
+  verifications: Verifications,
   contractLoader: ContractLoader,
   cryptoProvider: CryptoProvider,
   dataContract: DataContract,
@@ -294,7 +294,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     keyProvider,
   });
 
-  const claims = new Claims({
+  const verifications = new Verifications({
     accountStore: accountStore,
     contractLoader: contractLoader,
     config,
@@ -344,7 +344,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     accountStore,
     activeAccount,
     baseContract,
-    claims,
+    verifications,
     contractLoader,
     cryptoProvider,
     dataContract,

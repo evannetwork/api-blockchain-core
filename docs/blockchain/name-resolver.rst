@@ -555,7 +555,7 @@ claimFunds
 
   namerResolver.claimFunds(name, accountId);
 
-Claim funds for domain.
+Verification funds for domain.
 
 ----------
 Parameters
