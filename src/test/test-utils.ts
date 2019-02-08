@@ -26,8 +26,6 @@
 */
 
 import crypto = require('crypto');
-
-import IpfsApi = require('ipfs-api');
 import smartContract = require('@evan.network/smart-contracts-core');
 import Web3 = require('web3');
 

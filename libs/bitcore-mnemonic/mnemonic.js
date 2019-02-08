@@ -86,6 +86,18 @@ var Mnemonic = function(data, wordlist) {
   });
 };
 
+/**
+ * Internal function to generate a random mnemonic
+ *
+ * @param {Number} ENT - Entropy size, defaults to 128
+ * @param {Array} wordlist - Array of words to generate the mnemonic
+ * @returns {String} Mnemonic string
+ */
+Mnemonic._mnemonic = function(ENT, wordlist) {
+  var buf = Random.getRandomBuffer(ENT / 8);
+  return Mnemonic._entropy2mnemonic(buf, wordlist);
+};
+
 Mnemonic.Words = {
   ENGLISH: require('./lib/words/english.js')
 };

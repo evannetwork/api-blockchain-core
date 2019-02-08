@@ -61,7 +61,7 @@ const browserifyFile = async function(bundleName) {
     })
     .exclude('bcc')
     .exclude('@evan.network/smart-contracts-core')
-    .transform("babelify", {
+    .transform('babelify', {
       // compact everything
       compact: true,
       // remove comments
