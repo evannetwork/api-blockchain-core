@@ -495,7 +495,9 @@ describe('Verifications handler', function() {
 
     it('can add a verification and validate the integrity', async () => {
       const oldLength = (await verifications.getVerifications(contractId, '/company')).length;
+      await timeout(5000);
       await verifications.setVerification(accounts[0], contractId, '/company');
+      await timeout(5000);
       const verificationsForAccount = await verifications.getVerifications(contractId, '/company');
       expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
       await verifications.validateVerification(contractId, verificationsForAccount[oldLength].id);
