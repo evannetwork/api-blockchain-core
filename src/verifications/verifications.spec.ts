@@ -151,7 +151,9 @@ describe('Verifications handler', function() {
 
     it('can add a verification and validate the integrity', async () => {
       const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
+      await timeout(5000);
       await verifications.setVerification(accounts[0], accounts[1], '/company');
+      await timeout(5000);
       const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company');
       expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
       await verifications.validateVerification(accounts[1], verificationsForAccount[oldLength].id);
@@ -183,7 +185,9 @@ describe('Verifications handler', function() {
 
     it('can track the creation date', async() => {
       const before = Math.floor(Date.now() / 1000);
+      await timeout(5000);
       await verifications.setVerification(accounts[0], accounts[1], '/company');
+      await timeout(5000);
       const after = Math.floor(Date.now() / 1000);
       const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company');
       const last = verificationsForAccount.length - 1;
@@ -532,9 +536,9 @@ describe('Verifications handler', function() {
     });
 
     it('can track the creation date', async() => {
-      const before = Date.now() / 1000;
+      const before = Math.floor(Date.now() / 1000);
       await verifications.setVerification(accounts[0], contractId, '/company');
-      const after = Date.now() / 1000;
+      const after = Math.floor(Date.now() / 1000);
       const verificationsForAccount = await verifications.getVerifications(contractId, '/company');
       const last = verificationsForAccount.length - 1;
       expect(verificationsForAccount[last]).to.have.property('status', VerificationsStatus.Issued);
