@@ -28,6 +28,7 @@
 const https = require('https');
 const http = require('http');
 const querystring = require('querystring');
+const url = require('url');
 
 /**
  * Use this function instead of request node_module to reduce browser bundle file size.
@@ -38,16 +39,20 @@ const querystring = require('querystring');
 const request = (requestOptions: any) => {
   return new Promise((resolve, reject) => {
     const requestModule = requestOptions.url.startsWith('https') ? https : http;
+    const parsed = url.parse(requestOptions.url);
     let result = '';
 
     // define request options
     const options = {
       method: requestOptions.method || 'POST',
-      headers: requestOptions.header || { 'Content-Type': 'application/json' }
+      headers: requestOptions.header || { 'Content-Type': 'application/json' },
+      hostname: parsed.hostname,
+      port: parsed.port,
+      path: parsed.path,
     };
 
     // start the request
-    const req = requestModule.request(requestOptions.url, options, (res) => {
+    const req = requestModule.request(options, (res) => {
       res.on('data', (d) => result += d);
       res.on('end', () => {
         const resultObj = JSON.parse(result);
