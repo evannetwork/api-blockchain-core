@@ -2,6 +2,11 @@
 
 ## Next Version
 ### Features
+### Fixes
+### Deprecations
+
+## Version 2.0.0
+### Features
 - add support for contract creation to `executor-wallet`
 - add support for handling multiple confirmations to `executor-wallet` and `wallet`
 - use root level wallet factory (`wallet.factory.evan`) instead of a business center scoped wallet factory
@@ -17,7 +22,6 @@
 - add accountId argument to `ClaimHolder` constructor
 - rename `Claims` to `Verifications`
 - add nested verification functions and deep validity checks
-
 
 
 ## Version 1.7.1
