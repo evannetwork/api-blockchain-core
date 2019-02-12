@@ -4,17 +4,6 @@ sudo: required
 
 matrix:
   include:
-  - name: "non-blockchain specific tests"
-    node_js: "11"
-    env:
-      - ACCOUNT_MAP='{"0x001De828935e8c7e4cb56Fe610495cAe63fb2612":"01734663843202e2245e5796cb120510506343c67915eb4f9348ac0d8c2cf22a","0x0030C5e7394585400B1FB193DdbCb45a37Ab916E":"7d09c0873e3f8dc0c7282bb7c2ba76bfd432bff53c38ace06193d1e4faa977e7","0x00D1267B27C3A80080f9E1B6Ba01DE313b53Ab58":"a76a2b068fb715830d042ca40b1a4dab8d088b217d11af91d15b972a7afaf202"}'
-      - TESTSPECS='src/encryption/*.spec.ts src/dfs/*.spec.ts'
-      - ENS_ADDRESS='0x9f8063ac44D23C99E943eA3DE3E1bb6Ab7678df0'
-      - ENS_RESOLVER='0xc6b9F181BFa9eFA7679a3B3a786aB582AeE79dad'
-      - CHAIN_ENDPOINT='ws://localhost:8546'
-    script:
-      - npm run testunitcoverage
-
   - name: "services contracts tests"
     node_js: "11"
     env:
@@ -26,27 +15,16 @@ matrix:
     script:
       - npm run testunitcoverage -- --exclude src/name-resolver.spec.ts
 
-  - name: "data contract (encryption) tests"
+  - name: "data contract & IPFS tests"
     node_js: "11"
     env:
       - ACCOUNT_MAP='{"0x001De828935e8c7e4cb56Fe610495cAe63fb2612":"01734663843202e2245e5796cb120510506343c67915eb4f9348ac0d8c2cf22a","0x0030C5e7394585400B1FB193DdbCb45a37Ab916E":"7d09c0873e3f8dc0c7282bb7c2ba76bfd432bff53c38ace06193d1e4faa977e7","0x00D1267B27C3A80080f9E1B6Ba01DE313b53Ab58":"a76a2b068fb715830d042ca40b1a4dab8d088b217d11af91d15b972a7afaf202"}'
-      - TESTSPECS="src/contracts/data-contract/*.spec.ts"
+      - TESTSPECS="src/contracts/data-contract/*.spec.ts src/encryption/*.spec.ts src/dfs/*.spec.ts"
       - ENS_ADDRESS='0x9f8063ac44D23C99E943eA3DE3E1bb6Ab7678df0'
       - ENS_RESOLVER='0xc6b9F181BFa9eFA7679a3B3a786aB582AeE79dad'
       - CHAIN_ENDPOINT='ws://localhost:8546'
     script:
-      - npm run testunitcoverage -- --grep 'when working encrypted DFS files'
-
-  - name: "data contract tests"
-    node_js: "11"
-    env:
-      - ACCOUNT_MAP='{"0x001De828935e8c7e4cb56Fe610495cAe63fb2612":"01734663843202e2245e5796cb120510506343c67915eb4f9348ac0d8c2cf22a","0x0030C5e7394585400B1FB193DdbCb45a37Ab916E":"7d09c0873e3f8dc0c7282bb7c2ba76bfd432bff53c38ace06193d1e4faa977e7","0x00D1267B27C3A80080f9E1B6Ba01DE313b53Ab58":"a76a2b068fb715830d042ca40b1a4dab8d088b217d11af91d15b972a7afaf202"}'
-      - TESTSPECS="src/contracts/data-contract/*.spec.ts"
-      - ENS_ADDRESS='0x9f8063ac44D23C99E943eA3DE3E1bb6Ab7678df0'
-      - ENS_RESOLVER='0xc6b9F181BFa9eFA7679a3B3a786aB582AeE79dad'
-      - CHAIN_ENDPOINT='ws://localhost:8546'
-    script:
-      - npm run testunitcoverage -- --grep 'when working encrypted DFS files' --invert
+      - npm run testunitcoverage
 
   - name: "service/base/businesscenter contract tests"
     node_js: "11"

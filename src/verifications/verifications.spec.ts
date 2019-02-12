@@ -40,9 +40,14 @@ import { TestUtils } from '../test/test-utils';
 
 const linker = require('solc/linker');
 
+function timeout(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 use(chaiAsPromised);
 
 describe('Verifications handler', function() {
+  this.timeout(600000);
   let baseContract: BaseContract;
   let verifications: Verifications;
   let verificationsContracts;
@@ -62,12 +67,6 @@ describe('Verifications handler', function() {
     nameResolver = await TestUtils.getNameResolver(web3);
     baseContract = await TestUtils.getBaseContract(web3);
     description = await TestUtils.getDescription(web3, dfs);
-    await verifications.createIdentity(accounts[0]);
-    await verifications.createIdentity(accounts[1]);
-  });
-
-  after(async () => {
-    web3.currentProvider.connection.close();
   });
 
   it('can deploy a new structure', async () => {
@@ -111,7 +110,9 @@ describe('Verifications handler', function() {
 
   it('can add a verification', async () => {
     const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
+    await timeout(5000);
     await verifications.setVerification(accounts[0], accounts[1], '/company');
+    await timeout(5000);
     const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company');
     expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
     expect(verificationsForAccount[oldLength]).to.have.property('status', VerificationsStatus.Issued);
@@ -120,7 +121,9 @@ describe('Verifications handler', function() {
   describe('when using external account based identities', () => {
     it('can add a verification', async () => {
       const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
+      await timeout(5000);
       const verificationId = await verifications.setVerification(accounts[0], accounts[1], '/company');
+      await timeout(5000);
       expect(verificationId).to.be.ok;
       const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company');
       expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
@@ -138,7 +141,9 @@ describe('Verifications handler', function() {
     it('can add a verification with specific expirationDate', async () => {
       const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
       const now = Math.floor(new Date().getTime() / 1000);
+      await timeout(5000);
       await verifications.setVerification(accounts[0], accounts[1], '/company', now);
+      await timeout(5000);
       const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company');
       expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
       expect(verificationsForAccount[oldLength]).to.have.property('expirationDate', now.toString());
@@ -146,7 +151,9 @@ describe('Verifications handler', function() {
 
     it('can add a verification and validate the integrity', async () => {
       const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
+      await timeout(5000);
       await verifications.setVerification(accounts[0], accounts[1], '/company');
+      await timeout(5000);
       const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company');
       expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
       await verifications.validateVerification(accounts[1], verificationsForAccount[oldLength].id);
@@ -178,7 +185,9 @@ describe('Verifications handler', function() {
 
     it('can track the creation date', async() => {
       const before = Math.floor(Date.now() / 1000);
+      await timeout(5000);
       await verifications.setVerification(accounts[0], accounts[1], '/company');
+      await timeout(5000);
       const after = Math.floor(Date.now() / 1000);
       const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company');
       const last = verificationsForAccount.length - 1;
@@ -205,7 +214,9 @@ describe('Verifications handler', function() {
       await verifications.setVerification(accounts[0], accounts[0], '/company');
       await verifications.setVerification(accounts[0], accounts[0], '/company/b-s-s');
       await verifications.setVerification(accounts[0], accounts[0], '/company/b-s-s/employee');
+      await timeout(5000);
       const verificationId = await verifications.setVerification(accounts[0], accounts[1], '/company/b-s-s/employee/swo6');
+      await timeout(5000);
       await verifications.deleteVerification(accounts[1], accounts[1], verificationId);
       const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company/b-s-s/employee/swo6');
       expect(verificationsForAccount).to.have.lengthOf(0);
@@ -259,8 +270,11 @@ describe('Verifications handler', function() {
       await verifications.setVerification(accounts[0], accounts[0], '/company');
       await verifications.setVerification(accounts[0], accounts[0], '/company/b-s-s');
       await verifications.setVerification(accounts[0], accounts[0], '/company/b-s-s/employee');
+      await timeout(5000);
       const verificationId = await verifications.setVerification(accounts[0], accounts[1], '/company/b-s-s/employee/swo4');
+      await timeout(5000);
       await verifications.rejectVerification(accounts[1], accounts[1], verificationId, { reason: 'denied' });
+      await timeout(5000);
       const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company/b-s-s/employee/swo4');
       expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
       expect(verificationsForAccount[oldLength]).to.have.property('status', VerificationsStatus.Rejected);
@@ -464,6 +478,7 @@ describe('Verifications handler', function() {
     it('can add a verification with specific data', async () => {
       const oldLength = (await verifications.getVerifications(contractId, '/company')).length;
       await verifications.setVerification(accounts[0], contractId, '/company', null, {foo: 'bar'});
+      await timeout(5000);
       const verificationsForAccount = await verifications.getVerifications(contractId, '/company');
       expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
       expect(verificationsForAccount[oldLength]).to.have.property('uri', 'https://ipfs.evan.network/ipfs/Qmbjig3cZbUUufWqCEFzyCppqdnmQj3RoDjJWomnqYGy1f');
@@ -480,7 +495,9 @@ describe('Verifications handler', function() {
 
     it('can add a verification and validate the integrity', async () => {
       const oldLength = (await verifications.getVerifications(contractId, '/company')).length;
+      await timeout(5000);
       await verifications.setVerification(accounts[0], contractId, '/company');
+      await timeout(5000);
       const verificationsForAccount = await verifications.getVerifications(contractId, '/company');
       expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
       await verifications.validateVerification(contractId, verificationsForAccount[oldLength].id);
@@ -521,9 +538,9 @@ describe('Verifications handler', function() {
     });
 
     it('can track the creation date', async() => {
-      const before = Date.now() / 1000;
+      const before = Math.floor(Date.now() / 1000);
       await verifications.setVerification(accounts[0], contractId, '/company');
-      const after = Date.now() / 1000;
+      const after = Math.floor(Date.now() / 1000);
       const verificationsForAccount = await verifications.getVerifications(contractId, '/company');
       const last = verificationsForAccount.length - 1;
       expect(verificationsForAccount[last]).to.have.property('status', VerificationsStatus.Issued);
@@ -593,8 +610,11 @@ describe('Verifications handler', function() {
       await verifications.setVerification(accounts[0], accounts[0], '/company');
       await verifications.setVerification(accounts[0], accounts[0], '/company/b-s-s');
       await verifications.setVerification(accounts[0], accounts[0], '/company/b-s-s/employee');
+      await timeout(5000);
       const verificationId = await verifications.setVerification(accounts[0], contractId, '/company/b-s-s/employee/swo4');
+      await timeout(5000);
       await verifications.rejectVerification(accounts[0], contractId, verificationId, { reason: 'denied' });
+      await timeout(5000);
       const verificationsForAccount = await verifications.getVerifications(contractId, '/company/b-s-s/employee/swo4');
       expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
       expect(verificationsForAccount[oldLength]).to.have.property('status', VerificationsStatus.Rejected);
