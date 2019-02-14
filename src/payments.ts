@@ -360,7 +360,7 @@ export class Payments extends Logger {
         { data: params }
       );
 
-      if (result.error){
+      if (result.error) {
         throw result.error;
       }
       sig = result;
@@ -473,12 +473,13 @@ export class Payments extends Logger {
 
     const stillOpen = openEvents.filter((ev) => {
       for (let sev of settleEvents) {
-        if (sev.args._open_block_number.eq(ev.blockNumber))
+        if (sev.args._open_block_number.eq(ev.blockNumber)) {
           return false;
+        }
       }
       for (let cev of closeEvents) {
         if (cev.args._open_block_number.eq(ev.blockNumber) &&
-            cev.blockNumber + challenge > currentBlock)
+            cev.blockNumber + challenge > currentBlock) {}
           return false;
       }
       return true;
