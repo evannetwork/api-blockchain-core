@@ -169,7 +169,7 @@ load
 
 .. code-block:: typescript
 
-  wallet.load(contractId);
+  wallet.load(contractId[, walletType]);
 
 Load wallet contract from address and uses it as its wallet contract.
 
@@ -178,6 +178,7 @@ Parameters
 ----------
 
 #. ``contractid`` - ``string``: a wallet contract address
+#. ``walletType`` - ``string`` (optional): wallet contract type, defaults to ``MultiSigWallet``
 
 -------
 Returns

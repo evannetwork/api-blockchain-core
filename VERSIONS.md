@@ -2,8 +2,11 @@
 
 ## Next Version
 ### Features
+- add support for `MultiSigWalletSG` wallets to wallet `wallet` module
+
 ### Fixes
 ### Deprecations
+
 
 ## Version 2.0.0
 ### Features
@@ -39,10 +42,12 @@
 ### Fixes
 - remove `OriginIdentity`, as `ClaimHolder` is used for identities 
 
+
 ## Version 1.6.1
 ### Fixes
 - remove web3 initialization within the `ServiceContract`
 - use 1.0.0-beta.33, beta.37 will cause Websocket errors in Edge browser
+
 
 ## Version 1.6.0
 ### Features
@@ -55,6 +60,7 @@
 - add support for permanent ENS address on payable registrar
 - add support for retrieving proposals paged
 - add support for setting claims on contracts
+
 
 ## Version 1.5.0
 ### Features
