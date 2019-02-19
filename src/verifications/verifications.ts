@@ -345,9 +345,8 @@ export class Verifications extends Logger {
   public async ensureVerificationDescription(verification: any) {
     // map the topic to the verification ens name and extract the top level verifications domain to check, if
     // the user can set the verification tree
-    const fullDomain = this.getVerificationEnsAddress(verification.name);
-    const topLevelDomain = fullDomain.replace('.verifications.evan', '').split('.').reverse()[0];
-    const ensAddress = this.getFullDescriptionDomainWithHash(verification.name, topLevelDomain);
+    const ensAddress = this.getVerificationEnsAddress(verification.name);
+    const topLevelDomain = ensAddress.split('.').splice(-3, 3).join('.');
 
     // if no description was set, use the latest one or load it
     if (!verification.description) {
@@ -966,7 +965,7 @@ export class Verifications extends Logger {
         const stringified = JSON.stringify(verificationValue);
         const stateMd5 = crypto.createHash('md5').update(stringified).digest('hex');
         verificationData = await this.options.dfs.add(stateMd5, Buffer.from(stringified));
-        verificationDataUrl = `https://ipfs.test.evan.network/ipfs/${Ipfs.bytes32ToIpfsHash(verificationData)}`;
+        verificationDataUrl = `https://ipfs.evan.network/ipfs/${Ipfs.bytes32ToIpfsHash(verificationData)}`;
       } catch (e) {
         const msg = `error parsing verificationValue -> ${e.message}`;
         this.log(msg, 'info');

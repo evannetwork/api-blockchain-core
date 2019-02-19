@@ -3,12 +3,9 @@
   "dependencies": {
     "@evan.network/dbcp": "^1.5.2",
     "@evan.network/smart-contracts-core": "^2.0.0",
-    "@ledgerhq/hw-app-eth": "^4.39.0",
-    "@ledgerhq/hw-transport-node-hid": "^4.39.0",
     "@types/node": "8.0.53",
     "ajv": "^5.5.1",
     "babel-plugin-lodash": "^3.3.4",
-    "babel-polyfill": "^6.26.0",
     "bignumber.js": "3.0.1",
     "bitcore-lib": "^0.16.0",
     "bs58": "4.0.1",

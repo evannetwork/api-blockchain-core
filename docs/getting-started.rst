@@ -42,7 +42,7 @@ Configuring and initializing blockchain core
           'PRIVATE KEY',
       },
       // ipfs configuration for evan.network storage
-      ipfs: {host: 'ipfs.test.evan.network', port: '443', protocol: 'https'},
+      ipfs: {host: 'ipfs.evan.network', port: '443', protocol: 'https'},
       // web3 provider config (currently evan.network testcore)
       web3Provider: 'wss://testcore.evan.network/ws',
     };

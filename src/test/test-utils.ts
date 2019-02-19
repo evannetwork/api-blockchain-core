@@ -318,7 +318,7 @@ export class TestUtils {
   static async getIpfs(): Promise<Ipfs> {
     const pk = await this.getAccountStore(null).getPrivateKey(accounts[0]);
     const ipfs = new Ipfs({
-      dfsConfig: {host: 'ipfs.test.evan.network', port: '443', protocol: 'https'},
+      dfsConfig: {host: 'ipfs.evan.network', port: '443', protocol: 'https'},
       disablePin: true,
       accountId: accounts[0],
       privateKey: `0x${pk}`,

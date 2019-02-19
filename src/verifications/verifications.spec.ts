@@ -135,7 +135,7 @@ describe('Verifications handler', function() {
       await verifications.setVerification(accounts[0], accounts[1], '/company', null, {foo: 'bar'});
       const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company');
       expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
-      expect(verificationsForAccount[oldLength]).to.have.property('uri', 'https://ipfs.test.evan.network/ipfs/Qmbjig3cZbUUufWqCEFzyCppqdnmQj3RoDjJWomnqYGy1f');
+      expect(verificationsForAccount[oldLength]).to.have.property('uri', 'https://ipfs.evan.network/ipfs/Qmbjig3cZbUUufWqCEFzyCppqdnmQj3RoDjJWomnqYGy1f');
     });
 
     it('can add a verification with specific expirationDate', async () => {
@@ -481,7 +481,7 @@ describe('Verifications handler', function() {
       await timeout(5000);
       const verificationsForAccount = await verifications.getVerifications(contractId, '/company');
       expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
-      expect(verificationsForAccount[oldLength]).to.have.property('uri', 'https://ipfs.test.evan.network/ipfs/Qmbjig3cZbUUufWqCEFzyCppqdnmQj3RoDjJWomnqYGy1f');
+      expect(verificationsForAccount[oldLength]).to.have.property('uri', 'https://ipfs.evan.network/ipfs/Qmbjig3cZbUUufWqCEFzyCppqdnmQj3RoDjJWomnqYGy1f');
     });
 
     it('can add a verification with specific expirationDate', async () => {

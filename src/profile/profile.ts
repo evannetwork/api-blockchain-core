@@ -570,7 +570,7 @@ export class Profile extends Logger {
    */
   private async loadActiveVerifications() {
     const defaultVerifications = [
-      '/evan/onboarding/termsofuse',
+      '/evan/termsofuse',
     ];
 
     if (!this.trees[this.treeLabels.activeVerifications]) {
