@@ -4,6 +4,8 @@
 ### Features
 - add support for `MultiSigWalletSG` wallets to wallet `wallet` module
 - add tracking for  file hashes saved with `ipld` module
+- fix `ensureVerificationDescription` to match `getFullDescriptionDomainWithHash` ens paths
+- use correct defaultVerifications topics `loadActiveVerifications` 
 
 ### Fixes
 ### Deprecations
