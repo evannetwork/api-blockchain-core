@@ -345,8 +345,9 @@ export class Verifications extends Logger {
   public async ensureVerificationDescription(verification: any) {
     // map the topic to the verification ens name and extract the top level verifications domain to check, if
     // the user can set the verification tree
-    const ensAddress = this.getVerificationEnsAddress(verification.name);
-    const topLevelDomain = ensAddress.split('.').splice(-3, 3).join('.');
+    const fullDomain = this.getVerificationEnsAddress(verification.name);
+    const topLevelDomain = fullDomain.replace('.verifications.evan', '').split('.').reverse()[0];
+    const ensAddress = this.getFullDescriptionDomainWithHash(verification.name, topLevelDomain);
 
     // if no description was set, use the latest one or load it
     if (!verification.description) {

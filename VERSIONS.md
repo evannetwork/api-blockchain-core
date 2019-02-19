@@ -3,6 +3,8 @@
 ## Next Version
 ### Features
 - add support for `MultiSigWalletSG` wallets to wallet `wallet` module
+- fix `ensureVerificationDescription` to match `getFullDescriptionDomainWithHash` ens paths
+- use correct defaultVerifications topics `loadActiveVerifications` 
 
 ### Fixes
 ### Deprecations
