@@ -91,7 +91,7 @@ describe('IPFS handler', function() {
   });
 
   it('should set the cache when passed via options', async () => {
-    const remoteNode = IpfsApi({host: 'ipfs.evan.network', port: '443', protocol: 'https'});
+    const remoteNode = IpfsApi({host: 'ipfs.test.evan.network', port: '443', protocol: 'https'});
     const ipfs =  new Ipfs({ remoteNode, cache: new InMemoryCache()});
     expect(ipfs.cache).to.be.ok;
   })

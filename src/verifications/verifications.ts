@@ -966,7 +966,7 @@ export class Verifications extends Logger {
         const stringified = JSON.stringify(verificationValue);
         const stateMd5 = crypto.createHash('md5').update(stringified).digest('hex');
         verificationData = await this.options.dfs.add(stateMd5, Buffer.from(stringified));
-        verificationDataUrl = `https://ipfs.evan.network/ipfs/${Ipfs.bytes32ToIpfsHash(verificationData)}`;
+        verificationDataUrl = `https://ipfs.test.evan.network/ipfs/${Ipfs.bytes32ToIpfsHash(verificationData)}`;
       } catch (e) {
         const msg = `error parsing verificationValue -> ${e.message}`;
         this.log(msg, 'info');

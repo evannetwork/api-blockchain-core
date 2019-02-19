@@ -15,7 +15,7 @@ The blockchain core is a helper library, that offers helpers for interacting wit
 
 
 ## Documentation
-- API documentation can be found here [here](https://ipfs.evan.network/ipns/QmYmsPTdPPDLig6gKB1wu1De4KJtTqAXFLF1498umYs4M6/getting-started.html)<sup>[+]</sup>
+- API documentation can be found here [here](https://ipfs.test.evan.network/ipns/QmYmsPTdPPDLig6gKB1wu1De4KJtTqAXFLF1498umYs4M6/getting-started.html)<sup>[+]</sup>
 - if you want to know about where the API is used, you can have a look at our [wiki](https://evannetwork.github.io/)<sup>[+]</sup>
 - updates, develop HowTos and more cool stuff about what evan.network is doing can be found on our [Medium channel](https://medium.com/evan-network)<sup>[+]</sup>
 
