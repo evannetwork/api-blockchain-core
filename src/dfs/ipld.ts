@@ -80,6 +80,7 @@ export class Ipld extends Logger {
   originator: string;
   defaultCryptoAlgo: string;
   nameResolver: NameResolver;
+  hashLog: string[] = [];
 
   private readonly dagOptions = { format: 'dag-pb', };
   private readonly encodingUnencrypted = 'utf-8';
@@ -137,6 +138,7 @@ export class Ipld extends Logger {
       // add file to ipfs instead of dag put because js-ipfs-api don't supports dag at the moment
       return this.ipfs.add('dag', args[0])
         .then((hash) => {
+          this.hashLog.push(hash);
           const bufferHash = bs58.decode(Ipfs.bytes32ToIpfsHash(hash));
           const dagHash = bs58.encode(bufferHash);
           return bufferHash;
@@ -159,7 +161,7 @@ export class Ipld extends Logger {
             const envelope: Envelope = JSON.parse(dag.toString('utf-8'));
             const cryptor = this.cryptoProvider.getCryptorByCryptoInfo(envelope.cryptoInfo);
             const key = await this.keyProvider.getKey(envelope.cryptoInfo);
-            if(!key) {
+            if (!key) {
               return {};
             } else {
 
@@ -264,7 +266,9 @@ export class Ipld extends Logger {
     };
 
     // store to ipfs
-    return await this.ipfs.add('dag', Buffer.from(JSON.stringify(envelope)));
+    const fileHash = await this.ipfs.add('dag', Buffer.from(JSON.stringify(envelope)));
+    this.hashLog.push(fileHash);
+    return fileHash;
   }
 
   /**

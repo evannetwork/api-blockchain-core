@@ -3,6 +3,7 @@
 ## Next Version
 ### Features
 - add support for `MultiSigWalletSG` wallets to wallet `wallet` module
+- add tracking for  file hashes saved with `ipld` module
 
 ### Fixes
 ### Deprecations
