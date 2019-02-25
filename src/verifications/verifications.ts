@@ -399,7 +399,7 @@ export class Verifications extends Logger {
     if (!this.ensOwners[topLevelDomain]) {
       this.ensOwners[topLevelDomain] = (async () => {
         // transform the ens domain into a namehash and load the ens top level topic owner
-        const namehash = this.options.nameResolver.namehash(topLevelDomain);
+        const namehash = this.options.nameResolver.namehash(topLevelDomain + '.verifications.evan');
         return await this.options.executor.executeContractCall(
           this.options.nameResolver.ensContract, 'owner', namehash);
       })();
