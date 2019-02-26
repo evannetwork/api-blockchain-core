@@ -8,6 +8,8 @@
 - use correct defaultVerifications topics `loadActiveVerifications` 
 
 ### Fixes
+- fix `DataContract` `getEntry` to load unencrypted data, when no profile for the requesting account exists
+
 ### Deprecations
 
 
