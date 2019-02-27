@@ -6,6 +6,7 @@
 - add tracking for  file hashes saved with `ipld` module
 - fix `ensureVerificationDescription` to match `getFullDescriptionDomainWithHash` ens paths
 - use correct defaultVerifications topics `loadActiveVerifications` 
+- add current `signer-ledger` (wip)
 
 ### Fixes
 ### Deprecations
