@@ -5,8 +5,7 @@
 - add support for `MultiSigWalletSG` wallets to wallet `wallet` module
 - add tracking for  file hashes saved with `ipld` module
 - fix `ensureVerificationDescription` to match `getFullDescriptionDomainWithHash` ens paths
-- use correct defaultVerifications topics `loadActiveVerifications` 
-- add current `signer-ledger` (wip)
+- use correct defaultVerifications topics `loadActiveVerifications`
 
 ### Fixes
 - fix `DataContract` `getEntry` to load unencrypted data, when no profile for the requesting account exists
