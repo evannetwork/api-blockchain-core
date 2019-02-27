@@ -252,9 +252,17 @@ export class DataContract extends BaseContract {
     const envelope: Envelope = JSON.parse(toDecrypt);
     if (envelope.cryptoInfo) {
       const cryptor = this.options.cryptoProvider.getCryptorByCryptoInfo(envelope.cryptoInfo);
-      const contentKey = await this.options.sharing.getKey(dataContract.options.address, accountId, propertyName, envelope.cryptoInfo.block);
-      if (!contentKey && envelope.cryptoInfo.algorithm !== 'unencrypted') {
-        throw new Error(`no content key found for contract "${dataContract.options.address}" and account "${accountId}"`);
+      let contentKey;
+
+      // only load the contentKey when the algorithm isn't unencrypted if we try to load the content
+      // key for the current user and this user has no profile, it would break
+      if (envelope.cryptoInfo.algorithm !== 'unencrypted') {
+        contentKey = await this.options.sharing.getKey(dataContract.options.address, accountId,
+          propertyName, envelope.cryptoInfo.block);
+
+        if (!contentKey) {
+          throw new Error(`no content key found for contract "${dataContract.options.address}" and account "${accountId}"`);
+        }
       }
       const decryptedBuffer = await cryptor.decrypt(
         Buffer.from(envelope.private, this.encodingEncrypted), { key: contentKey, });

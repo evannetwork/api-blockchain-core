@@ -9,6 +9,8 @@
 - add current `signer-ledger` (wip)
 
 ### Fixes
+- fix `DataContract` `getEntry` to load unencrypted data, when no profile for the requesting account exists
+
 ### Deprecations
 
 
