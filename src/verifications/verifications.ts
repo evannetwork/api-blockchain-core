@@ -687,9 +687,7 @@ export class Verifications extends Logger {
             subject: subject,
             tree: [ ],
             warnings: [ 'missing' ],
-            subjectIdentity: isValidAddress ?
-              await this.options.executor.executeContractCall(
-                this.contracts.storage, 'users', subject) :
+            subjectIdentity: isValidAddress ? subjectIdentity :
               '0x0000000000000000000000000000000000000000',
           });
 
