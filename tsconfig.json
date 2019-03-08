@@ -12,7 +12,7 @@
       "es2017"
     ],
     "paths": {
-      "bcc": ["./src/bundles/bcc/bcc"]
+      "bcc": ["./src/dist/index.js"]
     }
   },
   "include": [

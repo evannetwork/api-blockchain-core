@@ -620,7 +620,8 @@ export class Verifications extends Logger {
 
             // if isser === subject and only if a parent is passed, so if the root one is empty and no
             // slash is available
-            if (verification.issuerAccount === verification.subject && verification.parent) {
+            if (verification.issuerAccount === verification.subject && verification.parent &&
+                verification.issuerAccount !== this.options.config.ensRootOwner) {
               verification.warnings.push('selfIssued');
             }
 

@@ -64,31 +64,32 @@ import { Votings } from './votings/votings';
  * runtime for interacting with dbcp, including helpers for transactions & co
  */
 export interface Runtime {
-  accountStore: AccountStore,
-  activeAccount: string,
-  baseContract: BaseContract,
-  contractLoader: ContractLoader,
-  cryptoProvider: CryptoProvider,
-  dataContract: DataContract,
-  description: Description,
-  dfs: DfsInterface,
-  eventHub: EventHub,
-  executor: Executor,
-  ipld: Ipld,
-  keyExchange: KeyExchange,
-  keyProvider: KeyProvider,
-  mailbox: Mailbox,
-  nameResolver: NameResolver,
-  onboarding: Onboarding,
-  payments: Payments,
-  profile: Profile,
-  rightsAndRoles: RightsAndRoles,
-  serviceContract: ServiceContract,
-  sharing: Sharing,
-  signer: SignerInterface,
-  verifications: Verifications,
-  votings: Votings,
-  web3: any,
+  accountStore?: AccountStore,
+  activeAccount?: string,
+  baseContract?: BaseContract,
+  contractLoader?: ContractLoader,
+  contracts?: any,
+  cryptoProvider?: CryptoProvider,
+  dataContract?: DataContract,
+  description?: Description,
+  dfs?: DfsInterface,
+  eventHub?: EventHub,
+  executor?: Executor,
+  ipld?: Ipld,
+  keyExchange?: KeyExchange,
+  keyProvider?: KeyProvider,
+  mailbox?: Mailbox,
+  nameResolver?: NameResolver,
+  onboarding?: Onboarding,
+  payments?: Payments,
+  profile?: Profile,
+  rightsAndRoles?: RightsAndRoles,
+  serviceContract?: ServiceContract,
+  sharing?: Sharing,
+  signer?: SignerInterface,
+  verifications?: Verifications,
+  votings?: Votings,
+  web3?: any,
 };
 
 /**
@@ -99,56 +100,58 @@ export interface Runtime {
  * @param      {any}               runtimeConfig  configuration values
  * @return     {Promise<Runtime>}  runtime instance
  */
-export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtimeConfig: any): Promise<Runtime> {
+export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtimeConfig: any, options: Runtime = { }): Promise<Runtime> {
   // get default logger
   const log = (new Logger()).logFunction;
 
   // if this function is used within node and no browser context exists, load the
   // @evan.network/smart-contracts-core normally and use the Solc functionalities to parse and
   // retrieve contracts
-  let contracts;
-  if (typeof global === 'undefined' || !(<any>global).localStorage) {
-    // get/compile smart contracts
-    // It is possible to load contracts from non-default locations
-    const solcCfg = { compileContracts: false, }
-    if (runtimeConfig.contractsLoadPath) {
-      solcCfg['destinationPath'] = runtimeConfig.contractsLoadPath;
+  let contracts = options.contracts;
+  if (!contracts) {
+    if (typeof global === 'undefined' || !(<any>global).localStorage) {
+      // get/compile smart contracts
+      // It is possible to load contracts from non-default locations
+      const solcCfg = { compileContracts: false, }
+      if (runtimeConfig.contractsLoadPath) {
+        solcCfg['destinationPath'] = runtimeConfig.contractsLoadPath;
+      }
+
+      const smartContract = require('@evan.network/smart-contracts-core');
+      const solc = new smartContract.Solc({ config: solcCfg, log, });
+      await solc.ensureCompiled(runtimeConfig.additionalContractsPaths || [], solcCfg['destinationPath']);
+
+      contracts = solc.getContracts();
+    } else {
+      // if this lib is used within the browser using browserify, smart-contracts-core needs to be
+      // defined externaly (normally defined by @evan.network/ui-dapp-browser) to return the abis
+      // directly as json
+      const originalContracts = require('@evan.network/smart-contracts-core');
+      contracts = { };
+
+      // map the contracts value object correctly
+      Object.keys(originalContracts).forEach((key) => {
+        const contractKey = (key.indexOf(':') !== -1) ? key.split(':')[1] : key;
+        contracts[contractKey] = originalContracts[key];
+      });
     }
-
-    const smartContract = require('@evan.network/smart-contracts-core');
-    const solc = new smartContract.Solc({ config: solcCfg, log, });
-    await solc.ensureCompiled(runtimeConfig.additionalContractsPaths || [], solcCfg['destinationPath']);
-
-    contracts = solc.getContracts();
-  } else {
-    // if this lib is used within the browser using browserify, smart-contracts-core needs to be
-    // defined externaly (normally defined by @evan.network/ui-dapp-browser) to return the abis
-    // directly as json
-    const originalContracts = require('@evan.network/smart-contracts-core');
-    contracts = { };
-
-    // map the contracts value object correctly
-    Object.keys(originalContracts).forEach((key) => {
-      const contractKey = (key.indexOf(':') !== -1) ? key.split(':')[1] : key;
-      contracts[contractKey] = originalContracts[key];
-    });
   }
 
   // web3 contract interfaces
-  const contractLoader = new ContractLoader({ contracts, web3, });
+  const contractLoader = options.contractLoader || new ContractLoader({ contracts, web3, });
 
   // executor
-  const accountStore = new AccountStore({ accounts: runtimeConfig.accountMap, });
-  const signer = new SignerInternal({ accountStore, contractLoader, config: {}, web3, });
-  const executor = new Executor(Object.assign({ config, signer, web3, }, runtimeConfig.options ? runtimeConfig.options.Executor : {}));
+  const accountStore = options.accountStore || new AccountStore({ accounts: runtimeConfig.accountMap, });
+  const signer = options.signer || new SignerInternal({ accountStore, contractLoader, config: {}, web3, });
+  const executor = options.executor || new Executor(Object.assign({ config, signer, web3, }, runtimeConfig.options ? runtimeConfig.options.Executor : {}));
   await executor.init({});
-  const nameResolver = new NameResolver({
+  const nameResolver = options.nameResolver || new NameResolver({
     config: runtimeConfig.nameResolver || config.nameResolver,
     executor,
     contractLoader,
     web3,
   });
-  const eventHub = new EventHub({
+  const eventHub = options.eventHub || new EventHub({
     config: runtimeConfig.nameResolver || config.nameResolver,
     contractLoader,
     nameResolver,
@@ -162,10 +165,10 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   cryptoConfig['aesBlob'] = new AesBlob({ dfs });
   cryptoConfig['aesEcb'] = new AesEcb();
   const cryptoProvider = new CryptoProvider(cryptoConfig);
-  const keyProvider = new KeyProvider({ keys: runtimeConfig.keyConfig, });
+  const keyProvider = options.keyProvider || new KeyProvider({ keys: runtimeConfig.keyConfig, });
 
   // description
-  const description = new Description({
+  const description = options.description || new Description({
     contractLoader,
     cryptoProvider,
     dfs,
@@ -175,7 +178,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     sharing: null,
     web3,
   });
-  const sharing = new Sharing({
+  const sharing = options.sharing || new Sharing({
     contractLoader,
     cryptoProvider,
     description,
@@ -187,13 +190,13 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   });
   description.sharing = sharing;
 
-  const baseContract = new BaseContract({
+  const baseContract = options.baseContract || new BaseContract({
     executor,
     loader: contractLoader,
     nameResolver,
   });
 
-  const dataContract = new DataContract({
+  const dataContract = options.dataContract || new DataContract({
     cryptoProvider,
     dfs,
     executor,
@@ -205,7 +208,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   });
 
   const activeAccount = Object.keys(runtimeConfig.accountMap)[0];
-  const ipld = new Ipld({
+  const ipld = options.ipld || new Ipld({
     ipfs: dfs as Ipfs,
     keyProvider,
     cryptoProvider,
@@ -245,7 +248,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     web3,
     description,
   });
-  let profile = new Profile({
+  let profile = options.profile || new Profile({
     accountId: activeAccount,
     contractLoader,
     dataContract: dataContractOwn,
@@ -258,14 +261,14 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   // keyProviderOwn is not liked to profile to prevent profile key lookups
   keyProvider.init(profile);
 
-  const rightsAndRoles = new RightsAndRoles({
+  const rightsAndRoles = options.rightsAndRoles || new RightsAndRoles({
     contractLoader,
     executor,
     nameResolver,
     web3,
   });
 
-  const serviceContract = new ServiceContract({
+  const serviceContract = options.serviceContract || new ServiceContract({
     cryptoProvider,
     dfs,
     executor,
@@ -276,7 +279,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     web3,
   });
 
-  const mailbox = new Mailbox({
+  const mailbox = options.mailbox || new Mailbox({
     mailboxOwner: activeAccount,
     nameResolver,
     ipfs: dfs as Ipfs,
@@ -286,7 +289,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     defaultCryptoAlgo: 'aes',
   });
 
-  const keyExchange = new KeyExchange({
+  const keyExchange = options.keyExchange || new KeyExchange({
     mailbox,
     cryptoProvider,
     defaultCryptoAlgo: 'aes',
@@ -294,7 +297,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     keyProvider,
   });
 
-  const verifications = new Verifications({
+  const verifications = options.verifications || new Verifications({
     accountStore: accountStore,
     contractLoader: contractLoader,
     config,
@@ -320,19 +323,19 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     log(`profile for ${activeAccount} doesn't exist`)
   }
 
-  const onboarding = new Onboarding({
+  const onboarding = options.onboarding || new Onboarding({
     mailbox,
     smartAgentId: '0x063fB42cCe4CA5448D69b4418cb89E663E71A139',
     executor,
   });
 
-  const votings = new Votings({
+  const votings = options.votings || new Votings({
     contractLoader,
     executor,
     nameResolver,
   });
 
-  const payments = new Payments({
+  const payments = options.payments || new Payments({
     accountStore,
     contractLoader,
     executor,
@@ -347,6 +350,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     contractLoader,
     cryptoProvider,
     dataContract,
+    contracts,
     description,
     dfs,
     eventHub,

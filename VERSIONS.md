@@ -9,9 +9,12 @@
 
 ### Fixes
 - fix `DataContract` `getEntry` to load unencrypted data, when no profile for the requesting account exists
+- fix empty verification missing subjectIdentity
+- verifications from the root evan user are never self issued
 
 ### Deprecations
-
+- remove build scripts for browserify bundle
+- remove `bcc/bundles/bcc.ts` file and switch to generalized `index.ts` for both, node and ui bundle (ui build job was moved to [ui-core/dapps/bcc](https://github.com/evannetwork/ui-core/tree/master/dapps/bcc))
 
 ## Version 2.0.0
 ### Features
