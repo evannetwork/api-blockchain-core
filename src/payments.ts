@@ -516,7 +516,7 @@ export class Payments extends Logger {
    *
    * @param account  Sender/client's account address
    * @param receiver  Receiver/server's account address
-   * @param deposit  Tokens to be initially deposited in the channel
+   * @param deposit  Tokens to be initially deposited in the channel (in Wei)
    * @returns  Promise to MicroChannel info object
    */
   async openChannel(account: string, receiver: string, deposit: BigNumber): Promise<MicroChannel> {
