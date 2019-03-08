@@ -34,7 +34,7 @@ import {
 } from '@evan.network/dbcp';
 
 import * as BigNumber from 'bignumber.js';
-import { typedSignatureHash, signTypedDataLegacy, recoverTypedSignatureLegacy } from 'eth-sig-util';
+import { typedSignatureHash, signTypedDataLegacy, recoverTypedSignatureLegacy, concatSig } from 'eth-sig-util';
 
 /**
  * parameters for Payments constructor
@@ -144,6 +144,9 @@ export class Payments extends Logger {
     super(options);
     this.options = options;
     this.startBlock = 0;
+    if (concatSig) {
+      const sig = concatSig;
+    }
     if (options.channelManager) {
       this.channelManager = this.options.contractLoader.loadContract(
         'RaidenMicroTransferChannels',
@@ -405,6 +408,9 @@ export class Payments extends Logger {
    * @returns  Promise to signature
    */
   async incrementBalanceAndSign(amount: BigNumber): Promise<MicroProof> {
+    if (!(amount instanceof BigNumber)) {
+      amount = new BigNumber(amount);
+    }
     if (!this.isChannelValid()) {
       throw new Error('No valid channelInfo');
     }
@@ -516,10 +522,13 @@ export class Payments extends Logger {
    *
    * @param account  Sender/client's account address
    * @param receiver  Receiver/server's account address
-   * @param deposit  Tokens to be initially deposited in the channel
+   * @param deposit  Tokens to be initially deposited in the channel (in Wei)
    * @returns  Promise to MicroChannel info object
    */
   async openChannel(account: string, receiver: string, deposit: BigNumber): Promise<MicroChannel> {
+    if (!(deposit instanceof BigNumber)) {
+      deposit = new BigNumber(deposit);
+    }
     if (this.isChannelValid()) {
       this.log(`Already valid channel will be forgotten: ${this.channel}`, 'warning');
     }
@@ -729,6 +738,10 @@ export class Payments extends Logger {
    * @returns  Promise to tx hash
    */
   async topUpChannel(deposit: BigNumber): Promise<void> {
+    if (!(deposit instanceof BigNumber)) {
+      deposit = new BigNumber(deposit);
+    }
+
     if (!this.isChannelValid()) {
       throw new Error('No valid channelInfo');
     }
@@ -755,6 +768,15 @@ export class Payments extends Logger {
       this.channel.receiver,
       this.channel.block,
     );
+  }
+
+  /**
+   * converts a input string to a bigNumber.js object
+   *
+   * @param      {string}  input  to converted string
+   */
+  public toBigNumber(input: string) {
+    return new BigNumber(input);
   }
 
   private getClosingProofSignatureParams(): MsgParam[] {
