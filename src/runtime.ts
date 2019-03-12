@@ -78,6 +78,7 @@ export interface Runtime {
   ipld?: Ipld,
   keyExchange?: KeyExchange,
   keyProvider?: KeyProvider,
+  logger?: Logger,
   mailbox?: Mailbox,
   nameResolver?: NameResolver,
   onboarding?: Onboarding,
@@ -102,7 +103,7 @@ export interface Runtime {
  */
 export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtimeConfig: any, options: Runtime = { }): Promise<Runtime> {
   // get default logger
-  const log = (new Logger()).logFunction;
+  const log = (options.logger || (new Logger())).logFunction;
 
   // if this function is used within node and no browser context exists, load the
   // @evan.network/smart-contracts-core normally and use the Solc functionalities to parse and
@@ -138,34 +139,36 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   }
 
   // web3 contract interfaces
-  const contractLoader = options.contractLoader || new ContractLoader({ contracts, web3, });
+  const contractLoader = options.contractLoader || new ContractLoader({ contracts, log, web3, });
 
   // executor
-  const accountStore = options.accountStore || new AccountStore({ accounts: runtimeConfig.accountMap, });
-  const signer = options.signer || new SignerInternal({ accountStore, contractLoader, config: {}, web3, });
-  const executor = options.executor || new Executor(Object.assign({ config, signer, web3, }, runtimeConfig.options ? runtimeConfig.options.Executor : {}));
+  const accountStore = options.accountStore || new AccountStore({ accounts: runtimeConfig.accountMap, log, });
+  const signer = options.signer || new SignerInternal({ accountStore, contractLoader, config: {}, log, web3, });
+  const executor = options.executor || new Executor(Object.assign({ config, log, signer, web3, }, runtimeConfig.options ? runtimeConfig.options.Executor : {}));
   await executor.init({});
   const nameResolver = options.nameResolver || new NameResolver({
     config: runtimeConfig.nameResolver || config.nameResolver,
     executor,
     contractLoader,
+    log,
     web3,
   });
   const eventHub = options.eventHub || new EventHub({
     config: runtimeConfig.nameResolver || config.nameResolver,
     contractLoader,
+    log,
     nameResolver,
   });
   executor.eventHub = eventHub;
 
   // encryption
   const cryptoConfig = {};
-  cryptoConfig['aes'] = new Aes();
-  cryptoConfig['unencrypted'] = new Unencrypted();
-  cryptoConfig['aesBlob'] = new AesBlob({ dfs });
-  cryptoConfig['aesEcb'] = new AesEcb();
+  cryptoConfig['aes'] = new Aes({ log });
+  cryptoConfig['unencrypted'] = new Unencrypted({ log });
+  cryptoConfig['aesBlob'] = new AesBlob({ dfs, log });
+  cryptoConfig['aesEcb'] = new AesEcb({ log });
   const cryptoProvider = new CryptoProvider(cryptoConfig);
-  const keyProvider = options.keyProvider || new KeyProvider({ keys: runtimeConfig.keyConfig, });
+  const keyProvider = options.keyProvider || new KeyProvider({ keys: runtimeConfig.keyConfig, log, });
 
   // description
   const description = options.description || new Description({
@@ -174,6 +177,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     dfs,
     executor,
     keyProvider,
+    log,
     nameResolver,
     sharing: null,
     web3,
@@ -185,6 +189,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     executor,
     dfs,
     keyProvider,
+    log,
     nameResolver,
     defaultCryptoAlgo: 'aes',
   });
@@ -193,6 +198,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   const baseContract = options.baseContract || new BaseContract({
     executor,
     loader: contractLoader,
+    log,
     nameResolver,
   });
 
@@ -201,6 +207,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     dfs,
     executor,
     loader: contractLoader,
+    log,
     nameResolver,
     sharing,
     web3,
@@ -213,18 +220,20 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     keyProvider,
     cryptoProvider,
     defaultCryptoAlgo: 'aes',
+    log,
     originator: nameResolver.soliditySha3(activeAccount),
     nameResolver,
   });
 
   // 'own' key provider, that won't be linked to profile and used in 'own' ipld
   // this prevents key lookup infinite loops
-  const keyProviderOwn = new KeyProvider({ keys: runtimeConfig.keyConfig, });
+  const keyProviderOwn = new KeyProvider({ keys: runtimeConfig.keyConfig, log, });
   const ipldOwn = new Ipld({
     ipfs: dfs as Ipfs,
     keyProvider: keyProviderOwn,
     cryptoProvider,
     defaultCryptoAlgo: 'aes',
+    log,
     originator: nameResolver.soliditySha3(activeAccount),
     nameResolver,
   });
@@ -235,6 +244,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     executor,
     dfs,
     keyProvider: keyProviderOwn,
+    log,
     nameResolver,
     defaultCryptoAlgo: 'aes',
   });
@@ -243,6 +253,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     dfs,
     executor,
     loader: contractLoader,
+    log,
     nameResolver,
     sharing: sharingOwn,
     web3,
@@ -255,6 +266,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     defaultCryptoAlgo: 'aes',
     executor,
     ipld: ipldOwn,
+    log,
     nameResolver,
   });
   // this key provider is linked to profile for key retrieval
@@ -264,6 +276,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   const rightsAndRoles = options.rightsAndRoles || new RightsAndRoles({
     contractLoader,
     executor,
+    log,
     nameResolver,
     web3,
   });
@@ -274,6 +287,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     executor,
     keyProvider,
     loader: contractLoader,
+    log,
     nameResolver,
     sharing,
     web3,
@@ -286,6 +300,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     contractLoader,
     cryptoProvider,
     keyProvider,
+    log,
     defaultCryptoAlgo: 'aes',
   });
 
@@ -295,6 +310,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     defaultCryptoAlgo: 'aes',
     account: activeAccount,
     keyProvider,
+    log,
   });
 
   const verifications = options.verifications || new Verifications({
@@ -304,6 +320,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     description,
     dfs: dfs,
     executor: executor,
+    log,
     nameResolver: nameResolver,
   })
 
@@ -327,11 +344,13 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     mailbox,
     smartAgentId: '0x063fB42cCe4CA5448D69b4418cb89E663E71A139',
     executor,
+    log,
   });
 
   const votings = options.votings || new Votings({
     contractLoader,
     executor,
+    log,
     nameResolver,
   });
 
@@ -339,6 +358,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     accountStore,
     contractLoader,
     executor,
+    log,
     web3
   });
 

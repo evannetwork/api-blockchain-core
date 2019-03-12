@@ -6,6 +6,7 @@
 - add tracking for  file hashes saved with `ipld` module
 - fix `ensureVerificationDescription` to match `getFullDescriptionDomainWithHash` ens paths
 - use correct defaultVerifications topics `loadActiveVerifications`
+- add support for passing `Logger` instance to `createDefaultRuntime`
 
 ### Fixes
 - fix `DataContract` `getEntry` to load unencrypted data, when no profile for the requesting account exists
