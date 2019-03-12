@@ -653,7 +653,7 @@ export class Payments extends Logger {
     if (!this.isChannelValid()) {
       throw new Error('No valid channelInfo');
     }
-    this.log(`signNewProof ${proof}`, 'debug');
+    this.log(`signNewProof, balance: ${proof.balance.toString()}, sig: ${proof.sig}`, 'debug');
     if (!proof) {
       proof = this.channel.proof;
     }
