@@ -77,7 +77,7 @@ describe('Payment Channels', function() {
     payments2.setChannel(initialChannel);
   });
 
-  it('should reload a channel to a other account, when loading from blockchain', async () => {
+  it('should reload a channel to an other account, when loading from blockchain', async () => {
     const channel = await payments1.loadChannelFromBlockchain(accounts[0], accounts[1]);
     expect(channel.block).to.equal(initialChannel.block);
   });
@@ -96,7 +96,7 @@ describe('Payment Channels', function() {
   });
 
   it('should close a channel cooperative from the receiver side', async () => {
-    const closingSig = await payments2.getClosingSig(accounts[1], proof);
+    const closingSig = await payments2.getClosingSig(accounts[1]);
 
     // store balance before closing
     const balanceReceiverBefore = new BigNumber(await web3.eth.getBalance(accounts[1]));
@@ -117,7 +117,7 @@ describe('Payment Channels', function() {
     proof = await payments1.incrementBalanceAndSign(1);
     payments1.confirmPayment(proof);
     payments2.channel.proof = proof;
-    const closingSig = await payments2.getClosingSig(accounts[1], proof);
+    const closingSig = await payments2.getClosingSig(accounts[1]);
 
     // store balance before closing
     const balanceReceiverBefore = new BigNumber(await web3.eth.getBalance(accounts[1]));
@@ -134,7 +134,7 @@ describe('Payment Channels', function() {
   });
 
    it.skip('should close a channel un-cooperative from the receiver side', async () => {
-    const closingSig = await payments2.getClosingSig(accounts[1], proof);
+    const closingSig = await payments2.getClosingSig(accounts[1]);
     await payments2.closeChannel(closingSig);
   });
 });
