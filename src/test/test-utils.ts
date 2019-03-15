@@ -71,7 +71,7 @@ export const sampleContext = 'context sample';
 const web3Provider = <any>process.env.CHAIN_ENDPOINT || 'wss://testcore.evan.network/ws';
 const wsp = new Web3.providers.WebsocketProvider(
       web3Provider, { clientConfig: { keepalive: true, keepaliveInterval: 5000 } });
-const web3 = new Web3(wsp);
+const web3 = new Web3(wsp, { transactionConfirmationBlocks: 1 });
 const sampleKeys = {};
 // dataKeys
 sampleKeys[web3.utils.soliditySha3(accounts[0])] =
