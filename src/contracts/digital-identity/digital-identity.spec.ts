@@ -35,8 +35,12 @@ import {
 } from '@evan.network/dbcp';
 
 import { accounts } from '../../test/accounts';
-import { DigitalIdentity, DigitalIdentityOptions } from './digital-identity';
 import { TestUtils } from '../../test/test-utils';
+import {
+  DigitalIdentity,
+  DigitalIdentityConfig,
+  DigitalIdentityOptions,
+} from './digital-identity';
 
 use(chaiAsPromised);
 
@@ -44,7 +48,7 @@ use(chaiAsPromised);
 describe('DigitalIdentity (name pending)', function() {
   this.timeout(60000);
   let dfs: Ipfs;
-  let defaultOptions: DigitalIdentityOptions;
+  let defaultConfig: DigitalIdentityConfig;
   let executor: Executor;
   const description = {
     name: 'test identity',
@@ -53,26 +57,30 @@ describe('DigitalIdentity (name pending)', function() {
     version: '0.1.0',
     dbcpVersion: 2,
   };
+  let runtime: DigitalIdentityOptions;
 
   before(async () => {
     dfs = await TestUtils.getIpfs();
     const web3 = await TestUtils.getWeb3();
     executor = await TestUtils.getExecutor(web3);
-    defaultOptions = {
-      accountId: 'will be replaced in test cases',
+    runtime = {
       contractLoader: await TestUtils.getContractLoader(web3),
       dataContract: await TestUtils.getDataContract(web3, dfs),
       description: await TestUtils.getDescription(web3, dfs),
       dfs,
       executor,
       nameResolver: await TestUtils.getNameResolver(web3),
+      web3,
     };
-    defaultOptions.executor.eventHub = await TestUtils.getEventHub(web3);
+    runtime.executor.eventHub = await TestUtils.getEventHub(web3);
+    defaultConfig = {
+      accountId: accounts[0],
+      description,
+    };
     // create factory for test
     const factory = await executor.createContract('IndexContractFactory', [], { from: accounts[0], gas: 3e6 });
-    defaultOptions.factoryAddress = factory.options.address;
-    // defaultOptions.factoryAddress = '';
-    console.log(`factory: ${defaultOptions.factoryAddress}`);
+    defaultConfig.factoryAddress = factory.options.address;
+    console.log(`factory: ${defaultConfig.factoryAddress}`);
   });
 
   after(async () => {
@@ -80,40 +88,100 @@ describe('DigitalIdentity (name pending)', function() {
   });
 
   it('can can create new contracts', async () => {
-    const digident = new DigitalIdentity({ ...defaultOptions, accountId: accounts[0] });
-    await digident.create(description);
+    const digident = await DigitalIdentity.create(runtime, defaultConfig);
     expect(digident.contract.options.address).to.match(/0x[0-9a-f]{40}/i);
+    const identityDescription = await digident.getDescription();
+    expect(identityDescription).to.deep.eq(description);
   });
 
-  it('can add entries to index', async () => {
-    const digident = new DigitalIdentity({ ...defaultOptions, accountId: accounts[0] });
-    await digident.create(description);
-    await digident.setEntry('sample', TestUtils.getRandomBytes32());
+  describe('when performing basic set/get operations', () => {
+    it('can add entries to index', async () => {
+      const digident = await DigitalIdentity.create(runtime, defaultConfig);
+      await digident.setEntry('sample', TestUtils.getRandomBytes32());
+    });
+
+    it('can get entries from index', async () => {
+      const digident = await DigitalIdentity.create(runtime, defaultConfig);
+      const value = TestUtils.getRandomBytes32();
+      await digident.setEntry('sample', value);
+      const result = await digident.getEntry('sample');
+      expect(result.value).to.eq(value);
+    });
+
+    it('can set and get bytes32 values', async () => {
+      const digident = await DigitalIdentity.create(runtime, defaultConfig);
+      const value = TestUtils.getRandomBytes32();
+      await digident.setEntry('sample', value);
+      const result = await digident.getEntry('sample');
+      expect(result.value).to.eq(value);
+      expect(result.type).to.eq('bytes32');
+    });
+
+    it('can set and get address values', async () => {
+      const digident = await DigitalIdentity.create(runtime, defaultConfig);
+      const value = TestUtils.getRandomAddress();
+      await digident.setEntry('sample', value);
+      const result = await digident.getEntry('sample');
+      expect(result.value).to.eq(value);
+      expect(result.type).to.eq('address');
+    });
+
+    it('can get multiple entries from index', async () => {
+      const samples = {};
+      for (let i = 0; i < 3; i++) {
+        samples['sample ' + i.toString().padStart(2, '0')] =
+          TestUtils.getRandomBytes32().replace(/.{4}$/, i.toString().padStart(4, '0'));
+      };
+      const digident = await DigitalIdentity.create(runtime, defaultConfig);
+      await digident.setEntries(samples);
+      const result = await digident.getEntries();
+      for (let key of Object.keys(samples)) {
+        expect(result[key].value).to.eq(samples[key]);
+      }
+    });
   });
 
-  it('can get entries from index', async () => {
-    const digident = new DigitalIdentity({ ...defaultOptions, accountId: accounts[0] });
-    await digident.create(description);
-    const value = TestUtils.getRandomBytes32();
-    await digident.setEntry('sample', value);
-    const result = await digident.getEntry('sample');
-    expect(result).to.eq(value);
-  });
-
-  it.only('can get multiple entries from index', async () => {
-    const digident = new DigitalIdentity({ ...defaultOptions, accountId: accounts[0] });
-    const samples = {};
-    for (let i = 0; i < 2; i++) {
-      samples['sample ' + i.toString().padStart(2, '0')] =
-        TestUtils.getRandomBytes32().replace(/.{4}$/, i.toString().padStart(4, '0'));
+  describe('when paging entries', () => {
+    const checkIdentity = async (identity, samples) => {
+      const result = await identity.getEntries();
+      for (let key of Object.keys(samples)) {
+        expect(result[key].value).to.eq(samples[key]);
+      }
     };
-    await digident.create(description);
-    for (let key of Object.keys(samples)) {
-      await digident.setEntry(key, samples[key]);
-    }
-    const result = await digident.getEntries();
-    for (let key of Object.keys(samples)) {
-      expect(result[key].value).to.eq(samples[key]);
-    }
+    const createIdentityWithEntries = async (entryCount): Promise<any> => {
+      const samples = {};
+      for (let i = 0; i < entryCount; i++) {
+        samples['sample ' + i.toString().padStart(2, '0')] =
+          TestUtils.getRandomBytes32().replace(/.{4}$/, i.toString().padStart(4, '0'));
+      };
+      const digident = await DigitalIdentity.create(runtime, defaultConfig);
+      await digident.setEntries(samples);
+      return { digident, samples };
+    };
+
+    it('can get handle result counts less than a page', async () => {
+      const { digident, samples } = await createIdentityWithEntries(4);
+      await checkIdentity(digident, samples);
+    });
+
+    it('can get handle result counts equal to a page', async () => {
+      const { digident, samples } = await createIdentityWithEntries(10);
+      await checkIdentity(digident, samples);
+    });
+
+    it('can get handle result counts more than a page', async () => {
+      const { digident, samples } = await createIdentityWithEntries(14);
+      await checkIdentity(digident, samples);
+    });
+
+    it('can get handle result counts with two pages', async () => {
+      const { digident, samples } = await createIdentityWithEntries(20);
+      await checkIdentity(digident, samples);
+    });
+
+    it('can get handle result counts with multiple pages', async () => {
+      const { digident, samples } = await createIdentityWithEntries(24);
+      await checkIdentity(digident, samples);
+    });
   });
 });

@@ -43,20 +43,36 @@ import { Sharing } from '../sharing';
 
 const defaultFactoryAddress = 'index.factory.evan';
 
+export interface IndexEntries {
+  [id: string]: IndexEntry;
+}
+
+export interface IndexEntry {
+  raw?: string;
+  type?: string;
+  value?: string;
+}
+
+export interface DigitalIdentityConfig {
+  accountId: string;
+  address?: string;
+  description?: any;
+  factoryAddress?: string;
+}
+
 /**
  * options for DigitalIdentity constructor
  */
 export interface DigitalIdentityOptions extends LoggerOptions {
-  accountId: string;
   contractLoader: ContractLoader;
   description: Description;
   dfs: DfsInterface;
   executor: Executor;
   dataContract: DataContract;
   nameResolver: NameResolver;
-  address?: string;
-  factoryAddress?: string;
+  web3: any;
 }
+
 
 /**
  * helper class for managing digital identities
@@ -64,50 +80,142 @@ export interface DigitalIdentityOptions extends LoggerOptions {
  * @class      DigitalIdentity (name)
  */
 export class DigitalIdentity extends Logger {
+  protected config: DigitalIdentityConfig;
   protected options: DigitalIdentityOptions;
   public contract: any;
 
-  constructor(optionsInput: DigitalIdentityOptions) {
-    super(optionsInput as LoggerOptions);
-    this.options = optionsInput;
-
-  }
-
   /**
    * create digital identity contract
+   *
+   * @param      {any}  description  description (public part, without envelope)
    */
-  public async create(description: any): Promise<void> {
+  public static async create(options: DigitalIdentityOptions, config: DigitalIdentityConfig):
+      Promise<DigitalIdentity> {
+    // check config
+    for (let property of ['description', 'factoryAddress']) {
+      if (!config[property]) {
+        throw new Error(`identity config is missing property ${property}`)
+      }
+    }
+    const instanceConfig = JSON.parse(JSON.stringify(config));
+
     // check description values and upload it
-    const envelope: Envelope = { public: description };
-    const validation = this.options.description.validateDescription(envelope);
+    const envelope: Envelope = { public: instanceConfig.description };
+    const validation = options.description.validateDescription(envelope);
     if (validation !== true) {
       throw new Error(`validation of description failed with: ${JSON.stringify(validation)}`);
     }
 
     // create contract
     let factoryAddress;
-    if (this.options.factoryAddress.startsWith('0x')) {
-      factoryAddress = this.options.factoryAddress;
+    if (instanceConfig.factoryAddress.startsWith('0x')) {
+      factoryAddress = instanceConfig.factoryAddress;
     } else {
-      factoryAddress = await this.options.nameResolver.getAddress(
-        this.options.factoryAddress || defaultFactoryAddress);
+      factoryAddress = await options.nameResolver.getAddress(
+        instanceConfig.factoryAddress || defaultFactoryAddress);
     }
-    const factory = this.options.contractLoader.loadContract(
+    const factory = options.contractLoader.loadContract(
       'IndexContractFactory', factoryAddress);
-    const contractId = await this.options.executor.executeContractTransaction(
+    const contractId = await options.executor.executeContractTransaction(
       factory,
       'createContract', {
-        from: this.options.accountId,
+        from: instanceConfig.accountId,
         autoGas: 1.1,
         event: { target: 'IndexContractFactory', eventName: 'ContractCreated', },
         getEventResult: (event, args) => args.newAddress,
       },
-      this.options.accountId,
+      instanceConfig.accountId,
     );
-    this.contract = this.options.contractLoader.loadContract('IndexContract', contractId);
 
     // set description to contract
-    await this.options.description.setDescription(contractId, envelope, this.options.accountId);
+    await options.description.setDescription(contractId, envelope, instanceConfig.accountId);
+
+    // set to ENS if address was passed in config
+    if (instanceConfig.address) {
+      await options.nameResolver.setAddress(config.address, contractId, config.accountId);
+    }
+    instanceConfig.address = contractId;
+
+    const identity = new DigitalIdentity(options, instanceConfig);
+    await identity.ensureContract();
+    return identity;
+  }
+
+  constructor(options: DigitalIdentityOptions, config: DigitalIdentityConfig) {
+    super(options as LoggerOptions);
+    this.options = options;
+    this.config = config;
+  }
+
+  /**
+   * check if digital identity contract already has been loaded, load from address / ENS if required
+   */
+  public async ensureContract(): Promise<void> {
+    if (this.contract) {
+      return;
+    }
+    let address = this.config.address.startsWith('0x') ?
+      this.config.address : await this.options.nameResolver.getAddress(this.config.address);
+    this.contract = this.options.contractLoader.loadContract('IndexContract', address)
+  }
+
+  /**
+   * returns description from identity
+   */
+  public async getDescription(): Promise<any> {
+    await this.ensureContract();
+    return (await this.options.description.getDescription(
+      this.contract.options.address, this.config.accountId)).public;
+  }
+
+  /**
+   * get all entries from index contract
+   */
+  public async getEntries(): Promise<IndexEntries> {
+    await this.ensureContract();
+    // get all from contract
+    let results = {};
+    let itemsRetrieved = 0;
+    const resultsPerPage = 10;
+    const getResults = async (singleQueryOffset) => {
+      const queryResult = await this.options.executor.executeContractCall(
+        this.contract,
+        'getEntries',
+        singleQueryOffset,
+      );
+      itemsRetrieved += resultsPerPage;
+      for (let i = 0; i < queryResult.names.length; i++) {
+        const resultId = i + singleQueryOffset;
+        results[queryResult.names[i]] = { raw: queryResult.values[i] };
+      }
+      if (itemsRetrieved < queryResult.totalCount) {
+        await getResults(singleQueryOffset + resultsPerPage);
+      }
+    };
+    await getResults(0);
+    for (let key of Object.keys(results)) {
+      this.processEntry(results[key]);
+    }
+    return results;
+  }
+
+  /**
+   * get single entry from index contract
+   *
+   * @param      {string}  name    entry name
+   */
+  public async getEntry(name: string): Promise<IndexEntry> {
+    await this.ensureContract();
+    // write value to contract
+    const result: IndexEntry = {
+      raw: await this.options.executor.executeContractCall(
+        this.contract,
+        'getEntry',
+        name,
+      )
+    };
+    this.processEntry(result);
+    return result;
   }
 
   /**
@@ -135,75 +243,47 @@ export class DigitalIdentity extends Logger {
     }
   }
 
-  public async getDescription(uploadToIpfs = false): Promise<any> {
-    return this.options.description.getDescription(this.options.address, this.options.accountId);
+  /**
+   * set multiple entries at index contract
+   *
+   * @param      {any}  entries  The entries
+   */
+  public async setEntries(entries: any): Promise<void> {
+    await Throttle.all(Object.keys(entries).map((name) => async () => this.setEntry(name, entries[name])));
   }
 
-  public async getEntries(): Promise<any> {
-    await this.ensureContract();
-    // get all from contract
-    let results = {};
-    let itemsRetrieved = 0;
-    const resultsPerPage = 10;
-    const getResults = async (singleQueryOffset) => {
-      const queryResult = await this.options.executor.executeContractCall(
-        this.contract,
-        'getEntries',
-        singleQueryOffset,
-      );
-      itemsRetrieved += resultsPerPage;
-      for (let i = 0; i < queryResult.names.length; i++) {
-        const resultId = i + singleQueryOffset;
-        results[queryResult.names[i]] = { raw: queryResult.values[i] };
-      }
-      if (itemsRetrieved < queryResult.totalCount) {
-        await getResults(singleQueryOffset + resultsPerPage);
-      }
-    };
-    await getResults(0);
-    for (let key of Object.keys(results)) {
-      const result = results[key];
-      const [ , first12B, last20B ] = /0x([0-9a-f]{24})([0-9a-f]{40})/.exec(result.raw);
-      if (first12B === '000000000000000000000000') {
-        result.type = 'address';
-        result.value = `0x${last20B}`;
-      } else {
-        result.type = 'bytes32';
-        result.value = result.raw;
-      }
-    }
-    return results;
-  }
-
+  /**
+   * set entry in index contract; entries are uniquie, setting the same name a second time will
+   * overwrite the first value
+   *
+   * @param      {string}  name    entry name
+   * @param      {string}  value   value to set (address or bytes32 value)
+   */
   public async setEntry(name: string, value: string): Promise<void> {
+    await this.ensureContract();
     // write value to contract
     await this.options.executor.executeContractTransaction(
       this.contract,
       'setEntry',
-      { from: this.options.accountId },
+      { from: this.config.accountId },
       name,
-      value,
-    );
-  }
-
-  public async getEntry(name: string): Promise<void> {
-    // write value to contract
-    return this.options.executor.executeContractCall(
-      this.contract,
-      'getEntry',
-      name,
+      value.length === 66 ? value : `0x000000000000000000000000${value.substr(2)}`,
     );
   }
 
   /**
-   * check if digital identity contract already has been loaded, load from address / ENS if required
+   * add type and value from raw value to entry
+   *
+   * @param      {IndexEntry}  entry   The entry
    */
-  private async ensureContract(): Promise<void> {
-    if (this.contract) {
-      return;
+  private processEntry(entry: IndexEntry) {
+    const [ , first12B, last20B ] = /0x([0-9a-f]{24})([0-9a-f]{40})/.exec(entry.raw);
+    if (first12B === '000000000000000000000000') {
+      entry.type = 'address';
+      entry.value = this.options.web3.utils.toChecksumAddress(`0x${last20B}`);
+    } else {
+      entry.type = 'bytes32';
+      entry.value = entry.raw;
     }
-    let address = this.options.address.startsWith('0x') ?
-      this.options.address : await this.options.nameResolver.getAddress(this.options.address);
-    this.contract = this.options.contractLoader.loadContract('Index', address)
   }
 }
