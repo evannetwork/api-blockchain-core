@@ -88,40 +88,40 @@ describe('DigitalIdentity (name pending)', function() {
   });
 
   it('can can create new contracts', async () => {
-    const digident = await DigitalIdentity.create(runtime, defaultConfig);
-    expect(digident.contract.options.address).to.match(/0x[0-9a-f]{40}/i);
-    const identityDescription = await digident.getDescription();
+    const identity = await DigitalIdentity.create(runtime, defaultConfig);
+    expect(identity.contract.options.address).to.match(/0x[0-9a-f]{40}/i);
+    const identityDescription = await identity.getDescription();
     expect(identityDescription).to.deep.eq(description);
   });
 
   describe('when performing basic set/get operations', () => {
     it('can add entries to index', async () => {
-      const digident = await DigitalIdentity.create(runtime, defaultConfig);
-      await digident.setEntry('sample', TestUtils.getRandomBytes32());
+      const identity = await DigitalIdentity.create(runtime, defaultConfig);
+      await identity.setEntry('sample', TestUtils.getRandomBytes32());
     });
 
     it('can get entries from index', async () => {
-      const digident = await DigitalIdentity.create(runtime, defaultConfig);
+      const identity = await DigitalIdentity.create(runtime, defaultConfig);
       const value = TestUtils.getRandomBytes32();
-      await digident.setEntry('sample', value);
-      const result = await digident.getEntry('sample');
+      await identity.setEntry('sample', value);
+      const result = await identity.getEntry('sample');
       expect(result.value).to.eq(value);
     });
 
     it('can set and get bytes32 values', async () => {
-      const digident = await DigitalIdentity.create(runtime, defaultConfig);
+      const identity = await DigitalIdentity.create(runtime, defaultConfig);
       const value = TestUtils.getRandomBytes32();
-      await digident.setEntry('sample', value);
-      const result = await digident.getEntry('sample');
+      await identity.setEntry('sample', value);
+      const result = await identity.getEntry('sample');
       expect(result.value).to.eq(value);
       expect(result.type).to.eq('bytes32');
     });
 
     it('can set and get address values', async () => {
-      const digident = await DigitalIdentity.create(runtime, defaultConfig);
+      const identity = await DigitalIdentity.create(runtime, defaultConfig);
       const value = TestUtils.getRandomAddress();
-      await digident.setEntry('sample', value);
-      const result = await digident.getEntry('sample');
+      await identity.setEntry('sample', value);
+      const result = await identity.getEntry('sample');
       expect(result.value).to.eq(value);
       expect(result.type).to.eq('address');
     });
@@ -132,9 +132,9 @@ describe('DigitalIdentity (name pending)', function() {
         samples['sample ' + i.toString().padStart(2, '0')] =
           TestUtils.getRandomBytes32().replace(/.{4}$/, i.toString().padStart(4, '0'));
       };
-      const digident = await DigitalIdentity.create(runtime, defaultConfig);
-      await digident.setEntries(samples);
-      const result = await digident.getEntries();
+      const identity = await DigitalIdentity.create(runtime, defaultConfig);
+      await identity.setEntries(samples);
+      const result = await identity.getEntries();
       for (let key of Object.keys(samples)) {
         expect(result[key].value).to.eq(samples[key]);
       }
@@ -154,34 +154,34 @@ describe('DigitalIdentity (name pending)', function() {
         samples['sample ' + i.toString().padStart(2, '0')] =
           TestUtils.getRandomBytes32().replace(/.{4}$/, i.toString().padStart(4, '0'));
       };
-      const digident = await DigitalIdentity.create(runtime, defaultConfig);
-      await digident.setEntries(samples);
-      return { digident, samples };
+      const identity = await DigitalIdentity.create(runtime, defaultConfig);
+      await identity.setEntries(samples);
+      return { identity, samples };
     };
 
     it('can get handle result counts less than a page', async () => {
-      const { digident, samples } = await createIdentityWithEntries(4);
-      await checkIdentity(digident, samples);
+      const { identity, samples } = await createIdentityWithEntries(4);
+      await checkIdentity(identity, samples);
     });
 
     it('can get handle result counts equal to a page', async () => {
-      const { digident, samples } = await createIdentityWithEntries(10);
-      await checkIdentity(digident, samples);
+      const { identity, samples } = await createIdentityWithEntries(10);
+      await checkIdentity(identity, samples);
     });
 
     it('can get handle result counts more than a page', async () => {
-      const { digident, samples } = await createIdentityWithEntries(14);
-      await checkIdentity(digident, samples);
+      const { identity, samples } = await createIdentityWithEntries(14);
+      await checkIdentity(identity, samples);
     });
 
     it('can get handle result counts with two pages', async () => {
-      const { digident, samples } = await createIdentityWithEntries(20);
-      await checkIdentity(digident, samples);
+      const { identity, samples } = await createIdentityWithEntries(20);
+      await checkIdentity(identity, samples);
     });
 
     it('can get handle result counts with multiple pages', async () => {
-      const { digident, samples } = await createIdentityWithEntries(24);
-      await checkIdentity(digident, samples);
+      const { identity, samples } = await createIdentityWithEntries(24);
+      await checkIdentity(identity, samples);
     });
   });
 });

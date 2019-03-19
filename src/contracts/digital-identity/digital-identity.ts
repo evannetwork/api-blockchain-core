@@ -92,10 +92,8 @@ export class DigitalIdentity extends Logger {
   public static async create(options: DigitalIdentityOptions, config: DigitalIdentityConfig):
       Promise<DigitalIdentity> {
     // check config
-    for (let property of ['description', 'factoryAddress']) {
-      if (!config[property]) {
-        throw new Error(`identity config is missing property ${property}`)
-      }
+    if (!config.description) {
+      throw new Error('identity config is missing property description');
     }
     const instanceConfig = JSON.parse(JSON.stringify(config));
 
@@ -121,7 +119,7 @@ export class DigitalIdentity extends Logger {
       'createContract', {
         from: instanceConfig.accountId,
         autoGas: 1.1,
-        event: { target: 'IndexContractFactory', eventName: 'ContractCreated', },
+        event: { target: 'IndexContractFactory', eventName: 'ContractCreated' },
         getEventResult: (event, args) => args.newAddress,
       },
       instanceConfig.accountId,
@@ -141,6 +139,12 @@ export class DigitalIdentity extends Logger {
     return identity;
   }
 
+  /**
+   * create new DititalIdentity instance
+   *
+   * @param      {DigitalIdentityOptions}  options  runtime-like object with required modules
+   * @param      {DigitalIdentityConfig}   config   digital identity related config
+   */
   constructor(options: DigitalIdentityOptions, config: DigitalIdentityConfig) {
     super(options as LoggerOptions);
     this.options = options;
