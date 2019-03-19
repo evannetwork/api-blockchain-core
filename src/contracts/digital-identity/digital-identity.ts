@@ -40,6 +40,7 @@ import { DataContract } from '../data-contract/data-contract';
 import { Description } from '../../shared-description';
 import { NameResolver } from '../../name-resolver';
 import { Sharing } from '../sharing';
+import { Verifications } from '../../verifications/verifications';
 
 const defaultFactoryAddress = 'index.factory.evan';
 
@@ -51,6 +52,15 @@ export interface IndexEntry {
   raw?: string;
   type?: string;
   value?: string;
+}
+
+export interface VerificationEntry {
+  subject: string;
+  topic: string;
+  descriptionDomain?: string;
+  disableSubverifications?: boolean;
+  expirationDate?: number;
+  verificationValue?: string;
 }
 
 export interface DigitalIdentityConfig {
@@ -70,6 +80,7 @@ export interface DigitalIdentityOptions extends LoggerOptions {
   executor: Executor;
   dataContract: DataContract;
   nameResolver: NameResolver;
+  verifications: Verifications;
   web3: any;
 }
 
@@ -134,6 +145,9 @@ export class DigitalIdentity extends Logger {
     }
     instanceConfig.address = contractId;
 
+    // create identity for index and write it to description
+    await options.verifications.createIdentity(config.accountId, contractId);
+
     const identity = new DigitalIdentity(options, instanceConfig);
     await identity.ensureContract();
     return identity;
@@ -149,6 +163,28 @@ export class DigitalIdentity extends Logger {
     super(options as LoggerOptions);
     this.options = options;
     this.config = config;
+  }
+
+  public async addVerifications(verifications: VerificationEntry[]): Promise<void> {
+    await this.ensureContract();
+    await Throttle.all(verifications.map(verification => async () =>
+      this.options.verifications.setVerification(
+        this.config.accountId,
+        this.contract.options.address,
+        verification.topic,
+        verification.expirationDate,
+        verification.verificationValue,
+        verification.descriptionDomain,
+        verification.disableSubverifications,
+    )));
+    const verificationTags = verifications.map(verification => `verification:${verification.topic}`);
+    const description = await this.getDescription();
+    const oldTags = description.tags || [];
+    const toAdd = verificationTags.filter(tag => !oldTags.includes(tag));
+    if (toAdd.length) {
+      description.tags = oldTags.concat(toAdd);
+      await this.setDescription(description);
+    }
   }
 
   /**
@@ -222,29 +258,31 @@ export class DigitalIdentity extends Logger {
     return result;
   }
 
+  public async getVerifications(): Promise<any[]> {
+    await this.ensureContract();
+    const description = await this.getDescription();
+    const tags = description.tags || [];
+    return Throttle.all(tags
+      .filter(tag => tag.startsWith('verification:'))
+      .map(tag => tag.substr(13))
+      .map(topic => { console.dir(topic, description.identity); return topic; })
+      .map(topic => async () => this.options.verifications.getVerifications(
+        description.identity,
+        topic,
+        true,
+      ))
+    );
+  }
+
   /**
    * create description info, pass `true` to automatically upload it to ipfs
    *
    * @param      {any}  uploadToIpfs  upload description to ipfs
    */
-  public async setDescription(uploadToIpfs = false) {
-    const description = {
-      public: {
-        name: 'DBCP sample contract',
-        description: 'DBCP sample contract description',
-        author: 'dbcp test',
-        tags: [
-          'example',
-          'greeter'
-        ],
-        version: '0.1.0'
-      }
-    };
-    if (!uploadToIpfs) {
-      return description;
-    } else {
-      return this.options.dfs.add('description', Buffer.from(JSON.stringify(description), 'binary'));
-    }
+  public async setDescription(description: any) {
+    await this.ensureContract();
+    await this.options.description.setDescription(
+      this.contract.options.address, { public: description }, this.config.accountId);
   }
 
   /**
@@ -253,6 +291,7 @@ export class DigitalIdentity extends Logger {
    * @param      {any}  entries  The entries
    */
   public async setEntries(entries: any): Promise<void> {
+    await this.ensureContract();
     await Throttle.all(Object.keys(entries).map((name) => async () => this.setEntry(name, entries[name])));
   }
 

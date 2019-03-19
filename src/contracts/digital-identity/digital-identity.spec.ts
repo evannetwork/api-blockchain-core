@@ -40,6 +40,7 @@ import {
   DigitalIdentity,
   DigitalIdentityConfig,
   DigitalIdentityOptions,
+  VerificationEntry,
 } from './digital-identity';
 
 use(chaiAsPromised);
@@ -70,6 +71,7 @@ describe('DigitalIdentity (name pending)', function() {
       dfs,
       executor,
       nameResolver: await TestUtils.getNameResolver(web3),
+      verifications: await TestUtils.getVerifications(web3, dfs),
       web3,
     };
     runtime.executor.eventHub = await TestUtils.getEventHub(web3);
@@ -182,6 +184,21 @@ describe('DigitalIdentity (name pending)', function() {
     it('can get handle result counts with multiple pages', async () => {
       const { identity, samples } = await createIdentityWithEntries(24);
       await checkIdentity(identity, samples);
+    });
+  });
+
+  describe('when working with verifications', async () => {
+    it.only('can set verifications to identity', async () => {
+      const identity = await DigitalIdentity.create(runtime, defaultConfig);
+      const verifications: VerificationEntry[] = [...Array(3)].map((_, i) => (<VerificationEntry> {
+        topic: `verifcation_${i}`,
+      }));
+      await identity.addVerifications(verifications);
+      const verificationsResults = await identity.getVerifications();
+      expect(verificationsResults.length).to.eq(3);
+      // all validation lists should have at least 1 valid verification
+      const allValid = verificationsResults.every(vs => vs.some(v => v.valid));
+      expect(allValid).to.be.true;
     });
   });
 });

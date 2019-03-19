@@ -238,10 +238,10 @@ export class Verifications extends Logger {
    * @return     {Promise<string>}  new identity
    */
   public async createIdentity(accountId: string, contractId?: string): Promise<string> {
+    await this.ensureStorage();
     let identity;
     if (!contractId) {
       // create Identity contract
-      await this.ensureStorage();
       const identityContract = await this.options.executor.createContract(
         'VerificationHolder', [ accountId ], { from: accountId, gas: 3000000, });
 
