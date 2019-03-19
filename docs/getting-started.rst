@@ -55,6 +55,6 @@ Configuring and initializing blockchain core
     // create runtime
     const runtime = await createDefaultRuntime(web3, dfs, { accountMap: runtimeConfig.accountMap, });
 
-That's it! now you can use the ``runtime`` object and interact with the evan.network blockchain.
+That's it! Now you can use the ``runtime`` object and interact with the evan.network blockchain.
 
 The blockchain-core api is a set of modules which can be plugged in individually. So the above ``runtime`` is a full blown entry point to the api. You can also plug your own runtime with needed modules together.
