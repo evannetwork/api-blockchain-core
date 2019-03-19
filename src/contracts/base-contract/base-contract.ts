@@ -99,18 +99,23 @@ export class BaseContract extends Logger {
       businessCenterDomain?: string,
       descriptionDfsHash = '0x0000000000000000000000000000000000000000000000000000000000000000')
       : Promise<string> {
-    let factoryDomain;
-    if (factoryName.includes('.')) {
-      // full ens domain name
-      factoryDomain = factoryName;
+    let factoryAddress;
+    if (factoryName.startsWith('0x')) {
+      factoryAddress = factoryName;
     } else {
-      // partial name, bc relative domain
-      factoryDomain = this.options.nameResolver.getDomainName(
-        this.options.nameResolver.config.domains.factory, factoryName);
+      let factoryDomain;
+      if (factoryName.includes('.')) {
+        // full ens domain name
+        factoryDomain = factoryName;
+      } else {
+        // partial name, bc relative domain
+        factoryDomain = this.options.nameResolver.getDomainName(
+          this.options.nameResolver.config.domains.factory, factoryName);
+      }
+      factoryAddress = await this.options.nameResolver.getAddress(factoryDomain);
     }
-    const factoryAddress = await this.options.nameResolver.getAddress(factoryDomain);
     if (!factoryAddress) {
-      throw new Error(`factory "${factoryName}" not found in "${this.options.nameResolver.config.labels.businessCenterRoot}"`);
+      throw new Error(`factory "${factoryName}" not found`);
     }
     const factory = this.options.loader.loadContract('BaseContractFactoryInterface', factoryAddress);
     let businessCenterAddress;
