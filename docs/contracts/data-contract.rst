@@ -91,7 +91,7 @@ create
 
 .. code-block:: javascript
 
-    dataContract.create(factoryName, accountId[, businessCenterDomain, contractDescription, allowConsumerInvite]);
+    dataContract.create(factoryName, accountId[, businessCenterDomain, contractDescription, allowConsumerInvite, sharingsHash]);
 
 Create and initialize new contract.
 
@@ -243,7 +243,7 @@ Parameters
 
 #. ``contract`` - ``any|string``: contract or contractId
 #. ``entryName`` - ``string``: entry name
-#. ``value`` - ``any``: value to add
+#. ``value`` - ``any``: value to set
 #. ``accountId`` - ``string``: Ethereum account id
 #. ``dfsStorage`` - ``Function`` (optional): store values in dfs, defaults to ``true``
 #. ``encryptedHashes`` - ``boolean`` (optional): encrypt hashes from values, defaults to ``true``
@@ -534,7 +534,7 @@ Parameters
 
 #. ``contract`` - ``any|string``: contract or contractId
 #. ``listName`` - ``string``: name of the list in the data contract
-#. ``index`` - ``number``: index of the entry to move in the origin list
+#. ``index`` - ``number``: index of the entry to remove from list
 #. ``accountId`` - ``string``: Ethereum account id
 
 -------

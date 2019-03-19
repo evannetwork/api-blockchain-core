@@ -9,7 +9,7 @@ Verifications
    * - Class Name
      - Verifications
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `verifications.ts <https://github.com/evannetwork/api-blockchain-core/blob/master/src/verifications/verifications.ts>`_
    * - Tests
