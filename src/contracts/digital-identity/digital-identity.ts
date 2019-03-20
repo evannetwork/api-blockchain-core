@@ -44,13 +44,25 @@ import { Verifications } from '../../verifications/verifications';
 
 const defaultFactoryAddress = 'index.factory.evan';
 
+/**
+ * possible entry types for entries in index
+ */
+export enum EntryType {
+  AccountId,
+  GenericContract,
+  IndexContract,
+  ContainerContract,
+  FileHash,
+  Hash
+};
+
 export interface IndexEntries {
   [id: string]: IndexEntry;
 }
 
 export interface IndexEntry {
-  raw?: string;
-  type?: string;
+  raw?: any;
+  entryType?: EntryType;
   value?: string;
 }
 
@@ -226,7 +238,9 @@ export class DigitalIdentity extends Logger {
       itemsRetrieved += resultsPerPage;
       for (let i = 0; i < queryResult.names.length; i++) {
         const resultId = i + singleQueryOffset;
-        results[queryResult.names[i]] = { raw: queryResult.values[i] };
+        results[queryResult.names[i]] = {
+          raw: { value: queryResult.values[i], entryType: queryResult.entryTypes[i] },
+        };
       }
       if (itemsRetrieved < queryResult.totalCount) {
         await getResults(singleQueryOffset + resultsPerPage);
@@ -265,7 +279,6 @@ export class DigitalIdentity extends Logger {
     return Throttle.all(tags
       .filter(tag => tag.startsWith('verification:'))
       .map(tag => tag.substr(13))
-      .map(topic => { console.dir(topic, description.identity); return topic; })
       .map(topic => async () => this.options.verifications.getVerifications(
         description.identity,
         topic,
@@ -292,7 +305,7 @@ export class DigitalIdentity extends Logger {
    */
   public async setEntries(entries: any): Promise<void> {
     await this.ensureContract();
-    await Throttle.all(Object.keys(entries).map((name) => async () => this.setEntry(name, entries[name])));
+    await Throttle.all(Object.keys(entries).map((name) => async () => this.setEntry(name, entries[name].value, entries[name].entryType)));
   }
 
   /**
@@ -302,7 +315,7 @@ export class DigitalIdentity extends Logger {
    * @param      {string}  name    entry name
    * @param      {string}  value   value to set (address or bytes32 value)
    */
-  public async setEntry(name: string, value: string): Promise<void> {
+  public async setEntry(name: string, value: string, entryType: EntryType): Promise<void> {
     await this.ensureContract();
     // write value to contract
     await this.options.executor.executeContractTransaction(
@@ -311,6 +324,7 @@ export class DigitalIdentity extends Logger {
       { from: this.config.accountId },
       name,
       value.length === 66 ? value : `0x000000000000000000000000${value.substr(2)}`,
+      entryType,
     );
   }
 
@@ -320,13 +334,16 @@ export class DigitalIdentity extends Logger {
    * @param      {IndexEntry}  entry   The entry
    */
   private processEntry(entry: IndexEntry) {
-    const [ , first12B, last20B ] = /0x([0-9a-f]{24})([0-9a-f]{40})/.exec(entry.raw);
-    if (first12B === '000000000000000000000000') {
-      entry.type = 'address';
-      entry.value = this.options.web3.utils.toChecksumAddress(`0x${last20B}`);
+    entry.entryType = parseInt(entry.raw.entryType, 10);
+    if ([
+        EntryType.AccountId,
+        EntryType.ContainerContract,
+        EntryType.GenericContract,
+        EntryType.IndexContract,
+        ].includes(entry.entryType)) {
+      entry.value = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
     } else {
-      entry.type = 'bytes32';
-      entry.value = entry.raw;
+      entry.value = entry.raw.value;
     }
   }
 }

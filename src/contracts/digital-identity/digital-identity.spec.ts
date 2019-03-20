@@ -40,6 +40,7 @@ import {
   DigitalIdentity,
   DigitalIdentityConfig,
   DigitalIdentityOptions,
+  EntryType,
   VerificationEntry,
 } from './digital-identity';
 
@@ -92,20 +93,18 @@ describe('DigitalIdentity (name pending)', function() {
   it('can can create new contracts', async () => {
     const identity = await DigitalIdentity.create(runtime, defaultConfig);
     expect(identity.contract.options.address).to.match(/0x[0-9a-f]{40}/i);
-    const identityDescription = await identity.getDescription();
-    expect(identityDescription).to.deep.eq(description);
   });
 
   describe('when performing basic set/get operations', () => {
     it('can add entries to index', async () => {
       const identity = await DigitalIdentity.create(runtime, defaultConfig);
-      await identity.setEntry('sample', TestUtils.getRandomBytes32());
+      await identity.setEntry('sample', TestUtils.getRandomBytes32(), EntryType.Hash);
     });
 
     it('can get entries from index', async () => {
       const identity = await DigitalIdentity.create(runtime, defaultConfig);
       const value = TestUtils.getRandomBytes32();
-      await identity.setEntry('sample', value);
+      await identity.setEntry('sample', value, EntryType.Hash);
       const result = await identity.getEntry('sample');
       expect(result.value).to.eq(value);
     });
@@ -113,32 +112,35 @@ describe('DigitalIdentity (name pending)', function() {
     it('can set and get bytes32 values', async () => {
       const identity = await DigitalIdentity.create(runtime, defaultConfig);
       const value = TestUtils.getRandomBytes32();
-      await identity.setEntry('sample', value);
+      await identity.setEntry('sample', value, EntryType.Hash);
       const result = await identity.getEntry('sample');
       expect(result.value).to.eq(value);
-      expect(result.type).to.eq('bytes32');
+      expect(result.entryType).to.eq(EntryType.Hash);
     });
 
     it('can set and get address values', async () => {
       const identity = await DigitalIdentity.create(runtime, defaultConfig);
       const value = TestUtils.getRandomAddress();
-      await identity.setEntry('sample', value);
+      await identity.setEntry('sample', value, EntryType.GenericContract);
       const result = await identity.getEntry('sample');
       expect(result.value).to.eq(value);
-      expect(result.type).to.eq('address');
+      expect(result.entryType).to.eq(EntryType.GenericContract);
     });
 
     it('can get multiple entries from index', async () => {
       const samples = {};
       for (let i = 0; i < 3; i++) {
-        samples['sample ' + i.toString().padStart(2, '0')] =
-          TestUtils.getRandomBytes32().replace(/.{4}$/, i.toString().padStart(4, '0'));
+        samples['sample ' + i.toString().padStart(2, '0')] = {
+          value: TestUtils.getRandomBytes32().replace(/.{4}$/, i.toString().padStart(4, '0')),
+          entryType: EntryType.Hash,
+        }
       };
       const identity = await DigitalIdentity.create(runtime, defaultConfig);
       await identity.setEntries(samples);
       const result = await identity.getEntries();
       for (let key of Object.keys(samples)) {
-        expect(result[key].value).to.eq(samples[key]);
+        expect(result[key].value).to.eq(samples[key].value);
+        expect(result[key].entryType).to.eq(samples[key].entryType);
       }
     });
   });
@@ -147,14 +149,17 @@ describe('DigitalIdentity (name pending)', function() {
     const checkIdentity = async (identity, samples) => {
       const result = await identity.getEntries();
       for (let key of Object.keys(samples)) {
-        expect(result[key].value).to.eq(samples[key]);
+        expect(result[key].value).to.eq(samples[key].value);
+        expect(result[key].entryType).to.eq(samples[key].entryType);
       }
     };
     const createIdentityWithEntries = async (entryCount): Promise<any> => {
       const samples = {};
       for (let i = 0; i < entryCount; i++) {
-        samples['sample ' + i.toString().padStart(2, '0')] =
-          TestUtils.getRandomBytes32().replace(/.{4}$/, i.toString().padStart(4, '0'));
+        samples['sample ' + i.toString().padStart(2, '0')] = {
+          value: TestUtils.getRandomBytes32().replace(/.{4}$/, i.toString().padStart(4, '0')),
+          entryType: EntryType.Hash,
+        }
       };
       const identity = await DigitalIdentity.create(runtime, defaultConfig);
       await identity.setEntries(samples);
@@ -188,7 +193,7 @@ describe('DigitalIdentity (name pending)', function() {
   });
 
   describe('when working with verifications', async () => {
-    it.only('can set verifications to identity', async () => {
+    it('can set verifications to identity', async () => {
       const identity = await DigitalIdentity.create(runtime, defaultConfig);
       const verifications: VerificationEntry[] = [...Array(3)].map((_, i) => (<VerificationEntry> {
         topic: `verifcation_${i}`,
