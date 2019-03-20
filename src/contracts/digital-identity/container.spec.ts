@@ -92,7 +92,7 @@ describe('Container (name pending)', function() {
   });
 
   describe('when setting entries', async () => {
-    it.only('can set and get entries for properties defined in (custom) template', async () => {
+    it('can set and get entries for properties defined in (custom) template', async () => {
       const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
       template.properties.testField = {
         dataSchema: { type: 'string' },
@@ -101,7 +101,6 @@ describe('Container (name pending)', function() {
         type: 'entry',
       };
       const container = await Container.create(runtime, { ...defaultConfig, template });
-          console.dir(container)
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       await container.setEntry('testField', randomString);
       expect(await container.getEntry('testField')).to.eq(randomString);
