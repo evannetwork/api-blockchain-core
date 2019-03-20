@@ -109,104 +109,154 @@ describe('DigitalIdentity (name pending)', function() {
     expect(identity.contract.options.address).to.match(/0x[0-9a-f]{40}/i);
   });
 
-  describe('when performing basic set/get operations', () => {
-    it('can add entries to index', async () => {
-      const identity = await DigitalIdentity.create(runtime, defaultConfig);
-      await identity.setEntry('sample', TestUtils.getRandomBytes32(), EntryType.Hash);
+  describe('when performing set/get operations', () => {
+    describe('when performing basic set/get operations', () => {
+      it('can add entries to index', async () => {
+        const identity = await DigitalIdentity.create(runtime, defaultConfig);
+        await identity.setEntry('sample', TestUtils.getRandomBytes32(), EntryType.Hash);
+      });
+
+      it('can get entries from index', async () => {
+        const identity = await DigitalIdentity.create(runtime, defaultConfig);
+        const value = TestUtils.getRandomBytes32();
+        await identity.setEntry('sample', value, EntryType.Hash);
+        const result = await identity.getEntry('sample');
+        expect(result.value).to.eq(value);
+      });
+
+      it('can set and get bytes32 values', async () => {
+        const identity = await DigitalIdentity.create(runtime, defaultConfig);
+        const value = TestUtils.getRandomBytes32();
+        await identity.setEntry('sample', value, EntryType.Hash);
+        const result = await identity.getEntry('sample');
+        expect(result.value).to.eq(value);
+        expect(result.entryType).to.eq(EntryType.Hash);
+      });
+
+      it('can set and get address values', async () => {
+        const identity = await DigitalIdentity.create(runtime, defaultConfig);
+        const value = TestUtils.getRandomAddress();
+        await identity.setEntry('sample', value, EntryType.GenericContract);
+        const result = await identity.getEntry('sample');
+        expect(result.value).to.eq(value);
+        expect(result.entryType).to.eq(EntryType.GenericContract);
+      });
+
+      it('can get multiple entries from index', async () => {
+        const samples = {};
+        for (let i = 0; i < 3; i++) {
+          samples['sample ' + i.toString().padStart(2, '0')] = {
+            value: TestUtils.getRandomBytes32().replace(/.{4}$/, i.toString().padStart(4, '0')),
+            entryType: EntryType.Hash,
+          }
+        };
+        const identity = await DigitalIdentity.create(runtime, defaultConfig);
+        await identity.setEntries(samples);
+        const result = await identity.getEntries();
+        for (let key of Object.keys(samples)) {
+          expect(result[key].value).to.eq(samples[key].value);
+          expect(result[key].entryType).to.eq(samples[key].entryType);
+        }
+      });
     });
 
-    it('can get entries from index', async () => {
-      const identity = await DigitalIdentity.create(runtime, defaultConfig);
-      const value = TestUtils.getRandomBytes32();
-      await identity.setEntry('sample', value, EntryType.Hash);
-      const result = await identity.getEntry('sample');
-      expect(result.value).to.eq(value);
-    });
-
-    it('can set and get bytes32 values', async () => {
-      const identity = await DigitalIdentity.create(runtime, defaultConfig);
-      const value = TestUtils.getRandomBytes32();
-      await identity.setEntry('sample', value, EntryType.Hash);
-      const result = await identity.getEntry('sample');
-      expect(result.value).to.eq(value);
-      expect(result.entryType).to.eq(EntryType.Hash);
-    });
-
-    it('can set and get address values', async () => {
-      const identity = await DigitalIdentity.create(runtime, defaultConfig);
-      const value = TestUtils.getRandomAddress();
-      await identity.setEntry('sample', value, EntryType.GenericContract);
-      const result = await identity.getEntry('sample');
-      expect(result.value).to.eq(value);
-      expect(result.entryType).to.eq(EntryType.GenericContract);
-    });
-
-    it('can get multiple entries from index', async () => {
-      const samples = {};
-      for (let i = 0; i < 3; i++) {
-        samples['sample ' + i.toString().padStart(2, '0')] = {
-          value: TestUtils.getRandomBytes32().replace(/.{4}$/, i.toString().padStart(4, '0')),
-          entryType: EntryType.Hash,
+    describe('when paging entries', () => {
+      const checkIdentity = async (identity, samples) => {
+        const result = await identity.getEntries();
+        for (let key of Object.keys(samples)) {
+          expect(result[key].value).to.eq(samples[key].value);
+          expect(result[key].entryType).to.eq(samples[key].entryType);
         }
       };
-      const identity = await DigitalIdentity.create(runtime, defaultConfig);
-      await identity.setEntries(samples);
-      const result = await identity.getEntries();
-      for (let key of Object.keys(samples)) {
-        expect(result[key].value).to.eq(samples[key].value);
-        expect(result[key].entryType).to.eq(samples[key].entryType);
-      }
+      const createIdentityWithEntries = async (entryCount): Promise<any> => {
+        const samples = {};
+        for (let i = 0; i < entryCount; i++) {
+          samples['sample ' + i.toString().padStart(2, '0')] = {
+            value: TestUtils.getRandomBytes32().replace(/.{4}$/, i.toString().padStart(4, '0')),
+            entryType: EntryType.Hash,
+          }
+        };
+        const identity = await DigitalIdentity.create(runtime, defaultConfig);
+        await identity.setEntries(samples);
+        return { identity, samples };
+      };
+
+      it('can get handle result counts less than a page', async () => {
+        const { identity, samples } = await createIdentityWithEntries(4);
+        await checkIdentity(identity, samples);
+      });
+
+      it('can get handle result counts equal to a page', async () => {
+        const { identity, samples } = await createIdentityWithEntries(10);
+        await checkIdentity(identity, samples);
+      });
+
+      it('can get handle result counts more than a page', async () => {
+        const { identity, samples } = await createIdentityWithEntries(14);
+        await checkIdentity(identity, samples);
+      });
+
+      it('can get handle result counts with two pages', async () => {
+        const { identity, samples } = await createIdentityWithEntries(20);
+        await checkIdentity(identity, samples);
+      });
+
+      it('can get handle result counts with multiple pages', async () => {
+        const { identity, samples } = await createIdentityWithEntries(24);
+        await checkIdentity(identity, samples);
+      });
+    });
+
+    describe('when working with linked indices', () => {
+      it('can link two identities and fetch properties via entry path navigtion', async () => {
+        const car = await DigitalIdentity.create(runtime, defaultConfig);
+        const tire = await DigitalIdentity.create(runtime, defaultConfig);
+
+        const container = TestUtils.getRandomAddress();
+        await tire.setEntry('metadata', container, EntryType.GenericContract);
+        await car.setEntry('tire', tire.contract.options.address, EntryType.IndexContract);
+
+        const otherIdentity = await car.getEntry('tire');
+        await otherIdentity.value.ensureContract();
+        expect(otherIdentity.raw.value).to.eq(`0x000000000000000000000000${tire.contract.options.address.substr(2).toLowerCase()}`);
+        expect(otherIdentity.entryType).to.eq(EntryType.IndexContract);
+        expect(otherIdentity.value.contract.options.address).to.eq(tire.contract.options.address);
+
+        const entry = await car.getEntry('tire/metadata');
+        expect(entry.value).to.eq(container);
+        expect(entry.entryType).to.eq(EntryType.GenericContract);
+      });
+
+      it('can link three identities and fetch properties via entry path navigtion', async () => {
+        const car = await DigitalIdentity.create(runtime, defaultConfig);
+        const tire = await DigitalIdentity.create(runtime, defaultConfig);
+        const screw = await DigitalIdentity.create(runtime, defaultConfig);
+
+        const container = TestUtils.getRandomAddress();
+        await screw.setEntry('metadata', container, EntryType.GenericContract);
+        await car.setEntry('tire', tire.contract.options.address, EntryType.IndexContract);
+        await tire.setEntry('screw', screw.contract.options.address, EntryType.IndexContract);
+
+        const otherIdentity1 = await car.getEntry('tire');
+        await otherIdentity1.value.ensureContract();
+        expect(otherIdentity1.raw.value).to.eq(`0x000000000000000000000000${tire.contract.options.address.substr(2).toLowerCase()}`);
+        expect(otherIdentity1.entryType).to.eq(EntryType.IndexContract);
+        expect(otherIdentity1.value.contract.options.address).to.eq(tire.contract.options.address);
+
+        const otherIdentity2 = await car.getEntry('tire/screw');
+        await otherIdentity2.value.ensureContract();
+        expect(otherIdentity2.raw.value).to.eq(`0x000000000000000000000000${screw.contract.options.address.substr(2).toLowerCase()}`);
+        expect(otherIdentity2.entryType).to.eq(EntryType.IndexContract);
+        expect(otherIdentity2.value.contract.options.address).to.eq(screw.contract.options.address);
+
+        const entry = await car.getEntry('tire/screw/metadata');
+        expect(entry.value).to.eq(container);
+        expect(entry.entryType).to.eq(EntryType.GenericContract);
+      });
     });
   });
 
-  describe('when paging entries', () => {
-    const checkIdentity = async (identity, samples) => {
-      const result = await identity.getEntries();
-      for (let key of Object.keys(samples)) {
-        expect(result[key].value).to.eq(samples[key].value);
-        expect(result[key].entryType).to.eq(samples[key].entryType);
-      }
-    };
-    const createIdentityWithEntries = async (entryCount): Promise<any> => {
-      const samples = {};
-      for (let i = 0; i < entryCount; i++) {
-        samples['sample ' + i.toString().padStart(2, '0')] = {
-          value: TestUtils.getRandomBytes32().replace(/.{4}$/, i.toString().padStart(4, '0')),
-          entryType: EntryType.Hash,
-        }
-      };
-      const identity = await DigitalIdentity.create(runtime, defaultConfig);
-      await identity.setEntries(samples);
-      return { identity, samples };
-    };
-
-    it('can get handle result counts less than a page', async () => {
-      const { identity, samples } = await createIdentityWithEntries(4);
-      await checkIdentity(identity, samples);
-    });
-
-    it('can get handle result counts equal to a page', async () => {
-      const { identity, samples } = await createIdentityWithEntries(10);
-      await checkIdentity(identity, samples);
-    });
-
-    it('can get handle result counts more than a page', async () => {
-      const { identity, samples } = await createIdentityWithEntries(14);
-      await checkIdentity(identity, samples);
-    });
-
-    it('can get handle result counts with two pages', async () => {
-      const { identity, samples } = await createIdentityWithEntries(20);
-      await checkIdentity(identity, samples);
-    });
-
-    it('can get handle result counts with multiple pages', async () => {
-      const { identity, samples } = await createIdentityWithEntries(24);
-      await checkIdentity(identity, samples);
-    });
-  });
-
-  describe('when working with verifications', async () => {
+  describe('when working with verifications', () => {
     it('can set verifications to identity', async () => {
       const identity = await DigitalIdentity.create(runtime, defaultConfig);
       const verifications: VerificationEntry[] = [...Array(3)].map((_, i) => (<VerificationEntry> {
@@ -221,7 +271,7 @@ describe('DigitalIdentity (name pending)', function() {
     });
   });
 
-  describe('when working with ENS', async () => {
+  describe('when working with ENS', () => {
     let ens;
     before(async () => {
       // get address for tests
@@ -252,54 +302,6 @@ describe('DigitalIdentity (name pending)', function() {
       expect(loadedIdentity.contract.options.address).to.match(/0x[0-9a-f]{40}/i);
       expect(loadedIdentity.contract.options.address).to.eq(
         await runtime.nameResolver.getAddress(address));
-    });
-  });
-
-  describe('when working with linked indices', async () => {
-    it('can link two identities and fetch properties via entry path navigtion', async () => {
-      const car = await DigitalIdentity.create(runtime, defaultConfig);
-      const tire = await DigitalIdentity.create(runtime, defaultConfig);
-
-      const container = TestUtils.getRandomAddress();
-      await tire.setEntry('metadata', container, EntryType.GenericContract);
-      await car.setEntry('tire', tire.contract.options.address, EntryType.IndexContract);
-
-      const otherIdentity = await car.getEntry('tire');
-      await otherIdentity.value.ensureContract();
-      expect(otherIdentity.raw.value).to.eq(`0x000000000000000000000000${tire.contract.options.address.substr(2).toLowerCase()}`);
-      expect(otherIdentity.entryType).to.eq(EntryType.IndexContract);
-      expect(otherIdentity.value.contract.options.address).to.eq(tire.contract.options.address);
-
-      const entry = await car.getEntry('tire/metadata');
-      expect(entry.value).to.eq(container);
-      expect(entry.entryType).to.eq(EntryType.GenericContract);
-    });
-
-    it('can link three identities and fetch properties via entry path navigtion', async () => {
-      const car = await DigitalIdentity.create(runtime, defaultConfig);
-      const tire = await DigitalIdentity.create(runtime, defaultConfig);
-      const screw = await DigitalIdentity.create(runtime, defaultConfig);
-
-      const container = TestUtils.getRandomAddress();
-      await screw.setEntry('metadata', container, EntryType.GenericContract);
-      await car.setEntry('tire', tire.contract.options.address, EntryType.IndexContract);
-      await tire.setEntry('screw', screw.contract.options.address, EntryType.IndexContract);
-
-      const otherIdentity1 = await car.getEntry('tire');
-      await otherIdentity1.value.ensureContract();
-      expect(otherIdentity1.raw.value).to.eq(`0x000000000000000000000000${tire.contract.options.address.substr(2).toLowerCase()}`);
-      expect(otherIdentity1.entryType).to.eq(EntryType.IndexContract);
-      expect(otherIdentity1.value.contract.options.address).to.eq(tire.contract.options.address);
-
-      const otherIdentity2 = await car.getEntry('tire/screw');
-      await otherIdentity2.value.ensureContract();
-      expect(otherIdentity2.raw.value).to.eq(`0x000000000000000000000000${screw.contract.options.address.substr(2).toLowerCase()}`);
-      expect(otherIdentity2.entryType).to.eq(EntryType.IndexContract);
-      expect(otherIdentity2.value.contract.options.address).to.eq(screw.contract.options.address);
-
-      const entry = await car.getEntry('tire/screw/metadata');
-      expect(entry.value).to.eq(container);
-      expect(entry.entryType).to.eq(EntryType.GenericContract);
     });
   });
 });
