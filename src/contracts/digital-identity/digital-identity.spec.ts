@@ -255,7 +255,7 @@ describe('DigitalIdentity (name pending)', function() {
     });
   });
 
-  describe.only('when working with linked indices', async () => {
+  describe('when working with linked indices', async () => {
     it('can link two identities and fetch properties via entry path navigtion', async () => {
       const car = await DigitalIdentity.create(runtime, defaultConfig);
       const tire = await DigitalIdentity.create(runtime, defaultConfig);
