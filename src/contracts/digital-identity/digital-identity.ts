@@ -108,16 +108,29 @@ export class DigitalIdentity extends Logger {
   public contract: any;
 
   /**
+   * check, that given subset of properties is present at config, collections missing properties and
+   * throws a single error
+   *
+   * @param      {ContainerConfig}  config      config for container instance
+   * @param      {string}           properties  list of property names, that should be present
+   */
+  public static checkConfigProperties(config: DigitalIdentityConfig, properties: string[]): void {
+    let missing = properties.filter(property => !config.hasOwnProperty(property));
+    if (missing.length === 1) {
+      throw new Error(`missing property in config: "${missing[0]}"`);
+    } else if (missing.length > 1) {
+      throw new Error(`missing properties in config: "${missing.join(', ')}"`);
+    }
+  }
+
+  /**
    * create digital identity contract
    *
    * @param      {any}  description  description (public part, without envelope)
    */
   public static async create(options: DigitalIdentityOptions, config: DigitalIdentityConfig):
       Promise<DigitalIdentity> {
-    // check config
-    if (!config.description) {
-      throw new Error('identity config is missing property description');
-    }
+    DigitalIdentity.checkConfigProperties(config, ['description']);
     const instanceConfig = JSON.parse(JSON.stringify(config));
 
     // check description values and upload it

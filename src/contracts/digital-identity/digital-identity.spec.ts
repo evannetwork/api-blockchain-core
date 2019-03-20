@@ -35,6 +35,7 @@ import {
 } from '@evan.network/dbcp';
 
 import { accounts } from '../../test/accounts';
+import { config } from '../../config';
 import { TestUtils } from '../../test/test-utils';
 import {
   DigitalIdentity,
@@ -46,6 +47,8 @@ import {
 
 use(chaiAsPromised);
 
+
+const ownedDomain = 'identitytest.fifs.registrar.test.evan';
 
 describe('DigitalIdentity (name pending)', function() {
   this.timeout(60000);
@@ -83,7 +86,7 @@ describe('DigitalIdentity (name pending)', function() {
     // create factory for test
     const factory = await executor.createContract('IndexContractFactory', [], { from: accounts[0], gas: 3e6 });
     defaultConfig.factoryAddress = factory.options.address;
-    console.log(`factory: ${defaultConfig.factoryAddress}`);
+    console.log(`using identity factory: ${defaultConfig.factoryAddress}`);
   });
 
   after(async () => {
@@ -204,6 +207,40 @@ describe('DigitalIdentity (name pending)', function() {
       // all validation lists should have at least 1 valid verification
       const allValid = verificationsResults.every(vs => vs.some(v => v.valid));
       expect(allValid).to.be.true;
+    });
+  });
+
+  describe('when working with ENS', async () => {
+    let ens;
+    before(async () => {
+      // get address for tests
+      ens = runtime.contractLoader.loadContract('AbstractENS', config.nameResolver.ensAddress);
+      const domainOwner = await executor.executeContractCall(
+        ens, 'owner', runtime.nameResolver.namehash(ownedDomain));
+      if (domainOwner === '0x0000000000000000000000000000000000000000') {
+        await runtime.nameResolver.claimAddress(ownedDomain, accounts[0]);
+      }
+    });
+
+    it('can save contracts to ENS', async () => {
+      const randomName = Math.floor(Math.random() * 1e12).toString(36);
+      const address = `${randomName}.${ownedDomain}`;
+      const identity = await DigitalIdentity.create(runtime, { ...defaultConfig, address });
+      expect(identity.contract.options.address).to.match(/0x[0-9a-f]{40}/i);
+      expect(identity.contract.options.address).to.eq(
+        await runtime.nameResolver.getAddress(address));
+    });
+
+    it('can load indicdes from ENS', async () => {
+      const randomName = Math.floor(Math.random() * 1e12).toString(36);
+      const address = `${randomName}.${ownedDomain}`;
+      const identity = await DigitalIdentity.create(runtime, { ...defaultConfig, address });
+
+      const loadedIdentity = new DigitalIdentity(runtime, { ...defaultConfig, address });
+      await loadedIdentity.ensureContract();
+      expect(loadedIdentity.contract.options.address).to.match(/0x[0-9a-f]{40}/i);
+      expect(loadedIdentity.contract.options.address).to.eq(
+        await runtime.nameResolver.getAddress(address));
     });
   });
 });
