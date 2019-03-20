@@ -76,7 +76,7 @@ describe('Container (name pending)', function() {
     };
     runtime.executor.eventHub = await TestUtils.getEventHub(web3);
     defaultConfig = {
-      accountId: accounts[0],
+      accountId: accounts[1],
       description,
       template: 'metadata',
     };
@@ -86,17 +86,13 @@ describe('Container (name pending)', function() {
     console.log(`factory: ${defaultConfig.factoryAddress}`);
   });
 
-  after(async () => {
-    await dfs.stop();
-  });
-
   it('can can create new contracts', async () => {
     const container = await Container.create(runtime, defaultConfig);
     expect(container.contract.options.address).to.match(/0x[0-9a-f]{40}/i);
   });
 
   describe('when setting entries', async () => {
-    it('can set and get entries for properties defined in (custom) template', async () => {
+    it.only('can set and get entries for properties defined in (custom) template', async () => {
       const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
       template.properties.testField = {
         dataSchema: { type: 'string' },
@@ -105,6 +101,7 @@ describe('Container (name pending)', function() {
         type: 'entry',
       };
       const container = await Container.create(runtime, { ...defaultConfig, template });
+          console.dir(container)
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       await container.setEntry('testField', randomString);
       expect(await container.getEntry('testField')).to.eq(randomString);

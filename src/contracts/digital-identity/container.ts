@@ -286,6 +286,11 @@ export class Container extends Logger {
     Container.checkConfigProperties(config, ['description']);
     const instanceConfig = JSON.parse(JSON.stringify(config));
 
+    // convert template properties to jsonSchema
+    if (instanceConfig.template.properties) {
+      instanceConfig.description.dataSchema = Container.toJsonSchema(instanceConfig.template.properties)
+    }
+
     // check description values and upload it
     const envelope: Envelope = { public: instanceConfig.description };
     const validation = options.description.validateDescription(envelope);
@@ -307,6 +312,33 @@ export class Container extends Logger {
     const container = new Container(options, instanceConfig);
     await container.ensureContract();
     return container;
+  }
+
+  /**
+   * converts a properties object to a jsonSchema object
+   *
+   * @param      {any}  properties  properties object from template
+   */
+  public static toJsonSchema(properties: any) {
+    const jsonSchema = {};
+
+    for (let field of Object.keys(properties)) {
+      if (properties[field].dataSchema && properties[field].dataSchema.type === 'object') {
+        jsonSchema[field] = {
+          $id: `${field}_schema`,
+          type: 'object',
+          additionalProperties: false,
+          properties: properties[field].dataSchema.properties
+        }
+      } else {
+        jsonSchema[field] = {
+          $id: `${field}_schema`,
+          type: properties[field].dataSchema.type
+        }
+      }
+    }
+
+    return jsonSchema;
   }
 
   constructor(options: ContainerOptions, config: ContainerConfig) {
@@ -445,4 +477,5 @@ export class Container extends Logger {
     */
     throw new Error('not implemented');
   }
+
 }

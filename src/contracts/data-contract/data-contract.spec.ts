@@ -118,10 +118,6 @@ describe('DataContract', function() {
     }
   });
 
-  after(async () => {
-    await dfs.stop();
-  });
-
   async function createContract(addSharing = false, schema?) {
     let description;
     if (schema) {
