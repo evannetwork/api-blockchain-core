@@ -36,9 +36,11 @@ import {
   LoggerOptions,
 } from '@evan.network/dbcp';
 
+import { Container, ContainerConfig, ContainerOptions } from './container';
 import { DataContract } from '../data-contract/data-contract';
 import { Description } from '../../shared-description';
 import { NameResolver } from '../../name-resolver';
+import { RightsAndRoles } from '../rights-and-roles';
 import { Sharing } from '../sharing';
 import { Verifications } from '../../verifications/verifications';
 
@@ -63,7 +65,7 @@ export interface IndexEntries {
 export interface IndexEntry {
   raw?: any;
   entryType?: EntryType;
-  value?: string;
+  value?: any;
 }
 
 export interface VerificationEntry {
@@ -78,6 +80,7 @@ export interface VerificationEntry {
 export interface DigitalIdentityConfig {
   accountId: string;
   address?: string;
+  containerConfig: ContainerConfig;
   description?: any;
   factoryAddress?: string;
 }
@@ -85,17 +88,10 @@ export interface DigitalIdentityConfig {
 /**
  * options for DigitalIdentity constructor
  */
-export interface DigitalIdentityOptions extends LoggerOptions {
-  contractLoader: ContractLoader;
-  description: Description;
+export interface DigitalIdentityOptions extends ContainerOptions {
   dfs: DfsInterface;
-  executor: Executor;
-  dataContract: DataContract;
-  nameResolver: NameResolver;
   verifications: Verifications;
-  web3: any;
 }
-
 
 /**
  * helper class for managing digital identities
@@ -273,16 +269,20 @@ export class DigitalIdentity extends Logger {
    */
   public async getEntry(name: string): Promise<IndexEntry> {
     await this.ensureContract();
-    // write value to contract
+    const [ , firstKey, remainder ] = /([^/]+)(?:\/(.+))?/.exec(name);
     const result: IndexEntry = {
       raw: await this.options.executor.executeContractCall(
         this.contract,
         'getEntry',
-        name,
-      )
+        firstKey,
+      ),
     };
     this.processEntry(result);
-    return result;
+    if (remainder && result.entryType === EntryType.IndexContract) {
+      return result.value.getEntry(remainder);
+    } else {
+      return result;
+    }
   }
 
   public async getVerifications(): Promise<any[]> {
@@ -347,16 +347,23 @@ export class DigitalIdentity extends Logger {
    * @param      {IndexEntry}  entry   The entry
    */
   private processEntry(entry: IndexEntry) {
+    let address;
     entry.entryType = parseInt(entry.raw.entryType, 10);
-    if ([
-        EntryType.AccountId,
-        EntryType.ContainerContract,
-        EntryType.GenericContract,
-        EntryType.IndexContract,
-        ].includes(entry.entryType)) {
-      entry.value = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
-    } else {
-      entry.value = entry.raw.value;
+    switch (entry.entryType) {
+        case EntryType.AccountId:
+        case EntryType.GenericContract:
+          entry.value = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
+          break;
+        case EntryType.ContainerContract:
+          address = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
+          entry.value = new Container(this.options, { ...this.config.containerConfig, address });
+          break;
+        case EntryType.IndexContract:
+          address = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
+          entry.value = new DigitalIdentity(this.options, { ...this.config, address });
+          break;
+        default:
+          entry.value = entry.raw.value;
     }
   }
 }

@@ -38,6 +38,9 @@ import { accounts } from '../../test/accounts';
 import { config } from '../../config';
 import { TestUtils } from '../../test/test-utils';
 import {
+  ContainerConfig,
+} from './container';
+import {
   DigitalIdentity,
   DigitalIdentityConfig,
   DigitalIdentityOptions,
@@ -75,6 +78,7 @@ describe('DigitalIdentity (name pending)', function() {
       dfs,
       executor,
       nameResolver: await TestUtils.getNameResolver(web3),
+      rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
       verifications: await TestUtils.getVerifications(web3, dfs),
       web3,
     };
@@ -82,6 +86,13 @@ describe('DigitalIdentity (name pending)', function() {
     defaultConfig = {
       accountId: accounts[0],
       description,
+      containerConfig: {
+        accountId: accounts[0],
+        mailTemplates: {
+          share: {},
+          sendTemplate: {},
+        },
+      },
     };
     // create factory for test
     const factory = await executor.createContract('IndexContractFactory', [], { from: accounts[0], gas: 3e6 });
@@ -241,6 +252,54 @@ describe('DigitalIdentity (name pending)', function() {
       expect(loadedIdentity.contract.options.address).to.match(/0x[0-9a-f]{40}/i);
       expect(loadedIdentity.contract.options.address).to.eq(
         await runtime.nameResolver.getAddress(address));
+    });
+  });
+
+  describe.only('when working with linked indices', async () => {
+    it('can link two identities and fetch properties via entry path navigtion', async () => {
+      const car = await DigitalIdentity.create(runtime, defaultConfig);
+      const tire = await DigitalIdentity.create(runtime, defaultConfig);
+
+      const container = TestUtils.getRandomAddress();
+      await tire.setEntry('metadata', container, EntryType.GenericContract);
+      await car.setEntry('tire', tire.contract.options.address, EntryType.IndexContract);
+
+      const otherIdentity = await car.getEntry('tire');
+      await otherIdentity.value.ensureContract();
+      expect(otherIdentity.raw.value).to.eq(`0x000000000000000000000000${tire.contract.options.address.substr(2).toLowerCase()}`);
+      expect(otherIdentity.entryType).to.eq(EntryType.IndexContract);
+      expect(otherIdentity.value.contract.options.address).to.eq(tire.contract.options.address);
+
+      const entry = await car.getEntry('tire/metadata');
+      expect(entry.value).to.eq(container);
+      expect(entry.entryType).to.eq(EntryType.GenericContract);
+    });
+
+    it('can link three identities and fetch properties via entry path navigtion', async () => {
+      const car = await DigitalIdentity.create(runtime, defaultConfig);
+      const tire = await DigitalIdentity.create(runtime, defaultConfig);
+      const screw = await DigitalIdentity.create(runtime, defaultConfig);
+
+      const container = TestUtils.getRandomAddress();
+      await screw.setEntry('metadata', container, EntryType.GenericContract);
+      await car.setEntry('tire', tire.contract.options.address, EntryType.IndexContract);
+      await tire.setEntry('screw', screw.contract.options.address, EntryType.IndexContract);
+
+      const otherIdentity1 = await car.getEntry('tire');
+      await otherIdentity1.value.ensureContract();
+      expect(otherIdentity1.raw.value).to.eq(`0x000000000000000000000000${tire.contract.options.address.substr(2).toLowerCase()}`);
+      expect(otherIdentity1.entryType).to.eq(EntryType.IndexContract);
+      expect(otherIdentity1.value.contract.options.address).to.eq(tire.contract.options.address);
+
+      const otherIdentity2 = await car.getEntry('tire/screw');
+      await otherIdentity2.value.ensureContract();
+      expect(otherIdentity2.raw.value).to.eq(`0x000000000000000000000000${screw.contract.options.address.substr(2).toLowerCase()}`);
+      expect(otherIdentity2.entryType).to.eq(EntryType.IndexContract);
+      expect(otherIdentity2.value.contract.options.address).to.eq(screw.contract.options.address);
+
+      const entry = await car.getEntry('tire/screw/metadata');
+      expect(entry.value).to.eq(container);
+      expect(entry.entryType).to.eq(EntryType.GenericContract);
     });
   });
 });
