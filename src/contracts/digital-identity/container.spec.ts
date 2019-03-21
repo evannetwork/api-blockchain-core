@@ -125,7 +125,7 @@ describe('Container (name pending)', function() {
     it('can set and get entries for properties defined in (custom) template', async () => {
       const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
       template.properties.testList = {
-        dataSchema: { type: 'number' },  // type schema is per list entry, so type isn't "array"
+        dataSchema: { $comment: '{ "entryType": "list"}', type: 'array', items: { type: 'number' } },
         sharing: '*',
         permissions: { 0: ['set'] },
         type: 'list',

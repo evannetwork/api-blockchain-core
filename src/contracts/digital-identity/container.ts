@@ -338,19 +338,7 @@ export class Container extends Logger {
     const jsonSchema = {};
 
     for (let field of Object.keys(properties)) {
-      if (properties[field].dataSchema && properties[field].dataSchema.type === 'object') {
-        jsonSchema[field] = {
-          $id: `${field}_schema`,
-          type: 'object',
-          additionalProperties: false,
-          properties: properties[field].dataSchema.properties
-        }
-      } else {
-        jsonSchema[field] = {
-          $id: `${field}_schema`,
-          type: properties[field].dataSchema.type
-        }
-      }
+      jsonSchema[field] = { $id: `${field}_schema`, ...properties[field].dataSchema };
     }
 
     return jsonSchema;
