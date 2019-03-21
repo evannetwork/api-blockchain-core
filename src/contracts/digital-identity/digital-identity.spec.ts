@@ -110,7 +110,7 @@ describe('DigitalIdentity (name pending)', function() {
 
   it('can can create new contracts', async () => {
     const identity = await DigitalIdentity.create(runtime, defaultConfig);
-    expect(identity.contract.options.address).to.match(/0x[0-9a-f]{40}/i);
+    expect(await identity.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
   });
 
   describe('when performing set/get operations', () => {
@@ -216,15 +216,17 @@ describe('DigitalIdentity (name pending)', function() {
         const car = await DigitalIdentity.create(runtime, defaultConfig);
         const tire = await DigitalIdentity.create(runtime, defaultConfig);
 
+        const carAddress = await car.getContractAddress();
+        const tireAddress = await tire.getContractAddress();
+
         const container = TestUtils.getRandomAddress();
         await tire.setEntry('metadata', container, EntryType.GenericContract);
-        await car.setEntry('tire', tire.contract.options.address, EntryType.IndexContract);
+        await car.setEntry('tire', await tire.getContractAddress(), EntryType.IndexContract);
 
         const otherIdentity = await car.getEntry('tire');
-        await otherIdentity.value.ensureContract();
-        expect(otherIdentity.raw.value).to.eq(`0x000000000000000000000000${tire.contract.options.address.substr(2).toLowerCase()}`);
+        expect(otherIdentity.raw.value).to.eq(`0x000000000000000000000000${tireAddress.substr(2).toLowerCase()}`);
         expect(otherIdentity.entryType).to.eq(EntryType.IndexContract);
-        expect(otherIdentity.value.contract.options.address).to.eq(tire.contract.options.address);
+        expect(await otherIdentity.value.getContractAddress()).to.eq(tireAddress);
 
         const entry = await car.getEntry('tire/metadata');
         expect(entry.value).to.eq(container);
@@ -236,22 +238,24 @@ describe('DigitalIdentity (name pending)', function() {
         const tire = await DigitalIdentity.create(runtime, defaultConfig);
         const screw = await DigitalIdentity.create(runtime, defaultConfig);
 
+        const carAddress = await car.getContractAddress();
+        const tireAddress = await tire.getContractAddress();
+        const screwAddress = await screw.getContractAddress();
+
         const container = TestUtils.getRandomAddress();
         await screw.setEntry('metadata', container, EntryType.GenericContract);
-        await car.setEntry('tire', tire.contract.options.address, EntryType.IndexContract);
-        await tire.setEntry('screw', screw.contract.options.address, EntryType.IndexContract);
+        await car.setEntry('tire', tireAddress, EntryType.IndexContract);
+        await tire.setEntry('screw', screwAddress, EntryType.IndexContract);
 
         const otherIdentity1 = await car.getEntry('tire');
-        await otherIdentity1.value.ensureContract();
-        expect(otherIdentity1.raw.value).to.eq(`0x000000000000000000000000${tire.contract.options.address.substr(2).toLowerCase()}`);
+        expect(otherIdentity1.raw.value).to.eq(`0x000000000000000000000000${tireAddress.substr(2).toLowerCase()}`);
         expect(otherIdentity1.entryType).to.eq(EntryType.IndexContract);
-        expect(otherIdentity1.value.contract.options.address).to.eq(tire.contract.options.address);
+        expect(await otherIdentity1.value.getContractAddress()).to.eq(tireAddress);
 
         const otherIdentity2 = await car.getEntry('tire/screw');
-        await otherIdentity2.value.ensureContract();
-        expect(otherIdentity2.raw.value).to.eq(`0x000000000000000000000000${screw.contract.options.address.substr(2).toLowerCase()}`);
+        expect(otherIdentity2.raw.value).to.eq(`0x000000000000000000000000${screwAddress.substr(2).toLowerCase()}`);
         expect(otherIdentity2.entryType).to.eq(EntryType.IndexContract);
-        expect(otherIdentity2.value.contract.options.address).to.eq(screw.contract.options.address);
+        expect(await otherIdentity2.value.getContractAddress()).to.eq(screwAddress);
 
         const entry = await car.getEntry('tire/screw/metadata');
         expect(entry.value).to.eq(container);
@@ -308,8 +312,9 @@ describe('DigitalIdentity (name pending)', function() {
       const randomName = Math.floor(Math.random() * 1e12).toString(36);
       const address = `${randomName}.${ownedDomain}`;
       const identity = await DigitalIdentity.create(runtime, { ...defaultConfig, address });
-      expect(identity.contract.options.address).to.match(/0x[0-9a-f]{40}/i);
-      expect(identity.contract.options.address).to.eq(
+
+      expect(await identity.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
+      expect(await identity.getContractAddress()).to.eq(
         await runtime.nameResolver.getAddress(address));
     });
 
@@ -317,11 +322,10 @@ describe('DigitalIdentity (name pending)', function() {
       const randomName = Math.floor(Math.random() * 1e12).toString(36);
       const address = `${randomName}.${ownedDomain}`;
       const identity = await DigitalIdentity.create(runtime, { ...defaultConfig, address });
-
       const loadedIdentity = new DigitalIdentity(runtime, { ...defaultConfig, address });
-      await loadedIdentity.ensureContract();
-      expect(loadedIdentity.contract.options.address).to.match(/0x[0-9a-f]{40}/i);
-      expect(loadedIdentity.contract.options.address).to.eq(
+
+      expect(await loadedIdentity.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
+      expect(await loadedIdentity.getContractAddress()).to.eq(
         await runtime.nameResolver.getAddress(address));
     });
   });

@@ -99,9 +99,9 @@ export interface DigitalIdentityOptions extends ContainerOptions {
  * @class      DigitalIdentity (name)
  */
 export class DigitalIdentity extends Logger {
-  protected config: DigitalIdentityConfig;
-  protected options: DigitalIdentityOptions;
-  public contract: any;
+  private config: DigitalIdentityConfig;
+  private contract: any;
+  private options: DigitalIdentityOptions;
 
   /**
    * check, that given subset of properties is present at config, collections missing properties and
@@ -186,6 +186,11 @@ export class DigitalIdentity extends Logger {
     this.config = config;
   }
 
+  /**
+   * add verifications to this identity; this will also add verifications to contract description
+   *
+   * @param      {VerificationEntry[]}  verifications  list of verifications to add
+   */
   public async addVerifications(verifications: VerificationEntry[]): Promise<void> {
     await this.ensureContract();
     await Throttle.all(verifications.map(verification => async () =>
@@ -218,6 +223,7 @@ export class DigitalIdentity extends Logger {
    */
   public async createContainer(name: string, containerOptions: Partial<ContainerConfig>):
       Promise<Container> {
+    await this.ensureContract();
     const container = await Container.create(
       this.options, { ...this.config.containerConfig, ...containerOptions });
     await this.setEntry(name, container, EntryType.ContainerContract);
@@ -234,6 +240,14 @@ export class DigitalIdentity extends Logger {
     let address = this.config.address.startsWith('0x') ?
       this.config.address : await this.options.nameResolver.getAddress(this.config.address);
     this.contract = this.options.contractLoader.loadContract('IndexContract', address)
+  }
+
+  /**
+   * get contract address of underlying IndexContract
+   */
+  public async getContractAddress(): Promise<string> {
+    await this.ensureContract();
+    return this.contract.options.address;
   }
 
   /**
@@ -301,6 +315,9 @@ export class DigitalIdentity extends Logger {
     }
   }
 
+  /**
+   * gets verifications from description and fetches list of verifications for each of them
+   */
   public async getVerifications(): Promise<any[]> {
     await this.ensureContract();
     const description = await this.getDescription();
@@ -350,7 +367,8 @@ export class DigitalIdentity extends Logger {
     // write value to contract
     let toSet;
     if (value instanceof Container) {
-      toSet = `0x000000000000000000000000${value.contract.options.address.substr(2)}`;
+      const contractAddress = await value.getContractAddress();
+      toSet = `0x000000000000000000000000${contractAddress.substr(2)}`;
     } else if (value.length === 42) {
       toSet = `0x000000000000000000000000${value.substr(2)}`;
     } else {

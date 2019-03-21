@@ -88,7 +88,7 @@ describe('Container (name pending)', function() {
 
   it('can can create new contracts', async () => {
     const container = await Container.create(runtime, defaultConfig);
-    expect(container.contract.options.address).to.match(/0x[0-9a-f]{40}/i);
+    expect(await container.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
   });
 
   describe('when setting entries', async () => {

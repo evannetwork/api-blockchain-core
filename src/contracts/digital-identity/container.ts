@@ -158,9 +158,9 @@ export class Container extends Logger {
   };
   private static defaultFactoryAddress = 'container.factory.evan';
   private static defaultTemplate = 'metadata';
-  public config: ContainerConfig;
-  public contract: any;
-  public options: ContainerOptions;
+  private config: ContainerConfig;
+  private contract: any;
+  private options: ContainerOptions;
 
   /**
    * apply template to data contract; this should be used with caution and is intended to only be
@@ -362,6 +362,14 @@ export class Container extends Logger {
   }
 
   /**
+   * get contract address of underlying DataContract
+   */
+  public async getContractAddress(): Promise<string> {
+    await this.ensureContract();
+    return this.contract.options.address;
+  }
+
+  /**
    * check if container contract already has been loaded, load from address / ENS if required
    */
   public async ensureContract(): Promise<void> {
@@ -396,6 +404,7 @@ export class Container extends Logger {
    */
   public async getListEntries(listName: string, count = 10, offset = 0, reverse = false):
       Promise<any[]> {
+    await this.ensureContract();
     return this.options.dataContract.getListEntries(
       this.contract, listName, this.config.accountId, true, true, count, offset, reverse);
   }
@@ -407,6 +416,7 @@ export class Container extends Logger {
    * @param      {number}  index     list entry id to retrieve
    */
   public async getListEntry(listName: string, index: number): Promise<any> {
+    await this.ensureContract();
     return this.options.dataContract.getListEntry(
       this.contract, listName, index, this.config.accountId);
   }
@@ -417,6 +427,7 @@ export class Container extends Logger {
    * @param      {string}  listName  name of a list in the container
    */
   public async getListEntryCount(listName: string): Promise<number> {
+    await this.ensureContract();
     return this.options.dataContract.getListEntryCount(this.contract, listName);
   }
 
@@ -427,6 +438,7 @@ export class Container extends Logger {
    * @param      {number}  entryIndex  index of the entry to remove from list
    */
   public async removeListEntry(listName: string, entryIndex: number): Promise<void> {
+    await this.ensureContract();
     await this.options.dataContract.removeListEntry(
       this.contract,
       listName,
@@ -481,5 +493,4 @@ export class Container extends Logger {
     */
     throw new Error('not implemented');
   }
-
 }
