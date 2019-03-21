@@ -171,14 +171,15 @@ export class Container extends Logger {
    * @param      {any}               contract  `DataContract` instance
    */
   public static async applyTemplate(
-      options: ContainerOptions, config: ContainerConfig, contract: any): Promise<void> {
+      options: ContainerOptions, config: ContainerConfig, container: Container): Promise<void> {
     Container.checkConfigProperties(config, ['template']);
-    const tasks = [];
+    let tasks = [];
     const template = typeof config.template === 'string' ?
       Container.templates[config.template] :
       config.template;
     for (let propertyName of Object.keys(template.properties)) {
       const property: ContainerTemplateProperty = template.properties[propertyName];
+      const permissionTasks = [];
       for (let role of Object.keys(property.permissions)) {
         for (let modification of property.permissions[role]) {
           let propertyType: PropertyType;
@@ -197,16 +198,29 @@ export class Container extends Logger {
           } else {
             throw new Error(`invalid modification "${modification}" for property "${propertyName}"`);
           }
-          tasks.push(async () => options.rightsAndRoles.setOperationPermission(
-            contract,
-            config.accountId,
-            parseInt(role, 10),
-            propertyName,
-            propertyType,
-            modificationType,
-            true,
-          ));
+          // allow setting this field; if value is specified, add value AFTER this
+          permissionTasks.push(async () => {
+            await options.rightsAndRoles.setOperationPermission(
+              container.contract.options.address,
+              config.accountId,
+              parseInt(role, 10),
+              propertyName,
+              propertyType,
+              modificationType,
+              true,
+            );
+          });
         }
+      }
+      if (property.hasOwnProperty('value')) {
+        // if value has been defined, wait for permissions to be completed, then set value
+        tasks.push(async () => {
+          await Throttle.all(permissionTasks);
+          await container.setEntry(propertyName, property.value);
+        });
+      } else {
+        // if no value has been specified, flatten permission tasks and add to task list
+        tasks = tasks.concat(async () => Throttle.all(permissionTasks));
       }
     }
     if (template.permissions) {
@@ -214,7 +228,7 @@ export class Container extends Logger {
         for (let role of Object.keys(template.permissions.roleCapability)) {
           for (let fun of template.permissions.roleCapability[role]) {
             tasks.push(async () => options.rightsAndRoles.setFunctionPermission(
-              contract,
+              container.contract.options.address,
               config.accountId,
               parseInt(role, 10),
               options.web3.utils.sha3(fun).substr(0, 10),
@@ -224,7 +238,7 @@ export class Container extends Logger {
         }
       }
       if (template.permissions.roleOperationCapability) {
-        const dsRolesAddress = await options.executor.executeContractCall(contract, 'authority');
+        const dsRolesAddress = await options.executor.executeContractCall(container.contract, 'authority');
         const dsRolesContract = options.contractLoader.loadContract('DSRolesPerContract', dsRolesAddress);
         const keccak256 = options.web3.utils.soliditySha3;
         const rekkeccak = (toKeccak) => toKeccak.length === 2 ? keccak256(...toKeccak) : keccak256(toKeccak.shift(), rekkeccak(toKeccak));
@@ -307,10 +321,11 @@ export class Container extends Logger {
     );
     instanceConfig.address = contract.options.address;
 
-    await Container.applyTemplate(options, instanceConfig, contract);
-
     const container = new Container(options, instanceConfig);
     await container.ensureContract();
+
+    await Container.applyTemplate(options, instanceConfig, container);
+
     return container;
   }
 
