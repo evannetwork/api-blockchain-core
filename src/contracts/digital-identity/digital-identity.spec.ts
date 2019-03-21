@@ -65,6 +65,13 @@ describe('DigitalIdentity (name pending)', function() {
     version: '0.1.0',
     dbcpVersion: 2,
   };
+  const containerDescription = {
+    name: 'test container',
+    description: 'container from test run',
+    author: 'evan GmbH',
+    version: '0.1.0',
+    dbcpVersion: 2,
+  };
   let runtime: DigitalIdentityOptions;
 
   before(async () => {
@@ -88,6 +95,7 @@ describe('DigitalIdentity (name pending)', function() {
       description,
       containerConfig: {
         accountId: accounts[0],
+        description: containerDescription,
         mailTemplates: {
           share: {},
           sendTemplate: {},
@@ -98,10 +106,6 @@ describe('DigitalIdentity (name pending)', function() {
     const factory = await executor.createContract('IndexContractFactory', [], { from: accounts[0], gas: 3e6 });
     defaultConfig.factoryAddress = factory.options.address;
     console.log(`using identity factory: ${defaultConfig.factoryAddress}`);
-  });
-
-  after(async () => {
-    await dfs.stop();
   });
 
   it('can can create new contracts', async () => {
@@ -252,6 +256,23 @@ describe('DigitalIdentity (name pending)', function() {
         const entry = await car.getEntry('tire/screw/metadata');
         expect(entry.value).to.eq(container);
         expect(entry.entryType).to.eq(EntryType.GenericContract);
+      });
+    });
+
+    describe('when adding containers', () => {
+      before(async () => {
+        const factory = await executor.createContract(
+          'ContainerDataContractFactory', [], { from: accounts[0], gas: 6e6 });
+        defaultConfig.containerConfig.factoryAddress = factory.options.address;
+      });
+      it('creates new containers automatically', async() => {
+        const identity = await DigitalIdentity.create(runtime, defaultConfig);
+        const newContainer = await identity.createContainer('myMetadata', { template: 'metadata' });
+        // new container has type property (default)
+        expect(await newContainer.getEntry('type')).to.eq('metadata');
+        // new container is linked to identity
+        const { value: fetchedContainer } = await identity.getEntry('myMetadata');
+        expect(await fetchedContainer.getEntry('type')).to.eq('metadata');
       });
     });
   });

@@ -209,6 +209,22 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
+   * create new `Container` instance and add it as entry to identity
+   *
+   * @param      {string}                    name              name of the entry
+   * @param      {Partial<ContainerConfig>}  containerOptions  properties for container config; will
+   *                                                           be merged with config defined in
+   *                                                           `config.containerConfig`
+   */
+  public async createContainer(name: string, containerOptions: Partial<ContainerConfig>):
+      Promise<Container> {
+    const container = await Container.create(
+      this.options, { ...this.config.containerConfig, ...containerOptions });
+    await this.setEntry(name, container, EntryType.ContainerContract);
+    return container;
+  }
+
+  /**
    * check if digital identity contract already has been loaded, load from address / ENS if required
    */
   public async ensureContract(): Promise<void> {
@@ -328,15 +344,24 @@ export class DigitalIdentity extends Logger {
    * @param      {string}  name    entry name
    * @param      {string}  value   value to set (address or bytes32 value)
    */
-  public async setEntry(name: string, value: string, entryType: EntryType): Promise<void> {
+  public async setEntry(name: string, value: string|Container, entryType: EntryType):
+      Promise<void> {
     await this.ensureContract();
     // write value to contract
+    let toSet;
+    if (value instanceof Container) {
+      toSet = `0x000000000000000000000000${value.contract.options.address.substr(2)}`;
+    } else if (value.length === 42) {
+      toSet = `0x000000000000000000000000${value.substr(2)}`;
+    } else {
+      toSet = value;
+    }
     await this.options.executor.executeContractTransaction(
       this.contract,
       'setEntry',
       { from: this.config.accountId },
       name,
-      value.length === 66 ? value : `0x000000000000000000000000${value.substr(2)}`,
+      toSet,
       entryType,
     );
   }

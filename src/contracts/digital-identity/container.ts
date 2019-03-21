@@ -377,6 +377,7 @@ export class Container extends Logger {
    * @param      {string}  entryName  The entry name
    */
   public async getEntry(entryName: string): Promise<any> {
+    await this.ensureContract();
     return this.options.dataContract.getEntry(this.contract, entryName, this.config.accountId);
   }
 
