@@ -337,7 +337,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
       keyProvider.profile = null;
     }
   } else {
-    log(`profile for ${activeAccount} doesn't exist`)
+    log(`profile for ${activeAccount} doesn't exist`, 'debug')
   }
 
   const onboarding = options.onboarding || new Onboarding({
