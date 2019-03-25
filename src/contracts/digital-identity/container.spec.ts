@@ -106,18 +106,33 @@ describe('Container (name pending)', function() {
       expect(await container.getEntry('testField')).to.eq(randomString);
     });
 
-    it.skip('cannot set entries if not defined in template', async () => {
-      const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
-      template.properties.testField = {
-        dataSchema: { type: 'string' },
-        sharing: '*',
-        permissions: { 0: ['set'] },
-        type: 'entry',
-      };
-      const container = await Container.create(runtime, { ...defaultConfig, template });
+    it('can set entries if not defined in template (auto adds properties)', async () => {
+      const container = await Container.create(runtime, defaultConfig);
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
-      await expect(container.setEntry('unsetField', randomString)).to.be.rejected;
-      throw new Error('this behaviour will change to auto-adding fields, resulting in successfull adding values');
+      await container.setEntry('testField', randomString);
+
+      expect(await container.getEntry('testField')).to.eq(randomString);
+      const expectedSchema = {
+        $id: 'testField_schema',
+        type: 'string',
+      };
+      const containerDescription = await container.getDescription();
+      expect(containerDescription.dataSchema.testField).to.deep.eq(expectedSchema);
+    });
+
+    it('can set list entries if not defined in template (auto adds properties)', async () => {
+      const container = await Container.create(runtime, defaultConfig);
+      const randomString = Math.floor(Math.random() * 1e12).toString(36);
+      await container.addListEntries('testList', [ randomString ]);
+
+      expect(await container.getListEntries('testList')).to.deep.eq([ randomString ]);
+      const expectedSchema = {
+        $id: 'testList_schema',
+        type: 'array',
+        items: { type: 'string'},
+      };
+      const containerDescription = await container.getDescription();
+      expect(containerDescription.dataSchema.testList).to.deep.eq(expectedSchema);
     });
   });
 
@@ -125,7 +140,7 @@ describe('Container (name pending)', function() {
     it('can set and get entries for properties defined in (custom) template', async () => {
       const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
       template.properties.testList = {
-        dataSchema: { $comment: '{ "entryType": "list"}', type: 'array', items: { type: 'number' } },
+        dataSchema: { type: 'array', items: { type: 'number' } },
         sharing: '*',
         permissions: { 0: ['set'] },
         type: 'list',
@@ -134,6 +149,27 @@ describe('Container (name pending)', function() {
       const randomNumbers = [...Array(8)].map(() => Math.floor(Math.random() * 1e12));
       await container.addListEntries('testList', randomNumbers);
       expect(await container.getListEntries('testList')).to.deep.eq(randomNumbers);
+    });
+  });
+
+  describe('when working with templates', async () => {
+    it('can store current contract as template', async () => {
+      const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
+      template.properties.testEntry = {
+        dataSchema: { type: 'string' },
+        sharing: '*',
+        permissions: { 0: ['set'] },
+        type: 'entry',
+      };
+      template.properties.testList = {
+        dataSchema: { type: 'array', items: { type: 'number' } },
+        sharing: '*',
+        permissions: { 0: ['set'] },
+        type: 'list',
+      };
+      const container = await Container.create(runtime, { ...defaultConfig, template });
+      const exported = await container.toTemplate();
+      expect(exported).to.deep.eq(template);
     });
   });
 });

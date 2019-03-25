@@ -344,6 +344,12 @@ export class Container extends Logger {
     return jsonSchema;
   }
 
+  /**
+   * create new `Container` instance; this will not create smart contract contract but is used to
+   * load existing containers. To create a new contract, use the static `create` function
+   * @param      {ContainerOptions}  options  runtime for new `Container`
+   * @param      {ContainerConfig}   config   config for new container
+   */
   constructor(options: ContainerOptions, config: ContainerConfig) {
     super(options as LoggerOptions);
     this.options = options;
@@ -356,9 +362,12 @@ export class Container extends Logger {
    * @param      {stringstring}  listName  name of the list in the data contract
    * @param      {any}           values    values to add
    */
-  public async addListEntries(listName: string|string[], values: any[]): Promise<void> {
+  public async addListEntries(listName: string, values: any[]): Promise<void> {
+    await this.ensureContract();
+    await this.ensurePermissionOnField(listName, 'list');
     await this.options.dataContract.addListEntries(
       this.contract, listName, values, this.config.accountId);
+    await this.ensureTypeInSchema(listName, values);
   }
 
   /**
@@ -380,6 +389,12 @@ export class Container extends Logger {
     let address = this.config.address.startsWith('0x') ?
       this.config.address : await this.options.nameResolver.getAddress(this.config.address);
     this.contract = this.options.contractLoader.loadContract('DataContract', address)
+  }
+
+  public async getDescription(): Promise<any> {
+    await this.ensureContract();
+    return (await this.options.description.getDescription(
+      this.contract.options.address, this.config.accountId)).public;
   }
 
   /**
@@ -448,6 +463,17 @@ export class Container extends Logger {
   }
 
   /**
+   * write given description to containers DBCP
+   *
+   * @param      {any}  description  description (public part)
+   */
+  public async setDescription(description: any): Promise<void> {
+    await this.ensureContract();
+    await this.options.description.setDescription(
+      this.contract.options.address, { public: description }, this.config.accountId);
+  }
+
+  /**
    * set entry for a key
    *
    * @param      {string}  entryName  name of an entry in the container
@@ -455,6 +481,8 @@ export class Container extends Logger {
    */
   public async setEntry(entryName: string, value: any): Promise<void> {
     await this.ensureContract();
+    await this.ensurePermissionOnField(entryName, 'entry');
+    await this.ensureTypeInSchema(entryName, value);
     await this.options.dataContract.setEntry(this.contract, entryName, value, this.config.accountId);
   }
 
@@ -492,5 +520,96 @@ export class Container extends Logger {
         □ sharings are not saved within the template!
     */
     throw new Error('not implemented');
+  }
+
+  /**
+   * create ajv schema (without $id value) by analyzing value
+   *
+   * @param      {any}    value    value to analyze
+   * @param      {any[]}  visited  (optional) not intended for direct use, visited nodes for
+   *                               recursion
+   * @return     {any}    ajv schema
+   */
+  private deriveSchema(value, visited = []): any {
+    if (visited.includes(value)) {
+      throw new Error('could not derive type of value; cyclic references detected');
+    }
+    let schema;
+    let type = typeof value;
+    if (['boolean', 'number', 'string'].includes(type)) {
+      schema = { type };
+    } else if (type === 'object') {
+      if (Array.isArray(value)) {
+        schema = { type: 'array' };
+        if (value.length) {
+          schema.items = this.deriveSchema(value[0], visited.concat([value]));
+        }
+      } else {
+        schema = { type: 'object' };
+      }
+    }
+    return schema;
+  }
+
+  /**
+   * ensure, that current user has permission to set values on given property
+   *
+   * @param      {string}  name    name of the property to ensure permission for
+   * @param      {string}  type    type of property ('entry'/'list')
+   */
+  private async ensurePermissionOnField(name: string, type: string): Promise<void> {
+    // ensure entry is writable by current account
+    const authority = this.options.contractLoader.loadContract(
+      'DSRolesPerContract',
+      await this.options.executor.executeContractCall(this.contract, 'authority'),
+    );
+    const keccak256 = this.options.web3.utils.soliditySha3;
+    const label = type === 'entry' ?
+      '0x84f3db82fb6cd291ed32c6f64f7f5eda656bda516d17c6bc146631a1f05a1833' : // entry
+      '0x7da2a80303fd8a8b312bb0f3403e22702ece25aa85a5e213371a770a74a50106';  // list entry
+    const operation = '0xd2f67e6aeaad1ab7487a680eb9d3363a597afa7a3de33fa9bf3ae6edcb88435d'; // set
+    let hash = keccak256(keccak256(label, keccak256(name)), operation);
+    // TODO check hashing here (tightly packed soliditySha3 or not?)
+    let canSetField = await this.options.executor.executeContractCall(
+      authority,
+      'canCallOperation',
+      this.config.accountId,
+      '0x0000000000000000000000000000000000000000',
+      hash);
+    if (!canSetField) {
+      await this.options.rightsAndRoles.setOperationPermission(
+        this.contract,
+        this.config.accountId,
+        0,
+        name,
+        type === 'entry' ? PropertyType.Entry : PropertyType.ListEntry,
+        ModificationType.Set,
+        true,
+      );
+    }
+    canSetField = await this.options.executor.executeContractCall(
+      authority,
+      'canCallOperation',
+      this.config.accountId,
+      '0x0000000000000000000000000000000000000000',
+      hash);
+  }
+
+  /**
+   * derive type from item value, ensure, that it is in DBCPs data schema
+   *
+   * @param      {string}  name    property name
+   * @param      {any}     value   property value
+   */
+  private async ensureTypeInSchema(name: string, value: any): Promise<void> {
+    const description = await this.getDescription();
+    if (!description.dataSchema) {
+      description.dataSchema = {};
+    }
+    if (!description.dataSchema[name]) {
+      description.dataSchema[name] = this.deriveSchema(value);
+      description.dataSchema[name].$id = `${name}_schema`;
+      await this.setDescription(description);
+    }
   }
 }
