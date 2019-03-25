@@ -725,23 +725,13 @@ export class DataContract extends BaseContract {
     }
     const merged = {...description.public, ...description.private};
     if (merged.dataSchema && merged.dataSchema[fieldName]) {
-      let schemaInfo;
-      if (merged.dataSchema[fieldName].$comment) {
-        try {
-          schemaInfo = JSON.parse(merged.dataSchema[fieldName].$comment);
-        } catch (_) {
-          // do not escalate error on comments that do not offer schema info
-        }
-      }
       // check values if description found
-      let validator;
-      if (schemaInfo && schemaInfo.entryType && schemaInfo.entryType === 'list') {
-        // schema is written for lists, so validate entry with item validation
-        validator = new Validator({ schema: merged.dataSchema[fieldName].items });
-      } else {
-        // schema is written per item, validate with entire schema
-        validator = new Validator({ schema: merged.dataSchema[fieldName] });
+      let schema = merged.dataSchema[fieldName];
+      if (schema.type === 'array') {
+        // for list types, check only items
+        schema = schema.items;
       }
+      const validator = new Validator({ schema });
       let values;
       if (Array.isArray(toCheck)) {
         values = toCheck;

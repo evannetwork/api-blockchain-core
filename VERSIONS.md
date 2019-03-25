@@ -9,7 +9,7 @@
 - add support for passing `Logger` instance to `createDefaultRuntime`
 - add `digital-identity` module (wrapper for `IdentityContracts`)
 - add `container` module (`DataContract` wrapper)
-- add support for entryType `list` in `data-contract`
+- add support for type `array` in `data-contract` (if type is array, subproperty `.items` is used for list entry validation)
 
 ### Fixes
 - fix `DataContract` `getEntry` to load unencrypted data, when no profile for the requesting account exists
