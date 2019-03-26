@@ -26,6 +26,7 @@
 */
 
 import * as Throttle from 'promise-parallel-throttle';
+import BigNumber from 'bignumber.js';
 
 import {
   ContractLoader,
@@ -118,16 +119,16 @@ export class Container extends Logger {
     metadata: {
       properties: {
         type: {
-          dataSchema: { type: 'string' },
+          dataSchema: { $id: 'type_schema', type: 'string' },
           type: 'entry',
           permissions: {
             0: ['set']
           },
-          sharing: '*',
+          sharing: 'type',
           value: 'metadata',
         },
         fieldForAll: {
-          dataSchema: { type: 'string' },
+          dataSchema: { $id: 'fieldForAll_schema', type: 'string' },
           type: 'entry',
           permissions: {
             0: ['set', 'remove'],
@@ -138,21 +139,23 @@ export class Container extends Logger {
         },
       },
       permissions: {
-        roleCapability: {
-          1: ['setEntry(bytes32,bytes32)'],
-        },
-        roleOperationCapability: {
-          0: [
-            ['contractState', 'Draft', 'PendingApproval'],
-            ['contractState', 'PendingApproval', 'Approved'],
-            ['contractState', 'Approved', 'Terminated'],
-            ['othersState', 'Draft', 'Terminated'],
-          ],
-          1: [
-            ['ownState', 'Draft', 'Active'],
-            ['ownState', 'Active', 'Terminated'],
-          ],
-        },
+        //////// disabled until specified further
+        // roleCapability: {
+        //   1: ['setEntry(bytes32,bytes32)'],
+        // },
+        // roleOperationCapability: {
+        //   0: [
+        //     ['contractState', 'Draft', 'PendingApproval'],
+        //     ['contractState', 'PendingApproval', 'Approved'],
+        //     ['contractState', 'Approved', 'Terminated'],
+        //     ['othersState', 'Draft', 'Terminated'],
+        //   ],
+        //   1: [
+        //     ['ownState', 'Draft', 'Active'],
+        //     ['ownState', 'Active', 'Terminated'],
+        //   ],
+        // },
+        ////////
       },
     },
   };
@@ -215,48 +218,50 @@ export class Container extends Logger {
       if (property.hasOwnProperty('value')) {
         // if value has been defined, wait for permissions to be completed, then set value
         tasks.push(async () => {
-          await Throttle.all(permissionTasks);
+          await Throttle.all(permissionTasks, { maxInProgress: 1 });
           await container.setEntry(propertyName, property.value);
         });
       } else {
         // if no value has been specified, flatten permission tasks and add to task list
-        tasks = tasks.concat(async () => Throttle.all(permissionTasks));
+        tasks = tasks.concat(async () => Throttle.all(permissionTasks, { maxInProgress: 1 }));
       }
     }
-    if (template.permissions) {
-      if (template.permissions.roleCapability) {
-        for (let role of Object.keys(template.permissions.roleCapability)) {
-          for (let fun of template.permissions.roleCapability[role]) {
-            tasks.push(async () => options.rightsAndRoles.setFunctionPermission(
-              container.contract.options.address,
-              config.accountId,
-              parseInt(role, 10),
-              options.web3.utils.sha3(fun).substr(0, 10),
-              true,
-            ));
-          }
-        }
-      }
-      if (template.permissions.roleOperationCapability) {
-        const dsRolesAddress = await options.executor.executeContractCall(container.contract, 'authority');
-        const dsRolesContract = options.contractLoader.loadContract('DSRolesPerContract', dsRolesAddress);
-        const keccak256 = options.web3.utils.soliditySha3;
-        const rekkeccak = (toKeccak) => toKeccak.length === 2 ? keccak256(...toKeccak) : keccak256(toKeccak.shift(), rekkeccak(toKeccak));
-        for (let role of Object.keys(template.permissions.roleOperationCapability)) {
-          for (let parts of template.permissions.roleOperationCapability[role]) {
-            tasks.push(async () => options.executor.executeContractTransaction(
-              dsRolesContract,
-              'setRoleOperationCapability',
-              { from: config.accountId },
-              role,
-              '0x0000000000000000000000000000000000000000',
-              rekkeccak(parts),
-              true,
-            ));
-          }
-        }
-      }
-    }
+    //////// disabled until specified further
+    // if (template.permissions) {
+    //   if (template.permissions.roleCapability) {
+    //     for (let role of Object.keys(template.permissions.roleCapability)) {
+    //       for (let fun of template.permissions.roleCapability[role]) {
+    //         tasks.push(async () => options.rightsAndRoles.setFunctionPermission(
+    //           container.contract.options.address,
+    //           config.accountId,
+    //           parseInt(role, 10),
+    //           options.web3.utils.sha3(fun).substr(0, 10),
+    //           true,
+    //         ));
+    //       }
+    //     }
+    //   }
+    //   if (template.permissions.roleOperationCapability) {
+    //     const dsRolesAddress = await options.executor.executeContractCall(container.contract, 'authority');
+    //     const dsRolesContract = options.contractLoader.loadContract('DSRolesPerContract', dsRolesAddress);
+    //     const keccak256 = options.web3.utils.soliditySha3;
+    //     const rekkeccak = (toKeccak) => toKeccak.length === 2 ? keccak256(...toKeccak) : keccak256(toKeccak.shift(), rekkeccak(toKeccak));
+    //     for (let role of Object.keys(template.permissions.roleOperationCapability)) {
+    //       for (let parts of template.permissions.roleOperationCapability[role]) {
+    //         tasks.push(async () => options.executor.executeContractTransaction(
+    //           dsRolesContract,
+    //           'setRoleOperationCapability',
+    //           { from: config.accountId },
+    //           role,
+    //           '0x0000000000000000000000000000000000000000',
+    //           rekkeccak(parts),
+    //           true,
+    //         ));
+    //       }
+    //     }
+    //   }
+    // }
+    ////////
     await Throttle.all(tasks);
   }
 
@@ -505,21 +510,44 @@ export class Container extends Logger {
     throw new Error('not implemented');
   }
 
-  public async toTemplate(): Promise<any> {
-    // build template object
-    /*
-      § DataSchema copied from DBCP
-        □ only copy entries from dataschema where i'm permitted
-        □ dbcp will be cleaned
-      § Metadata
-        □ entries including it's configurations
-          ® name
-          ®  type
-          ® value (per default not copied, but can be enabled)
-        □ roles for the entries
-        □ sharings are not saved within the template!
-    */
-    throw new Error('not implemented');
+  public async toTemplate(getValues): Promise<any> {
+    const getAllEntries = async (listName) => {
+      const count = await this.getListEntryCount(listName);
+
+    };
+    // create empty template
+    const template: ContainerTemplate = {
+      properties: {},
+      permissions: {},
+    };
+
+    // fetch description, add fields from data schema
+    const description = await this.getDescription();
+    if (description.dataSchema) {
+      const authority = this.options.contractLoader.loadContract(
+        'DSRolesPerContract',
+        await this.options.executor.executeContractCall(this.contract, 'authority'),
+      );
+      const roleCount = await this.options.executor.executeContractCall(authority, 'roleCount');
+      const keccak256 = this.options.web3.utils.soliditySha3;
+      for (let property of Object.keys(description.dataSchema)) {
+        const dataSchema = description.dataSchema[property];
+        const type = dataSchema.type === 'array' ? 'list' : 'entry';
+        template.properties[property] = {
+          dataSchema,
+          permissions: {},
+          sharing: property,
+          type,
+        };
+        if (getValues && dataSchema.type !== 'array') {
+          template.properties[property].value = await this.getEntry(property);
+        }
+        template.properties[property].permissions =
+          await this.getRolePermission(authority, property, type);
+      }
+    }
+
+    return template;
   }
 
   /**
@@ -563,19 +591,13 @@ export class Container extends Logger {
       'DSRolesPerContract',
       await this.options.executor.executeContractCall(this.contract, 'authority'),
     );
-    const keccak256 = this.options.web3.utils.soliditySha3;
-    const label = type === 'entry' ?
-      '0x84f3db82fb6cd291ed32c6f64f7f5eda656bda516d17c6bc146631a1f05a1833' : // entry
-      '0x7da2a80303fd8a8b312bb0f3403e22702ece25aa85a5e213371a770a74a50106';  // list entry
-    const operation = '0xd2f67e6aeaad1ab7487a680eb9d3363a597afa7a3de33fa9bf3ae6edcb88435d'; // set
-    let hash = keccak256(keccak256(label, keccak256(name)), operation);
-    // TODO check hashing here (tightly packed soliditySha3 or not?)
     let canSetField = await this.options.executor.executeContractCall(
       authority,
       'canCallOperation',
       this.config.accountId,
       '0x0000000000000000000000000000000000000000',
-      hash);
+      this.getOperationHash(name, type, 'set'),
+    );
     if (!canSetField) {
       await this.options.rightsAndRoles.setOperationPermission(
         this.contract,
@@ -587,12 +609,6 @@ export class Container extends Logger {
         true,
       );
     }
-    canSetField = await this.options.executor.executeContractCall(
-      authority,
-      'canCallOperation',
-      this.config.accountId,
-      '0x0000000000000000000000000000000000000000',
-      hash);
   }
 
   /**
@@ -611,5 +627,70 @@ export class Container extends Logger {
       description.dataSchema[name].$id = `${name}_schema`;
       await this.setDescription(description);
     }
+  }
+
+  /**
+   * get hash for operation permission, this creates the hashes, that are used in
+   * `DSRolesPerContract` to check operation capabilities
+   *
+   * @param      {string}  name       property name
+   * @param      {string}  type       'entry' or 'list'
+   * @param      {string}  operation  'set' or 'remove'
+   * @return     {string}  bytes32 hash as string
+   */
+  private getOperationHash(name: string, type: string, operation = 'set'): string {
+    const keccak256 = this.options.web3.utils.soliditySha3;
+    const label = type === 'entry' ?
+      '0x84f3db82fb6cd291ed32c6f64f7f5eda656bda516d17c6bc146631a1f05a1833' : // entry
+      '0x7da2a80303fd8a8b312bb0f3403e22702ece25aa85a5e213371a770a74a50106';  // list entry
+    let operationHash;
+    if (operation === 'set') {
+      operationHash = '0xd2f67e6aeaad1ab7487a680eb9d3363a597afa7a3de33fa9bf3ae6edcb88435d';
+    } else if (operation === 'remove') {
+      operationHash = '0x8dd27a19ebb249760a6490a8d33442a54b5c3c8504068964b74388bfe83458be';
+    }
+    return keccak256(keccak256(label, keccak256(name)), operationHash);
+  }
+
+  /**
+   * get role permission for given property and type from authority contract
+   *
+   * @param      {any}     authorityContract  `DSRolesPerContract` instance
+   * @param      {string}  property           property name
+   * @param      {string}  type               'entry' or 'list'
+   */
+  private async getRolePermission(authorityContract: any, property: string, type: string):
+      Promise<any> {
+    const permissions = {};
+    for (let operation of ['set', 'remove']) {
+      const rolesMap = await this.options.executor.executeContractCall(
+        authorityContract,
+        'getOperationCapabilityRoles',
+        this.config.address,
+        this.getOperationHash(property, type, operation),
+      );
+      const checkNumber = (bnum) => {
+        const results = [];
+        let bn = new BigNumber(bnum);
+        for (let i = 0; i < 256; i++) {
+          const divisor = (new BigNumber(2)).pow(i);
+          if (divisor.gt(bnum)) {
+            break;
+          }
+          results.push(parseInt(bnum.dividedToIntegerBy(divisor).mod(2).toString(), 10));
+        }
+        return results;
+      };
+      const roleMap = checkNumber(new BigNumber(rolesMap));
+      roleMap.forEach((value, i) => {
+        if (value) {
+          if (!permissions[i])  {
+            permissions[i] = [];
+          }
+          permissions[i].push(operation);
+        }
+      });
+    }
+    return permissions;
   }
 }

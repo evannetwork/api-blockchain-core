@@ -96,7 +96,7 @@ describe('Container (name pending)', function() {
       const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
       template.properties.testField = {
         dataSchema: { type: 'string' },
-        sharing: '*',
+        sharing: 'testField',
         permissions: { 0: ['set'] },
         type: 'entry',
       };
@@ -156,19 +156,22 @@ describe('Container (name pending)', function() {
     it('can store current contract as template', async () => {
       const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
       template.properties.testEntry = {
-        dataSchema: { type: 'string' },
-        sharing: '*',
+        dataSchema: { $id: 'testEntry_schema', type: 'string' },
+        sharing: 'testEntry',
         permissions: { 0: ['set'] },
         type: 'entry',
       };
       template.properties.testList = {
-        dataSchema: { type: 'array', items: { type: 'number' } },
-        sharing: '*',
+        dataSchema: { $id: 'testList_schema', type: 'array', items: { type: 'number' } },
+        sharing: 'testList',
         permissions: { 0: ['set'] },
         type: 'list',
       };
       const container = await Container.create(runtime, { ...defaultConfig, template });
-      const exported = await container.toTemplate();
+      const exported = await container.toTemplate(false);
+      // we do not export values, so remove them
+      delete template.properties.fieldForAll.value;
+      delete template.properties.type.value;
       expect(exported).to.deep.eq(template);
     });
   });
