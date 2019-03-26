@@ -114,15 +114,6 @@ export class Container extends Logger {
           },
           value: 'metadata',
         },
-        fieldForAll: {
-          dataSchema: { $id: 'fieldForAll_schema', type: 'string' },
-          type: 'entry',
-          permissions: {
-            0: ['set', 'remove'],
-            1: ['set'],
-          },
-          value: 'test value for all',
-        },
       },
     },
   };
@@ -222,8 +213,13 @@ export class Container extends Logger {
    *                                          to new `Container`
    */
   public static async clone(
-      options: ContainerOptions, config: ContainerConfig, source: Container): Promise<void> {
-    throw new Error('not implemented');
+      options: ContainerOptions,
+      config: ContainerConfig,
+      source: Container,
+      copyValues = false,
+      ): Promise<Container> {
+    const template = await source.toTemplate(copyValues);
+    return Container.create(options, { ...config, template });
   }
 
   /**
@@ -448,11 +444,12 @@ export class Container extends Logger {
     throw new Error('not implemented');
   }
 
-  public async toTemplate(getValues): Promise<any> {
-    const getAllEntries = async (listName) => {
-      const count = await this.getListEntryCount(listName);
-
-    };
+  /**
+   * export current container state as template
+   *
+   * @param      {boolean}  getValues  export entries or not (list entries are always excluded)
+   */
+  public async toTemplate(getValues = false): Promise<any> {
     // create empty template
     const template: ContainerTemplate = {
       properties: {},
@@ -476,7 +473,10 @@ export class Container extends Logger {
           type,
         };
         if (getValues && dataSchema.type !== 'array') {
-          template.properties[property].value = await this.getEntry(property);
+          const value = await this.getEntry(property);
+          if (value !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
+            template.properties[property].value = value;
+          }
         }
         template.properties[property].permissions =
           await this.getRolePermission(authority, property, type);

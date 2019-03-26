@@ -166,11 +166,44 @@ describe('Container (name pending)', function() {
         type: 'list',
       };
       const container = await Container.create(runtime, { ...defaultConfig, template });
-      const exported = await container.toTemplate(false);
+      const exported = await container.toTemplate();
       // we do not export values, so remove them
-      delete template.properties.fieldForAll.value;
       delete template.properties.type.value;
       expect(exported).to.deep.eq(template);
+    });
+
+    it('can store current contract as template with values', async () => {
+      const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
+      template.properties.testEntry = {
+        dataSchema: { $id: 'testEntry_schema', type: 'string' },
+        permissions: { 0: ['set'] },
+        type: 'entry',
+      };
+      template.properties.testList = {
+        dataSchema: { $id: 'testList_schema', type: 'array', items: { type: 'number' } },
+        permissions: { 0: ['set'] },
+        type: 'list',
+      };
+      const container = await Container.create(runtime, { ...defaultConfig, template });
+      const exported = await container.toTemplate(true);
+      // we do not export values, so remove them
+      expect(exported).to.deep.eq(template);
+    });
+
+    it('can clone contracts', async () => {
+      const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
+      template.properties.testField = {
+        dataSchema: { type: 'string' },
+        permissions: { 0: ['set'] },
+        type: 'entry',
+      };
+      const container = await Container.create(runtime, { ...defaultConfig, template });
+      const randomString = Math.floor(Math.random() * 1e12).toString(36);
+      await container.setEntry('testField', randomString);
+      expect(await container.getEntry('testField')).to.eq(randomString);
+
+      const dolly = await Container.clone(runtime, defaultConfig, container, true);
+      expect(await dolly.getEntry('testField')).to.eq(randomString);
     });
   });
 });
