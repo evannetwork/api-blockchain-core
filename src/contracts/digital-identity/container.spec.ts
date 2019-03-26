@@ -67,11 +67,13 @@ describe('Container (name pending)', function() {
     executor = await TestUtils.getExecutor(web3);
     runtime = {
       contractLoader: await TestUtils.getContractLoader(web3),
+      cryptoProvider: await TestUtils.getCryptoProvider(),
       dataContract: await TestUtils.getDataContract(web3, dfs),
       description: await TestUtils.getDescription(web3, dfs),
       executor,
       nameResolver: await TestUtils.getNameResolver(web3),
       rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
+      sharing: await TestUtils.getSharing(web3, dfs),
       web3,
     };
     runtime.executor.eventHub = await TestUtils.getEventHub(web3);
@@ -96,7 +98,6 @@ describe('Container (name pending)', function() {
       const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
       template.properties.testField = {
         dataSchema: { type: 'string' },
-        sharing: 'testField',
         permissions: { 0: ['set'] },
         type: 'entry',
       };
@@ -141,7 +142,6 @@ describe('Container (name pending)', function() {
       const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
       template.properties.testList = {
         dataSchema: { type: 'array', items: { type: 'number' } },
-        sharing: '*',
         permissions: { 0: ['set'] },
         type: 'list',
       };
@@ -157,13 +157,11 @@ describe('Container (name pending)', function() {
       const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
       template.properties.testEntry = {
         dataSchema: { $id: 'testEntry_schema', type: 'string' },
-        sharing: 'testEntry',
         permissions: { 0: ['set'] },
         type: 'entry',
       };
       template.properties.testList = {
         dataSchema: { $id: 'testList_schema', type: 'array', items: { type: 'number' } },
-        sharing: 'testList',
         permissions: { 0: ['set'] },
         type: 'list',
       };

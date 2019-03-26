@@ -27,9 +27,11 @@
 
 import * as Throttle from 'promise-parallel-throttle';
 import BigNumber from 'bignumber.js';
+import { Mutex } from 'async-mutex';
 
 import {
   ContractLoader,
+  CryptoProvider,
   DfsInterface,
   Envelope,
   Executor,
@@ -64,22 +66,7 @@ export interface ContainerConfig {
  * template for container instances, covers properties setup and permissions
  */
 export interface ContainerTemplate {
-  permissions?: ContainerTemplatePermissions;
   properties?: { [id: string]: ContainerTemplateProperty; }
-}
-
-/**
- * permissions for `ContainerTemplate`
- */
-export interface ContainerTemplatePermissions {
-  /**
-   * group id is key, value is a lkist of function signatures (not hashed)
-   */
-  roleCapability?: { [id: number]: string[]; };
-  /**
-   * group id is key, value is a list of arrays, that will be hashed (tied to operation permission checks)
-   */
-  roleOperationCapability?: { [id: number]: string[][]; };
 }
 
 /**
@@ -88,7 +75,6 @@ export interface ContainerTemplatePermissions {
 export interface ContainerTemplateProperty {
   dataSchema: any;
   permissions: { [id: number]: string[]; };
-  sharing: string;
   type: string;
   value?: string;
 }
@@ -98,11 +84,13 @@ export interface ContainerTemplateProperty {
  */
 export interface ContainerOptions extends LoggerOptions {
   contractLoader: ContractLoader;
+  cryptoProvider: CryptoProvider;
   dataContract: DataContract;
   description: Description;
   executor: Executor;
   nameResolver: NameResolver;
   rightsAndRoles: RightsAndRoles;
+  sharing: Sharing;
   web3: any;
 }
 
@@ -124,7 +112,6 @@ export class Container extends Logger {
           permissions: {
             0: ['set']
           },
-          sharing: 'type',
           value: 'metadata',
         },
         fieldForAll: {
@@ -134,28 +121,8 @@ export class Container extends Logger {
             0: ['set', 'remove'],
             1: ['set'],
           },
-          sharing: 'fieldForAll',
           value: 'test value for all',
         },
-      },
-      permissions: {
-        //////// disabled until specified further
-        // roleCapability: {
-        //   1: ['setEntry(bytes32,bytes32)'],
-        // },
-        // roleOperationCapability: {
-        //   0: [
-        //     ['contractState', 'Draft', 'PendingApproval'],
-        //     ['contractState', 'PendingApproval', 'Approved'],
-        //     ['contractState', 'Approved', 'Terminated'],
-        //     ['othersState', 'Draft', 'Terminated'],
-        //   ],
-        //   1: [
-        //     ['ownState', 'Draft', 'Active'],
-        //     ['ownState', 'Active', 'Terminated'],
-        //   ],
-        // },
-        ////////
       },
     },
   };
@@ -163,6 +130,7 @@ export class Container extends Logger {
   private static defaultTemplate = 'metadata';
   private config: ContainerConfig;
   private contract: any;
+  private mutexes: { [id: string]: Mutex; };
   private options: ContainerOptions;
 
   /**
@@ -218,50 +186,14 @@ export class Container extends Logger {
       if (property.hasOwnProperty('value')) {
         // if value has been defined, wait for permissions to be completed, then set value
         tasks.push(async () => {
-          await Throttle.all(permissionTasks, { maxInProgress: 1 });
+          await Throttle.all(permissionTasks);
           await container.setEntry(propertyName, property.value);
         });
       } else {
         // if no value has been specified, flatten permission tasks and add to task list
-        tasks = tasks.concat(async () => Throttle.all(permissionTasks, { maxInProgress: 1 }));
+        tasks = tasks.concat(async () => Throttle.all(permissionTasks));
       }
     }
-    //////// disabled until specified further
-    // if (template.permissions) {
-    //   if (template.permissions.roleCapability) {
-    //     for (let role of Object.keys(template.permissions.roleCapability)) {
-    //       for (let fun of template.permissions.roleCapability[role]) {
-    //         tasks.push(async () => options.rightsAndRoles.setFunctionPermission(
-    //           container.contract.options.address,
-    //           config.accountId,
-    //           parseInt(role, 10),
-    //           options.web3.utils.sha3(fun).substr(0, 10),
-    //           true,
-    //         ));
-    //       }
-    //     }
-    //   }
-    //   if (template.permissions.roleOperationCapability) {
-    //     const dsRolesAddress = await options.executor.executeContractCall(container.contract, 'authority');
-    //     const dsRolesContract = options.contractLoader.loadContract('DSRolesPerContract', dsRolesAddress);
-    //     const keccak256 = options.web3.utils.soliditySha3;
-    //     const rekkeccak = (toKeccak) => toKeccak.length === 2 ? keccak256(...toKeccak) : keccak256(toKeccak.shift(), rekkeccak(toKeccak));
-    //     for (let role of Object.keys(template.permissions.roleOperationCapability)) {
-    //       for (let parts of template.permissions.roleOperationCapability[role]) {
-    //         tasks.push(async () => options.executor.executeContractTransaction(
-    //           dsRolesContract,
-    //           'setRoleOperationCapability',
-    //           { from: config.accountId },
-    //           role,
-    //           '0x0000000000000000000000000000000000000000',
-    //           rekkeccak(parts),
-    //           true,
-    //         ));
-    //       }
-    //     }
-    //   }
-    // }
-    ////////
     await Throttle.all(tasks);
   }
 
@@ -359,6 +291,7 @@ export class Container extends Logger {
     super(options as LoggerOptions);
     this.options = options;
     this.config = config;
+    this.mutexes = {};
   }
 
   /**
@@ -370,6 +303,7 @@ export class Container extends Logger {
   public async addListEntries(listName: string, values: any[]): Promise<void> {
     await this.ensureContract();
     await this.ensurePermissionOnField(listName, 'list');
+    await this.ensureKeyInSharing(listName);
     await this.options.dataContract.addListEntries(
       this.contract, listName, values, this.config.accountId);
     await this.ensureTypeInSchema(listName, values);
@@ -490,6 +424,7 @@ export class Container extends Logger {
   public async setEntry(entryName: string, value: any): Promise<void> {
     await this.ensureContract();
     await this.ensurePermissionOnField(entryName, 'entry');
+    await this.ensureKeyInSharing(entryName);
     await this.ensureTypeInSchema(entryName, value);
     await this.options.dataContract.setEntry(this.contract, entryName, value, this.config.accountId);
   }
@@ -521,7 +456,6 @@ export class Container extends Logger {
     // create empty template
     const template: ContainerTemplate = {
       properties: {},
-      permissions: {},
     };
 
     // fetch description, add fields from data schema
@@ -539,7 +473,6 @@ export class Container extends Logger {
         template.properties[property] = {
           dataSchema,
           permissions: {},
-          sharing: property,
           type,
         };
         if (getValues && dataSchema.type !== 'array') {
@@ -582,6 +515,27 @@ export class Container extends Logger {
     return schema;
   }
 
+  private async ensureKeyInSharing(entryName): Promise<void> {
+    let key = await this.options.sharing.getKey(
+      this.contract.options.address, this.config.accountId, entryName);
+    if (!key) {
+      // clear cache to remove failed key request
+      this.options.sharing.clearCache();
+      const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aes');
+      key = await cryptor.generateKey();
+      await this.getMutex('sharing').runExclusive(async () => {
+        await this.options.sharing.addSharing(
+          this.contract.options.address,
+          this.config.accountId,
+          this.config.accountId,
+          entryName,
+          0,
+          key,
+        );
+      });
+    }
+  }
+
   /**
    * ensure, that current user has permission to set values on given property
    *
@@ -621,15 +575,30 @@ export class Container extends Logger {
    * @param      {any}     value   property value
    */
   private async ensureTypeInSchema(name: string, value: any): Promise<void> {
-    const description = await this.getDescription();
-    if (!description.dataSchema) {
-      description.dataSchema = {};
+    await this.getMutex('schema').runExclusive(async () => {
+      const description = await this.getDescription();
+      if (!description.dataSchema) {
+        description.dataSchema = {};
+      }
+      if (!description.dataSchema[name]) {
+        description.dataSchema[name] = this.deriveSchema(value);
+        description.dataSchema[name].$id = `${name}_schema`;
+        await this.setDescription(description);
+      }
+    });
+  }
+
+  /**
+   * get mutex for keyword, this can be used to lock several sections during updates
+   *
+   * @param      {string}  name    name of a section; e.g. 'sharings', 'schema'
+   * @return     {Mutex}   Mutex instance
+   */
+  private getMutex(name: string): Mutex {
+    if (!this.mutexes[name]) {
+      this.mutexes[name] = new Mutex();
     }
-    if (!description.dataSchema[name]) {
-      description.dataSchema[name] = this.deriveSchema(value);
-      description.dataSchema[name].$id = `${name}_schema`;
-      await this.setDescription(description);
-    }
+    return this.mutexes[name];
   }
 
   /**
