@@ -396,6 +396,9 @@ export class Container extends Logger {
     this.contract = this.options.contractLoader.loadContract('DataContract', address)
   }
 
+  /**
+   * get description from container contract
+   */
   public async getDescription(): Promise<any> {
     await this.ensureContract();
     return (await this.options.description.getDescription(
