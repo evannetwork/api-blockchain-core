@@ -47,8 +47,9 @@ import {
 use(chaiAsPromised);
 
 
-describe('Container (name pending)', function() {
+describe('Container', function() {
   this.timeout(60000);
+  let [ owner, member, otherUser ] = accounts;
   let dfs: Ipfs;
   let defaultConfig: ContainerConfig;
   let executor: Executor;
@@ -59,37 +60,43 @@ describe('Container (name pending)', function() {
     version: '0.1.0',
     dbcpVersion: 2,
   };
-  let runtime: ContainerOptions;
+  let runtimes: { [id: string]: ContainerOptions; } = {};
 
   before(async () => {
     dfs = await TestUtils.getIpfs();
     const web3 = await TestUtils.getWeb3();
     executor = await TestUtils.getExecutor(web3);
-    runtime = {
-      contractLoader: await TestUtils.getContractLoader(web3),
-      cryptoProvider: await TestUtils.getCryptoProvider(),
-      dataContract: await TestUtils.getDataContract(web3, dfs),
-      description: await TestUtils.getDescription(web3, dfs),
-      executor,
-      nameResolver: await TestUtils.getNameResolver(web3),
-      rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
-      sharing: await TestUtils.getSharing(web3, dfs),
-      web3,
-    };
-    runtime.executor.eventHub = await TestUtils.getEventHub(web3);
+    const sha3 = (...args) => web3.utils.soliditySha3(...args);
+    const sha9 = (accountId1, accountId2) => sha3(...[sha3(accountId1), sha3(accountId2)].sort());
+    for (let accountId of accounts) {
+      // data contract instance has sha3 self key and edges to self and other accounts
+      const requestedKeys = [sha3(accountId), ...accounts.map(partner => sha9(accountId, partner))];
+      runtimes[accountId] = {
+        contractLoader: await TestUtils.getContractLoader(web3),
+        cryptoProvider: await TestUtils.getCryptoProvider(),
+        dataContract: await TestUtils.getDataContract(web3, dfs, requestedKeys),
+        description: await TestUtils.getDescription(web3, dfs, requestedKeys),
+        executor,
+        nameResolver: await TestUtils.getNameResolver(web3),
+        rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
+        sharing: await TestUtils.getSharing(web3, dfs, requestedKeys),
+        web3,
+      };
+      runtimes[accountId].executor.eventHub = await TestUtils.getEventHub(web3);
+    }
     defaultConfig = {
-      accountId: accounts[1],
+      accountId: accounts[0],
       description,
       template: 'metadata',
     };
     // create factory for test
     const factory = await executor.createContract('ContainerDataContractFactory', [], { from: accounts[0], gas: 6e6 });
     defaultConfig.factoryAddress = factory.options.address;
-    console.log(`factory: ${defaultConfig.factoryAddress}`);
+    console.log(`Container tests are using factory "${defaultConfig.factoryAddress}"`);
   });
 
   it('can can create new contracts', async () => {
-    const container = await Container.create(runtime, defaultConfig);
+    const container = await Container.create(runtimes[owner], defaultConfig);
     expect(await container.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
   });
 
@@ -101,14 +108,14 @@ describe('Container (name pending)', function() {
         permissions: { 0: ['set'] },
         type: 'entry',
       };
-      const container = await Container.create(runtime, { ...defaultConfig, template });
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       await container.setEntry('testField', randomString);
       expect(await container.getEntry('testField')).to.eq(randomString);
     });
 
     it('can set entries if not defined in template (auto adds properties)', async () => {
-      const container = await Container.create(runtime, defaultConfig);
+      const container = await Container.create(runtimes[owner], defaultConfig);
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       await container.setEntry('testField', randomString);
 
@@ -122,7 +129,7 @@ describe('Container (name pending)', function() {
     });
 
     it('can set list entries if not defined in template (auto adds properties)', async () => {
-      const container = await Container.create(runtime, defaultConfig);
+      const container = await Container.create(runtimes[owner], defaultConfig);
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       await container.addListEntries('testList', [ randomString ]);
 
@@ -145,7 +152,7 @@ describe('Container (name pending)', function() {
         permissions: { 0: ['set'] },
         type: 'list',
       };
-      const container = await Container.create(runtime, { ...defaultConfig, template });
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
       const randomNumbers = [...Array(8)].map(() => Math.floor(Math.random() * 1e12));
       await container.addListEntries('testList', randomNumbers);
       expect(await container.getListEntries('testList')).to.deep.eq(randomNumbers);
@@ -165,7 +172,7 @@ describe('Container (name pending)', function() {
         permissions: { 0: ['set'] },
         type: 'list',
       };
-      const container = await Container.create(runtime, { ...defaultConfig, template });
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
       const exported = await container.toTemplate();
       // we do not export values, so remove them
       delete template.properties.type.value;
@@ -184,7 +191,7 @@ describe('Container (name pending)', function() {
         permissions: { 0: ['set'] },
         type: 'list',
       };
-      const container = await Container.create(runtime, { ...defaultConfig, template });
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
       const exported = await container.toTemplate(true);
       // we do not export values, so remove them
       expect(exported).to.deep.eq(template);
@@ -197,13 +204,150 @@ describe('Container (name pending)', function() {
         permissions: { 0: ['set'] },
         type: 'entry',
       };
-      const container = await Container.create(runtime, { ...defaultConfig, template });
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       await container.setEntry('testField', randomString);
       expect(await container.getEntry('testField')).to.eq(randomString);
 
-      const dolly = await Container.clone(runtime, defaultConfig, container, true);
+      const dolly = await Container.clone(runtimes[owner], defaultConfig, container, true);
       expect(await dolly.getEntry('testField')).to.eq(randomString);
+    });
+  });
+
+  describe('when sharing properties', async () => {
+    describe('when sharing entries', async () => {
+      it('can share read access a property from owner to another user', async() => {
+        const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
+        template.properties.testField = {
+          dataSchema: { type: 'string' },
+          permissions: { 0: ['set'] },
+          type: 'entry',
+        };
+        const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+        const randomString = Math.floor(Math.random() * 1e12).toString(36);
+        await container.setEntry('testField', randomString);
+        expect(await container.getEntry('testField')).to.eq(randomString);
+
+        await container.shareProperties([{ account: accounts[1], permissions: { testField: { } } }]);
+        const memberContainer = new Container(
+          runtimes[member],
+          { ...defaultConfig, address: await container.getContractAddress(), accountId: accounts[1] },
+        );
+        expect(await memberContainer.getEntry('testField')).to.eq(randomString);
+      });
+
+      it('can share write access a property from owner to another user', async() => {
+        const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
+        template.properties.testField = {
+          dataSchema: { type: 'string' },
+          permissions: { 0: ['set'] },
+          type: 'entry',
+        };
+        const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+        const randomString = Math.floor(Math.random() * 1e12).toString(36);
+        await container.setEntry('testField', randomString);
+        expect(await container.getEntry('testField')).to.eq(randomString);
+
+        await container.shareProperties([{ account: accounts[1], permissions: { testField: { 1: ['set'] } } }]);
+        const memberContainer = new Container(
+          runtimes[member],
+          { ...defaultConfig, address: await container.getContractAddress(), accountId: accounts[1] },
+        );
+        expect(await memberContainer.getEntry('testField')).to.eq(randomString);
+
+        // now change property with invited user
+        const newRandomString = Math.floor(Math.random() * 1e12).toString(36);
+        await memberContainer.setEntry('testField', newRandomString);
+        expect(await memberContainer.getEntry('testField')).to.eq(newRandomString);
+        expect(await container.getEntry('testField')).to.eq(newRandomString);
+      });
+    });
+
+    describe('when sharing lists', async () => {
+      it('can share read access a property from owner to another user', async() => {
+        const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
+        template.properties.testList = {
+          dataSchema: { type: 'array', items: { type: 'string' } },
+          permissions: { 0: ['set'] },
+          type: 'list',
+        };
+        const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+        const randomString = Math.floor(Math.random() * 1e12).toString(36);
+        await container.addListEntries('testList', [randomString]);
+        expect(await container.getListEntries('testList')).to.deep.eq([randomString]);
+
+        await container.shareProperties([{ account: accounts[1], permissions: { testList: { } } }]);
+        const memberContainer = new Container(
+          runtimes[member],
+          { ...defaultConfig, address: await container.getContractAddress(), accountId: accounts[1] },
+        );
+        expect(await memberContainer.getListEntries('testList')).to.deep.eq([randomString]);
+      });
+
+      it('can share write access a property from owner to another user', async() => {
+        const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
+        template.properties.testList = {
+          dataSchema: { type: 'array', items: { type: 'string' } },
+          permissions: { 0: ['set'] },
+          type: 'list',
+        };
+        const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+        const randomString = Math.floor(Math.random() * 1e12).toString(36);
+        await container.addListEntries('testList', [randomString]);
+        expect(await container.getListEntries('testList')).to.deep.eq([randomString]);
+
+        await container.shareProperties([{ account: accounts[1], permissions: { testList: { 1: ['set'] } } }]);
+        const memberContainer = new Container(
+          runtimes[member],
+          { ...defaultConfig, address: await container.getContractAddress(), accountId: accounts[1] },
+        );
+        expect(await memberContainer.getListEntries('testList')).to.deep.eq([randomString]);
+
+        // now add list entry with invited user
+        const newRandomString = Math.floor(Math.random() * 1e12).toString(36);
+        await memberContainer.addListEntries('testList', [newRandomString]);
+        expect(await memberContainer.getListEntries('testList')).to.deep.eq([randomString, newRandomString]);
+        expect(await container.getListEntries('testList')).to.deep.eq([randomString, newRandomString]);
+      });
+
+      it('can share remove access a property from owner to another user', async() => {
+        const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
+        template.properties.testList = {
+          dataSchema: { type: 'array', items: { type: 'string' } },
+          permissions: { 0: ['set'] },
+          type: 'list',
+        };
+        const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+        const randomString = Math.floor(Math.random() * 1e12).toString(36);
+        await container.addListEntries('testList', [randomString]);
+        expect(await container.getListEntries('testList')).to.deep.eq([randomString]);
+
+        await container.shareProperties([{ account: accounts[1], permissions: { testList: { 1: ['remove'] } } }]);
+        const memberContainer = new Container(
+          runtimes[member],
+          { ...defaultConfig, address: await container.getContractAddress(), accountId: accounts[1] },
+        );
+        expect(await memberContainer.getListEntries('testList')).to.deep.eq([randomString]);
+
+        // now add list entry with invited user
+        await memberContainer.removeListEntry('testList', 0);
+        expect(await memberContainer.getListEntries('testList')).to.deep.eq([]);
+        expect(await container.getListEntries('testList')).to.deep.eq([]);
+      });
+    });
+
+    describe('when sharing entire containers', async () => {
+      it.skip('can share access a property from owner to another user', async() => {});
+    });
+
+    describe('when working on shared containers', async () => {
+      it.skip('cannot have other user access properties before sharing them', async() => {});
+
+      it.skip('cannot share access from a non-owner account to another user', async() => {});
+
+      it.skip('can clone a fully shared container from the receiver of a sharing', async() => {});
+
+      it.skip('can clone a partially shared container from the receiver of a sharing', async() => {});
     });
   });
 });
