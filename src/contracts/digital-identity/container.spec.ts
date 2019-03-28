@@ -49,7 +49,7 @@ use(chaiAsPromised);
 
 describe('Container', function() {
   this.timeout(60000);
-  let [ owner, member, otherUser ] = accounts;
+  let [ owner, consumer, otherUser ] = accounts;
   let dfs: Ipfs;
   let defaultConfig: ContainerConfig;
   let executor: Executor;
@@ -228,12 +228,12 @@ describe('Container', function() {
         await container.setEntry('testField', randomString);
         expect(await container.getEntry('testField')).to.eq(randomString);
 
-        await container.shareProperties([{ account: accounts[1], permissions: { testField: { } } }]);
-        const memberContainer = new Container(
-          runtimes[member],
-          { ...defaultConfig, address: await container.getContractAddress(), accountId: accounts[1] },
+        await container.shareProperties([{ account: consumer, permissions: { testField: {} } }]);
+        const consumerContainer = new Container(
+          runtimes[consumer],
+          { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
         );
-        expect(await memberContainer.getEntry('testField')).to.eq(randomString);
+        expect(await consumerContainer.getEntry('testField')).to.eq(randomString);
       });
 
       it('can share write access a property from owner to another user', async() => {
@@ -248,17 +248,17 @@ describe('Container', function() {
         await container.setEntry('testField', randomString);
         expect(await container.getEntry('testField')).to.eq(randomString);
 
-        await container.shareProperties([{ account: accounts[1], permissions: { testField: { 1: ['set'] } } }]);
-        const memberContainer = new Container(
-          runtimes[member],
-          { ...defaultConfig, address: await container.getContractAddress(), accountId: accounts[1] },
+        await container.shareProperties([{ account: consumer, permissions: { testField: { 1: ['set'] } } }]);
+        const consumerContainer = new Container(
+          runtimes[consumer],
+          { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
         );
-        expect(await memberContainer.getEntry('testField')).to.eq(randomString);
+        expect(await consumerContainer.getEntry('testField')).to.eq(randomString);
 
         // now change property with invited user
         const newRandomString = Math.floor(Math.random() * 1e12).toString(36);
-        await memberContainer.setEntry('testField', newRandomString);
-        expect(await memberContainer.getEntry('testField')).to.eq(newRandomString);
+        await consumerContainer.setEntry('testField', newRandomString);
+        expect(await consumerContainer.getEntry('testField')).to.eq(newRandomString);
         expect(await container.getEntry('testField')).to.eq(newRandomString);
       });
     });
@@ -276,12 +276,12 @@ describe('Container', function() {
         await container.addListEntries('testList', [randomString]);
         expect(await container.getListEntries('testList')).to.deep.eq([randomString]);
 
-        await container.shareProperties([{ account: accounts[1], permissions: { testList: { } } }]);
-        const memberContainer = new Container(
-          runtimes[member],
-          { ...defaultConfig, address: await container.getContractAddress(), accountId: accounts[1] },
+        await container.shareProperties([{ account: consumer, permissions: { testList: { } } }]);
+        const consumerContainer = new Container(
+          runtimes[consumer],
+          { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
         );
-        expect(await memberContainer.getListEntries('testList')).to.deep.eq([randomString]);
+        expect(await consumerContainer.getListEntries('testList')).to.deep.eq([randomString]);
       });
 
       it('can share write access a property from owner to another user', async() => {
@@ -296,17 +296,17 @@ describe('Container', function() {
         await container.addListEntries('testList', [randomString]);
         expect(await container.getListEntries('testList')).to.deep.eq([randomString]);
 
-        await container.shareProperties([{ account: accounts[1], permissions: { testList: { 1: ['set'] } } }]);
-        const memberContainer = new Container(
-          runtimes[member],
-          { ...defaultConfig, address: await container.getContractAddress(), accountId: accounts[1] },
+        await container.shareProperties([{ account: consumer, permissions: { testList: { 1: ['set'] } } }]);
+        const consumerContainer = new Container(
+          runtimes[consumer],
+          { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
         );
-        expect(await memberContainer.getListEntries('testList')).to.deep.eq([randomString]);
+        expect(await consumerContainer.getListEntries('testList')).to.deep.eq([randomString]);
 
         // now add list entry with invited user
         const newRandomString = Math.floor(Math.random() * 1e12).toString(36);
-        await memberContainer.addListEntries('testList', [newRandomString]);
-        expect(await memberContainer.getListEntries('testList')).to.deep.eq([randomString, newRandomString]);
+        await consumerContainer.addListEntries('testList', [newRandomString]);
+        expect(await consumerContainer.getListEntries('testList')).to.deep.eq([randomString, newRandomString]);
         expect(await container.getListEntries('testList')).to.deep.eq([randomString, newRandomString]);
       });
 
@@ -322,16 +322,16 @@ describe('Container', function() {
         await container.addListEntries('testList', [randomString]);
         expect(await container.getListEntries('testList')).to.deep.eq([randomString]);
 
-        await container.shareProperties([{ account: accounts[1], permissions: { testList: { 1: ['remove'] } } }]);
-        const memberContainer = new Container(
-          runtimes[member],
-          { ...defaultConfig, address: await container.getContractAddress(), accountId: accounts[1] },
+        await container.shareProperties([{ account: consumer, permissions: { testList: { 1: ['remove'] } } }]);
+        const consumerContainer = new Container(
+          runtimes[consumer],
+          { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
         );
-        expect(await memberContainer.getListEntries('testList')).to.deep.eq([randomString]);
+        expect(await consumerContainer.getListEntries('testList')).to.deep.eq([randomString]);
 
         // now add list entry with invited user
-        await memberContainer.removeListEntry('testList', 0);
-        expect(await memberContainer.getListEntries('testList')).to.deep.eq([]);
+        await consumerContainer.removeListEntry('testList', 0);
+        expect(await consumerContainer.getListEntries('testList')).to.deep.eq([]);
         expect(await container.getListEntries('testList')).to.deep.eq([]);
       });
     });
@@ -341,13 +341,74 @@ describe('Container', function() {
     });
 
     describe('when working on shared containers', async () => {
-      it.skip('cannot have other user access properties before sharing them', async() => {});
+      it('cannot have other user access properties before sharing them', async() => {
+        const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
+        template.properties.testField = {
+          dataSchema: { type: 'string' },
+          permissions: { 0: ['set'] },
+          type: 'entry',
+        };
+        const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+        const randomString = Math.floor(Math.random() * 1e12).toString(36);
+        await container.setEntry('testField', randomString);
+        expect(await container.getEntry('testField')).to.eq(randomString);
 
-      it.skip('cannot share access from a non-owner account to another user', async() => {});
+        const consumerContainer = new Container(
+          runtimes[consumer],
+          { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
+        );
+
+        expect(consumerContainer.getEntry('testField')).to.be.rejected;
+      });
+
+      it('cannot share access from a non-owner account to another user', async() => {
+        const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
+        template.properties.testField = {
+          dataSchema: { type: 'string' },
+          permissions: { 0: ['set'] },
+          type: 'entry',
+        };
+        const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+        const randomString = Math.floor(Math.random() * 1e12).toString(36);
+        await container.setEntry('testField', randomString);
+        expect(await container.getEntry('testField')).to.eq(randomString);
+
+        await container;
+        const consumerContainer = new Container(
+          runtimes[consumer],
+          { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
+        );
+
+        const sharePromise = consumerContainer.shareProperties(
+          [{ account: consumer, permissions: { testField: {} } }]);
+        expect(sharePromise).to.be.rejected;
+      });
+
+      it.only('can clone a partially shared container from the receiver of a sharing', async() => {
+        const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
+        template.properties.testField = {
+          dataSchema: { type: 'string' },
+          permissions: { 0: ['set'] },
+          type: 'entry',
+        };
+        const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+        const randomString = Math.floor(Math.random() * 1e12).toString(36);
+        await container.setEntry('testField', randomString);
+        expect(await container.getEntry('testField')).to.eq(randomString);
+
+        await container.shareProperties([{ account: consumer, permissions: { testField: {}, type: {} } }]);
+        const consumerContainer = new Container(
+          runtimes[consumer],
+          { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
+        );
+        expect(await consumerContainer.getEntry('testField')).to.eq(randomString);
+
+        const clonedContainer = await Container.clone(
+          runtimes[consumer], { ...defaultConfig, accountId: consumer }, consumerContainer, true);
+        expect(await clonedContainer.getEntry('testField')).to.eq(randomString);
+      });
 
       it.skip('can clone a fully shared container from the receiver of a sharing', async() => {});
-
-      it.skip('can clone a partially shared container from the receiver of a sharing', async() => {});
     });
   });
 });
