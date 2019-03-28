@@ -66,6 +66,7 @@ export interface ContainerConfig {
  * template for container instances, covers properties setup and permissions
  */
 export interface ContainerTemplate {
+  type: string;
   properties?: { [id: string]: ContainerTemplateProperty; }
 }
 
@@ -114,16 +115,8 @@ export interface ContainerOptions extends LoggerOptions {
 export class Container extends Logger {
   public static templates: { [id: string]: ContainerTemplate; } = {
     metadata: {
-      properties: {
-        type: {
-          dataSchema: { $id: 'type_schema', type: 'string' },
-          type: 'entry',
-          permissions: {
-            0: ['set']
-          },
-          value: 'metadata',
-        },
-      },
+      type: 'metadata',
+      properties: {},
     },
   };
   private static defaultFactoryAddress = 'container.factory.evan';
@@ -148,8 +141,21 @@ export class Container extends Logger {
     const template = typeof config.template === 'string' ?
       Container.templates[config.template] :
       config.template;
-    for (let propertyName of Object.keys(template.properties)) {
-      const property: ContainerTemplateProperty = template.properties[propertyName];
+
+    // add type property
+    const properties = JSON.parse(JSON.stringify(template.properties));
+    if (!properties.type) {
+      properties.type = {
+        dataSchema: { $id: 'type_schema', type: 'string' },
+        type: 'entry',
+        permissions: {
+          0: ['set']
+        },
+        value: template.type,
+      };
+    }
+    for (let propertyName of Object.keys(properties)) {
+      const property: ContainerTemplateProperty = properties[propertyName];
       const permissionTasks = [];
       for (let role of Object.keys(property.permissions)) {
         for (let modification of property.permissions[role]) {
@@ -440,7 +446,6 @@ export class Container extends Logger {
    * @param      {ContainerShareConfig[]}  shareConfigs  list of share configs
    */
   public async shareProperties(shareConfigs: ContainerShareConfig[]): Promise<void> {
-    // await container.shareProperties([{ account: accounts[1], keys: ['testField'], groups: [1] }]);
     const authority = this.options.contractLoader.loadContract(
       'DSRolesPerContract',
       await this.options.executor.executeContractCall(this.contract, 'authority'),
@@ -454,7 +459,12 @@ export class Container extends Logger {
         `tried to share properties, but missing one or more in schema: ${missingProperties}`);
     }
     // for all share configs
-    for (let { account, permissions } of shareConfigs) {
+    for (let { account, permissions: permissionsToShare } of shareConfigs) {
+      const permissions = JSON.parse(JSON.stringify(permissionsToShare));
+      // add type to permissions
+      if (!permissions.type) {
+        permissions.type = {};
+      }
       // ensure that account is member in contract
       if (! await this.options.executor.executeContractCall(this.contract, 'isConsumer', account)) {
         await this.options.dataContract.inviteToContract(
@@ -559,7 +569,7 @@ export class Container extends Logger {
    */
   public async toTemplate(getValues = false): Promise<ContainerTemplate> {
     // create empty template
-    const template: ContainerTemplate = {
+    const template: Partial<ContainerTemplate> = {
       properties: {},
     };
 
@@ -573,6 +583,9 @@ export class Container extends Logger {
       const roleCount = await this.options.executor.executeContractCall(authority, 'roleCount');
       const keccak256 = this.options.web3.utils.soliditySha3;
       for (let property of Object.keys(description.dataSchema)) {
+        if (property === 'type') {
+          continue;
+        }
         const dataSchema = description.dataSchema[property];
         const type = dataSchema.type === 'array' ? 'list' : 'entry';
         template.properties[property] = {
@@ -590,8 +603,10 @@ export class Container extends Logger {
           await this.getRolePermission(authority, property, type);
       }
     }
+    // write type value to template property
+    template.type = await this.getEntry('type');
 
-    return template;
+    return template as ContainerTemplate;
   }
 
   /**

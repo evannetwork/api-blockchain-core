@@ -94,10 +94,26 @@ describe('Container', function() {
     defaultConfig.factoryAddress = factory.options.address;
     console.log(`Container tests are using factory "${defaultConfig.factoryAddress}"`);
   });
+  describe('when setting entries', async () => {
+    it('can can create new contracts', async () => {
+      const container = await Container.create(runtimes[owner], defaultConfig);
+      expect(await container.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
+    });
 
-  it('can can create new contracts', async () => {
-    const container = await Container.create(runtimes[owner], defaultConfig);
-    expect(await container.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
+    it('writes template type to automatic field "type"', async () => {
+      const template: ContainerTemplate = {
+        type: Math.floor(Math.random() * 1e12).toString(36),
+        properties: {
+          testField: {
+            dataSchema: { type: 'string' },
+            permissions: { 0: ['set'] },
+            type: 'entry',
+          },
+        },
+      };
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+      expect(await container.getEntry('type')).to.eq(template.type);
+    });
   });
 
   describe('when setting entries', async () => {
@@ -174,8 +190,6 @@ describe('Container', function() {
       };
       const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
       const exported = await container.toTemplate();
-      // we do not export values, so remove them
-      delete template.properties.type.value;
       expect(exported).to.deep.eq(template);
     });
 
@@ -396,7 +410,7 @@ describe('Container', function() {
         await container.setEntry('testField', randomString);
         expect(await container.getEntry('testField')).to.eq(randomString);
 
-        await container.shareProperties([{ account: consumer, permissions: { testField: {}, type: {} } }]);
+        await container.shareProperties([{ account: consumer, permissions: { testField: {} } }]);
         const consumerContainer = new Container(
           runtimes[consumer],
           { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
