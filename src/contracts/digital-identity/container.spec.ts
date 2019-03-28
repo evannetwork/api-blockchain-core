@@ -209,8 +209,8 @@ describe('Container', function() {
       await container.setEntry('testField', randomString);
       expect(await container.getEntry('testField')).to.eq(randomString);
 
-      const dolly = await Container.clone(runtimes[owner], defaultConfig, container, true);
-      expect(await dolly.getEntry('testField')).to.eq(randomString);
+      const clonedContainer = await Container.clone(runtimes[owner], defaultConfig, container, true);
+      expect(await clonedContainer.getEntry('testField')).to.eq(randomString);
     });
   });
 
@@ -384,7 +384,7 @@ describe('Container', function() {
         expect(sharePromise).to.be.rejected;
       });
 
-      it.only('can clone a partially shared container from the receiver of a sharing', async() => {
+      it('can clone a partially shared container from the receiver of a sharing', async() => {
         const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
         template.properties.testField = {
           dataSchema: { type: 'string' },
