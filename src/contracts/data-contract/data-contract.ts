@@ -95,7 +95,7 @@ export class DataContract extends BaseContract {
       factoryName: string,
       accountId: string,
       businessCenterDomain?: string,
-      contractDescription = '0x0000000000000000000000000000000000000000000000000000000000000000',
+      contractDescription: any = '0x0000000000000000000000000000000000000000000000000000000000000000',
       allowConsumerInvite = true,
       sharingsHash = null,
   ): Promise<any> {
