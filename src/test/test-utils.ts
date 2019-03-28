@@ -201,9 +201,9 @@ export class TestUtils {
     return new CryptoProvider(cryptoConfig);
   }
 
-  static async getDataContract(web3, dfs) {
-    const sharing = await this.getSharing(web3, dfs);
-    const description = await this.getDescription(web3, dfs);
+  static async getDataContract(web3, dfs, requestedKeys?: string[]) {
+    const sharing = await this.getSharing(web3, dfs, requestedKeys);
+    const description = await this.getDescription(web3, dfs, requestedKeys);
     description.sharing = sharing;
     const eventHub = await this.getEventHub(web3);
     const executor = await this.getExecutor(web3);
@@ -221,7 +221,7 @@ export class TestUtils {
     });
   }
 
-  static async getDescription(web3, dfsParam?: DfsInterface): Promise<Description> {
+  static async getDescription(web3, dfsParam?: DfsInterface, requestedKeys?: string[]): Promise<Description> {
     const executor = await this.getExecutor(web3);
     const contracts = await this.getContracts();
     const contractLoader = await this.getContractLoader(web3);
@@ -233,7 +233,7 @@ export class TestUtils {
       cryptoProvider,
       dfs,
       executor,
-      keyProvider: this.getKeyProvider(),
+      keyProvider: this.getKeyProvider(requestedKeys),
       nameResolver,
       sharing: null,
       web3,
@@ -428,15 +428,15 @@ export class TestUtils {
     });
   }
 
-  static async getSharing(web3, dfsParam?: DfsInterface): Promise<Sharing> {
+  static async getSharing(web3, dfsParam?: DfsInterface, requestedKeys?: string[]): Promise<Sharing> {
     const dfs = dfsParam ? dfsParam : await TestUtils.getIpfs();
     return new Sharing({
       contractLoader: await TestUtils.getContractLoader(web3),
       cryptoProvider: TestUtils.getCryptoProvider(),
-      description: await TestUtils.getDescription(web3, dfs),
+      description: await TestUtils.getDescription(web3, dfs, requestedKeys),
       executor: await TestUtils.getExecutor(web3),
       dfs,
-      keyProvider: TestUtils.getKeyProvider(),
+      keyProvider: TestUtils.getKeyProvider(requestedKeys),
       nameResolver: await TestUtils.getNameResolver(web3),
       defaultCryptoAlgo: 'aes',
     });
