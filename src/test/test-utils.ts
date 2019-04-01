@@ -125,14 +125,14 @@ export class TestUtils {
     });
   };
 
-  static async getVerifications(web3, dfs): Promise<Verifications> {
+  static async getVerifications(web3, dfs, requestedKeys?: string[]): Promise<Verifications> {
     const eventHub = await this.getEventHub(web3);
     const executor = await this.getExecutor(web3);
     executor.eventHub = eventHub;
     return new Verifications({
       config,
       contractLoader: await TestUtils.getContractLoader(web3),
-      description: await TestUtils.getDescription(web3, dfs),
+      description: await TestUtils.getDescription(web3, dfs, requestedKeys),
       executor,
       nameResolver: await this.getNameResolver(web3),
       accountStore: this.getAccountStore({}),
