@@ -317,8 +317,11 @@ export class Container extends Logger {
     await this.ensureContract();
     await this.ensurePermissionOnField(listName, 'list');
     await this.ensureKeyInSharing(listName);
-    await this.options.dataContract.addListEntries(
-      this.contract, listName, values, this.config.accountId);
+    await this.wrapPromise(
+      'add list entries to contract',
+      this.options.dataContract.addListEntries(
+        this.contract, listName, values, this.config.accountId),
+    );
     await this.ensureTypeInSchema(listName, values);
   }
 
@@ -359,7 +362,10 @@ export class Container extends Logger {
    */
   public async getEntry(entryName: string): Promise<any> {
     await this.ensureContract();
-    return this.options.dataContract.getEntry(this.contract, entryName, this.config.accountId);
+    return this.wrapPromise(
+      'get entry',
+      this.options.dataContract.getEntry(this.contract, entryName, this.config.accountId),
+    );
   }
 
   /**
@@ -375,8 +381,11 @@ export class Container extends Logger {
   public async getListEntries(listName: string, count = 10, offset = 0, reverse = false):
       Promise<any[]> {
     await this.ensureContract();
-    return this.options.dataContract.getListEntries(
-      this.contract, listName, this.config.accountId, true, true, count, offset, reverse);
+    return this.wrapPromise(
+      'get list entries',
+      this.options.dataContract.getListEntries(
+        this.contract, listName, this.config.accountId, true, true, count, offset, reverse),
+    );
   }
 
   /**
@@ -387,8 +396,10 @@ export class Container extends Logger {
    */
   public async getListEntry(listName: string, index: number): Promise<any> {
     await this.ensureContract();
-    return this.options.dataContract.getListEntry(
-      this.contract, listName, index, this.config.accountId);
+    return this.wrapPromise(
+      'get list entry',
+      this.options.dataContract.getListEntry(this.contract, listName, index, this.config.accountId),
+    );
   }
 
   /**
@@ -398,7 +409,10 @@ export class Container extends Logger {
    */
   public async getListEntryCount(listName: string): Promise<number> {
     await this.ensureContract();
-    return this.options.dataContract.getListEntryCount(this.contract, listName);
+    return this.wrapPromise(
+      'get list entry count',
+      this.options.dataContract.getListEntryCount(this.contract, listName),
+    );
   }
 
   /**
@@ -409,11 +423,14 @@ export class Container extends Logger {
    */
   public async removeListEntry(listName: string, entryIndex: number): Promise<void> {
     await this.ensureContract();
-    await this.options.dataContract.removeListEntry(
-      this.contract,
-      listName,
-      entryIndex,
-      this.config.accountId,
+    this.wrapPromise(
+      'remove list entry',
+      this.options.dataContract.removeListEntry(
+        this.contract,
+        listName,
+        entryIndex,
+        this.config.accountId,
+      ),
     );
   }
 
@@ -424,8 +441,11 @@ export class Container extends Logger {
    */
   public async setDescription(description: any): Promise<void> {
     await this.ensureContract();
-    await this.options.description.setDescription(
-      this.contract.options.address, { public: description }, this.config.accountId);
+    await this.wrapPromise(
+      'set description',
+      this.options.description.setDescription(
+        this.contract.options.address, { public: description }, this.config.accountId),
+    );
   }
 
   /**
@@ -438,8 +458,11 @@ export class Container extends Logger {
     await this.ensureContract();
     await this.ensurePermissionOnField(entryName, 'entry');
     await this.ensureKeyInSharing(entryName);
+    await this.wrapPromise(
+      'set entry',
+      this.options.dataContract.setEntry(this.contract, entryName, value, this.config.accountId),
+    );
     await this.ensureTypeInSchema(entryName, value);
-    await this.options.dataContract.setEntry(this.contract, entryName, value, this.config.accountId);
   }
 
   /**
@@ -448,16 +471,27 @@ export class Container extends Logger {
    * @param      {ContainerShareConfig[]}  shareConfigs  list of share configs
    */
   public async shareProperties(shareConfigs: ContainerShareConfig[]): Promise<void> {
+    await this.ensureContract();
+    ///////////////////////////////////////////////////////////////////////////// check requirements
+    // check ownership
     const authority = this.options.contractLoader.loadContract(
       'DSRolesPerContract',
       await this.options.executor.executeContractCall(this.contract, 'authority'),
     );
+    if (!await this.options.executor.executeContractCall(
+        authority, 'hasUserRole', this.config.accountId, 0)) {
+      throw new Error(`current account "${this.config.accountId}" is unable to share properties, ` +
+        `as it isn't owner of the underlying contract "${this.contract.options.address}"`);
+    }
+
+    // check fields
     const { properties: schemaProperties } = await this.toTemplate(false);
     const sharedProperties = Array.from(
       new Set([].concat(...shareConfigs.map(shareConfig => [].concat(
         shareConfig.read, shareConfig.readWrite)))))
       .filter(property => property !== undefined);
-    const missingProperties = sharedProperties.filter(property => !schemaProperties.hasOwnProperty(property));
+    const missingProperties = sharedProperties
+      .filter(property => !schemaProperties.hasOwnProperty(property));
     if (missingProperties.length) {
       throw new Error(
         `tried to share properties, but missing one or more in schema: ${missingProperties}`);
@@ -565,20 +599,12 @@ export class Container extends Logger {
   }
 
   /**
-   * convert contract to template and share it via bmail
-   *
-   * @param      {string[]}  recipients  bmail recipients
-   */
-  public async shareTemplate(recipients: string[]): Promise<void> {
-    throw new Error('not implemented');
-  }
-
-  /**
    * export current container state as template
    *
    * @param      {boolean}  getValues  export entries or not (list entries are always excluded)
    */
   public async toTemplate(getValues = false): Promise<ContainerTemplate> {
+    await this.ensureContract();
     // create empty template
     const template: Partial<ContainerTemplate> = {
       properties: {},
@@ -810,5 +836,19 @@ export class Container extends Logger {
       });
     }
     return permissions;
+  }
+
+  /**
+   * wrap try, catch around promise and throw error with message if rejected
+   *
+   * @param      {string}      task     name of a task, is inlcuded in error message
+   * @param      {Promise<any>}  promise  promise to await
+   */
+  private async wrapPromise(task: string, promise: Promise<any>): Promise<any> {
+    try {
+      return await promise;
+    } catch (ex) {
+      throw new Error(`could not ${task}; ${ex.message || ex}`);
+    }
   }
 }

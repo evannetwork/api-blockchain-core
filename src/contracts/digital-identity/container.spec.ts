@@ -344,10 +344,37 @@ describe('Container', function() {
           { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
         );
 
-        expect(consumerContainer.getEntry('testField')).to.be.rejected;
+        const getPromise = consumerContainer.getEntry('testField');
+        await expect(getPromise).to.be.rejectedWith(new RegExp('^could not get entry', 'i'));
       });
 
-      it('cannot share access from a non-owner account to another user', async() => {
+      it('cannot share access, when member, but not owner of the container', async () => {
+        const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
+        template.properties.testField = {
+          dataSchema: { type: 'string' },
+          permissions: { 0: ['set'] },
+          type: 'entry',
+        };
+        const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+        const randomString = Math.floor(Math.random() * 1e12).toString(36);
+        await container.setEntry('testField', randomString);
+        expect(await container.getEntry('testField')).to.eq(randomString);
+
+        await container.shareProperties([{ accountId: consumer, read: ['testField'] }]);
+        const consumerContainer = new Container(
+          runtimes[consumer],
+          { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
+        );
+        expect(await consumerContainer.getEntry('testField')).to.eq(randomString);
+
+        const sharePromise = consumerContainer.shareProperties(
+          [{ accountId: otherUser, read: ['testField'] }]);
+        await expect(sharePromise).to.be.rejectedWith(new RegExp(
+          '^current account "0x[0-9a-f]{40}" is unable to share properties, as it isn\'t owner of ' +
+          'the underlying contract "0x[0-9a-f]{40}"$', 'i'));
+      });
+
+      it('cannot share access from a non-member account to another user', async() => {
         const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
         template.properties.testField = {
           dataSchema: { type: 'string' },
@@ -367,7 +394,9 @@ describe('Container', function() {
 
         const sharePromise = consumerContainer.shareProperties(
           [{ accountId: consumer, read: ['testField'] }]);
-        expect(sharePromise).to.be.rejected;
+        await expect(sharePromise).to.be.rejectedWith(
+          new RegExp('^current account "0x[0-9a-f]{40}" is unable to share properties, as it ' +
+            'isn\'t owner of the underlying contract "0x[0-9a-f]{40}"$', 'i'));
       });
 
       it('can clone a partially shared container from the receiver of a sharing', async() => {
