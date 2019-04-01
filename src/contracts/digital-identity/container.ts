@@ -277,10 +277,14 @@ export class Container extends Logger {
       null,
       envelope,
     );
-    instanceConfig.address = contract.options.address;
+    const contractId = contract.options.address;
+    instanceConfig.address = contractId;
+
+    // set description to contract
+    await options.description.setDescription(contractId, envelope, instanceConfig.accountId);
 
     // create identity for index and write it to description
-    await options.verifications.createIdentity(config.accountId, contract.options.address);
+    await options.verifications.createIdentity(config.accountId, contractId);
 
     const container = new Container(options, instanceConfig);
     await container.ensureContract();
