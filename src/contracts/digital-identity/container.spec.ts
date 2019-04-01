@@ -42,6 +42,7 @@ import {
   ContainerOptions,
   ContainerTemplate,
   ContainerTemplateProperty,
+  ContainerVerificationEntry,
 } from './container';
 
 use(chaiAsPromised);
@@ -80,6 +81,7 @@ describe('Container', function() {
         nameResolver: await TestUtils.getNameResolver(web3),
         rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
         sharing: await TestUtils.getSharing(web3, dfs, requestedKeys),
+        verifications: await TestUtils.getVerifications(web3, dfs, requestedKeys),
         web3,
       };
       runtimes[accountId].executor.eventHub = await TestUtils.getEventHub(web3);
@@ -422,6 +424,20 @@ describe('Container', function() {
           runtimes[consumer], { ...defaultConfig, accountId: consumer }, consumerContainer, true);
         expect(await clonedContainer.getEntry('testField')).to.eq(randomString);
       });
+    });
+  });
+
+  describe('when working with verifications', () => {
+    it('can set verifications to container', async () => {
+      const container = await Container.create(runtimes[owner], defaultConfig);
+      const verifications: ContainerVerificationEntry[] = [...Array(3)].map(
+        (_, i) => (<ContainerVerificationEntry> { topic: `verifcation_${i}` }));
+      await container.addVerifications(verifications);
+      const verificationsResults = await container.getVerifications();
+      expect(verificationsResults.length).to.eq(3);
+      // all validation lists should have at least 1 valid verification
+      const allValid = verificationsResults.every(vs => vs.some(v => v.valid));
+      expect(allValid).to.be.true;
     });
   });
 });

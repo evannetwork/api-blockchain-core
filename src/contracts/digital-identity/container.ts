@@ -43,6 +43,7 @@ import { Description } from '../../shared-description';
 import { NameResolver } from '../../name-resolver';
 import { RightsAndRoles, ModificationType, PropertyType } from '../rights-and-roles';
 import { Sharing } from '../sharing';
+import { Verifications } from '../../verifications/verifications';
 
 
 /**
@@ -69,6 +70,7 @@ export interface ContainerOptions extends LoggerOptions {
   nameResolver: NameResolver;
   rightsAndRoles: RightsAndRoles;
   sharing: Sharing;
+  verifications: Verifications;
   web3: any;
 }
 
@@ -98,6 +100,18 @@ export interface ContainerTemplateProperty {
   type: string;
   value?: string;
 }
+
+/**
+ * data for verifications for containers
+ */
+export interface ContainerVerificationEntry {
+  subject: string;
+  topic: string;
+  descriptionDomain?: string;
+  disableSubverifications?: boolean;
+  expirationDate?: number;
+  verificationValue?: string;
+};
 
 
 /**
@@ -265,9 +279,13 @@ export class Container extends Logger {
     );
     instanceConfig.address = contract.options.address;
 
+    // create identity for index and write it to description
+    await options.verifications.createIdentity(config.accountId, contract.options.address);
+
     const container = new Container(options, instanceConfig);
     await container.ensureContract();
 
+    // write values from template to new contract
     await Container.applyTemplate(options, instanceConfig, container);
 
     return container;
@@ -317,6 +335,35 @@ export class Container extends Logger {
         this.contract, listName, values, this.config.accountId),
     );
     await this.ensureTypeInSchema(listName, values);
+  }
+
+  /**
+   * add verifications to this container; this will also add verifications to contract description
+   *
+   * @param      {ContainerVerificationEntry[]}  verifications  list of verifications to add
+   */
+  public async addVerifications(verifications: ContainerVerificationEntry[]): Promise<void> {
+    await this.ensureContract();
+    await Throttle.all(verifications.map(verification => async () =>
+      this.options.verifications.setVerification(
+        this.config.accountId,
+        this.contract.options.address,
+        verification.topic,
+        verification.expirationDate,
+        verification.verificationValue,
+        verification.descriptionDomain,
+        verification.disableSubverifications,
+    )));
+    const verificationTags = verifications.map(verification => `verification:${verification.topic}`);
+    await this.getMutex('description').runExclusive(async () => {
+      const description = await this.getDescription();
+      const oldTags = description.tags || [];
+      const toAdd = verificationTags.filter(tag => !oldTags.includes(tag));
+      if (toAdd.length) {
+        description.tags = oldTags.concat(toAdd);
+        await this.setDescription(description);
+      }
+    });
   }
 
   /**
@@ -406,6 +453,24 @@ export class Container extends Logger {
     return this.wrapPromise(
       'get list entry count',
       this.options.dataContract.getListEntryCount(this.contract, listName),
+    );
+  }
+
+  /**
+   * gets verifications from description and fetches list of verifications for each of them
+   */
+  public async getVerifications(): Promise<any[]> {
+    await this.ensureContract();
+    const description = await this.getDescription();
+    const tags = description.tags || [];
+    return Throttle.all(tags
+      .filter(tag => tag.startsWith('verification:'))
+      .map(tag => tag.substr(13))
+      .map(topic => async () => this.options.verifications.getVerifications(
+        description.identity,
+        topic,
+        true,
+      ))
     );
   }
 
