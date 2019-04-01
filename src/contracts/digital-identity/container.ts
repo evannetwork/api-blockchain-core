@@ -713,7 +713,7 @@ export class Container extends Logger {
    *                               recursion
    * @return     {any}    ajv schema
    */
-  private deriveSchema(value, visited = []): any {
+  private deriveSchema(value: any, visited: any = []): any {
     if (visited.includes(value)) {
       throw new Error('could not derive type of value; cyclic references detected');
     }
@@ -734,7 +734,12 @@ export class Container extends Logger {
     return schema;
   }
 
-  private async ensureKeyInSharing(entryName): Promise<void> {
+  /**
+   * ensure that current account has a key for given entry in sharings
+   *
+   * @param      {string}  entryName  name of an entry to ensure a key for
+   */
+  private async ensureKeyInSharing(entryName: string): Promise<void> {
     let key = await this.options.sharing.getKey(
       this.contract.options.address, this.config.accountId, entryName);
     if (!key) {

@@ -89,11 +89,9 @@ export interface DigitalIdentityVerificationEntry {
 }
 
 /**
- * options for DigitalIdentity constructor
+ * options for DigitalIdentity constructor (uses same properties as ContainerOptions)
  */
-export interface DigitalIdentityOptions extends ContainerOptions {
-  dfs: DfsInterface;
-}
+export interface DigitalIdentityOptions extends ContainerOptions { }
 
 
 /**

@@ -80,7 +80,6 @@ describe('DigitalIdentity (name pending)', function() {
       cryptoProvider: await TestUtils.getCryptoProvider(),
       dataContract: await TestUtils.getDataContract(web3, dfs),
       description: await TestUtils.getDescription(web3, dfs),
-      dfs,
       executor,
       nameResolver: await TestUtils.getNameResolver(web3),
       rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
