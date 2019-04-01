@@ -54,10 +54,6 @@ export interface ContainerConfig {
   address?: string;
   description?: any;
   factoryAddress?: string;
-  mailTemplates?: {
-    share: {},
-    sendTemplate: {},
-  },
   origin?: Container;
   template?: string | ContainerTemplate;
 }
