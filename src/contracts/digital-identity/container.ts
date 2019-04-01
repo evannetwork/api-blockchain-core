@@ -85,8 +85,9 @@ export interface ContainerRolePermissions {
 }
 
 export interface ContainerShareConfig {
-  account: string;
-  permissions: { [id: string]: ContainerRolePermissions };
+  accountId: string;
+  read?: string[];
+  readWrite?: string[];
 }
 
 /**
@@ -125,6 +126,7 @@ export class Container extends Logger {
   private contract: any;
   private mutexes: { [id: string]: Mutex; };
   private options: ContainerOptions;
+  private reservedRoles = 64;
 
   /**
    * apply template to data contract; this should be used with caution and is intended to only be
@@ -441,7 +443,7 @@ export class Container extends Logger {
   }
 
   /**
-   * share entry/list/mapping, send bmail if template is set, otherwise just set property
+   * share entry/list to another user; this handles role permissions, role memberships
    *
    * @param      {ContainerShareConfig[]}  shareConfigs  list of share configs
    */
@@ -451,75 +453,79 @@ export class Container extends Logger {
       await this.options.executor.executeContractCall(this.contract, 'authority'),
     );
     const { properties: schemaProperties } = await this.toTemplate(false);
-    const propertyGroups = shareConfigs.map(shareConfig => Object.keys(shareConfig.permissions));
-    const sharedProperties = Array.from(new Set([].concat(...propertyGroups)));
+    const sharedProperties = Array.from(
+      new Set([].concat(...shareConfigs.map(shareConfig => [].concat(
+        shareConfig.read, shareConfig.readWrite)))))
+      .filter(property => property !== undefined);
     const missingProperties = sharedProperties.filter(property => !schemaProperties.hasOwnProperty(property));
     if (missingProperties.length) {
       throw new Error(
         `tried to share properties, but missing one or more in schema: ${missingProperties}`);
     }
     // for all share configs
-    for (let { account, permissions: permissionsToShare } of shareConfigs) {
-      const permissions = JSON.parse(JSON.stringify(permissionsToShare));
-      // add type to permissions
-      if (!permissions.type) {
-        permissions.type = {};
-      }
-      // ensure that account is member in contract
-      if (! await this.options.executor.executeContractCall(this.contract, 'isConsumer', account)) {
+    for (let { accountId, read = [], readWrite = [] } of shareConfigs) {
+      //////////////////////////////////////////////////// ensure that account is member in contract
+      if (! await this.options.executor.executeContractCall(
+          this.contract, 'isConsumer', accountId)) {
         await this.options.dataContract.inviteToContract(
-          null, this.contract.options.address, this.config.accountId, account);
+          null, this.contract.options.address, this.config.accountId, accountId);
       }
-      // for all properties in a share config
-      for (let property of Object.keys(permissions)) {
-        // for all roles on this property
-        for (let roleString of Object.keys(permissions[property])) {
-          const role = parseInt(roleString, 10);
-          // ensure that account has role
-          const hasRole = await this.options.executor.executeContractCall(
-            authority, 'hasUserRole', account, role);
-          if (!hasRole) {
-            await this.options.rightsAndRoles.addAccountToRole(
-              this.contract, this.config.accountId, account, role);
+
+      ///////////////////////////////////////////////////////// ensure property roles and membership
+      // share type every time as it is mandatory
+      if (!read.includes('type')) {
+        read.push('type');
+      }
+      // ensure that roles for fields exist and that accounts have permissions
+      for (let property of readWrite) {
+        // get permissions from contract
+        const hash = this.getOperationHash(property, schemaProperties[property].type, 'set');
+        const rolesMap = await this.options.executor.executeContractCall(
+          authority,
+          'getOperationCapabilityRoles',
+          '0x0000000000000000000000000000000000000000',
+          hash,
+        );
+        const binary = (new BigNumber(rolesMap)).toString(2);
+        // search for role with permissions
+        let permittedRole = [...binary].reverse().join('').indexOf('1');
+        if (permittedRole < this.reservedRoles) {
+          // if not found or included in reserved roles, add new role
+          const roleCount = await this.options.executor.executeContractCall(authority, 'roleCount');
+          if (roleCount >= 256) {
+            throw new Error(`could not share property "${property}", maximum role count reached`);
           }
-          // for all opertions on this property
-          for (let operation of permissions[property][role]) {
-            const hash = this.getOperationHash(property, schemaProperties[property].type, operation);
-            const rolesMap = await this.options.executor.executeContractCall(
-              authority,
-              'getOperationCapabilityRoles',
-              '0x0000000000000000000000000000000000000000',
-              hash,
-            );
-            // convert to binary number string to check flags
-            // each bitmask flag is a 1 or 0 for a role in the string,
-            // so iterate over string and check for each position / role
-            const binary = (new BigNumber(rolesMap)).toString(2);
-            if (binary.length <= role || binary[binary.length - 1 - role] === '0') {
-              // bit mask flag for role isn't set, so add permissions for this role
-              await this.options.rightsAndRoles.setOperationPermission(
-                this.contract,
-                this.config.accountId,
-                role,
-                property,
-                schemaProperties[property].type === 'list' ? PropertyType.ListEntry : PropertyType.Entry,
-                operation === 'remove' ? ModificationType.Remove : ModificationType.Set,
-                true,
-              );
-            }
-          }
+          permittedRole = Math.max(this.reservedRoles, roleCount);
+          await this.options.rightsAndRoles.setOperationPermission(
+            authority,
+            this.config.accountId,
+            permittedRole,
+            property,
+            schemaProperties[property].type === 'list' ? PropertyType.ListEntry : PropertyType.Entry,
+            ModificationType.Set,
+            true,
+          );
+        }
+
+        // ensure that account has role
+        const hasRole = await this.options.executor.executeContractCall(
+          authority, 'hasUserRole', accountId, permittedRole);
+        if (!hasRole) {
+          await this.options.rightsAndRoles.addAccountToRole(
+            this.contract, this.config.accountId, accountId, permittedRole);
         }
       }
 
+      //////////////////////////////////////////////////////// ensure encryption keys for properties
       // checkout sharings
       const sharings = await this.options.sharing.getSharingsFromContract(this.contract);
 
       // check if account already has a hash key
       const sha3 = (...args) => this.options.nameResolver.soliditySha3(...args);
       const isShared = (section, block?) => {
-        if (!sharings[sha3(account)] ||
-            !sharings[sha3(account)][sha3(section)] ||
-            (typeof block !== 'undefined' && !sharings[sha3(account)][sha3(section)][block])) {
+        if (!sharings[sha3(accountId)] ||
+            !sharings[sha3(accountId)][sha3(section)] ||
+            (typeof block !== 'undefined' && !sharings[sha3(accountId)][sha3(section)][block])) {
           return false;
         }
         return true;
@@ -529,26 +535,28 @@ export class Container extends Logger {
         const hashKeyToShare = await this.options.sharing.getHashKey(
           this.contract.options.address, this.config.accountId);
         await this.options.sharing.extendSharings(
-          sharings, this.config.accountId, account, '*', 'hashKey', hashKeyToShare, null);
+          sharings, this.config.accountId, accountId, '*', 'hashKey', hashKeyToShare, null);
         modified = true;
       }
 
       // ensure that target user has sharings for properties
       const blockNr = await this.options.web3.eth.getBlockNumber();
-      for (let sharedProperty of Object.keys(permissions)) {
-        if (!isShared(sharedProperty)) {
+      // share keys for read and readWrite
+      for (let property of [...read, ...readWrite]) {
+        if (!isShared(property)) {
           // get key
           const contentKey = await this.options.sharing.getKey(
-            this.contract.options.address, this.config.accountId, sharedProperty, blockNr);
+            this.contract.options.address, this.config.accountId, property, blockNr);
           // share this key
           await this.options.sharing.extendSharings(
-            sharings, this.config.accountId, account, sharedProperty, 0, contentKey);
+            sharings, this.config.accountId, accountId, property, 0, contentKey);
           modified = true;
         }
       }
       if (modified) {
         // store sharings
-        await this.options.sharing.saveSharingsToContract(this.contract.options.address, sharings, this.config.accountId);
+        await this.options.sharing.saveSharingsToContract(
+          this.contract.options.address, sharings, this.config.accountId);
       }
     }
   }
@@ -663,7 +671,7 @@ export class Container extends Logger {
    * ensure, that current user has permission to set values on given property; note that this
    * function is for internal use in `Container` and skips a check to verify, that given account is
    * in specified role; used out of context, this may check check if an account has permissions on a
-   * field and add then adds this account to an unrelated group, therefore not granting permissions
+   * field and add then adds this account to an unrelated role, therefore not granting permissions
    * on checked field
    *
    * @param      {string}  name       name of the property to ensure permission for
@@ -774,7 +782,7 @@ export class Container extends Logger {
         this.config.address,
         this.getOperationHash(property, type, operation),
       );
-      // iterates over all roles and checks which groups are included
+      // iterates over all roles and checks which roles are included
       const checkNumber = (bnum) => {
         const results = [];
         let bn = new BigNumber(bnum);
