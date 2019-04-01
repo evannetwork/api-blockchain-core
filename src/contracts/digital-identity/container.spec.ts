@@ -94,6 +94,7 @@ describe('Container', function() {
     defaultConfig.factoryAddress = factory.options.address;
     console.log(`Container tests are using factory "${defaultConfig.factoryAddress}"`);
   });
+
   describe('when setting entries', async () => {
     it('can can create new contracts', async () => {
       const container = await Container.create(runtimes[owner], defaultConfig);
@@ -392,12 +393,6 @@ describe('Container', function() {
           runtimes[consumer], { ...defaultConfig, accountId: consumer }, consumerContainer, true);
         expect(await clonedContainer.getEntry('testField')).to.eq(randomString);
       });
-    });
-
-    describe('when sharing entire containers', async () => {
-      it.skip('can share access a property from owner to another user', async() => {});
-
-      it.skip('can clone a fully shared container from the receiver of a sharing', async() => {});
     });
   });
 });
