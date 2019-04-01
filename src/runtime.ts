@@ -103,7 +103,8 @@ export interface Runtime {
  */
 export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtimeConfig: any, options: Runtime = { }): Promise<Runtime> {
   // get default logger
-  const log = (options.logger || (new Logger())).logFunction;
+  const logger = options.logger || (new Logger());
+  const log = logger.logFunction;
 
   // if this function is used within node and no browser context exists, load the
   // @evan.network/smart-contracts-core normally and use the Solc functionalities to parse and
@@ -337,7 +338,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
       keyProvider.profile = null;
     }
   } else {
-    log(`profile for ${activeAccount} doesn't exist`)
+    log(`profile for ${activeAccount} doesn't exist`, 'debug')
   }
 
   const onboarding = options.onboarding || new Onboarding({
@@ -368,9 +369,9 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     activeAccount,
     baseContract,
     contractLoader,
+    contracts,
     cryptoProvider,
     dataContract,
-    contracts,
     description,
     dfs,
     eventHub,
@@ -378,6 +379,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     ipld,
     keyExchange,
     keyProvider,
+    logger,
     mailbox,
     nameResolver,
     onboarding,

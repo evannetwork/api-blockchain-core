@@ -7,6 +7,7 @@
 - fix `ensureVerificationDescription` to match `getFullDescriptionDomainWithHash` ens paths
 - use correct defaultVerifications topics `loadActiveVerifications`
 - add support for passing `Logger` instance to `createDefaultRuntime`
+- return `Logger` instance from `createDefaultRuntime`
 - add `digital-identity` module (wrapper for `IdentityContracts`)
 - add `container` module (`DataContract` wrapper)
 - add support for type `array` in `data-contract` (if type is array, subproperty `.items` is used for list entry validation)
@@ -19,6 +20,7 @@
 ### Deprecations
 - remove build scripts for browserify bundle
 - remove `bcc/bundles/bcc.ts` file and switch to generalized `index.ts` for both, node and ui bundle (ui build job was moved to [ui-core/dapps/bcc](https://github.com/evannetwork/ui-core/tree/master/dapps/bcc))
+
 
 ## Version 2.0.0
 ### Features
