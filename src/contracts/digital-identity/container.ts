@@ -517,47 +517,50 @@ export class Container extends Logger {
       }
 
       //////////////////////////////////////////////////////// ensure encryption keys for properties
-      // checkout sharings
-      const sharings = await this.options.sharing.getSharingsFromContract(this.contract);
+      // run with mutex to prevent breaking sharing info
+      await this.getMutex('sharing').runExclusive(async () => {
+        // checkout sharings
+        const sharings = await this.options.sharing.getSharingsFromContract(this.contract);
 
-      // check if account already has a hash key
-      const sha3 = (...args) => this.options.nameResolver.soliditySha3(...args);
-      const isShared = (section, block?) => {
-        if (!sharings[sha3(accountId)] ||
-            !sharings[sha3(accountId)][sha3(section)] ||
-            (typeof block !== 'undefined' && !sharings[sha3(accountId)][sha3(section)][block])) {
-          return false;
-        }
-        return true;
-      };
-      let modified = false;
-      if (!isShared('*', 'hashKey')) {
-        const hashKeyToShare = await this.options.sharing.getHashKey(
-          this.contract.options.address, this.config.accountId);
-        await this.options.sharing.extendSharings(
-          sharings, this.config.accountId, accountId, '*', 'hashKey', hashKeyToShare, null);
-        modified = true;
-      }
-
-      // ensure that target user has sharings for properties
-      const blockNr = await this.options.web3.eth.getBlockNumber();
-      // share keys for read and readWrite
-      for (let property of [...read, ...readWrite]) {
-        if (!isShared(property)) {
-          // get key
-          const contentKey = await this.options.sharing.getKey(
-            this.contract.options.address, this.config.accountId, property, blockNr);
-          // share this key
+        // check if account already has a hash key
+        const sha3 = (...args) => this.options.nameResolver.soliditySha3(...args);
+        const isShared = (section, block?) => {
+          if (!sharings[sha3(accountId)] ||
+              !sharings[sha3(accountId)][sha3(section)] ||
+              (typeof block !== 'undefined' && !sharings[sha3(accountId)][sha3(section)][block])) {
+            return false;
+          }
+          return true;
+        };
+        let modified = false;
+        if (!isShared('*', 'hashKey')) {
+          const hashKeyToShare = await this.options.sharing.getHashKey(
+            this.contract.options.address, this.config.accountId);
           await this.options.sharing.extendSharings(
-            sharings, this.config.accountId, accountId, property, 0, contentKey);
+            sharings, this.config.accountId, accountId, '*', 'hashKey', hashKeyToShare, null);
           modified = true;
         }
-      }
-      if (modified) {
-        // store sharings
-        await this.options.sharing.saveSharingsToContract(
-          this.contract.options.address, sharings, this.config.accountId);
-      }
+
+        // ensure that target user has sharings for properties
+        const blockNr = await this.options.web3.eth.getBlockNumber();
+        // share keys for read and readWrite
+        for (let property of [...read, ...readWrite]) {
+          if (!isShared(property)) {
+            // get key
+            const contentKey = await this.options.sharing.getKey(
+              this.contract.options.address, this.config.accountId, property, blockNr);
+            // share this key
+            await this.options.sharing.extendSharings(
+              sharings, this.config.accountId, accountId, property, 0, contentKey);
+            modified = true;
+          }
+        }
+        if (modified) {
+          // store sharings
+          await this.options.sharing.saveSharingsToContract(
+            this.contract.options.address, sharings, this.config.accountId);
+        }
+      });
     }
   }
 
