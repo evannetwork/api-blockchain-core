@@ -54,7 +54,7 @@ export enum DigitalIdentityEntryType {
   ContainerContract,
   FileHash,
   Hash
-};
+}
 
 /**
  * config for digital identity
@@ -65,7 +65,7 @@ export interface DigitalIdentityConfig {
   containerConfig: ContainerConfig;
   description?: any;
   factoryAddress?: string;
-};
+}
 
 /**
  * container for digital identity entry values
@@ -74,7 +74,7 @@ export interface DigitalIdentityIndexEntry {
   entryType?: DigitalIdentityEntryType;
   raw?: any;
   value?: any;
-};
+}
 
 /**
  * data for verifications for digital identities
@@ -86,15 +86,14 @@ export interface DigitalIdentityVerificationEntry {
   disableSubverifications?: boolean;
   expirationDate?: number;
   verificationValue?: string;
-};
+}
 
 /**
  * options for DigitalIdentity constructor
  */
 export interface DigitalIdentityOptions extends ContainerOptions {
   dfs: DfsInterface;
-  verifications: Verifications;
-};
+}
 
 
 /**
