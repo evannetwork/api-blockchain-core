@@ -32,6 +32,7 @@ const config = {
     labels: {
       admin: 'admin',
       businessCenterRoot: process.env.BC_ROOT || 'testbc.evan',
+      container: 'container',
       ensRoot: process.env.ENS_ROOT || 'evan',
       eventhub: 'eventhub',
       factory: 'factory',
@@ -42,6 +43,7 @@ const config = {
     domains: {
       adminFactory: ['admin', 'factory', 'ensRoot'],
       businessCenter: ['businessCenterRoot'],
+      containerFactory: ['container', 'factory', 'ensRoot'],
       eventhub: process.env.ENS_EVENTS || ['eventhub', 'ensRoot'],
       factory: ['factory', 'businessCenterRoot'],
       mailbox: process.env.ENS_MAILBOX || ['mailbox', 'ensRoot'],

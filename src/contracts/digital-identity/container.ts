@@ -28,7 +28,6 @@
 import * as Throttle from 'promise-parallel-throttle';
 import BigNumber from 'bignumber.js';
 import { Mutex } from 'async-mutex';
-
 import {
   ContractLoader,
   CryptoProvider,
@@ -59,34 +58,6 @@ export interface ContainerConfig {
 }
 
 /**
- * template for container instances, covers properties setup and permissions
- */
-export interface ContainerTemplate {
-  type: string;
-  properties?: { [id: string]: ContainerTemplateProperty; }
-}
-
-/**
- * property in `ContainerTemplate`, defines an `entry` or `list` at the data contract
- */
-export interface ContainerTemplateProperty {
-  dataSchema: any;
-  permissions: ContainerRolePermissions;
-  type: string;
-  value?: string;
-}
-
-export interface ContainerRolePermissions {
-  [id: number]: string[];
-}
-
-export interface ContainerShareConfig {
-  accountId: string;
-  read?: string[];
-  readWrite?: string[];
-}
-
-/**
  * options for Container constructor
  */
 export interface ContainerOptions extends LoggerOptions {
@@ -99,6 +70,33 @@ export interface ContainerOptions extends LoggerOptions {
   rightsAndRoles: RightsAndRoles;
   sharing: Sharing;
   web3: any;
+}
+
+/**
+ * config for sharing multiple fields to one account (read and/or readWrite access)
+ */
+export interface ContainerShareConfig {
+  accountId: string;
+  read?: string[];
+  readWrite?: string[];
+}
+
+/**
+ * template for container instances, covers properties setup and permissions
+ */
+export interface ContainerTemplate {
+  type: string;
+  properties?: { [id: string]: ContainerTemplateProperty; }
+}
+
+/**
+ * property in `ContainerTemplate`, defines an `entry` or `list` at the data contract
+ */
+export interface ContainerTemplateProperty {
+  dataSchema: any;
+  permissions: { [id: number]: string[] };
+  type: string;
+  value?: string;
 }
 
 
@@ -116,7 +114,6 @@ export class Container extends Logger {
       properties: {},
     },
   };
-  private static defaultFactoryAddress = 'container.factory.evan';
   private static defaultTemplate = 'metadata';
   private config: ContainerConfig;
   private contract: any;
@@ -260,7 +257,8 @@ export class Container extends Logger {
 
     // create contract
     const contract = await options.dataContract.create(
-      instanceConfig.factoryAddress || Container.defaultFactoryAddress,
+      instanceConfig.factoryAddress ||
+        options.nameResolver.getDomainName(options.nameResolver.config.domains.containerFactory),
       instanceConfig.accountId,
       null,
       envelope,
