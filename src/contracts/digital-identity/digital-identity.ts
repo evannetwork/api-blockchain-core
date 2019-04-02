@@ -125,8 +125,10 @@ export class DigitalIdentity extends Logger {
    *
    * @param      {any}  description  description (public part, without envelope)
    */
-  public static async create(options: DigitalIdentityOptions, config: DigitalIdentityConfig):
-      Promise<DigitalIdentity> {
+  public static async create(
+    options: DigitalIdentityOptions,
+    config: DigitalIdentityConfig,
+  ): Promise<DigitalIdentity> {
     DigitalIdentity.checkConfigProperties(config, ['description']);
     const instanceConfig = JSON.parse(JSON.stringify(config));
 
@@ -217,20 +219,22 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * create new `Container` instance and add it as entry to identity
+   * create new `Container` instances and add them as entry to identity
    *
-   * @param      {string}                    name              name of the entry
-   * @param      {Partial<ContainerConfig>}  containerOptions  properties for container config; will
-   *                                                           be merged with config defined in
-   *                                                           `config.containerConfig`
+   * @param      {{ [id: string]: Partial<ContainerConfig> }}  containers  object with containers to
+   *                                                                       create, name is used as
+   *                                                                       entry name in identity
    */
-  public async createContainer(name: string, containerOptions: Partial<ContainerConfig>):
-      Promise<Container> {
+  public async createContainers(containers: { [id: string]: Partial<ContainerConfig> }
+  ): Promise<{ [id: string]: Partial<Container> }> {
     await this.ensureContract();
-    const container = await Container.create(
-      this.options, { ...this.config.containerConfig, ...containerOptions });
-    await this.setEntry(name, container, DigitalIdentityEntryType.ContainerContract);
-    return container;
+    const result = {};
+    await Throttle.all(Object.keys(containers).map((name) => async () => {
+      result[name] = await Container.create(
+        this.options, { ...this.config.containerConfig, ...containers[name] });
+      await this.setEntry(name, result[name], DigitalIdentityEntryType.ContainerContract);
+    }));
+    return result;
   }
 
   /**
@@ -341,7 +345,7 @@ export class DigitalIdentity extends Logger {
    *
    * @param      {any}  uploadToIpfs  upload description to ipfs
    */
-  public async setDescription(description: any) {
+  public async setDescription(description: any): Promise<void> {
     await this.ensureContract();
     await this.options.description.setDescription(
       this.contract.options.address, { public: description }, this.config.accountId);
@@ -364,8 +368,11 @@ export class DigitalIdentity extends Logger {
    * @param      {string}  name    entry name
    * @param      {string}  value   value to set (address or bytes32 value)
    */
-  public async setEntry(name: string, value: string|Container, entryType: DigitalIdentityEntryType):
-      Promise<void> {
+  public async setEntry(
+    name: string,
+    value: string|Container,
+    entryType: DigitalIdentityEntryType,
+  ): Promise<void> {
     await this.ensureContract();
     // write value to contract
     let toSet;
@@ -392,7 +399,7 @@ export class DigitalIdentity extends Logger {
    *
    * @param      {DigitalIdentityIndexEntry}  entry   The entry
    */
-  private processEntry(entry: DigitalIdentityIndexEntry) {
+  private processEntry(entry: DigitalIdentityIndexEntry): void {
     let address;
     entry.entryType = parseInt(entry.raw.entryType, 10);
     switch (entry.entryType) {

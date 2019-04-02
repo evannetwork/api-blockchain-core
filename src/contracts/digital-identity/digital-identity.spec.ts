@@ -33,7 +33,7 @@ import {
   Ipfs,
 } from '@evan.network/dbcp';
 
-import { ContainerConfig } from './container';
+import { Container, ContainerConfig } from './container';
 import { TestUtils } from '../../test/test-utils';
 import { accounts } from '../../test/accounts';
 import { config } from '../../config';
@@ -263,14 +263,29 @@ describe('DigitalIdentity (name pending)', function() {
           'ContainerDataContractFactory', [], { from: accounts[0], gas: 6e6 });
         defaultConfig.containerConfig.factoryAddress = factory.options.address;
       });
+
       it('creates new containers automatically', async() => {
         const identity = await DigitalIdentity.create(runtime, defaultConfig);
-        const newContainer = await identity.createContainer('myMetadata', { template: 'metadata' });
+        const customTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
+        customTemplate.properties.type = {
+          dataSchema: { type: 'string' },
+          permissions: { 0: ['set'] },
+          type: 'entry',
+          value: 'customTemplate',
+        };
+        const containers = await identity.createContainers({
+          entry1: { template: 'metadata' },
+          entry2: { template: customTemplate },
+        });
         // new container has type property (default)
-        expect(await newContainer.getEntry('type')).to.eq('metadata');
-        // new container is linked to identity
-        const { value: fetchedContainer } = await identity.getEntry('myMetadata');
-        expect(await fetchedContainer.getEntry('type')).to.eq('metadata');
+        expect(await containers.entry1.getEntry('type')).to.eq('metadata');
+        expect(await containers.entry2.getEntry('type')).to.eq('customTemplate');
+        // new containers are linked to identity
+        let entry;
+        entry = await identity.getEntry('entry1');
+        expect(await entry.value.getEntry('type')).to.eq('metadata');
+        entry = await identity.getEntry('entry2');
+        expect(await entry.value.getEntry('type')).to.eq('customTemplate');
       });
     });
   });
