@@ -174,7 +174,8 @@ export class Container extends Logger {
           } else if (property.type === 'list') {
             propertyType = PropertyType.ListEntry;
           } else {
-            throw new Error(`invalid property type "${property.type}" for property "${propertyName}"`);
+            throw new Error(`invalid property type "${property.type}" ` +
+              `for property "${propertyName}"`);
           }
           let modificationType: ModificationType;
           if (modification === 'set') {
@@ -182,7 +183,8 @@ export class Container extends Logger {
           } else if (modification === 'remove') {
             modificationType = ModificationType.Remove;
           } else {
-            throw new Error(`invalid modification "${modification}" for property "${propertyName}"`);
+            throw new Error(`invalid modification "${modification}" ` +
+              `for property "${propertyName}"`);
           }
           // allow setting this field; if value is specified, add value AFTER this
           permissionTasks.push(async () => {
@@ -241,7 +243,7 @@ export class Container extends Logger {
       config: ContainerConfig,
       source: Container,
       copyValues = false,
-      ): Promise<Container> {
+  ): Promise<Container> {
     const template = await source.toTemplate(copyValues);
     return Container.create(options, { ...config, template });
   }
@@ -252,8 +254,8 @@ export class Container extends Logger {
    * @param      {ContainerOptions}  options  runtime for new `Container`
    * @param      {ContainerConfig}   config   config for new container
    */
-  public static async create(options: ContainerOptions, config: ContainerConfig):
-      Promise<Container> {
+  public static async create(options: ContainerOptions, config: ContainerConfig
+  ): Promise<Container> {
     Container.checkConfigProperties(config, ['description']);
     const instanceConfig = JSON.parse(JSON.stringify(config));
 
@@ -300,7 +302,7 @@ export class Container extends Logger {
    *
    * @param      {any}  properties  properties object from template
    */
-  public static toJsonSchema(properties: any) {
+  public static toJsonSchema(properties: any): any {
     const jsonSchema = {};
 
     for (let field of Object.keys(properties)) {
@@ -423,8 +425,8 @@ export class Container extends Logger {
    * @param      {number}   offset    skip this many entries
    * @param      {boolean}  reverse   if true, fetches last items first
    */
-  public async getListEntries(listName: string, count = 10, offset = 0, reverse = false):
-      Promise<any[]> {
+  public async getListEntries(listName: string, count = 10, offset = 0, reverse = false
+  ): Promise<any[]> {
     await this.ensureContract();
     return this.wrapPromise(
       'get list entries',
@@ -778,7 +780,11 @@ export class Container extends Logger {
    * @param      {number}  role       (optional) role id, defaults to 0
    */
   private async ensurePermissionOnField(
-      name: string, type: string, accountId = this.config.accountId, role = 0): Promise<void> {
+    name: string,
+    type: string,
+    accountId = this.config.accountId,
+    role = 0,
+  ): Promise<void> {
     // ensure entry is writable by current account
     const authority = this.options.contractLoader.loadContract(
       'DSRolesPerContract',
@@ -869,8 +875,8 @@ export class Container extends Logger {
    * @param      {string}  property           property name
    * @param      {string}  type               'entry' or 'list'
    */
-  private async getRolePermission(authorityContract: any, property: string, type: string):
-      Promise<any> {
+  private async getRolePermission(authorityContract: any, property: string, type: string
+  ): Promise<any> {
     const permissions = {};
     for (let operation of ['set', 'remove']) {
       const rolesMap = await this.options.executor.executeContractCall(
