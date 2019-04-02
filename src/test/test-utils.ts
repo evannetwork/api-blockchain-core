@@ -390,6 +390,7 @@ export class TestUtils {
       executor,
       ipld: ipld || await TestUtils.getIpld(ipfs),
       nameResolver: await TestUtils.getNameResolver(web3),
+      rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
     });
     return profile;
   }

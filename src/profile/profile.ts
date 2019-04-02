@@ -38,6 +38,7 @@ import { CryptoProvider } from '../encryption/crypto-provider';
 import { DataContract } from '../contracts/data-contract/data-contract';
 import { Ipld } from '../dfs/ipld';
 import { KeyExchange } from '../keyExchange';
+import { RightsAndRoles, ModificationType, PropertyType } from '../contracts/rights-and-roles';
 
 
 /**
@@ -51,6 +52,7 @@ export interface ProfileOptions extends LoggerOptions {
   executor: Executor,
   ipld: Ipld,
   nameResolver: NameResolver,
+  rightsAndRoles: RightsAndRoles,
 }
 
 
@@ -79,6 +81,7 @@ export class Profile extends Logger {
   executor: Executor;
   ipld: Ipld;
   nameResolver: NameResolver;
+  options: ProfileOptions;
   profileContract: any;
   trees: any;
   treeLabels = {
@@ -87,6 +90,7 @@ export class Profile extends Logger {
     bookmarkedDapps: 'bookmarkedDapps',
     contracts: 'contracts',
     publicKey: 'publicKey',
+    templates: 'templates',
   };
 
   constructor(options: ProfileOptions) {
@@ -99,6 +103,7 @@ export class Profile extends Logger {
     this.ipld = options.ipld;
     this.nameResolver = options.nameResolver;
     this.trees = {};
+    this.options = options;
   }
 
   /**
@@ -169,7 +174,7 @@ export class Profile extends Logger {
   /**
    * add a contract to the current profile
    *
-   * @param      {string}  address  contact address
+   * @param      {string}  address  contract address
    * @return     {any}     bookmark info
    */
   async addContract(address: string, data: any): Promise<any> {
@@ -447,6 +452,20 @@ export class Profile extends Logger {
   }
 
   /**
+   * get templates from profile
+   */
+  async getTemplates(): Promise<any> {
+    if (!this.trees[this.treeLabels.templates]) {
+      await this.loadForAccount(this.treeLabels.templates);
+    }
+
+    return this.ipld.getLinkedGraph(
+      this.trees[this.treeLabels.templates],
+      this.treeLabels.templates,
+    );
+  }
+
+  /**
    * load profile for given account from global profile contract, if a tree is given, load that tree
    * from ipld as well
    *
@@ -568,7 +587,7 @@ export class Profile extends Logger {
    *
    * @return     {Array<string>}  array of topics of verifications that should be displayed
    */
-  private async loadActiveVerifications() {
+  async loadActiveVerifications() {
     const defaultVerifications = [
       '/evan/onboarding/termsofuse',
     ];
@@ -623,6 +642,22 @@ export class Profile extends Logger {
   }
 
   /**
+   * save set of templates to profile
+   *
+   * @param      {any}     templates  entire collections of templates to store in profile
+   */
+  async setTemplates(templates: any): Promise<void> {
+    this.ensureTree(this.treeLabels.templates);
+
+    await this.ipld.set(
+      this.trees[this.treeLabels.templates],
+      this.treeLabels.templates,
+      templates,
+      true,
+    );
+  }
+
+  /**
    * stores profile tree or given hash to global profile contract
    *
    * @param      {string}   tree      tree to store ('bookmarkedDapps', 'contracts', ...)
@@ -630,6 +665,7 @@ export class Profile extends Logger {
    * @return     {Promise}  resolved when done
    */
   async storeForAccount(tree: string, ipldHash?: string): Promise<void> {
+    await this.ensurePropertyInProfile(tree);
     if (ipldHash) {
       this.log(`store tree "${tree}" with given hash to profile contract for account "${this.activeAccount}"`);
       if (tree === this.treeLabels.publicKey) {
@@ -658,6 +694,29 @@ export class Profile extends Logger {
    */
   async storeToIpld(tree: string): Promise<string> {
     return await this.ipld.store(this.trees[tree]);
+  }
+
+  /**
+   * ensure that `activeAccount` has permissions on given tree in profile; will throw if permissions
+   * cannot be granted (e.g. because `activeAccount` isn't owner of the profile contract)
+   *
+   * @param      {string}  tree    name of a tree/entry in profile
+   */
+  private async ensurePropertyInProfile(tree: string): Promise<void> {
+    const hash = this.options.rightsAndRoles.getOperationCapabilityHash(
+      tree, PropertyType.Entry, ModificationType.Set);
+    if (! await this.options.rightsAndRoles.canCallOperation(
+        this.profileContract.options.address, this.activeAccount, hash)) {
+      await this.options.rightsAndRoles.setOperationPermission(
+        this.profileContract,
+        this.activeAccount,
+        0,
+        tree,
+        PropertyType.Entry,
+        ModificationType.Set,
+        true,
+      );
+    }
   }
 
   /**

@@ -873,7 +873,7 @@ addContract
 
 .. code-block:: typescript
 
-  profile.addContract(bc, address, data);
+  profile.addContract(address, data);
 
 Add a contract to the current profile.
 
@@ -881,8 +881,7 @@ Add a contract to the current profile.
 Parameters
 ----------
 
-#. ``bc`` - ``string``: business center ens address or contract address
-#. ``address`` - ``string``: contact address
+#. ``address`` - ``string``: contract address
 #. ``data`` - ``any``: bookmark metadata
 
 -------
@@ -897,45 +896,7 @@ Example
 
 .. code-block:: typescript
 
-  await profile.addBcContract('testbc.evan', '0x', contractDescription);
-
-
-
-------------------------------------------------------------------------------
-
-
-
-.. _profile_removeContract:
-
-removeContract
-================================================================================
-
-.. code-block:: typescript
-
-  profile.removeContract(address, data);
-
-removes a contract (task contract etc. ) from a business center scope of the current profile
-
-----------
-Parameters
-----------
-
-#. ``bc`` - ``string``: business center ens address or contract address
-#. ``address`` - ``any``: contact address
-
--------
-Returns
--------
-
-``Promise`` returns ``void``: resolved when done
-
--------
-Example
--------
-
-.. code-block:: typescript
-
-  await profile.removeBcContract('testbc.evan', '0x');
+  await profile.addContract('0x...', contractDescription);
 
 
 
@@ -1120,6 +1081,44 @@ Example
 
 ------------------------------------------------------------------------------
 
+
+
+.. _profile_removeBcContract:
+
+removeContract
+================================================================================
+
+.. code-block:: typescript
+
+  profile.removeBcContract(address, data);
+
+removes a contract (task contract etc. ) from a business center scope of the current profile
+
+----------
+Parameters
+----------
+
+#. ``bc`` - ``string``: business center ens address or contract address
+#. ``address`` - ``any``: contact address
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await profile.removeBcContract('testbc.evan', '0x');
+
+
+
+------------------------------------------------------------------------------
+
 = publicKey =
 ==============================================================================
 
@@ -1191,6 +1190,8 @@ Example
 
   const key = await profile.getPublicKey();
 
+
+
 ------------------------------------------------------------------------------
 
 .. _profile_loadActiveVerifications:
@@ -1224,6 +1225,8 @@ Example
 
   const topics = await bcc.profile.loadActiveVerifications();
 
+
+
 ------------------------------------------------------------------------------
 
 .. _profile_setActiveVerifications:
@@ -1256,6 +1259,75 @@ Example
 .. code-block:: typescript
 
   await bcc.profile.setActiveVerifications([ '/company/tuev', '/test/1234' ]);
+
+
+
+--------------------------------------------------------------------------------
+= templates =
+================================================================================
+
+
+
+.. _profile_setTemplates:
+
+setTemplates
+================================================================================
+
+.. code-block:: typescript
+
+  profile.setTemplates(templates);
+
+Save set of templates to profile.
+
+----------
+Parameters
+----------
+
+#. ``templates`` - ``any``: entire collections of templates to store in profile 
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await profile.setTemplates({ customMetadata: {} });
+
+
+
+--------------------------------------------------------------------------------
+
+.. _profile_getTemplates:
+
+getTemplates
+================================================================================
+
+.. code-block:: typescript
+
+  profile.getTemplates();
+
+Get entire set of templates from profile.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``any``: all templates from profile
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const templates = await profile.getTemplates();
+
 
 
 .. required for building markup

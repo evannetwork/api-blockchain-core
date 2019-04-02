@@ -11,6 +11,8 @@
 - add `digital-identity` module (wrapper for `IdentityContracts`)
 - add `container` module (`DataContract` wrapper)
 - add support for type `array` in `data-contract` (if type is array, subproperty `.items` is used for list entry validation)
+- add support for templates to profile
+- add support to automatically add property to profile when storing properties
 
 ### Fixes
 - fix `DataContract` `getEntry` to load unencrypted data, when no profile for the requesting account exists
@@ -20,6 +22,7 @@
 ### Deprecations
 - remove build scripts for browserify bundle
 - remove `bcc/bundles/bcc.ts` file and switch to generalized `index.ts` for both, node and ui bundle (ui build job was moved to [ui-core/dapps/bcc](https://github.com/evannetwork/ui-core/tree/master/dapps/bcc))
+- add dependency to `RightsAndRoles` to `Profile`
 
 
 ## Version 2.0.0
