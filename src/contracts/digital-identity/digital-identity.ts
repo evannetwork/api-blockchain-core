@@ -93,6 +93,9 @@ export interface DigitalIdentityOptions extends ContainerOptions {
   verifications: Verifications;
 }
 
+// empty address
+const nullAddress = '0x0000000000000000000000000000000000000000';
+
 /**
  * helper class for managing digital identities
  *
@@ -122,7 +125,8 @@ export class DigitalIdentity extends Logger {
   /**
    * create digital identity contract
    *
-   * @param      {any}  description  description (public part, without envelope)
+   * @param      {DigitalIdentityOptions}  options  identity runtime options
+   * @param      {DigitalIdentityConfig}   config   configuration for the new identity instance
    */
   public static async create(options: DigitalIdentityOptions, config: DigitalIdentityConfig):
       Promise<DigitalIdentity> {
@@ -172,6 +176,35 @@ export class DigitalIdentity extends Logger {
     const identity = new DigitalIdentity(options, instanceConfig);
     await identity.ensureContract();
     return identity;
+  }
+
+  /**
+   * check if a contract is located under the specified address
+   *
+   * @param      {DigitalIdentityOptions}  options     identity runtime options
+   * @param      {string}                  ensAddress  ens address that should be checked
+   */
+  public static async isValidDigitalIdentity(
+    options: DigitalIdentityOptions,
+    ensAddress: string,
+  ): Promise<{valid: boolean, error: Error}> {
+    let error, valid = false;
+
+    // create temporary identity instance, to ensure the contract
+    const identityInstance = new DigitalIdentity(options, {
+      accountId: nullAddress,
+      address: ensAddress,
+      containerConfig: { accountId: nullAddress }
+    });
+
+    // try to load the contract, this will throw, when the specification is invalid
+    try {
+      await identityInstance.ensureContract();
+    } catch (ex) {
+      error = ex;
+    }
+
+    return { valid, error };
   }
 
   /**
@@ -232,6 +265,8 @@ export class DigitalIdentity extends Logger {
 
   /**
    * check if digital identity contract already has been loaded, load from address / ENS if required
+   * and throw an error, when no contract exists or the description machtes not the identity
+   * specifications
    */
   public async ensureContract(): Promise<void> {
     if (this.contract) {
@@ -239,7 +274,30 @@ export class DigitalIdentity extends Logger {
     }
     let address = this.config.address.startsWith('0x') ?
       this.config.address : await this.options.nameResolver.getAddress(this.config.address);
-    this.contract = this.options.contractLoader.loadContract('IndexContract', address)
+    const baseError = `ens address ${ this.config.address } / contract address ${ address }:`;
+
+    // if no address is set, throw an error
+    if (!address || address === nullAddress) {
+      throw new Error(`${ baseError } contract does not exists`);
+    } else {
+      try {
+        const description = (await this.options.description
+          .getDescription(address, nullAddress)).public;
+
+        // if the evan digital identity tag does not exist, throw 
+        if (!description || !description.tags || description.tags
+          .indexOf('evan-digital-identity') === -1) {
+          throw new Error(`${ baseError } match not the specification (missing
+            'evan-digital-identity' tag)`);
+        }
+      } catch (ex) {
+        // when the dbcp could not be loaded, throw
+        this.options.log(`${ baseError } address ${ address }: Could not load dbcp:
+          ${ ex.message }`, 'info');
+      }
+    }
+
+    this.contract = this.options.contractLoader.loadContract('IndexContract', address);
   }
 
   /**
@@ -340,6 +398,13 @@ export class DigitalIdentity extends Logger {
    */
   public async setDescription(description: any) {
     await this.ensureContract();
+
+    // ensure, that the evan digital identity tag is set
+    description.tags = description.tags || [ ];
+    if (description.tags.indexOf('evan-digital-identity') === -1) {
+      description.tags.push('evan-digital-identity');
+    }
+
     await this.options.description.setDescription(
       this.contract.options.address, { public: description }, this.config.accountId);
   }

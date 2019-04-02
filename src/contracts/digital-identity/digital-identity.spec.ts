@@ -108,9 +108,43 @@ describe('DigitalIdentity (name pending)', function() {
     console.log(`using identity factory: ${defaultConfig.factoryAddress}`);
   });
 
-  it('can can create new contracts', async () => {
-    const identity = await DigitalIdentity.create(runtime, defaultConfig);
-    expect(await identity.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
+  describe('working with identities', () => {
+    it('can can create new contracts', async () => {
+      const identity = await DigitalIdentity.create(runtime, defaultConfig);
+      expect(await identity.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
+    });
+
+    it.only('empty description.tags identities should have tag \'evan-digital-identity\' after creation', async () => {
+      const customDescription = JSON.parse(JSON.stringify(defaultConfig));
+      delete customDescription.tags;
+      const identity = await DigitalIdentity.create(runtime, customDescription);
+      const identityDescription = await identity.getDescription();
+
+      expect(identityDescription.tags).to.include('evan-digital-identity');
+    });
+
+    it.only('loading a identity without the tag \'evan-digital-identity\' should be invalid', async () => {
+      const identity = await DigitalIdentity.create(runtime, defaultConfig);
+      const address = await identity.getContractAddress();
+
+      // reset filled tags
+      await runtime.description.setDescriptionToContract(address, defaultConfig, accounts[0]);
+      const isIdentityValid = await DigitalIdentity.isValidDigitalIdentity(runtime, address);
+
+      expect(isIdentityValid.valid).to.be.false;
+      expect(isIdentityValid.error).to.include('match not the specification');
+    });
+
+    it.only('loading a identity with the tag \'evan-digital-identity\' should be valid', async () => {
+      const identity = await DigitalIdentity.create(runtime, defaultConfig);
+      const address = await identity.getContractAddress();
+
+      // reset filled tags
+      const isIdentityValid = await DigitalIdentity.isValidDigitalIdentity(runtime, address);
+
+      expect(isIdentityValid.valid).to.be.true;
+      expect(isIdentityValid.error).to.be.false;
+    });
   });
 
   describe('when performing set/get operations', () => {
@@ -327,6 +361,14 @@ describe('DigitalIdentity (name pending)', function() {
       expect(await loadedIdentity.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
       expect(await loadedIdentity.getContractAddress()).to.eq(
         await runtime.nameResolver.getAddress(address));
+    });
+
+    it('loading an empty ens address should throw an error', async () => {
+      const isValidIdentity = await DigitalIdentity.isValidDigitalIdentity(runtime,
+        'there.s.really.no.identity.evan');
+
+      expect(isValidIdentity.valid).to.be.false;
+      expect(isValidIdentity.error).to.include('contract does not exists');
     });
   });
 });
