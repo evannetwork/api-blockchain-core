@@ -128,7 +128,7 @@ export class Container extends Logger {
       properties: {},
     },
   };
-  private static defaultTemplate = 'metadata';
+  public static defaultTemplate = 'metadata';
   private config: ContainerConfig;
   private contract: any;
   private mutexes: { [id: string]: Mutex; };
@@ -168,24 +168,6 @@ export class Container extends Logger {
       const permissionTasks = [];
       for (let role of Object.keys(property.permissions)) {
         for (let modification of property.permissions[role]) {
-          let propertyType: PropertyType;
-          if (property.type === 'entry') {
-            propertyType = PropertyType.Entry;
-          } else if (property.type === 'list') {
-            propertyType = PropertyType.ListEntry;
-          } else {
-            throw new Error(`invalid property type "${property.type}" ` +
-              `for property "${propertyName}"`);
-          }
-          let modificationType: ModificationType;
-          if (modification === 'set') {
-            modificationType = ModificationType.Set;
-          } else if (modification === 'remove') {
-            modificationType = ModificationType.Remove;
-          } else {
-            throw new Error(`invalid modification "${modification}" ` +
-              `for property "${propertyName}"`);
-          }
           // allow setting this field; if value is specified, add value AFTER this
           permissionTasks.push(async () => {
             await options.rightsAndRoles.setOperationPermission(
@@ -193,8 +175,8 @@ export class Container extends Logger {
               config.accountId,
               parseInt(role, 10),
               propertyName,
-              propertyType,
-              modificationType,
+              Container.getPropertyType(property.type),
+              Container.getModificationType(modification),
               true,
             );
           });
@@ -295,6 +277,34 @@ export class Container extends Logger {
     await Container.applyTemplate(options, instanceConfig, container);
 
     return container;
+  }
+
+  /**
+   * converts 'remove'/'set' to rights and roles enum type, throws if invalid
+   *
+   * @param      {string}            typeName  remove/set
+   * @return     {ModificationType}  enum value from `RightsAndRoles`
+   */
+  public static getModificationType(typeName: string): ModificationType {
+    switch (typeName) {
+      case 'remove': return ModificationType.Remove;
+      case 'set': return ModificationType.Set;
+      default: throw new Error(`unsupported modification type "${typeName}"`);
+    }
+  }
+
+  /**
+   * converts 'entry'/'list' to rights and roles enum type, throws if invalid
+   *
+   * @param      {string}        typeName  entry/list
+   * @return     {PropertyType}  enum value from `RightsAndRoles`
+   */
+  public static getPropertyType(typeName: string): PropertyType {
+    switch (typeName) {
+      case 'entry': return PropertyType.Entry;
+      case 'list': return PropertyType.ListEntry;
+      default: throw new Error(`unsupported property type type "${typeName}"`);
+    }
   }
 
   /**
@@ -578,7 +588,11 @@ export class Container extends Logger {
       // ensure that roles for fields exist and that accounts have permissions
       for (let property of readWrite) {
         // get permissions from contract
-        const hash = this.getOperationHash(property, schemaProperties[property].type, 'set');
+        const hash = this.options.rightsAndRoles.getOperationCapabilityHash(
+          property,
+          Container.getPropertyType(schemaProperties[property].type),
+          ModificationType.Set,
+        );
         const rolesMap = await this.options.executor.executeContractCall(
           authority,
           'getOperationCapabilityRoles',
@@ -600,7 +614,7 @@ export class Container extends Logger {
             this.config.accountId,
             permittedRole,
             property,
-            schemaProperties[property].type === 'list' ? PropertyType.ListEntry : PropertyType.Entry,
+            Container.getPropertyType(schemaProperties[property].type),
             ModificationType.Set,
             true,
           );
@@ -790,12 +804,13 @@ export class Container extends Logger {
       'DSRolesPerContract',
       await this.options.executor.executeContractCall(this.contract, 'authority'),
     );
+    const enumType = Container.getPropertyType(type);
     let canSetField = await this.options.executor.executeContractCall(
       authority,
       'canCallOperation',
       accountId,
       '0x0000000000000000000000000000000000000000',
-      this.getOperationHash(name, type, 'set'),
+      this.options.rightsAndRoles.getOperationCapabilityHash(name, enumType, ModificationType.Set),
     );
     if (!canSetField) {
       this.log(`adding permissions on ${type} "${name}" for role ${role} to enable account ` +
@@ -805,7 +820,7 @@ export class Container extends Logger {
         this.config.accountId,
         role,
         name,
-        type === 'entry' ? PropertyType.Entry : PropertyType.ListEntry,
+        enumType,
         ModificationType.Set,
         true,
       );
@@ -883,7 +898,8 @@ export class Container extends Logger {
         authorityContract,
         'getOperationCapabilityRoles',
         this.config.address,
-        this.getOperationHash(property, type, operation),
+        this.options.rightsAndRoles.getOperationCapabilityHash(
+          property, Container.getPropertyType(type), Container.getModificationType(operation)),
       );
       // iterates over all roles and checks which roles are included
       const checkNumber = (bnum) => {
