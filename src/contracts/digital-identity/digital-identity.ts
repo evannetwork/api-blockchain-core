@@ -341,9 +341,9 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * create description info, pass `true` to automatically upload it to ipfs
+   * create description info
    *
-   * @param      {any}  uploadToIpfs  upload description to ipfs
+   * @param      {any}  description  description to set (only `public` part)
    */
   public async setDescription(description: any): Promise<void> {
     await this.ensureContract();
