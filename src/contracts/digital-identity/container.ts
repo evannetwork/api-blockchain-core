@@ -50,11 +50,15 @@ import { Verifications } from '../../verifications/verifications';
  * config properties, specific to `Container` instances
  */
 export interface ContainerConfig {
+  /** account id of user, that interacts with container */
   accountId: string;
+  /** address of a ``DataContract`` instance, can be ENS or contract address */
   address?: string;
+  /** description has to be passed to ``.create`` to apply it to to contract */
   description?: any;
+  /** factory address can be passed to ``.create`` for custome container factory */
   factoryAddress?: string;
-  origin?: Container;
+  /** template to be used in ``.create``, can be string with name or a ``ContainerTemplate`` */
   template?: string | ContainerTemplate;
 }
 
@@ -78,8 +82,11 @@ export interface ContainerOptions extends LoggerOptions {
  * config for sharing multiple fields to one account (read and/or readWrite access)
  */
 export interface ContainerShareConfig {
+  /** account, that gets properties shared */
   accountId: string;
+  /** list of properties, that are shared read-only */
   read?: string[];
+  /** list of properties, that are shared readable and writeable */
   readWrite?: string[];
 }
 
@@ -87,7 +94,9 @@ export interface ContainerShareConfig {
  * template for container instances, covers properties setup and permissions
  */
 export interface ContainerTemplate {
+  /** type of the template (equals name of the template) */
   type: string;
+  /** list of properties included in this template, key is field name, value is property setup */
   properties?: { [id: string]: ContainerTemplateProperty; }
 }
 
@@ -95,21 +104,29 @@ export interface ContainerTemplate {
  * property in `ContainerTemplate`, defines an `entry` or `list` at the data contract
  */
 export interface ContainerTemplateProperty {
+  /** `Ajv <https://github.com/epoberezkin/ajv>`_ data schema for field */
   dataSchema: any;
+  /** permissions for this template, key is role id, value is array with 'set' and/or 'remove' */
   permissions: { [id: number]: string[] };
+  /** type of property (entry/list) */
   type: string;
-  value?: string;
+  /** value of property */
+  value?: any;
 }
 
 /**
- * data for verifications for containers
+ * data for verifications for containers, see ``Validation`` docu for details
  */
 export interface ContainerVerificationEntry {
-  subject: string;
+  /** validation path */
   topic: string;
+  /** domain, where the description of this validation is stored */
   descriptionDomain?: string;
+  /** if set, validations created in a subpath are invalid by default */
   disableSubverifications?: boolean;
+  /** expiration date, validations do not expire if omitted */
   expirationDate?: number;
+  /** reference to additional validation details */
   verificationValue?: string;
 };
 
@@ -323,9 +340,10 @@ export class Container extends Logger {
   }
 
   /**
-   * create new `Container` instance; this will not create smart contract contract but is used to
-   * load existing containers. To create a new contract, use the static `create` function
-   * @param      {ContainerOptions}  options  runtime for new `Container`
+   * Create new ``Container`` instance. This will not create a smart contract contract but is used
+   * to load existing containers. To create a new contract, use the static ``create`` function.
+   *
+   * @param      {ContainerOptions}  options  runtime for new container
    * @param      {ContainerConfig}   config   config for new container
    */
   constructor(options: ContainerOptions, config: ContainerConfig) {
