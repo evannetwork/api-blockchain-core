@@ -68,7 +68,7 @@ export { Verifications, VerificationsStatus } from './verifications/verification
 export { Votings, MemberOptions, ProposalInfo, ProposalInfos, ProposalOptions, VotingsContractOptions } from './votings/votings';
 export { Wallet } from './contracts/wallet';
 export { Container, ContainerConfig, ContainerTemplate, ContainerTemplateProperty,
-  ContainerRolePermissions, ContainerShareConfig, ContainerOptions } from './contracts/digital-identity/container';
+  ContainerShareConfig, ContainerOptions } from './contracts/digital-identity/container';
 export { DigitalIdentity } from './contracts/digital-identity/digital-identity';
 
 /******** export this libraries to be able to build the blockchain-core into an umd bundle ********/

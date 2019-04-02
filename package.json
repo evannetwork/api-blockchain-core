@@ -70,6 +70,7 @@
   "scripts": {
     "build": "tsc",
     "build-all": "env-cmd ./.env.local npm run build-contracts && env-cmd ./.env.local npm run build",
+    "build-contracts": "node ./scripts/buildContracts.js",
     "installl": "npm install && ./scripts/link.sh",
     "test:contracts": "env-cmd ./.env.local npm run build && env-cmd ./.env.local mocha --exit --inspect -r ts-node/register src/contracts/*.spec.ts src/contracts/base-contract/*.spec.ts src/contracts/business-center/*.spec.ts src/contracts/service-contract/*.spec.ts",
     "test:datacontract": "env-cmd ./.env.local npm run build && env-cmd ./.env.local mocha --exit --inspect -r ts-node/register src/contracts/data-contract/*.spec.ts",

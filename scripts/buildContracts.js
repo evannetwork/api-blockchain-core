@@ -28,7 +28,6 @@
 
 const smartContractsCore = require('@evan.network/smart-contracts-core');
 
-
 const solc = new smartContractsCore.Solc({
   config: { compileContracts: false, },
   log: console.log,

@@ -136,6 +136,12 @@ export class DigitalIdentity extends Logger {
     DigitalIdentity.checkConfigProperties(config, ['description']);
     const instanceConfig = JSON.parse(JSON.stringify(config));
 
+    // ensure, that the evan digital identity tag is set
+    instanceConfig.description.tags = instanceConfig.description.tags || [ ];
+    if (instanceConfig.description.tags.indexOf('evan-digital-identity') === -1) {
+      instanceConfig.description.tags.push('evan-digital-identity');
+    }
+
     // check description values and upload it
     const envelope: Envelope = { public: instanceConfig.description };
     const validation = options.description.validateDescription(envelope);
@@ -193,7 +199,7 @@ export class DigitalIdentity extends Logger {
     options: DigitalIdentityOptions,
     ensAddress: string,
   ): Promise<{valid: boolean, error: Error}> {
-    let error, valid = false;
+    let error = null, valid = false;
 
     // create temporary identity instance, to ensure the contract
     const identityInstance = new DigitalIdentity(options, {
@@ -205,6 +211,7 @@ export class DigitalIdentity extends Logger {
     // try to load the contract, this will throw, when the specification is invalid
     try {
       await identityInstance.ensureContract();
+      valid = true;
     } catch (ex) {
       error = ex;
     }
@@ -282,26 +289,27 @@ export class DigitalIdentity extends Logger {
     let address = this.config.address.startsWith('0x') ?
       this.config.address : await this.options.nameResolver.getAddress(this.config.address);
     const baseError = `ens address ${ this.config.address } / contract address ${ address }:`;
+    let description;
 
     // if no address is set, throw an error
     if (!address || address === nullAddress) {
       throw new Error(`${ baseError } contract does not exists`);
     } else {
       try {
-        const description = (await this.options.description
+        description = (await this.options.description
           .getDescription(address, nullAddress)).public;
-
-        // if the evan digital identity tag does not exist, throw 
-        if (!description || !description.tags || description.tags
-          .indexOf('evan-digital-identity') === -1) {
-          throw new Error(`${ baseError } match not the specification (missing
-            'evan-digital-identity' tag)`);
-        }
       } catch (ex) {
         // when the dbcp could not be loaded, throw
-        this.options.log(`${ baseError } address ${ address }: Could not load dbcp:
+        this.log(`${ baseError } address ${ address }: Could not load dbcp:
           ${ ex.message }`, 'info');
       }
+    }
+
+    // if the evan digital identity tag does not exist, throw 
+    if (!description || !description.tags || description.tags
+      .indexOf('evan-digital-identity') === -1) {
+      throw new Error(`${ baseError } match not the specification (missing
+        'evan-digital-identity' tag)`);
     }
 
     this.contract = this.options.contractLoader.loadContract('IndexContract', address);

@@ -108,36 +108,39 @@ describe('DigitalIdentity (name pending)', function() {
       expect(await identity.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
     });
 
-    it.only('empty description.tags identities should have tag \'evan-digital-identity\' after creation', async () => {
-      const customDescription = JSON.parse(JSON.stringify(defaultConfig));
-      delete customDescription.tags;
-      const identity = await DigitalIdentity.create(runtime, customDescription);
+    it('empty description.tags identities should have tag \'evan-digital-identity\' after creation', async () => {
+      const customConfig = JSON.parse(JSON.stringify(defaultConfig));
+      delete customConfig.description.tags;
+      const identity = await DigitalIdentity.create(runtime, customConfig);
       const identityDescription = await identity.getDescription();
 
       expect(identityDescription.tags).to.include('evan-digital-identity');
     });
 
-    it.only('loading a identity without the tag \'evan-digital-identity\' should be invalid', async () => {
+    it('loading a identity without the tag \'evan-digital-identity\' should be invalid', async () => {
       const identity = await DigitalIdentity.create(runtime, defaultConfig);
       const address = await identity.getContractAddress();
+      const customDescription = JSON.parse(JSON.stringify(description));
+      delete customDescription.tags;
 
       // reset filled tags
-      await runtime.description.setDescriptionToContract(address, defaultConfig, accounts[0]);
+      await runtime.description.setDescription(address, { public: customDescription }, accounts[0]);
       const isIdentityValid = await DigitalIdentity.isValidDigitalIdentity(runtime, address);
 
       expect(isIdentityValid.valid).to.be.false;
-      expect(isIdentityValid.error).to.include('match not the specification');
+      expect(isIdentityValid.error.message).to.include('match not the specification');
     });
 
-    it.only('loading a identity with the tag \'evan-digital-identity\' should be valid', async () => {
+    it('loading a identity with the tag \'evan-digital-identity\' should be valid', async () => {
       const identity = await DigitalIdentity.create(runtime, defaultConfig);
       const address = await identity.getContractAddress();
 
       // reset filled tags
       const isIdentityValid = await DigitalIdentity.isValidDigitalIdentity(runtime, address);
+      console.log(isIdentityValid)
 
       expect(isIdentityValid.valid).to.be.true;
-      expect(isIdentityValid.error).to.be.false;
+      expect(isIdentityValid.error).to.be.null;
     });
   });
 
@@ -338,18 +341,18 @@ describe('DigitalIdentity (name pending)', function() {
     });
   });
 
-  describe('when working with ENS', () => {
-    let ens;
-    before(async () => {
-      // get address for tests
-      ens = runtime.contractLoader.loadContract('AbstractENS', config.nameResolver.ensAddress);
-      const domainOwner = await executor.executeContractCall(
-        ens, 'owner', runtime.nameResolver.namehash(ownedDomain));
-      if (domainOwner === '0x0000000000000000000000000000000000000000') {
-        await runtime.nameResolver.claimAddress(ownedDomain, accounts[0]);
-      }
-    });
+  let ens;
+  before(async () => {
+    // get address for tests
+    ens = runtime.contractLoader.loadContract('AbstractENS', config.nameResolver.ensAddress);
+    const domainOwner = await executor.executeContractCall(
+      ens, 'owner', runtime.nameResolver.namehash(ownedDomain));
+    if (domainOwner === '0x0000000000000000000000000000000000000000') {
+      await runtime.nameResolver.claimAddress(ownedDomain, accounts[0]);
+    }
+  });
 
+  describe('when working with ENS', () => {
     it('can save contracts to ENS', async () => {
       const randomName = Math.floor(Math.random() * 1e12).toString(36);
       const address = `${randomName}.${ownedDomain}`;
@@ -376,7 +379,7 @@ describe('DigitalIdentity (name pending)', function() {
         'there.s.really.no.identity.evan');
 
       expect(isValidIdentity.valid).to.be.false;
-      expect(isValidIdentity.error).to.include('contract does not exists');
+      expect(isValidIdentity.error.message).to.include('contract does not exists');
     });
   });
 });
