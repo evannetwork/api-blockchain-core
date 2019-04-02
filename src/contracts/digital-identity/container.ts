@@ -28,7 +28,6 @@
 import * as Throttle from 'promise-parallel-throttle';
 import BigNumber from 'bignumber.js';
 import { Mutex } from 'async-mutex';
-
 import {
   ContractLoader,
   CryptoProvider,
@@ -44,6 +43,7 @@ import { Description } from '../../shared-description';
 import { NameResolver } from '../../name-resolver';
 import { RightsAndRoles, ModificationType, PropertyType } from '../rights-and-roles';
 import { Sharing } from '../sharing';
+import { Verifications } from '../../verifications/verifications';
 
 
 /**
@@ -54,12 +54,33 @@ export interface ContainerConfig {
   address?: string;
   description?: any;
   factoryAddress?: string;
-  mailTemplates?: {
-    share: {},
-    sendTemplate: {},
-  },
   origin?: Container;
   template?: string | ContainerTemplate;
+}
+
+/**
+ * options for Container constructor
+ */
+export interface ContainerOptions extends LoggerOptions {
+  contractLoader: ContractLoader;
+  cryptoProvider: CryptoProvider;
+  dataContract: DataContract;
+  description: Description;
+  executor: Executor;
+  nameResolver: NameResolver;
+  rightsAndRoles: RightsAndRoles;
+  sharing: Sharing;
+  verifications: Verifications;
+  web3: any;
+}
+
+/**
+ * config for sharing multiple fields to one account (read and/or readWrite access)
+ */
+export interface ContainerShareConfig {
+  accountId: string;
+  read?: string[];
+  readWrite?: string[];
 }
 
 /**
@@ -75,34 +96,22 @@ export interface ContainerTemplate {
  */
 export interface ContainerTemplateProperty {
   dataSchema: any;
-  permissions: ContainerRolePermissions;
+  permissions: { [id: number]: string[] };
   type: string;
   value?: string;
 }
 
-export interface ContainerRolePermissions {
-  [id: number]: string[];
-}
-
-export interface ContainerShareConfig {
-  account: string;
-  permissions: { [id: string]: ContainerRolePermissions };
-}
-
 /**
- * options for Container constructor
+ * data for verifications for containers
  */
-export interface ContainerOptions extends LoggerOptions {
-  contractLoader: ContractLoader;
-  cryptoProvider: CryptoProvider;
-  dataContract: DataContract;
-  description: Description;
-  executor: Executor;
-  nameResolver: NameResolver;
-  rightsAndRoles: RightsAndRoles;
-  sharing: Sharing;
-  web3: any;
-}
+export interface ContainerVerificationEntry {
+  subject: string;
+  topic: string;
+  descriptionDomain?: string;
+  disableSubverifications?: boolean;
+  expirationDate?: number;
+  verificationValue?: string;
+};
 
 
 /**
@@ -119,12 +128,12 @@ export class Container extends Logger {
       properties: {},
     },
   };
-  private static defaultFactoryAddress = 'container.factory.evan';
   private static defaultTemplate = 'metadata';
   private config: ContainerConfig;
   private contract: any;
   private mutexes: { [id: string]: Mutex; };
   private options: ContainerOptions;
+  private reservedRoles = 64;
 
   /**
    * apply template to data contract; this should be used with caution and is intended to only be
@@ -165,7 +174,8 @@ export class Container extends Logger {
           } else if (property.type === 'list') {
             propertyType = PropertyType.ListEntry;
           } else {
-            throw new Error(`invalid property type "${property.type}" for property "${propertyName}"`);
+            throw new Error(`invalid property type "${property.type}" ` +
+              `for property "${propertyName}"`);
           }
           let modificationType: ModificationType;
           if (modification === 'set') {
@@ -173,7 +183,8 @@ export class Container extends Logger {
           } else if (modification === 'remove') {
             modificationType = ModificationType.Remove;
           } else {
-            throw new Error(`invalid modification "${modification}" for property "${propertyName}"`);
+            throw new Error(`invalid modification "${modification}" ` +
+              `for property "${propertyName}"`);
           }
           // allow setting this field; if value is specified, add value AFTER this
           permissionTasks.push(async () => {
@@ -232,7 +243,7 @@ export class Container extends Logger {
       config: ContainerConfig,
       source: Container,
       copyValues = false,
-      ): Promise<Container> {
+  ): Promise<Container> {
     const template = await source.toTemplate(copyValues);
     return Container.create(options, { ...config, template });
   }
@@ -243,8 +254,8 @@ export class Container extends Logger {
    * @param      {ContainerOptions}  options  runtime for new `Container`
    * @param      {ContainerConfig}   config   config for new container
    */
-  public static async create(options: ContainerOptions, config: ContainerConfig):
-      Promise<Container> {
+  public static async create(options: ContainerOptions, config: ContainerConfig
+  ): Promise<Container> {
     Container.checkConfigProperties(config, ['description']);
     const instanceConfig = JSON.parse(JSON.stringify(config));
 
@@ -262,16 +273,25 @@ export class Container extends Logger {
 
     // create contract
     const contract = await options.dataContract.create(
-      instanceConfig.factoryAddress || Container.defaultFactoryAddress,
+      instanceConfig.factoryAddress ||
+        options.nameResolver.getDomainName(options.nameResolver.config.domains.containerFactory),
       instanceConfig.accountId,
       null,
       envelope,
     );
-    instanceConfig.address = contract.options.address;
+    const contractId = contract.options.address;
+    instanceConfig.address = contractId;
+
+    // set description to contract
+    await options.description.setDescription(contractId, envelope, instanceConfig.accountId);
+
+    // create identity for index and write it to description
+    await options.verifications.createIdentity(config.accountId, contractId);
 
     const container = new Container(options, instanceConfig);
     await container.ensureContract();
 
+    // write values from template to new contract
     await Container.applyTemplate(options, instanceConfig, container);
 
     return container;
@@ -282,7 +302,7 @@ export class Container extends Logger {
    *
    * @param      {any}  properties  properties object from template
    */
-  public static toJsonSchema(properties: any) {
+  public static toJsonSchema(properties: any): any {
     const jsonSchema = {};
 
     for (let field of Object.keys(properties)) {
@@ -315,9 +335,41 @@ export class Container extends Logger {
     await this.ensureContract();
     await this.ensurePermissionOnField(listName, 'list');
     await this.ensureKeyInSharing(listName);
-    await this.options.dataContract.addListEntries(
-      this.contract, listName, values, this.config.accountId);
+    await this.wrapPromise(
+      'add list entries to contract',
+      this.options.dataContract.addListEntries(
+        this.contract, listName, values, this.config.accountId),
+    );
     await this.ensureTypeInSchema(listName, values);
+  }
+
+  /**
+   * add verifications to this container; this will also add verifications to contract description
+   *
+   * @param      {ContainerVerificationEntry[]}  verifications  list of verifications to add
+   */
+  public async addVerifications(verifications: ContainerVerificationEntry[]): Promise<void> {
+    await this.ensureContract();
+    await Throttle.all(verifications.map(verification => async () =>
+      this.options.verifications.setVerification(
+        this.config.accountId,
+        this.contract.options.address,
+        verification.topic,
+        verification.expirationDate,
+        verification.verificationValue,
+        verification.descriptionDomain,
+        verification.disableSubverifications,
+    )));
+    const verificationTags = verifications.map(verification => `verification:${verification.topic}`);
+    await this.getMutex('description').runExclusive(async () => {
+      const description = await this.getDescription();
+      const oldTags = description.tags || [];
+      const toAdd = verificationTags.filter(tag => !oldTags.includes(tag));
+      if (toAdd.length) {
+        description.tags = oldTags.concat(toAdd);
+        await this.setDescription(description);
+      }
+    });
   }
 
   /**
@@ -357,7 +409,10 @@ export class Container extends Logger {
    */
   public async getEntry(entryName: string): Promise<any> {
     await this.ensureContract();
-    return this.options.dataContract.getEntry(this.contract, entryName, this.config.accountId);
+    return this.wrapPromise(
+      'get entry',
+      this.options.dataContract.getEntry(this.contract, entryName, this.config.accountId),
+    );
   }
 
   /**
@@ -370,11 +425,14 @@ export class Container extends Logger {
    * @param      {number}   offset    skip this many entries
    * @param      {boolean}  reverse   if true, fetches last items first
    */
-  public async getListEntries(listName: string, count = 10, offset = 0, reverse = false):
-      Promise<any[]> {
+  public async getListEntries(listName: string, count = 10, offset = 0, reverse = false
+  ): Promise<any[]> {
     await this.ensureContract();
-    return this.options.dataContract.getListEntries(
-      this.contract, listName, this.config.accountId, true, true, count, offset, reverse);
+    return this.wrapPromise(
+      'get list entries',
+      this.options.dataContract.getListEntries(
+        this.contract, listName, this.config.accountId, true, true, count, offset, reverse),
+    );
   }
 
   /**
@@ -385,8 +443,10 @@ export class Container extends Logger {
    */
   public async getListEntry(listName: string, index: number): Promise<any> {
     await this.ensureContract();
-    return this.options.dataContract.getListEntry(
-      this.contract, listName, index, this.config.accountId);
+    return this.wrapPromise(
+      'get list entry',
+      this.options.dataContract.getListEntry(this.contract, listName, index, this.config.accountId),
+    );
   }
 
   /**
@@ -396,7 +456,28 @@ export class Container extends Logger {
    */
   public async getListEntryCount(listName: string): Promise<number> {
     await this.ensureContract();
-    return this.options.dataContract.getListEntryCount(this.contract, listName);
+    return this.wrapPromise(
+      'get list entry count',
+      this.options.dataContract.getListEntryCount(this.contract, listName),
+    );
+  }
+
+  /**
+   * gets verifications from description and fetches list of verifications for each of them
+   */
+  public async getVerifications(): Promise<any[]> {
+    await this.ensureContract();
+    const description = await this.getDescription();
+    const tags = description.tags || [];
+    return Throttle.all(tags
+      .filter(tag => tag.startsWith('verification:'))
+      .map(tag => tag.substr(13))
+      .map(topic => async () => this.options.verifications.getVerifications(
+        description.identity,
+        topic,
+        true,
+      ))
+    );
   }
 
   /**
@@ -407,11 +488,14 @@ export class Container extends Logger {
    */
   public async removeListEntry(listName: string, entryIndex: number): Promise<void> {
     await this.ensureContract();
-    await this.options.dataContract.removeListEntry(
-      this.contract,
-      listName,
-      entryIndex,
-      this.config.accountId,
+    this.wrapPromise(
+      'remove list entry',
+      this.options.dataContract.removeListEntry(
+        this.contract,
+        listName,
+        entryIndex,
+        this.config.accountId,
+      ),
     );
   }
 
@@ -422,8 +506,11 @@ export class Container extends Logger {
    */
   public async setDescription(description: any): Promise<void> {
     await this.ensureContract();
-    await this.options.description.setDescription(
-      this.contract.options.address, { public: description }, this.config.accountId);
+    await this.wrapPromise(
+      'set description',
+      this.options.description.setDescription(
+        this.contract.options.address, { public: description }, this.config.accountId),
+    );
   }
 
   /**
@@ -436,130 +523,144 @@ export class Container extends Logger {
     await this.ensureContract();
     await this.ensurePermissionOnField(entryName, 'entry');
     await this.ensureKeyInSharing(entryName);
+    await this.wrapPromise(
+      'set entry',
+      this.options.dataContract.setEntry(this.contract, entryName, value, this.config.accountId),
+    );
     await this.ensureTypeInSchema(entryName, value);
-    await this.options.dataContract.setEntry(this.contract, entryName, value, this.config.accountId);
   }
 
   /**
-   * share entry/list/mapping, send bmail if template is set, otherwise just set property
+   * share entry/list to another user; this handles role permissions, role memberships
    *
    * @param      {ContainerShareConfig[]}  shareConfigs  list of share configs
    */
   public async shareProperties(shareConfigs: ContainerShareConfig[]): Promise<void> {
+    await this.ensureContract();
+    ///////////////////////////////////////////////////////////////////////////// check requirements
+    // check ownership
     const authority = this.options.contractLoader.loadContract(
       'DSRolesPerContract',
       await this.options.executor.executeContractCall(this.contract, 'authority'),
     );
+    if (!await this.options.executor.executeContractCall(
+        authority, 'hasUserRole', this.config.accountId, 0)) {
+      throw new Error(`current account "${this.config.accountId}" is unable to share properties, ` +
+        `as it isn't owner of the underlying contract "${this.contract.options.address}"`);
+    }
+
+    // check fields
     const { properties: schemaProperties } = await this.toTemplate(false);
-    const propertyGroups = shareConfigs.map(shareConfig => Object.keys(shareConfig.permissions));
-    const sharedProperties = Array.from(new Set([].concat(...propertyGroups)));
-    const missingProperties = sharedProperties.filter(property => !schemaProperties.hasOwnProperty(property));
+    const sharedProperties = Array.from(
+      new Set([].concat(...shareConfigs.map(shareConfig => [].concat(
+        shareConfig.read, shareConfig.readWrite)))))
+      .filter(property => property !== undefined);
+    const missingProperties = sharedProperties
+      .filter(property => !schemaProperties.hasOwnProperty(property));
     if (missingProperties.length) {
       throw new Error(
         `tried to share properties, but missing one or more in schema: ${missingProperties}`);
     }
     // for all share configs
-    for (let { account, permissions: permissionsToShare } of shareConfigs) {
-      const permissions = JSON.parse(JSON.stringify(permissionsToShare));
-      // add type to permissions
-      if (!permissions.type) {
-        permissions.type = {};
-      }
-      // ensure that account is member in contract
-      if (! await this.options.executor.executeContractCall(this.contract, 'isConsumer', account)) {
+    for (let { accountId, read = [], readWrite = [] } of shareConfigs) {
+      //////////////////////////////////////////////////// ensure that account is member in contract
+      if (! await this.options.executor.executeContractCall(
+          this.contract, 'isConsumer', accountId)) {
         await this.options.dataContract.inviteToContract(
-          null, this.contract.options.address, this.config.accountId, account);
+          null, this.contract.options.address, this.config.accountId, accountId);
       }
-      // for all properties in a share config
-      for (let property of Object.keys(permissions)) {
-        // for all roles on this property
-        for (let roleString of Object.keys(permissions[property])) {
-          const role = parseInt(roleString, 10);
-          // ensure that account has role
-          const hasRole = await this.options.executor.executeContractCall(
-            authority, 'hasUserRole', account, role);
-          if (!hasRole) {
-            await this.options.rightsAndRoles.addAccountToRole(
-              this.contract, this.config.accountId, account, role);
+
+      ///////////////////////////////////////////////////////// ensure property roles and membership
+      // share type every time as it is mandatory
+      if (!read.includes('type')) {
+        read.push('type');
+      }
+      // ensure that roles for fields exist and that accounts have permissions
+      for (let property of readWrite) {
+        // get permissions from contract
+        const hash = this.getOperationHash(property, schemaProperties[property].type, 'set');
+        const rolesMap = await this.options.executor.executeContractCall(
+          authority,
+          'getOperationCapabilityRoles',
+          '0x0000000000000000000000000000000000000000',
+          hash,
+        );
+        const binary = (new BigNumber(rolesMap)).toString(2);
+        // search for role with permissions
+        let permittedRole = [...binary].reverse().join('').indexOf('1');
+        if (permittedRole < this.reservedRoles) {
+          // if not found or included in reserved roles, add new role
+          const roleCount = await this.options.executor.executeContractCall(authority, 'roleCount');
+          if (roleCount >= 256) {
+            throw new Error(`could not share property "${property}", maximum role count reached`);
           }
-          // for all opertions on this property
-          for (let operation of permissions[property][role]) {
-            const hash = this.getOperationHash(property, schemaProperties[property].type, operation);
-            const rolesMap = await this.options.executor.executeContractCall(
-              authority,
-              'getOperationCapabilityRoles',
-              '0x0000000000000000000000000000000000000000',
-              hash,
-            );
-            // convert to binary number string to check flags
-            // each bitmask flag is a 1 or 0 for a role in the string,
-            // so iterate over string and check for each position / role
-            const binary = (new BigNumber(rolesMap)).toString(2);
-            if (binary.length <= role || binary[binary.length - 1 - role] === '0') {
-              // bit mask flag for role isn't set, so add permissions for this role
-              await this.options.rightsAndRoles.setOperationPermission(
-                this.contract,
-                this.config.accountId,
-                role,
-                property,
-                schemaProperties[property].type === 'list' ? PropertyType.ListEntry : PropertyType.Entry,
-                operation === 'remove' ? ModificationType.Remove : ModificationType.Set,
-                true,
-              );
-            }
-          }
+          permittedRole = Math.max(this.reservedRoles, roleCount);
+          await this.options.rightsAndRoles.setOperationPermission(
+            authority,
+            this.config.accountId,
+            permittedRole,
+            property,
+            schemaProperties[property].type === 'list' ? PropertyType.ListEntry : PropertyType.Entry,
+            ModificationType.Set,
+            true,
+          );
+        }
+
+        // ensure that account has role
+        const hasRole = await this.options.executor.executeContractCall(
+          authority, 'hasUserRole', accountId, permittedRole);
+        if (!hasRole) {
+          await this.options.rightsAndRoles.addAccountToRole(
+            this.contract, this.config.accountId, accountId, permittedRole);
         }
       }
 
-      // checkout sharings
-      const sharings = await this.options.sharing.getSharingsFromContract(this.contract);
+      //////////////////////////////////////////////////////// ensure encryption keys for properties
+      // run with mutex to prevent breaking sharing info
+      await this.getMutex('sharing').runExclusive(async () => {
+        // checkout sharings
+        const sharings = await this.options.sharing.getSharingsFromContract(this.contract);
 
-      // check if account already has a hash key
-      const sha3 = (...args) => this.options.nameResolver.soliditySha3(...args);
-      const isShared = (section, block?) => {
-        if (!sharings[sha3(account)] ||
-            !sharings[sha3(account)][sha3(section)] ||
-            (typeof block !== 'undefined' && !sharings[sha3(account)][sha3(section)][block])) {
-          return false;
-        }
-        return true;
-      };
-      let modified = false;
-      if (!isShared('*', 'hashKey')) {
-        const hashKeyToShare = await this.options.sharing.getHashKey(
-          this.contract.options.address, this.config.accountId);
-        await this.options.sharing.extendSharings(
-          sharings, this.config.accountId, account, '*', 'hashKey', hashKeyToShare, null);
-        modified = true;
-      }
-
-      // ensure that target user has sharings for properties
-      const blockNr = await this.options.web3.eth.getBlockNumber();
-      for (let sharedProperty of Object.keys(permissions)) {
-        if (!isShared(sharedProperty)) {
-          // get key
-          const contentKey = await this.options.sharing.getKey(
-            this.contract.options.address, this.config.accountId, sharedProperty, blockNr);
-          // share this key
+        // check if account already has a hash key
+        const sha3 = (...args) => this.options.nameResolver.soliditySha3(...args);
+        const isShared = (section, block?) => {
+          if (!sharings[sha3(accountId)] ||
+              !sharings[sha3(accountId)][sha3(section)] ||
+              (typeof block !== 'undefined' && !sharings[sha3(accountId)][sha3(section)][block])) {
+            return false;
+          }
+          return true;
+        };
+        let modified = false;
+        if (!isShared('*', 'hashKey')) {
+          const hashKeyToShare = await this.options.sharing.getHashKey(
+            this.contract.options.address, this.config.accountId);
           await this.options.sharing.extendSharings(
-            sharings, this.config.accountId, account, sharedProperty, 0, contentKey);
+            sharings, this.config.accountId, accountId, '*', 'hashKey', hashKeyToShare, null);
           modified = true;
         }
-      }
-      if (modified) {
-        // store sharings
-        await this.options.sharing.saveSharingsToContract(this.contract.options.address, sharings, this.config.accountId);
-      }
-    }
-  }
 
-  /**
-   * convert contract to template and share it via bmail
-   *
-   * @param      {string[]}  recipients  bmail recipients
-   */
-  public async shareTemplate(recipients: string[]): Promise<void> {
-    throw new Error('not implemented');
+        // ensure that target user has sharings for properties
+        const blockNr = await this.options.web3.eth.getBlockNumber();
+        // share keys for read and readWrite
+        for (let property of [...read, ...readWrite]) {
+          if (!isShared(property)) {
+            // get key
+            const contentKey = await this.options.sharing.getKey(
+              this.contract.options.address, this.config.accountId, property, blockNr);
+            // share this key
+            await this.options.sharing.extendSharings(
+              sharings, this.config.accountId, accountId, property, 0, contentKey);
+            modified = true;
+          }
+        }
+        if (modified) {
+          // store sharings
+          await this.options.sharing.saveSharingsToContract(
+            this.contract.options.address, sharings, this.config.accountId);
+        }
+      });
+    }
   }
 
   /**
@@ -568,6 +669,7 @@ export class Container extends Logger {
    * @param      {boolean}  getValues  export entries or not (list entries are always excluded)
    */
   public async toTemplate(getValues = false): Promise<ContainerTemplate> {
+    await this.ensureContract();
     // create empty template
     const template: Partial<ContainerTemplate> = {
       properties: {},
@@ -617,7 +719,7 @@ export class Container extends Logger {
    *                               recursion
    * @return     {any}    ajv schema
    */
-  private deriveSchema(value, visited = []): any {
+  private deriveSchema(value: any, visited: any = []): any {
     if (visited.includes(value)) {
       throw new Error('could not derive type of value; cyclic references detected');
     }
@@ -638,7 +740,12 @@ export class Container extends Logger {
     return schema;
   }
 
-  private async ensureKeyInSharing(entryName): Promise<void> {
+  /**
+   * ensure that current account has a key for given entry in sharings
+   *
+   * @param      {string}  entryName  name of an entry to ensure a key for
+   */
+  private async ensureKeyInSharing(entryName: string): Promise<void> {
     let key = await this.options.sharing.getKey(
       this.contract.options.address, this.config.accountId, entryName);
     if (!key) {
@@ -663,7 +770,7 @@ export class Container extends Logger {
    * ensure, that current user has permission to set values on given property; note that this
    * function is for internal use in `Container` and skips a check to verify, that given account is
    * in specified role; used out of context, this may check check if an account has permissions on a
-   * field and add then adds this account to an unrelated group, therefore not granting permissions
+   * field and add then adds this account to an unrelated role, therefore not granting permissions
    * on checked field
    *
    * @param      {string}  name       name of the property to ensure permission for
@@ -673,7 +780,11 @@ export class Container extends Logger {
    * @param      {number}  role       (optional) role id, defaults to 0
    */
   private async ensurePermissionOnField(
-      name: string, type: string, accountId = this.config.accountId, role = 0): Promise<void> {
+    name: string,
+    type: string,
+    accountId = this.config.accountId,
+    role = 0,
+  ): Promise<void> {
     // ensure entry is writable by current account
     const authority = this.options.contractLoader.loadContract(
       'DSRolesPerContract',
@@ -764,8 +875,8 @@ export class Container extends Logger {
    * @param      {string}  property           property name
    * @param      {string}  type               'entry' or 'list'
    */
-  private async getRolePermission(authorityContract: any, property: string, type: string):
-      Promise<any> {
+  private async getRolePermission(authorityContract: any, property: string, type: string
+  ): Promise<any> {
     const permissions = {};
     for (let operation of ['set', 'remove']) {
       const rolesMap = await this.options.executor.executeContractCall(
@@ -774,7 +885,7 @@ export class Container extends Logger {
         this.config.address,
         this.getOperationHash(property, type, operation),
       );
-      // iterates over all roles and checks which groups are included
+      // iterates over all roles and checks which roles are included
       const checkNumber = (bnum) => {
         const results = [];
         let bn = new BigNumber(bnum);
@@ -799,5 +910,19 @@ export class Container extends Logger {
       });
     }
     return permissions;
+  }
+
+  /**
+   * wrap try, catch around promise and throw error with message if rejected
+   *
+   * @param      {string}      task     name of a task, is inlcuded in error message
+   * @param      {Promise<any>}  promise  promise to await
+   */
+  private async wrapPromise(task: string, promise: Promise<any>): Promise<any> {
+    try {
+      return await promise;
+    } catch (ex) {
+      throw new Error(`could not ${task}; ${ex.message || ex}`);
+    }
   }
 }

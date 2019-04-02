@@ -26,30 +26,27 @@
 */
 
 import 'mocha';
-import { expect, use } from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
-
+import { expect, use } from 'chai';
 import {
   Executor,
   Ipfs,
 } from '@evan.network/dbcp';
 
+import { Container, ContainerConfig } from './container';
+import { TestUtils } from '../../test/test-utils';
 import { accounts } from '../../test/accounts';
 import { config } from '../../config';
-import { TestUtils } from '../../test/test-utils';
-import {
-  ContainerConfig,
-} from './container';
 import {
   DigitalIdentity,
   DigitalIdentityConfig,
+  DigitalIdentityEntryType,
   DigitalIdentityOptions,
-  EntryType,
-  VerificationEntry,
+  DigitalIdentityVerificationEntry,
 } from './digital-identity';
 
-use(chaiAsPromised);
 
+use(chaiAsPromised);
 
 const ownedDomain = 'identitytest.fifs.registrar.test.evan';
 
@@ -80,27 +77,24 @@ describe('DigitalIdentity (name pending)', function() {
     executor = await TestUtils.getExecutor(web3);
     runtime = {
       contractLoader: await TestUtils.getContractLoader(web3),
+      cryptoProvider: await TestUtils.getCryptoProvider(),
       dataContract: await TestUtils.getDataContract(web3, dfs),
       description: await TestUtils.getDescription(web3, dfs),
-      dfs,
       executor,
       nameResolver: await TestUtils.getNameResolver(web3),
       rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
+      sharing: await TestUtils.getSharing(web3, dfs),
       verifications: await TestUtils.getVerifications(web3, dfs),
       web3,
     };
     runtime.executor.eventHub = await TestUtils.getEventHub(web3);
     defaultConfig = {
       accountId: accounts[0],
-      description,
       containerConfig: {
         accountId: accounts[0],
         description: containerDescription,
-        mailTemplates: {
-          share: {},
-          sendTemplate: {},
-        },
       },
+      description,
     };
     // create factory for test
     const factory = await executor.createContract('IndexContractFactory', [], { from: accounts[0], gas: 3e6 });
@@ -151,13 +145,13 @@ describe('DigitalIdentity (name pending)', function() {
     describe('when performing basic set/get operations', () => {
       it('can add entries to index', async () => {
         const identity = await DigitalIdentity.create(runtime, defaultConfig);
-        await identity.setEntry('sample', TestUtils.getRandomBytes32(), EntryType.Hash);
+        await identity.setEntry('sample', TestUtils.getRandomBytes32(), DigitalIdentityEntryType.Hash);
       });
 
       it('can get entries from index', async () => {
         const identity = await DigitalIdentity.create(runtime, defaultConfig);
         const value = TestUtils.getRandomBytes32();
-        await identity.setEntry('sample', value, EntryType.Hash);
+        await identity.setEntry('sample', value, DigitalIdentityEntryType.Hash);
         const result = await identity.getEntry('sample');
         expect(result.value).to.eq(value);
       });
@@ -165,19 +159,19 @@ describe('DigitalIdentity (name pending)', function() {
       it('can set and get bytes32 values', async () => {
         const identity = await DigitalIdentity.create(runtime, defaultConfig);
         const value = TestUtils.getRandomBytes32();
-        await identity.setEntry('sample', value, EntryType.Hash);
+        await identity.setEntry('sample', value, DigitalIdentityEntryType.Hash);
         const result = await identity.getEntry('sample');
         expect(result.value).to.eq(value);
-        expect(result.entryType).to.eq(EntryType.Hash);
+        expect(result.entryType).to.eq(DigitalIdentityEntryType.Hash);
       });
 
       it('can set and get address values', async () => {
         const identity = await DigitalIdentity.create(runtime, defaultConfig);
         const value = TestUtils.getRandomAddress();
-        await identity.setEntry('sample', value, EntryType.GenericContract);
+        await identity.setEntry('sample', value, DigitalIdentityEntryType.GenericContract);
         const result = await identity.getEntry('sample');
         expect(result.value).to.eq(value);
-        expect(result.entryType).to.eq(EntryType.GenericContract);
+        expect(result.entryType).to.eq(DigitalIdentityEntryType.GenericContract);
       });
 
       it('can get multiple entries from index', async () => {
@@ -185,7 +179,7 @@ describe('DigitalIdentity (name pending)', function() {
         for (let i = 0; i < 3; i++) {
           samples['sample ' + i.toString().padStart(2, '0')] = {
             value: TestUtils.getRandomBytes32().replace(/.{4}$/, i.toString().padStart(4, '0')),
-            entryType: EntryType.Hash,
+            entryType: DigitalIdentityEntryType.Hash,
           }
         };
         const identity = await DigitalIdentity.create(runtime, defaultConfig);
@@ -211,7 +205,7 @@ describe('DigitalIdentity (name pending)', function() {
         for (let i = 0; i < entryCount; i++) {
           samples['sample ' + i.toString().padStart(2, '0')] = {
             value: TestUtils.getRandomBytes32().replace(/.{4}$/, i.toString().padStart(4, '0')),
-            entryType: EntryType.Hash,
+            entryType: DigitalIdentityEntryType.Hash,
           }
         };
         const identity = await DigitalIdentity.create(runtime, defaultConfig);
@@ -254,17 +248,17 @@ describe('DigitalIdentity (name pending)', function() {
         const tireAddress = await tire.getContractAddress();
 
         const container = TestUtils.getRandomAddress();
-        await tire.setEntry('metadata', container, EntryType.GenericContract);
-        await car.setEntry('tire', await tire.getContractAddress(), EntryType.IndexContract);
+        await tire.setEntry('metadata', container, DigitalIdentityEntryType.GenericContract);
+        await car.setEntry('tire', await tire.getContractAddress(), DigitalIdentityEntryType.IndexContract);
 
         const otherIdentity = await car.getEntry('tire');
         expect(otherIdentity.raw.value).to.eq(`0x000000000000000000000000${tireAddress.substr(2).toLowerCase()}`);
-        expect(otherIdentity.entryType).to.eq(EntryType.IndexContract);
+        expect(otherIdentity.entryType).to.eq(DigitalIdentityEntryType.IndexContract);
         expect(await otherIdentity.value.getContractAddress()).to.eq(tireAddress);
 
         const entry = await car.getEntry('tire/metadata');
         expect(entry.value).to.eq(container);
-        expect(entry.entryType).to.eq(EntryType.GenericContract);
+        expect(entry.entryType).to.eq(DigitalIdentityEntryType.GenericContract);
       });
 
       it('can link three identities and fetch properties via entry path navigtion', async () => {
@@ -277,23 +271,23 @@ describe('DigitalIdentity (name pending)', function() {
         const screwAddress = await screw.getContractAddress();
 
         const container = TestUtils.getRandomAddress();
-        await screw.setEntry('metadata', container, EntryType.GenericContract);
-        await car.setEntry('tire', tireAddress, EntryType.IndexContract);
-        await tire.setEntry('screw', screwAddress, EntryType.IndexContract);
+        await screw.setEntry('metadata', container, DigitalIdentityEntryType.GenericContract);
+        await car.setEntry('tire', tireAddress, DigitalIdentityEntryType.IndexContract);
+        await tire.setEntry('screw', screwAddress, DigitalIdentityEntryType.IndexContract);
 
         const otherIdentity1 = await car.getEntry('tire');
         expect(otherIdentity1.raw.value).to.eq(`0x000000000000000000000000${tireAddress.substr(2).toLowerCase()}`);
-        expect(otherIdentity1.entryType).to.eq(EntryType.IndexContract);
+        expect(otherIdentity1.entryType).to.eq(DigitalIdentityEntryType.IndexContract);
         expect(await otherIdentity1.value.getContractAddress()).to.eq(tireAddress);
 
         const otherIdentity2 = await car.getEntry('tire/screw');
         expect(otherIdentity2.raw.value).to.eq(`0x000000000000000000000000${screwAddress.substr(2).toLowerCase()}`);
-        expect(otherIdentity2.entryType).to.eq(EntryType.IndexContract);
+        expect(otherIdentity2.entryType).to.eq(DigitalIdentityEntryType.IndexContract);
         expect(await otherIdentity2.value.getContractAddress()).to.eq(screwAddress);
 
         const entry = await car.getEntry('tire/screw/metadata');
         expect(entry.value).to.eq(container);
-        expect(entry.entryType).to.eq(EntryType.GenericContract);
+        expect(entry.entryType).to.eq(DigitalIdentityEntryType.GenericContract);
       });
     });
 
@@ -303,14 +297,29 @@ describe('DigitalIdentity (name pending)', function() {
           'ContainerDataContractFactory', [], { from: accounts[0], gas: 6e6 });
         defaultConfig.containerConfig.factoryAddress = factory.options.address;
       });
+
       it('creates new containers automatically', async() => {
         const identity = await DigitalIdentity.create(runtime, defaultConfig);
-        const newContainer = await identity.createContainer('myMetadata', { template: 'metadata' });
+        const customTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
+        customTemplate.properties.type = {
+          dataSchema: { type: 'string' },
+          permissions: { 0: ['set'] },
+          type: 'entry',
+          value: 'customTemplate',
+        };
+        const containers = await identity.createContainers({
+          entry1: { template: 'metadata' },
+          entry2: { template: customTemplate },
+        });
         // new container has type property (default)
-        expect(await newContainer.getEntry('type')).to.eq('metadata');
-        // new container is linked to identity
-        const { value: fetchedContainer } = await identity.getEntry('myMetadata');
-        expect(await fetchedContainer.getEntry('type')).to.eq('metadata');
+        expect(await containers.entry1.getEntry('type')).to.eq('metadata');
+        expect(await containers.entry2.getEntry('type')).to.eq('customTemplate');
+        // new containers are linked to identity
+        let entry;
+        entry = await identity.getEntry('entry1');
+        expect(await entry.value.getEntry('type')).to.eq('metadata');
+        entry = await identity.getEntry('entry2');
+        expect(await entry.value.getEntry('type')).to.eq('customTemplate');
       });
     });
   });
@@ -318,9 +327,8 @@ describe('DigitalIdentity (name pending)', function() {
   describe('when working with verifications', () => {
     it('can set verifications to identity', async () => {
       const identity = await DigitalIdentity.create(runtime, defaultConfig);
-      const verifications: VerificationEntry[] = [...Array(3)].map((_, i) => (<VerificationEntry> {
-        topic: `verifcation_${i}`,
-      }));
+      const verifications: DigitalIdentityVerificationEntry[] = [...Array(3)].map(
+        (_, i) => (<DigitalIdentityVerificationEntry> { topic: `verifcation_${i}` }));
       await identity.addVerifications(verifications);
       const verificationsResults = await identity.getVerifications();
       expect(verificationsResults.length).to.eq(3);

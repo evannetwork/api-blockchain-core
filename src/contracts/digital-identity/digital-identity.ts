@@ -26,7 +26,6 @@
 */
 
 import * as Throttle from 'promise-parallel-throttle';
-
 import {
   ContractLoader,
   DfsInterface,
@@ -44,39 +43,22 @@ import { RightsAndRoles } from '../rights-and-roles';
 import { Sharing } from '../sharing';
 import { Verifications } from '../../verifications/verifications';
 
-const defaultFactoryAddress = 'index.factory.evan';
 
 /**
  * possible entry types for entries in index
  */
-export enum EntryType {
+export enum DigitalIdentityEntryType {
   AccountId,
   GenericContract,
   IndexContract,
   ContainerContract,
   FileHash,
   Hash
-};
-
-export interface IndexEntries {
-  [id: string]: IndexEntry;
 }
 
-export interface IndexEntry {
-  raw?: any;
-  entryType?: EntryType;
-  value?: any;
-}
-
-export interface VerificationEntry {
-  subject: string;
-  topic: string;
-  descriptionDomain?: string;
-  disableSubverifications?: boolean;
-  expirationDate?: number;
-  verificationValue?: string;
-}
-
+/**
+ * config for digital identity
+ */
 export interface DigitalIdentityConfig {
   accountId: string;
   address?: string;
@@ -86,12 +68,31 @@ export interface DigitalIdentityConfig {
 }
 
 /**
- * options for DigitalIdentity constructor
+ * container for digital identity entry values
  */
-export interface DigitalIdentityOptions extends ContainerOptions {
-  dfs: DfsInterface;
-  verifications: Verifications;
+export interface DigitalIdentityIndexEntry {
+  entryType?: DigitalIdentityEntryType;
+  raw?: any;
+  value?: any;
 }
+
+/**
+ * data for verifications for digital identities
+ */
+export interface DigitalIdentityVerificationEntry {
+  subject: string;
+  topic: string;
+  descriptionDomain?: string;
+  disableSubverifications?: boolean;
+  expirationDate?: number;
+  verificationValue?: string;
+}
+
+/**
+ * options for DigitalIdentity constructor (uses same properties as ContainerOptions)
+ */
+export interface DigitalIdentityOptions extends ContainerOptions { }
+
 
 // empty address
 const nullAddress = '0x0000000000000000000000000000000000000000';
@@ -128,8 +129,10 @@ export class DigitalIdentity extends Logger {
    * @param      {DigitalIdentityOptions}  options  identity runtime options
    * @param      {DigitalIdentityConfig}   config   configuration for the new identity instance
    */
-  public static async create(options: DigitalIdentityOptions, config: DigitalIdentityConfig):
-      Promise<DigitalIdentity> {
+  public static async create(
+    options: DigitalIdentityOptions,
+    config: DigitalIdentityConfig,
+  ): Promise<DigitalIdentity> {
     DigitalIdentity.checkConfigProperties(config, ['description']);
     const instanceConfig = JSON.parse(JSON.stringify(config));
 
@@ -146,7 +149,9 @@ export class DigitalIdentity extends Logger {
       factoryAddress = instanceConfig.factoryAddress;
     } else {
       factoryAddress = await options.nameResolver.getAddress(
-        instanceConfig.factoryAddress || defaultFactoryAddress);
+        instanceConfig.factoryAddress ||
+        options.nameResolver.getDomainName(options.nameResolver.config.domains.indexFactory),
+      );
     }
     const factory = options.contractLoader.loadContract(
       'IndexContractFactory', factoryAddress);
@@ -222,9 +227,9 @@ export class DigitalIdentity extends Logger {
   /**
    * add verifications to this identity; this will also add verifications to contract description
    *
-   * @param      {VerificationEntry[]}  verifications  list of verifications to add
+   * @param      {DigitalIdentityVerificationEntry[]}  verifications  list of verifications to add
    */
-  public async addVerifications(verifications: VerificationEntry[]): Promise<void> {
+  public async addVerifications(verifications: DigitalIdentityVerificationEntry[]): Promise<void> {
     await this.ensureContract();
     await Throttle.all(verifications.map(verification => async () =>
       this.options.verifications.setVerification(
@@ -247,20 +252,22 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * create new `Container` instance and add it as entry to identity
+   * create new `Container` instances and add them as entry to identity
    *
-   * @param      {string}                    name              name of the entry
-   * @param      {Partial<ContainerConfig>}  containerOptions  properties for container config; will
-   *                                                           be merged with config defined in
-   *                                                           `config.containerConfig`
+   * @param      {{ [id: string]: Partial<ContainerConfig> }}  containers  object with containers to
+   *                                                                       create, name is used as
+   *                                                                       entry name in identity
    */
-  public async createContainer(name: string, containerOptions: Partial<ContainerConfig>):
-      Promise<Container> {
+  public async createContainers(containers: { [id: string]: Partial<ContainerConfig> }
+  ): Promise<{ [id: string]: Partial<Container> }> {
     await this.ensureContract();
-    const container = await Container.create(
-      this.options, { ...this.config.containerConfig, ...containerOptions });
-    await this.setEntry(name, container, EntryType.ContainerContract);
-    return container;
+    const result = {};
+    await Throttle.all(Object.keys(containers).map((name) => async () => {
+      result[name] = await Container.create(
+        this.options, { ...this.config.containerConfig, ...containers[name] });
+      await this.setEntry(name, result[name], DigitalIdentityEntryType.ContainerContract);
+    }));
+    return result;
   }
 
   /**
@@ -320,7 +327,7 @@ export class DigitalIdentity extends Logger {
   /**
    * get all entries from index contract
    */
-  public async getEntries(): Promise<IndexEntries> {
+  public async getEntries(): Promise<{[id: string]: DigitalIdentityIndexEntry}> {
     await this.ensureContract();
     // get all from contract
     let results = {};
@@ -355,10 +362,10 @@ export class DigitalIdentity extends Logger {
    *
    * @param      {string}  name    entry name
    */
-  public async getEntry(name: string): Promise<IndexEntry> {
+  public async getEntry(name: string): Promise<DigitalIdentityIndexEntry> {
     await this.ensureContract();
     const [ , firstKey, remainder ] = /([^/]+)(?:\/(.+))?/.exec(name);
-    const result: IndexEntry = {
+    const result: DigitalIdentityIndexEntry = {
       raw: await this.options.executor.executeContractCall(
         this.contract,
         'getEntry',
@@ -366,7 +373,7 @@ export class DigitalIdentity extends Logger {
       ),
     };
     this.processEntry(result);
-    if (remainder && result.entryType === EntryType.IndexContract) {
+    if (remainder && result.entryType === DigitalIdentityEntryType.IndexContract) {
       return result.value.getEntry(remainder);
     } else {
       return result;
@@ -392,11 +399,11 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * create description info, pass `true` to automatically upload it to ipfs
+   * create description info
    *
-   * @param      {any}  uploadToIpfs  upload description to ipfs
+   * @param      {any}  description  description to set (only `public` part)
    */
-  public async setDescription(description: any) {
+  public async setDescription(description: any): Promise<void> {
     await this.ensureContract();
 
     // ensure, that the evan digital identity tag is set
@@ -426,8 +433,11 @@ export class DigitalIdentity extends Logger {
    * @param      {string}  name    entry name
    * @param      {string}  value   value to set (address or bytes32 value)
    */
-  public async setEntry(name: string, value: string|Container, entryType: EntryType):
-      Promise<void> {
+  public async setEntry(
+    name: string,
+    value: string|Container,
+    entryType: DigitalIdentityEntryType,
+  ): Promise<void> {
     await this.ensureContract();
     // write value to contract
     let toSet;
@@ -452,21 +462,21 @@ export class DigitalIdentity extends Logger {
   /**
    * add type and value from raw value to entry
    *
-   * @param      {IndexEntry}  entry   The entry
+   * @param      {DigitalIdentityIndexEntry}  entry   The entry
    */
-  private processEntry(entry: IndexEntry) {
+  private processEntry(entry: DigitalIdentityIndexEntry): void {
     let address;
     entry.entryType = parseInt(entry.raw.entryType, 10);
     switch (entry.entryType) {
-        case EntryType.AccountId:
-        case EntryType.GenericContract:
+        case DigitalIdentityEntryType.AccountId:
+        case DigitalIdentityEntryType.GenericContract:
           entry.value = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
           break;
-        case EntryType.ContainerContract:
+        case DigitalIdentityEntryType.ContainerContract:
           address = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
           entry.value = new Container(this.options, { ...this.config.containerConfig, address });
           break;
-        case EntryType.IndexContract:
+        case DigitalIdentityEntryType.IndexContract:
           address = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
           entry.value = new DigitalIdentity(this.options, { ...this.config, address });
           break;
