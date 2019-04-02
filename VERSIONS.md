@@ -13,6 +13,7 @@
 - add support for type `array` in `data-contract` (if type is array, subproperty `.items` is used for list entry validation)
 - add support for templates to profile
 - add support to automatically add property to profile when storing properties
+- add support to check if an account can perform an operation to `RightsAndRoles`
 
 ### Fixes
 - fix `DataContract` `getEntry` to load unencrypted data, when no profile for the requesting account exists
