@@ -12,6 +12,7 @@ Contracts
     base-contract
     data-contract
     service-contract
+    container
 
 
 This section includes modules, that deal with smart contract interactions, which includes:
