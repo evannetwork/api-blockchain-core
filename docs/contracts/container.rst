@@ -46,7 +46,7 @@ Parameters
 #. ``options`` - ``ContainerOptions``: runtime for new container
     * ``contractLoader`` - |source contractLoader|_: |source contractLoader|_ instance
     * ``cryptoProvider`` - |source cryptoProvider|_: |source cryptoProvider|_ instance
-    * ``container`` - |source container|_: |source container|_ instance
+    * ``dataContract`` - |source dataContract|_: |source dataContract|_ instance
     * ``description`` - |source description|_: |source description|_ instance
     * ``executor`` - |source executor|_: |source executor|_ instance
     * ``nameResolver`` - |source nameResolver|_: |source nameResolver|_ instance
@@ -111,7 +111,7 @@ Parameters
 #. ``options`` - ``ContainerOptions``: runtime for new container
     * ``contractLoader`` - |source contractLoader|_: |source contractLoader|_ instance
     * ``cryptoProvider`` - |source cryptoProvider|_: |source cryptoProvider|_ instance
-    * ``container`` - |source container|_: |source container|_ instance
+    * ``dataContract`` - |source dataContract|_: |source dataContract|_ instance
     * ``description`` - |source description|_: |source description|_ instance
     * ``executor`` - |source executor|_: |source executor|_ instance
     * ``nameResolver`` - |source nameResolver|_: |source nameResolver|_ instance
@@ -190,7 +190,7 @@ Parameters
 #. ``options`` - ``ContainerOptions``: runtime for new container
     * ``contractLoader`` - |source contractLoader|_: |source contractLoader|_ instance
     * ``cryptoProvider`` - |source cryptoProvider|_: |source cryptoProvider|_ instance
-    * ``container`` - |source container|_: |source container|_ instance
+    * ``dataContract`` - |source dataContract|_: |source dataContract|_ instance
     * ``description`` - |source description|_: |source description|_ instance
     * ``executor`` - |source executor|_: |source executor|_ instance
     * ``nameResolver`` - |source nameResolver|_: |source nameResolver|_ instance
@@ -948,8 +948,8 @@ data for verifications for containers
 .. |source contractLoader| replace:: ``ContractLoader``
 .. _source contractLoader: ../contracts/contract-loader.html
 
-.. |source container| replace:: ``DataContract``
-.. _source container: ../contracts/container.html
+.. |source dataContract| replace:: ``DataContract``
+.. _source dataContract: ../contracts/data-contract.html
 
 .. |source cryptoProvider| replace:: ``CryptoProvider``
 .. _source cryptoProvider: /encryption/crypto-provider.html
