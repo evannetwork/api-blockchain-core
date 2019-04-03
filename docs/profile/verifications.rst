@@ -314,30 +314,30 @@ Example
   await verifications.setVerification(accounts[0], accounts[1], '/company');
   console.dir(await verifications.getVerifications(accounts[1], '/company'));
   // Output:
-  [{
-    creationDate: 1234567890,
-    data: '0x0000000000000000000000000000000000000000000000000000000000000000',
-    description: {
-      name: 'sample verification',
-      description: 'I\'m a sample verification',
-      author: 'evan.network',
-      version: '1.0.0',
-      dbcpVersion: 1,
-    },
-    expirationDate: 1234567890,
-    id: '0x0000000000000000000000000000000000000000000000000000000000000000',
-    issuer: '0x0000000000000000000000000000000000000001',
-    name: '/company',
-    rejectReason: {
-      "rejected": "rejection message"
-    },
-    signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
-    status: 0 (Issued) || 1 (Confirmed) || 2 (Rejected), 
-    subject: '0x0000000000000000000000000000000000000002',
-    uri: '',
-    signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
-    valid: true
-  }]
+  // [{
+  //   creationDate: 1234567890,
+  //   data: '0x0000000000000000000000000000000000000000000000000000000000000000',
+  //   description: {
+  //     name: 'sample verification',
+  //     description: 'I\'m a sample verification',
+  //     author: 'evan.network',
+  //     version: '1.0.0',
+  //     dbcpVersion: 1,
+  //   },
+  //   expirationDate: 1234567890,
+  //   id: '0x0000000000000000000000000000000000000000000000000000000000000000',
+  //   issuer: '0x0000000000000000000000000000000000000001',
+  //   name: '/company',
+  //   rejectReason: {
+  //     "rejected": "rejection message"
+  //   },
+  //   signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
+  //   status: 0 (Issued) || 1 (Confirmed) || 2 (Rejected), 
+  //   subject: '0x0000000000000000000000000000000000000002',
+  //   uri: '',
+  //   signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
+  //   valid: true
+  // }]
 
 --------------------------------------------------------------------------------
 getNestedVerifications
