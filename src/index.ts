@@ -69,7 +69,8 @@ export { Votings, MemberOptions, ProposalInfo, ProposalInfos, ProposalOptions, V
 export { Wallet } from './contracts/wallet';
 export { Container, ContainerConfig, ContainerTemplate, ContainerTemplateProperty,
   ContainerShareConfig, ContainerOptions } from './contracts/digital-identity/container';
-export { DigitalIdentity } from './contracts/digital-identity/digital-identity';
+export { DigitalIdentity, DigitalIdentityEntryType, DigitalIdentityConfig, DigitalIdentityIndexEntry,
+  DigitalIdentityVerificationEntry } from './contracts/digital-identity/digital-identity';
 
 /******** export this libraries to be able to build the blockchain-core into an umd bundle ********/
 import Web3 = require('web3');

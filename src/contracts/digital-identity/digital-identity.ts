@@ -151,7 +151,7 @@ export class DigitalIdentity extends Logger {
 
     // create contract
     let factoryAddress;
-    if (instanceConfig.factoryAddress.startsWith('0x')) {
+    if (instanceConfig.factoryAddress && instanceConfig.factoryAddress.startsWith('0x')) {
       factoryAddress = instanceConfig.factoryAddress;
     } else {
       factoryAddress = await options.nameResolver.getAddress(
@@ -195,11 +195,11 @@ export class DigitalIdentity extends Logger {
    * @param      {DigitalIdentityOptions}  options     identity runtime options
    * @param      {string}                  ensAddress  ens address that should be checked
    */
-  public static async isValidDigitalIdentity(
+  public static async getValidity(
     options: DigitalIdentityOptions,
     ensAddress: string,
-  ): Promise<{valid: boolean, error: Error}> {
-    let error = null, valid = false;
+  ): Promise<{valid: boolean, exists: boolean, error: Error}> {
+    let valid = false, exists = false, error = null;
 
     // create temporary identity instance, to ensure the contract
     const identityInstance = new DigitalIdentity(options, {
@@ -216,7 +216,12 @@ export class DigitalIdentity extends Logger {
       error = ex;
     }
 
-    return { valid, error };
+    // set exists parameter
+    if (!error || error.message.indexOf('contract does not exists') === -1) {
+      exists = true;
+    }
+
+    return { valid, error, exists };
   }
 
   /**

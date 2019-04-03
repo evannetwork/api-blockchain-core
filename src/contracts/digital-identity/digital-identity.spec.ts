@@ -125,22 +125,19 @@ describe('DigitalIdentity (name pending)', function() {
 
       // reset filled tags
       await runtime.description.setDescription(address, { public: customDescription }, accounts[0]);
-      const isIdentityValid = await DigitalIdentity.isValidDigitalIdentity(runtime, address);
+      const validity = await DigitalIdentity.getValidity(runtime, address);
 
-      expect(isIdentityValid.valid).to.be.false;
-      expect(isIdentityValid.error.message).to.include('match not the specification');
+      expect(validity.valid).to.be.false;
+      expect(validity.error.message).to.include('match not the specification');
     });
 
     it('loading a identity with the tag \'evan-digital-identity\' should be valid', async () => {
       const identity = await DigitalIdentity.create(runtime, defaultConfig);
       const address = await identity.getContractAddress();
+      const validity = await DigitalIdentity.getValidity(runtime, address);
 
-      // reset filled tags
-      const isIdentityValid = await DigitalIdentity.isValidDigitalIdentity(runtime, address);
-      console.log(isIdentityValid)
-
-      expect(isIdentityValid.valid).to.be.true;
-      expect(isIdentityValid.error).to.be.null;
+      expect(validity.valid).to.be.true;
+      expect(validity.error).to.be.null;
     });
   });
 
@@ -375,7 +372,7 @@ describe('DigitalIdentity (name pending)', function() {
     });
 
     it('loading an empty ens address should throw an error', async () => {
-      const isValidIdentity = await DigitalIdentity.isValidDigitalIdentity(runtime,
+      const isValidIdentity = await DigitalIdentity.getValidity(runtime,
         'there.s.really.no.identity.evan');
 
       expect(isValidIdentity.valid).to.be.false;

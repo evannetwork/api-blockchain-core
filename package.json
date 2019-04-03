@@ -26,7 +26,8 @@
     "small-request": "^2.1.0",
     "tweetnacl": "^1.0.1",
     "web3": "1.0.0-beta.37",
-    "web3-eth-abi": "1.0.0-beta.33"
+    "web3-eth-abi": "1.0.0-beta.33",
+    "xhr2": "^0.1.4"
   },
   "description": "blockchain interaction core library",
   "devDependencies": {
