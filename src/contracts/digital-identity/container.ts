@@ -153,84 +153,7 @@ export class Container extends Logger {
   private reservedRoles = 64;
 
   /**
-   * apply template to data contract; this should be used with caution and is intended to only be
-   * used on new contract (e.g. in `create` and `clone`)
-   *
-   * @param      {ContainerOptions}  options   runtime for new `Container`
-   * @param      {ContainerConfig}   config    config for new container
-   * @param      {any}               contract  `DataContract` instance
-   */
-  public static async applyTemplate(
-      options: ContainerOptions, config: ContainerConfig, container: Container): Promise<void> {
-    Container.checkConfigProperties(config, ['template']);
-    let tasks = [];
-    const template = typeof config.template === 'string' ?
-      Container.templates[config.template] :
-      config.template;
-
-    // add type property
-    const properties = JSON.parse(JSON.stringify(template.properties));
-    if (!properties.type) {
-      properties.type = {
-        dataSchema: { $id: 'type_schema', type: 'string' },
-        type: 'entry',
-        permissions: {
-          0: ['set']
-        },
-        value: template.type,
-      };
-    }
-    for (let propertyName of Object.keys(properties)) {
-      const property: ContainerTemplateProperty = properties[propertyName];
-      const permissionTasks = [];
-      for (let role of Object.keys(property.permissions)) {
-        for (let modification of property.permissions[role]) {
-          // allow setting this field; if value is specified, add value AFTER this
-          permissionTasks.push(async () => {
-            await options.rightsAndRoles.setOperationPermission(
-              container.contract.options.address,
-              config.accountId,
-              parseInt(role, 10),
-              propertyName,
-              Container.getPropertyType(property.type),
-              Container.getModificationType(modification),
-              true,
-            );
-          });
-        }
-      }
-      if (property.hasOwnProperty('value')) {
-        // if value has been defined, wait for permissions to be completed, then set value
-        tasks.push(async () => {
-          await Throttle.all(permissionTasks);
-          await container.setEntry(propertyName, property.value);
-        });
-      } else {
-        // if no value has been specified, flatten permission tasks and add to task list
-        tasks = tasks.concat(async () => Throttle.all(permissionTasks));
-      }
-    }
-    await Throttle.all(tasks);
-  }
-
-  /**
-   * check, that given subset of properties is present at config, collections missing properties and
-   * throws a single error
-   *
-   * @param      {ContainerConfig}  config      config for container instance
-   * @param      {string}           properties  list of property names, that should be present
-   */
-  public static checkConfigProperties(config: ContainerConfig, properties: string[]): void {
-    let missing = properties.filter(property => !config.hasOwnProperty(property));
-    if (missing.length === 1) {
-      throw new Error(`missing property in config: "${missing[0]}"`);
-    } else if (missing.length > 1) {
-      throw new Error(`missing properties in config: "${missing.join(', ')}"`);
-    }
-  }
-
-  /**
-   * clone `Container` instance into template and creates new `Container` with it
+   * Clone ``Container`` instance into template and creates new ``Container`` with it.
    *
    * @param      {ContainerOptions}  options  runtime for new `Container`
    * @param      {ContainerConfig}   config   config for new container
@@ -248,19 +171,21 @@ export class Container extends Logger {
   }
 
   /**
-   * create digital container contract
+   * Creates a new digital container contract on the blockchain.
    *
    * @param      {ContainerOptions}  options  runtime for new `Container`
    * @param      {ContainerConfig}   config   config for new container
    */
-  public static async create(options: ContainerOptions, config: ContainerConfig
+  public static async create(
+    options: ContainerOptions,
+    config: ContainerConfig,
   ): Promise<Container> {
-    Container.checkConfigProperties(config, ['description']);
+    checkConfigProperties(config, ['description']);
     const instanceConfig = JSON.parse(JSON.stringify(config));
 
     // convert template properties to jsonSchema
     if (instanceConfig.template.properties) {
-      instanceConfig.description.dataSchema = Container.toJsonSchema(instanceConfig.template.properties)
+      instanceConfig.description.dataSchema = toJsonSchema(instanceConfig.template.properties)
     }
 
     // check description values and upload it
@@ -291,52 +216,9 @@ export class Container extends Logger {
     await container.ensureContract();
 
     // write values from template to new contract
-    await Container.applyTemplate(options, instanceConfig, container);
+    await applyTemplate(options, instanceConfig, container);
 
     return container;
-  }
-
-  /**
-   * converts 'remove'/'set' to rights and roles enum type, throws if invalid
-   *
-   * @param      {string}            typeName  remove/set
-   * @return     {ModificationType}  enum value from `RightsAndRoles`
-   */
-  public static getModificationType(typeName: string): ModificationType {
-    switch (typeName) {
-      case 'remove': return ModificationType.Remove;
-      case 'set': return ModificationType.Set;
-      default: throw new Error(`unsupported modification type "${typeName}"`);
-    }
-  }
-
-  /**
-   * converts 'entry'/'list' to rights and roles enum type, throws if invalid
-   *
-   * @param      {string}        typeName  entry/list
-   * @return     {PropertyType}  enum value from `RightsAndRoles`
-   */
-  public static getPropertyType(typeName: string): PropertyType {
-    switch (typeName) {
-      case 'entry': return PropertyType.Entry;
-      case 'list': return PropertyType.ListEntry;
-      default: throw new Error(`unsupported property type type "${typeName}"`);
-    }
-  }
-
-  /**
-   * converts a properties object to a jsonSchema object
-   *
-   * @param      {any}  properties  properties object from template
-   */
-  public static toJsonSchema(properties: any): any {
-    const jsonSchema = {};
-
-    for (let field of Object.keys(properties)) {
-      jsonSchema[field] = { $id: `${field}_schema`, ...properties[field].dataSchema };
-    }
-
-    return jsonSchema;
   }
 
   /**
@@ -354,10 +236,16 @@ export class Container extends Logger {
   }
 
   /**
-   * add list entriesd
+   * Add list entries to a list list property.
    *
-   * @param      {stringstring}  listName  name of the list in the data contract
-   * @param      {any}           values    values to add
+   * List entries can be added in bulk, so the value argument is an array with values. This array
+   * can be arbitrarily large **up to a certain degree**. Values are inserted on the blockchain side
+   * and adding very large arrays this way may take more gas during the contract transaction, than
+   * may fit into a single transaction. If this is the case, values can be added in chunks (multiple
+   * transactions).
+   *
+   * @param      {string}  listName  name of the list in the data contract
+   * @param      {any}     values    values to add
    */
   public async addListEntries(listName: string, values: any[]): Promise<void> {
     await this.ensureContract();
@@ -372,10 +260,12 @@ export class Container extends Logger {
   }
 
   /**
-   * add verifications to this container; this will also add verifications to contract description
+   * Add verifications to this container; this will also add verifications to contract description.
+   * Due to the automatic expansion of the contract description, this function can only be called by
+   * the container owner.
    *
    * @param      {ContainerVerificationEntry[]}  verifications  list of verifications to add
-   */
+  */
   public async addVerifications(verifications: ContainerVerificationEntry[]): Promise<void> {
     await this.ensureContract();
     await Throttle.all(verifications.map(verification => async () =>
@@ -401,7 +291,7 @@ export class Container extends Logger {
   }
 
   /**
-   * get contract address of underlying DataContract
+   * Get contract address of underlying ``DataContract``.
    */
   public async getContractAddress(): Promise<string> {
     await this.ensureContract();
@@ -409,20 +299,7 @@ export class Container extends Logger {
   }
 
   /**
-   * check if container contract already has been loaded, load from address / ENS if required
-   */
-  public async ensureContract(): Promise<void> {
-    if (this.contract) {
-      return;
-    }
-    Container.checkConfigProperties(this.config, ['address']);
-    let address = this.config.address.startsWith('0x') ?
-      this.config.address : await this.options.nameResolver.getAddress(this.config.address);
-    this.contract = this.options.contractLoader.loadContract('DataContract', address)
-  }
-
-  /**
-   * get description from container contract
+   * Get description from container contract.
    */
   public async getDescription(): Promise<any> {
     await this.ensureContract();
@@ -431,9 +308,9 @@ export class Container extends Logger {
   }
 
   /**
-   * return entry from contract
+   * Return entry from contract.
    *
-   * @param      {string}  entryName  The entry name
+   * @param      {string}  entryName  entry name
    */
   public async getEntry(entryName: string): Promise<any> {
     await this.ensureContract();
@@ -444,7 +321,7 @@ export class Container extends Logger {
   }
 
   /**
-   * return list entries from contract. Note, that in the current implementation, this function
+   * Return list entries from contract. Note, that in the current implementation, this function
    * retrieves the entries one at a time and may take a longer time when querying large lists, so be
    * aware of that
    *
@@ -464,7 +341,7 @@ export class Container extends Logger {
   }
 
   /**
-   * return a single list entry from contract
+   * Return a single list entry from contract.
    *
    * @param      {string}  listName  name of a list in the container
    * @param      {number}  index     list entry id to retrieve
@@ -478,7 +355,8 @@ export class Container extends Logger {
   }
 
   /**
-   * return number of entries in the list
+   * Return number of entries in the list.
+   * Does not try to actually fetch and decrypt values, but just returns the count.
    *
    * @param      {string}  listName  name of a list in the container
    */
@@ -491,7 +369,7 @@ export class Container extends Logger {
   }
 
   /**
-   * gets verifications from description and fetches list of verifications for each of them
+   * Gets verifications from description and fetches list of verifications for each of them.
    */
   public async getVerifications(): Promise<any[]> {
     await this.ensureContract();
@@ -509,26 +387,7 @@ export class Container extends Logger {
   }
 
   /**
-   * remove entry from a list
-   *
-   * @param      {string}  listName    name of a list in the container
-   * @param      {number}  entryIndex  index of the entry to remove from list
-   */
-  public async removeListEntry(listName: string, entryIndex: number): Promise<void> {
-    await this.ensureContract();
-    this.wrapPromise(
-      'remove list entry',
-      this.options.dataContract.removeListEntry(
-        this.contract,
-        listName,
-        entryIndex,
-        this.config.accountId,
-      ),
-    );
-  }
-
-  /**
-   * write given description to containers DBCP
+   * Write given description to containers DBCP.
    *
    * @param      {any}  description  description (public part)
    */
@@ -542,7 +401,7 @@ export class Container extends Logger {
   }
 
   /**
-   * set entry for a key
+   * Set a value for an entry.
    *
    * @param      {string}  entryName  name of an entry in the container
    * @param      {any}     value      value to set
@@ -559,7 +418,7 @@ export class Container extends Logger {
   }
 
   /**
-   * share entry/list to another user; this handles role permissions, role memberships
+   * Share entry/list to another user; this handles role permissions, role memberships.
    *
    * @param      {ContainerShareConfig[]}  shareConfigs  list of share configs
    */
@@ -608,7 +467,7 @@ export class Container extends Logger {
         // get permissions from contract
         const hash = this.options.rightsAndRoles.getOperationCapabilityHash(
           property,
-          Container.getPropertyType(schemaProperties[property].type),
+          getPropertyType(schemaProperties[property].type),
           ModificationType.Set,
         );
         const rolesMap = await this.options.executor.executeContractCall(
@@ -632,7 +491,7 @@ export class Container extends Logger {
             this.config.accountId,
             permittedRole,
             property,
-            Container.getPropertyType(schemaProperties[property].type),
+            getPropertyType(schemaProperties[property].type),
             ModificationType.Set,
             true,
           );
@@ -696,9 +555,9 @@ export class Container extends Logger {
   }
 
   /**
-   * export current container state as template
+   * Export current container state as template.
    *
-   * @param      {boolean}  getValues  export entries or not (list entries are always excluded)
+   * @param      {boolean}  getValues  export entry values or not (list entries are always excluded)
    */
   public async toTemplate(getValues = false): Promise<ContainerTemplate> {
     await this.ensureContract();
@@ -773,6 +632,19 @@ export class Container extends Logger {
   }
 
   /**
+   * Check if container contract already has been loaded, load from address / ENS if required.
+   */
+  private async ensureContract(): Promise<void> {
+    if (this.contract) {
+      return;
+    }
+    checkConfigProperties(this.config, ['address']);
+    let address = this.config.address.startsWith('0x') ?
+      this.config.address : await this.options.nameResolver.getAddress(this.config.address);
+    this.contract = this.options.contractLoader.loadContract('DataContract', address)
+  }
+
+  /**
    * ensure that current account has a key for given entry in sharings
    *
    * @param      {string}  entryName  name of an entry to ensure a key for
@@ -822,7 +694,7 @@ export class Container extends Logger {
       'DSRolesPerContract',
       await this.options.executor.executeContractCall(this.contract, 'authority'),
     );
-    const enumType = Container.getPropertyType(type);
+    const enumType = getPropertyType(type);
     let canSetField = await this.options.executor.executeContractCall(
       authority,
       'canCallOperation',
@@ -917,7 +789,7 @@ export class Container extends Logger {
         'getOperationCapabilityRoles',
         this.config.address,
         this.options.rightsAndRoles.getOperationCapabilityHash(
-          property, Container.getPropertyType(type), Container.getModificationType(operation)),
+          property, getPropertyType(type), getModificationType(operation)),
       );
       // iterates over all roles and checks which roles are included
       const checkNumber = (bnum) => {
@@ -959,4 +831,128 @@ export class Container extends Logger {
       throw new Error(`could not ${task}; ${ex.message || ex}`);
     }
   }
+}
+
+
+/**
+ * Apply template to data contract; this should be used with caution and is intended to only be
+ * used on new contract (e.g. in `create` and `clone`).
+ *
+ * @param      {ContainerOptions}  options   runtime for new `Container`
+ * @param      {ContainerConfig}   config    config for new container
+ * @param      {any}               contract  `DataContract` instance
+ */
+async function applyTemplate(
+  options: ContainerOptions,
+  config: ContainerConfig,
+  container: Container,
+): Promise<void> {
+  checkConfigProperties(config, ['template']);
+  let tasks = [];
+  const template = typeof config.template === 'string' ?
+    Container.templates[config.template] :
+    config.template;
+
+  // add type property
+  const properties = JSON.parse(JSON.stringify(template.properties));
+  if (!properties.type) {
+    properties.type = {
+      dataSchema: { $id: 'type_schema', type: 'string' },
+      type: 'entry',
+      permissions: {
+        0: ['set']
+      },
+      value: template.type,
+    };
+  }
+  for (let propertyName of Object.keys(properties)) {
+    const property: ContainerTemplateProperty = properties[propertyName];
+    const permissionTasks = [];
+    for (let role of Object.keys(property.permissions)) {
+      for (let modification of property.permissions[role]) {
+        // allow setting this field; if value is specified, add value AFTER this
+        permissionTasks.push(async () => {
+          await options.rightsAndRoles.setOperationPermission(
+            await container.getContractAddress(),
+            config.accountId,
+            parseInt(role, 10),
+            propertyName,
+            getPropertyType(property.type),
+            getModificationType(modification),
+            true,
+          );
+        });
+      }
+    }
+    if (property.hasOwnProperty('value')) {
+      // if value has been defined, wait for permissions to be completed, then set value
+      tasks.push(async () => {
+        await Throttle.all(permissionTasks);
+        await container.setEntry(propertyName, property.value);
+      });
+    } else {
+      // if no value has been specified, flatten permission tasks and add to task list
+      tasks = tasks.concat(async () => Throttle.all(permissionTasks));
+    }
+  }
+  await Throttle.all(tasks);
+}
+
+/**
+ * Check, that given subset of properties is present at config, collections missing properties and
+ * throws a single error.
+ *
+ * @param      {ContainerConfig}  config      config for container instance
+ * @param      {string}           properties  list of property names, that should be present
+ */
+function checkConfigProperties(config: ContainerConfig, properties: string[]): void {
+  let missing = properties.filter(property => !config.hasOwnProperty(property));
+  if (missing.length === 1) {
+    throw new Error(`missing property in config: "${missing[0]}"`);
+  } else if (missing.length > 1) {
+    throw new Error(`missing properties in config: "${missing.join(', ')}"`);
+  }
+}
+
+/**
+ * Converts 'remove'/'set' to rights and roles enum type, throws if invalid.
+ *
+ * @param      {string}            typeName  remove/set
+ * @return     {ModificationType}  enum value from `RightsAndRoles`
+ */
+function getModificationType(typeName: string): ModificationType {
+  switch (typeName) {
+    case 'remove': return ModificationType.Remove;
+    case 'set': return ModificationType.Set;
+    default: throw new Error(`unsupported modification type "${typeName}"`);
+  }
+}
+
+/**
+ * Converts 'entry'/'list' to rights and roles enum type, throws if invalid.
+ *
+ * @param      {string}        typeName  entry/list
+ * @return     {PropertyType}  enum value from `RightsAndRoles`
+ */
+function getPropertyType(typeName: string): PropertyType {
+  switch (typeName) {
+    case 'entry': return PropertyType.Entry;
+    case 'list': return PropertyType.ListEntry;
+    default: throw new Error(`unsupported property type type "${typeName}"`);
+  }
+}
+
+/**
+ * Converts a properties object to a jsonSchema object.
+ *
+ * @param      {any}  properties  properties object from template
+ */
+function toJsonSchema(properties: any): any {
+  const jsonSchema = {};
+
+  for (let field of Object.keys(properties)) {
+    jsonSchema[field] = { $id: `${field}_schema`, ...properties[field].dataSchema };
+  }
+
+  return jsonSchema;
 }
