@@ -46,26 +46,35 @@ import { Sharing } from '../sharing';
 import { Verifications } from '../../verifications/verifications';
 
 
+// empty address
+const nullAddress = '0x0000000000000000000000000000000000000000';
+
+
 /**
  * possible entry types for entries in index
  */
 export enum DigitalIdentityEntryType {
   AccountId,
-  GenericContract,
-  IndexContract,
   ContainerContract,
   FileHash,
-  Hash
+  GenericContract,
+  Hash,
+  IndexContract,
 }
 
 /**
  * config for digital identity
  */
 export interface DigitalIdentityConfig {
+  /** account id of user, that interacts with digital identity */
   accountId: string;
-  address?: string;
+  /** address of a ``DigitalIdentity`` instance, can be ENS or contract address */
   containerConfig: ContainerConfig;
+  /** address of a ``DigitalIdentity`` instance, can be ENS or contract address */
+  address?: string;
+  /** description has to be passed to ``.create`` to apply it to to contract */
   description?: any;
+  /** factory address can be passed to ``.create`` for customer digital identity factory*/
   factoryAddress?: string;
 }
 
@@ -73,8 +82,11 @@ export interface DigitalIdentityConfig {
  * container for digital identity entry values
  */
 export interface DigitalIdentityIndexEntry {
+  /** type of entry in index */
   entryType?: DigitalIdentityEntryType;
+  /** raw value (``bytes32`` hash) */
   raw?: any;
+  /** decrypted/loaded value */
   value?: any;
 }
 
@@ -82,11 +94,15 @@ export interface DigitalIdentityIndexEntry {
  * data for verifications for digital identities
  */
 export interface DigitalIdentityVerificationEntry {
-  subject: string;
+  /** name of the verification (full path) */
   topic: string;
+  /** domain of the verification, this is a subdomain under 'verifications.evan', so passing 'example' will link verifications */
   descriptionDomain?: string;
+  /** if true, verifications created under  this path are invalid, defaults to ``false`` */
   disableSubverifications?: boolean;
+  /** expiration date, for the verification, defaults to `0` (does not expire) */
   expirationDate?: number;
+  /** json object which will be stored in the verification */
   verificationValue?: string;
 }
 
@@ -96,10 +112,6 @@ export interface DigitalIdentityVerificationEntry {
 export interface DigitalIdentityOptions extends ContainerOptions {
   profile: Profile;
 }
-
-
-// empty address
-const nullAddress = '0x0000000000000000000000000000000000000000';
 
 /**
  * helper class for managing digital identities
@@ -113,23 +125,7 @@ export class DigitalIdentity extends Logger {
   private mutexes: { [id: string]: Mutex; };
 
   /**
-   * check, that given subset of properties is present at config, collections missing properties and
-   * throws a single error
-   *
-   * @param      {ContainerConfig}  config      config for container instance
-   * @param      {string}           properties  list of property names, that should be present
-   */
-  public static checkConfigProperties(config: DigitalIdentityConfig, properties: string[]): void {
-    let missing = properties.filter(property => !config.hasOwnProperty(property));
-    if (missing.length === 1) {
-      throw new Error(`missing property in config: "${missing[0]}"`);
-    } else if (missing.length > 1) {
-      throw new Error(`missing properties in config: "${missing.join(', ')}"`);
-    }
-  }
-
-  /**
-   * create digital identity contract
+   * Create digital identity contract.
    *
    * @param      {DigitalIdentityOptions}  options  identity runtime options
    * @param      {DigitalIdentityConfig}   config   configuration for the new identity instance
@@ -138,7 +134,7 @@ export class DigitalIdentity extends Logger {
     options: DigitalIdentityOptions,
     config: DigitalIdentityConfig,
   ): Promise<DigitalIdentity> {
-    DigitalIdentity.checkConfigProperties(config, ['description']);
+    checkConfigProperties(config, ['description']);
     const instanceConfig = JSON.parse(JSON.stringify(config));
 
     // ensure, that the evan digital identity tag is set
@@ -195,7 +191,8 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * check if a contract is located under the specified address
+   * Check if a valid contract is located under the specified address, which allows to check for
+   * identities before actually loading them.
    *
    * @param      {DigitalIdentityOptions}  options     identity runtime options
    * @param      {string}                  ensAddress  ens address that should be checked
@@ -203,7 +200,7 @@ export class DigitalIdentity extends Logger {
   public static async getValidity(
     options: DigitalIdentityOptions,
     ensAddress: string,
-  ): Promise<{valid: boolean, exists: boolean, error: Error}> {
+  ): Promise<{ valid: boolean, exists: boolean, error: Error }> {
     let valid = false, exists = false, error = null;
 
     // create temporary identity instance, to ensure the contract
@@ -222,7 +219,7 @@ export class DigitalIdentity extends Logger {
     }
 
     // set exists parameter
-    if (!error || error.message.indexOf('contract does not exists') === -1) {
+    if (!error || error.message.indexOf('contract does not exist') === -1) {
       exists = true;
     }
 
@@ -242,7 +239,8 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * create new DititalIdentity instance
+   * Create new DititalIdentity instance. This will not create a smart contract contract but is used
+   * to load existing containers. To create a new contract, use the static ``create`` function.
    *
    * @param      {DigitalIdentityOptions}  options  runtime-like object with required modules
    * @param      {DigitalIdentityConfig}   config   digital identity related config
@@ -255,7 +253,7 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * add verifications to this identity; this will also add verifications to contract description
+   * Add verifications to this identity; this will also add verifications to contract description
    *
    * @param      {DigitalIdentityVerificationEntry[]}  verifications  list of verifications to add
    */
@@ -282,14 +280,14 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * create new `Container` instances and add them as entry to identity
+   * Create new `Container` instances and add them as entry to identity.
    *
    * @param      {{ [id: string]: Partial<ContainerConfig> }}  containers  object with containers to
    *                                                                       create, name is used as
    *                                                                       entry name in identity
    */
   public async createContainers(containers: { [id: string]: Partial<ContainerConfig> }
-  ): Promise<{ [id: string]: Partial<Container> }> {
+  ): Promise<{ [id: string]: Container }> {
     await this.ensureContract();
     const result = {};
     await Throttle.all(Object.keys(containers).map((name) => async () => {
@@ -301,9 +299,9 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * check if digital identity contract already has been loaded, load from address / ENS if required
-   * and throw an error, when no contract exists or the description machtes not the identity
-   * specifications
+   * Check if digital identity contract already has been loaded, load from address / ENS if required
+   * and throw an error, when no contract exists or the description doesn't match the identity
+   * specifications.
    */
   public async ensureContract(): Promise<void> {
     if (this.contract) {
@@ -316,7 +314,7 @@ export class DigitalIdentity extends Logger {
 
     // if no address is set, throw an error
     if (!address || address === nullAddress) {
-      throw new Error(`${ baseError } contract does not exists`);
+      throw new Error(`${ baseError } contract does not exist`);
     } else {
       try {
         description = (await this.options.description
@@ -328,18 +326,18 @@ export class DigitalIdentity extends Logger {
       }
     }
 
-    // if the evan digital identity tag does not exist, throw 
+    // if the evan digital identity tag does not exist, throw
     if (!description || !description.tags || description.tags
       .indexOf('evan-digital-identity') === -1) {
-      throw new Error(`${ baseError } match not the specification (missing
-        'evan-digital-identity' tag)`);
+      throw new Error(`${ baseError } doesn't match the specification (missing ` +
+        'evan-digital-identity\' tag)');
     }
 
     this.contract = this.options.contractLoader.loadContract('IndexContract', address);
   }
 
   /**
-   * get contract address of underlying IndexContract
+   * Get contract address of underlying IndexContract.
    */
   public async getContractAddress(): Promise<string> {
     await this.ensureContract();
@@ -347,7 +345,7 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * returns description from identity
+   * Returns description from digital identity.
    */
   public async getDescription(): Promise<any> {
     await this.ensureContract();
@@ -356,7 +354,7 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * get all entries from index contract
+   * Get all entries from index contract.
    */
   public async getEntries(): Promise<{[id: string]: DigitalIdentityIndexEntry}> {
     await this.ensureContract();
@@ -389,7 +387,7 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * get single entry from index contract
+   * Get single entry from index contract.
    *
    * @param      {string}  name    entry name
    */
@@ -412,7 +410,7 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * gets verifications from description and fetches list of verifications for each of them
+   * Gets verifications from description and fetches list of verifications for each of them.
    */
   public async getVerifications(): Promise<any[]> {
     await this.ensureContract();
@@ -430,9 +428,9 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * create description info
+   * Write given description to digital identities DBCP.
    *
-   * @param      {any}  description  description to set (only `public` part)
+   * @param      {any}  description  description to set (`public` part)
    */
   public async setDescription(description: any): Promise<void> {
     await this.ensureContract();
@@ -448,21 +446,23 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * set multiple entries at index contract
+   * Set multiple entries at index contract.
    *
-   * @param      {any}  entries  The entries
+   * @param      {{[id: string]: DigitalIdentityIndexEntry}}  entries  entries to set
    */
-  public async setEntries(entries: any): Promise<void> {
+  public async setEntries(entries: {[id: string]: DigitalIdentityIndexEntry}): Promise<void> {
     await this.ensureContract();
-    await Throttle.all(Object.keys(entries).map((name) => async () => this.setEntry(name, entries[name].value, entries[name].entryType)));
+    await Throttle.all(Object.keys(entries).map((name) => async () =>
+      this.setEntry(name, entries[name].value, entries[name].entryType)));
   }
 
   /**
-   * set entry in index contract; entries are uniquie, setting the same name a second time will
-   * overwrite the first value
+   * Set entry in index contract; entries are unique, setting the same name a second time will
+   * overwrite the first value.
    *
-   * @param      {string}  name    entry name
-   * @param      {string}  value   value to set (address or bytes32 value)
+   * @param      {string}                    name       entry name
+   * @param      {string}                    value      value to set
+   * @param      {DigitalIdentityEntryType}  entryType  type of given value
    */
   public async setEntry(
     name: string,
@@ -559,5 +559,22 @@ export class DigitalIdentity extends Logger {
       this.mutexes[name] = new Mutex();
     }
     return this.mutexes[name];
+  }
+}
+
+
+/**
+ * Check, that given subset of properties is present at config, collections missing properties and
+ * throws a single error.
+ *
+ * @param      {ContainerConfig}  config      config for container instance
+ * @param      {string}           properties  list of property names, that should be present
+ */
+function checkConfigProperties(config: DigitalIdentityConfig, properties: string[]): void {
+  let missing = properties.filter(property => !config.hasOwnProperty(property));
+  if (missing.length === 1) {
+    throw new Error(`missing property in config: "${missing[0]}"`);
+  } else if (missing.length > 1) {
+    throw new Error(`missing properties in config: "${missing.join(', ')}"`);
   }
 }

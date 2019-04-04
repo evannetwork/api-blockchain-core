@@ -394,7 +394,7 @@ describe('DigitalIdentity (name pending)', function() {
         'there.s.really.no.identity.evan');
 
       expect(isValidIdentity.valid).to.be.false;
-      expect(isValidIdentity.error.message).to.include('contract does not exists');
+      expect(isValidIdentity.error.message).to.include('contract does not exist');
     });
   });
 });
