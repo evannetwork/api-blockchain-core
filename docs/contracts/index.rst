@@ -12,6 +12,7 @@ Contracts
     base-contract
     data-contract
     service-contract
+    digital-identity
     container
 
 
