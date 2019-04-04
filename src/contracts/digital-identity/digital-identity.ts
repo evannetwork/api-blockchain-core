@@ -26,6 +26,7 @@
 */
 
 import * as Throttle from 'promise-parallel-throttle';
+import { Mutex } from 'async-mutex';
 import {
   ContractLoader,
   DfsInterface,
@@ -39,6 +40,7 @@ import { Container, ContainerConfig, ContainerOptions } from './container';
 import { DataContract } from '../data-contract/data-contract';
 import { Description } from '../../shared-description';
 import { NameResolver } from '../../name-resolver';
+import { Profile } from '../../profile/profile';
 import { RightsAndRoles } from '../rights-and-roles';
 import { Sharing } from '../sharing';
 import { Verifications } from '../../verifications/verifications';
@@ -91,7 +93,9 @@ export interface DigitalIdentityVerificationEntry {
 /**
  * options for DigitalIdentity constructor (uses same properties as ContainerOptions)
  */
-export interface DigitalIdentityOptions extends ContainerOptions { }
+export interface DigitalIdentityOptions extends ContainerOptions {
+  profile: Profile;
+}
 
 
 // empty address
@@ -106,6 +110,7 @@ export class DigitalIdentity extends Logger {
   private config: DigitalIdentityConfig;
   private contract: any;
   private options: DigitalIdentityOptions;
+  private mutexes: { [id: string]: Mutex; };
 
   /**
    * check, that given subset of properties is present at config, collections missing properties and
@@ -225,6 +230,18 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
+   * Gets the favorite identities.
+   */
+  public static async getFavorites(options: DigitalIdentityOptions) {
+    const favorites = (await options.profile.getBcContracts('identities.evan')) || { };
+    
+    // purge crypto info directly
+    delete favorites.cryptoInfo;
+
+    return favorites;
+  }
+
+  /**
    * create new DititalIdentity instance
    *
    * @param      {DigitalIdentityOptions}  options  runtime-like object with required modules
@@ -234,6 +251,7 @@ export class DigitalIdentity extends Logger {
     super(options as LoggerOptions);
     this.options = options;
     this.config = config;
+    this.mutexes = {};
   }
 
   /**
@@ -496,5 +514,50 @@ export class DigitalIdentity extends Logger {
         default:
           entry.value = entry.raw.value;
     }
+  }
+
+  /**
+   * Check if this digital identity is an favorite.
+   */
+  async isFavorite() {
+    const favorites = await DigitalIdentity.getFavorites(this.options);
+    return !!favorites[this.config.address];
+  }
+
+  /**
+   * Add the digital identity with the passed address to the profile contracts.
+   */
+  async addAsFavorite() {
+    await this.getMutex('profile').runExclusive(async () => {
+      const description = await this.getDescription();
+
+      await this.options.profile.addBcContract('identities.evan', this.config.address, description);
+      await this.options.profile.storeForAccount(this.options.profile.treeLabels.contracts);
+    });
+  }
+
+  /**
+   * Removes the current identity from the favorites.
+   */
+  async removeFromFavorites() {
+    await this.getMutex('profile').runExclusive(async () => {
+      const description = await this.getDescription();
+
+      await this.options.profile.removeBcContract('identities.evan', this.config.address);
+      await this.options.profile.storeForAccount(this.options.profile.treeLabels.contracts);
+    });
+  }
+
+  /**
+   * get mutex for keyword, this can be used to lock several sections during updates
+   *
+   * @param      {string}  name    name of a section; e.g. 'sharings', 'schema'
+   * @return     {Mutex}   Mutex instance
+   */
+  private getMutex(name: string): Mutex {
+    if (!this.mutexes[name]) {
+      this.mutexes[name] = new Mutex();
+    }
+    return this.mutexes[name];
   }
 }

@@ -33,10 +33,11 @@ import {
   Ipfs,
 } from '@evan.network/dbcp';
 
-import { Container, ContainerConfig } from './container';
-import { TestUtils } from '../../test/test-utils';
 import { accounts } from '../../test/accounts';
 import { config } from '../../config';
+import { Container, ContainerConfig } from './container';
+import { Ipld } from '../../dfs/ipld';
+import { TestUtils } from '../../test/test-utils';
 import {
   DigitalIdentity,
   DigitalIdentityConfig,
@@ -53,6 +54,7 @@ const ownedDomain = 'identitytest.fifs.registrar.test.evan';
 describe('DigitalIdentity (name pending)', function() {
   this.timeout(60000);
   let dfs: Ipfs;
+  let ipld: Ipld;
   let defaultConfig: DigitalIdentityConfig;
   let executor: Executor;
   const description = {
@@ -82,6 +84,7 @@ describe('DigitalIdentity (name pending)', function() {
       description: await TestUtils.getDescription(web3, dfs),
       executor,
       nameResolver: await TestUtils.getNameResolver(web3),
+      profile: await TestUtils.getProfile(web3, dfs, null, accounts[0]),
       rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
       sharing: await TestUtils.getSharing(web3, dfs),
       verifications: await TestUtils.getVerifications(web3, dfs),
@@ -138,6 +141,21 @@ describe('DigitalIdentity (name pending)', function() {
 
       expect(validity.valid).to.be.true;
       expect(validity.error).to.be.null;
+    });
+
+    it.only('can handle identity as favorites within my profile', async () => {
+      const identity = await DigitalIdentity.create(runtime, defaultConfig);
+      let favorites;
+
+      // check favorite adding
+      await identity.addAsFavorite();
+      favorites = await DigitalIdentity.getFavorites(runtime);
+      expect(favorites).to.have.property(await identity.getContractAddress());
+
+      // check favorite remove
+      await identity.removeFromFavorites();
+      favorites = await DigitalIdentity.getFavorites(runtime);
+      expect(favorites).to.not.have.property(await identity.getContractAddress());
     });
   });
 
