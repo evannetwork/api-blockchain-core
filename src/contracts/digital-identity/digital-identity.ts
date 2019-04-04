@@ -191,6 +191,20 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
+   * Gets bookmarked identities from profile.
+   *
+   * @param      {DigitalIdentityOptions}  options  identity runtime options
+   */
+  public static async getFavorites(options: DigitalIdentityOptions): Promise<string[]> {
+    const favorites = (await options.profile.getBcContracts('identities.evan')) || { };
+
+    // purge crypto info directly
+    delete favorites.cryptoInfo;
+
+    return favorites;
+  }
+
+  /**
    * Check if a valid contract is located under the specified address, which allows to check for
    * identities before actually loading them.
    *
@@ -227,18 +241,6 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * Gets the favorite identities.
-   */
-  public static async getFavorites(options: DigitalIdentityOptions) {
-    const favorites = (await options.profile.getBcContracts('identities.evan')) || { };
-    
-    // purge crypto info directly
-    delete favorites.cryptoInfo;
-
-    return favorites;
-  }
-
-  /**
    * Create new DititalIdentity instance. This will not create a smart contract contract but is used
    * to load existing containers. To create a new contract, use the static ``create`` function.
    *
@@ -250,6 +252,18 @@ export class DigitalIdentity extends Logger {
     this.options = options;
     this.config = config;
     this.mutexes = {};
+  }
+
+  /**
+   * Add the digital identity with given address to profile.
+   */
+  public async addAsFavorite(): Promise<void> {
+    await this.getMutex('profile').runExclusive(async () => {
+      const description = await this.getDescription();
+
+      await this.options.profile.addBcContract('identities.evan', this.config.address, description);
+      await this.options.profile.storeForAccount(this.options.profile.treeLabels.contracts);
+    });
   }
 
   /**
@@ -428,6 +442,26 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
+   * Check if this digital identity is bookmarked in profile.
+   */
+  public async isFavorite(): Promise<boolean> {
+    const favorites = await DigitalIdentity.getFavorites(this.options);
+    return !!favorites[this.config.address];
+  }
+
+  /**
+   * Removes the current identity from the favorites in profile.
+   */
+  public async removeFromFavorites(): Promise<void> {
+    await this.getMutex('profile').runExclusive(async () => {
+      const description = await this.getDescription();
+
+      await this.options.profile.removeBcContract('identities.evan', this.config.address);
+      await this.options.profile.storeForAccount(this.options.profile.treeLabels.contracts);
+    });
+  }
+
+  /**
    * Write given description to digital identities DBCP.
    *
    * @param      {any}  description  description to set (`public` part)
@@ -514,38 +548,6 @@ export class DigitalIdentity extends Logger {
         default:
           entry.value = entry.raw.value;
     }
-  }
-
-  /**
-   * Check if this digital identity is an favorite.
-   */
-  async isFavorite() {
-    const favorites = await DigitalIdentity.getFavorites(this.options);
-    return !!favorites[this.config.address];
-  }
-
-  /**
-   * Add the digital identity with the passed address to the profile contracts.
-   */
-  async addAsFavorite() {
-    await this.getMutex('profile').runExclusive(async () => {
-      const description = await this.getDescription();
-
-      await this.options.profile.addBcContract('identities.evan', this.config.address, description);
-      await this.options.profile.storeForAccount(this.options.profile.treeLabels.contracts);
-    });
-  }
-
-  /**
-   * Removes the current identity from the favorites.
-   */
-  async removeFromFavorites() {
-    await this.getMutex('profile').runExclusive(async () => {
-      const description = await this.getDescription();
-
-      await this.options.profile.removeBcContract('identities.evan', this.config.address);
-      await this.options.profile.storeForAccount(this.options.profile.treeLabels.contracts);
-    });
   }
 
   /**
