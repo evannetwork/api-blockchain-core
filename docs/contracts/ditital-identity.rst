@@ -152,6 +152,102 @@ Example
 
 
 
+--------------------------------------------------------------------------------
+
+= Container =
+=============
+
+= Entries =
+===========
+
+= Verifications =
+=================
+
+= Description =
+===============
+
+= Profile =
+===========
+
+= Tools =
+=========
+
+
+
+--------------------------------------------------------------------------------
+
+Additional Components
+======================
+
+Enums
+=====
+
+.. _digital-identity_DigitalIdentityEntryType:
+
+------------------------
+DigitalIdentityEntryType
+------------------------
+
+possible entry types for entries in index
+
+#. ``AccountId``
+#. ``ContainerContract``
+#. ``FileHash``
+#. ``GenericContract``
+#. ``Hash``
+#. ``IndexContract``
+
+
+
+Interfaces
+==========
+
+.. _digital-identity_ContainerConfig:
+
+---------------------
+DigitalIdentityConfig
+---------------------
+
+config for digital identity
+
+#. ``accountId`` - ``string``: account id of user, that interacts with digital identity
+#. ``containerConfig`` - ``ContainerConfig``: address of a ``DigitalIdentity`` instance, can be ENS or contract address
+#. ``address`` - ``string`` (optional): address of an ``IndexContract`` instance, can be ENS or contract address
+#. ``description`` - ``string`` (optional): description has to be passed to ``.create`` to apply it to to contract
+#. ``factoryAddress`` - ``string`` (optional): factory address can be passed to ``.create`` for customer digital identity factory
+
+
+
+.. _digital-identity_DigitalIdentityIndexEntry:
+
+-------------------------
+DigitalIdentityIndexEntry
+-------------------------
+
+container for digital identity entry values
+
+#. ``entryType`` - ``DigitalIdentityEntryType`` (optional): type of entry in index
+#. ``raw`` - ``any`` (optional): raw value (``bytes32`` hash)
+#. ``value`` - ``any`` (optional): decrypted/loaded value
+
+
+
+.. _digital-identity_DigitalIdentityVerificationEntry:
+
+--------------------------------
+DigitalIdentityVerificationEntry
+--------------------------------
+
+data for verifications for digital identities
+
+#. ``topic`` - ``string``: name of the verification (full path)
+#. ``descriptionDomain`` - ``string`` (optional): domain of the verification, this is a subdomain under 'verifications.evan', so passing 'example' will link verifications
+#. ``disableSubVerifications`` - ``boolean`` (optional): if true, verifications created under  this path are invalid, defaults to ``false``
+#. ``expirationDate`` - ``number`` (optional): expiration date, for the verification, defaults to `0` (does not expire)
+#. ``verificationValue`` - ``any`` (optional): json object which will be stored in the verification
+
+
+
 .. required for building markup
 
 .. |source contractLoader| replace:: ``ContractLoader``
