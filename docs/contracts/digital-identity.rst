@@ -523,11 +523,162 @@ Example
 
 --------------------------------------------------------------------------------
 
-
 = Profile =
 ===========
 
-...
+.. _digital-identity_addAsFavorite:
+
+addAsFavorite
+================================================================================
+
+.. code-block:: typescript
+
+  digitalIdentity.addAsFavorite();
+
+Add the digital identity with given address to profile.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const digitalIdentity = new DigitalIdentity(options.config);
+  if (await digitalIdentity.isFavorite()) {
+    console.log('I know this digital identity!');
+  } else {
+    await digitalIdentity.addToFavorites();
+    console.log('bookmarked digital identity');
+  }
+
+
+
+--------------------------------------------------------------------------------
+.. _digital-identity_getFavorites:
+
+getFavorites
+================================================================================
+
+.. code-block:: typescript
+
+  DigitalIdentity.getFavorites();
+
+Gets bookmarked identities from profile.
+
+----------
+Parameters
+----------
+
+#. ``options`` - ``ContainerOptions``: runtime-like object with required modules
+    * ``contractLoader`` - |source contractLoader|_: |source contractLoader|_ instance
+    * ``cryptoProvider`` - |source cryptoProvider|_: |source cryptoProvider|_ instance
+    * ``dataContract`` - |source dataContract|_: |source dataContract|_ instance
+    * ``description`` - |source description|_: |source description|_ instance
+    * ``executor`` - |source executor|_: |source executor|_ instance
+    * ``nameResolver`` - |source nameResolver|_: |source nameResolver|_ instance
+    * ``rightsAndRoles`` - |source rightsAndRoles|_: |source rightsAndRoles|_ instance
+    * ``sharing`` - |source sharing|_: |source sharing|_ instance
+    * ``verifications`` - |source verifications|_: |source verifications|_ instance
+    * ``web3`` - |source web3|_: |source web3|_ instance
+    * ``log`` - ``Function`` (optional): function to use for logging: ``(message, level) => {...}``
+    * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
+    * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
+    * ``logLogLevel`` - |source logLevel|_ (optional): messages with this level will be pushed to ``logLog``
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const favorites = await DigitalIdentity.getFavorites(options);
+  console.dir(favorites);
+  // Output:
+  // [
+  //  'example.somewhere.evan',
+  //  'another.example.somewhere.else.evan',
+  //  '0x0000000000000000000000000000000000001234'
+  // ]
+
+
+
+--------------------------------------------------------------------------------
+
+.. _digitalIdentity_isFavorite:
+
+isFavorite
+================================================================================
+
+.. code-block:: typescript
+
+  digitalIdentity.isFavorite();
+
+Check if this digital identity is bookmarked in profile.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``boolean``: true if bookmarked
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const digitalIdentity = new DigitalIdentity(options.config);
+  if (await digitalIdentity.isFavorite()) {
+    console.log('I know this digital identity!');
+  } else {
+    await digitalIdentity.addToFavorites();
+    console.log('bookmarked digital identity');
+  }
+
+
+
+--------------------------------------------------------------------------------
+
+.. _digitalIdentity_removeFromFavorites:
+
+removeFromFavorites
+================================================================================
+
+.. code-block:: typescript
+
+  digitalIdentity.removeFromFavorites();
+
+Removes the current identity from the favorites in profile.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const digitalIdentity = new DigitalIdentity(options.config);
+  if (await digitalIdentity.isFavorite()) {
+    await digitalIdentity.removeFromFavorites();
+    console.log('removed digital identity from favorites');
+  }
 
 
 
