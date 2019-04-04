@@ -55,6 +55,7 @@ Under this "path" a set of values can be found. These value describe the verific
   check if the verification has a valid signature
 
 
+
 --------------------------------------------------------------------------------
 
 .. _verifications_constructor:
@@ -156,6 +157,7 @@ Example
 
 
 --------------------------------------------------------------------------------
+
 .. _verifications_identityAvailable:
 
 identityAvailable
@@ -278,6 +280,7 @@ Example
     accounts[0], accounts[1], '/company', expirationDate, verificationValue, 'example');
 
 
+
 --------------------------------------------------------------------------------
 
 .. _verifications_getVerifications:
@@ -339,7 +342,12 @@ Example
     valid: true
   }]
 
+
+
 --------------------------------------------------------------------------------
+
+.. _verifications_getNestedVerifications:
+
 getNestedVerifications
 ================================================================================
 
@@ -417,7 +425,11 @@ Example
     }
   ]
 
+
+
 --------------------------------------------------------------------------------
+
+.. _verifications_computeVerifications:
 
 computeVerifications
 ================================================================================
@@ -465,7 +477,10 @@ Example
   //   }
 
 
+
 --------------------------------------------------------------------------------
+
+.. _verifications_getComputedVerification:
 
 getComputedVerification
 ================================================================================
@@ -511,45 +526,8 @@ Example
   //   }
 
 
---------------------------------------------------------------------------------
-
-.. _verifications_identityAvailable:
-
-identityAvailable
-================================================================================
-
-.. code-block:: typescript
-
-  verifications.identityAvailable(subject);
-
-checks if a account has already a identity contract
-
-----------
-Parameters
-----------
-
-#. ``subject`` - ``string``: subject of the verifications
-
--------
-Returns
--------
-
-``Promise`` returns ``any``: true if identity exists, otherwise false
-
--------
-Example
--------
-
-.. code-block:: typescript
-
-  console.dir(await verifications.identityAvailable(accounts[1]));
-  // Output:
-  true
-
-
 
 --------------------------------------------------------------------------------
-
 
 .. _verifications_validateVerification:
 
@@ -588,6 +566,8 @@ Example
   );
   // Output:
   true
+
+
 
 --------------------------------------------------------------------------------
 
@@ -668,11 +648,8 @@ Example
 
 --------------------------------------------------------------------------------
 
-
 = Subjects =
 ==========================
-
-
 
 .. _verifications_confirmVerification:
 
@@ -711,7 +688,6 @@ Example
 
 
 --------------------------------------------------------------------------------
-
 
 = Descriptions =
 ==========================
@@ -783,6 +759,8 @@ Example
   //   dbcpVersion: 1,
   // }
 
+
+
 --------------------------------------------------------------------------------
 
 .. _verifications_getVerificationEnsAddress:
@@ -817,7 +795,11 @@ Example
   const ensAddress = verifications.getVerificationEnsAddress('/evan/test');
   // will return test.verifications.evan
 
+
+
 --------------------------------------------------------------------------------
+
+.. _verifications_ensureVerificationDescription:
 
 ensureVerificationDescription
 ================================================================================
@@ -842,13 +824,12 @@ Example
 
   verifications.ensureVerificationDescription(verification);
 
---------------------------------------------------------------------------------
 
+
+--------------------------------------------------------------------------------
 
 = Deployment =
 ==========================
-
-
 
 .. _verifications_createStructure:
 
