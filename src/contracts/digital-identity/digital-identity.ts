@@ -525,6 +525,19 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
+   * get mutex for keyword, this can be used to lock several sections during updates
+   *
+   * @param      {string}  name    name of a section; e.g. 'sharings', 'schema'
+   * @return     {Mutex}   Mutex instance
+   */
+  private getMutex(name: string): Mutex {
+    if (!this.mutexes[name]) {
+      this.mutexes[name] = new Mutex();
+    }
+    return this.mutexes[name];
+  }
+
+  /**
    * add type and value from raw value to entry
    *
    * @param      {DigitalIdentityIndexEntry}  entry   The entry
@@ -548,19 +561,6 @@ export class DigitalIdentity extends Logger {
         default:
           entry.value = entry.raw.value;
     }
-  }
-
-  /**
-   * get mutex for keyword, this can be used to lock several sections during updates
-   *
-   * @param      {string}  name    name of a section; e.g. 'sharings', 'schema'
-   * @return     {Mutex}   Mutex instance
-   */
-  private getMutex(name: string): Mutex {
-    if (!this.mutexes[name]) {
-      this.mutexes[name] = new Mutex();
-    }
-    return this.mutexes[name];
   }
 }
 
