@@ -150,6 +150,27 @@ export class DigitalIdentity extends Logger {
       throw new Error(`validation of description failed with: ${JSON.stringify(validation)}`);
     }
 
+    // ensure, that the user can set an contract to the specified ens address
+    try {
+      const splitEns = config.address.split('.');
+      for (let i = splitEns.length - 1; i > -1; i--) {
+        const checkAddress = splitEns.slice(i, splitEns.length).join('.');
+
+        const owner = await options.executor.executeContractCall(
+          options.nameResolver.ensContract, 'owner', options.nameResolver.namehash(checkAddress));
+        if (owner === '0x0000000000000000000000000000000000000000') {
+          await options.nameResolver.setAddress(
+            checkAddress,
+            '0x0000000000000000000000000000000000000000',
+            instanceConfig.accountId
+          );
+        }
+      }
+    } catch (ex) {
+      throw new Error(`account is not permitted to create a contract for the ens address
+        ${ config.address }`);
+    }
+
     // create contract
     let factoryAddress;
     if (instanceConfig.factoryAddress && instanceConfig.factoryAddress.startsWith('0x')) {
@@ -229,13 +250,13 @@ export class DigitalIdentity extends Logger {
   /**
    * Gets the favorite identities.
    */
-  public static async getFavorites(options: DigitalIdentityOptions) {
+  public static async getFavorites(options: DigitalIdentityOptions): Promise<Array<string>> {
     const favorites = (await options.profile.getBcContracts('identities.evan')) || { };
     
     // purge crypto info directly
     delete favorites.cryptoInfo;
 
-    return favorites;
+    return Object.keys(favorites);
   }
 
   /**
@@ -521,7 +542,7 @@ export class DigitalIdentity extends Logger {
    */
   async isFavorite() {
     const favorites = await DigitalIdentity.getFavorites(this.options);
-    return !!favorites[this.config.address];
+    return favorites.indexOf(this.config.address) !== -1;
   }
 
   /**
@@ -531,7 +552,8 @@ export class DigitalIdentity extends Logger {
     await this.getMutex('profile').runExclusive(async () => {
       const description = await this.getDescription();
 
-      await this.options.profile.addBcContract('identities.evan', this.config.address, description);
+      await this.options.profile.loadForAccount(this.options.profile.treeLabels.contracts);
+      await this.options.profile.addBcContract('identities.evan', this.config.address, null);
       await this.options.profile.storeForAccount(this.options.profile.treeLabels.contracts);
     });
   }
@@ -543,6 +565,7 @@ export class DigitalIdentity extends Logger {
     await this.getMutex('profile').runExclusive(async () => {
       const description = await this.getDescription();
 
+      await this.options.profile.loadForAccount(this.options.profile.treeLabels.contracts);
       await this.options.profile.removeBcContract('identities.evan', this.config.address);
       await this.options.profile.storeForAccount(this.options.profile.treeLabels.contracts);
     });

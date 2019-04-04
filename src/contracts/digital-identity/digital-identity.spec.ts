@@ -150,12 +150,12 @@ describe('DigitalIdentity (name pending)', function() {
       // check favorite adding
       await identity.addAsFavorite();
       favorites = await DigitalIdentity.getFavorites(runtime);
-      expect(favorites).to.have.property(await identity.getContractAddress());
+      expect(favorites).to.include(await identity.getContractAddress());
 
       // check favorite remove
       await identity.removeFromFavorites();
       favorites = await DigitalIdentity.getFavorites(runtime);
-      expect(favorites).to.not.have.property(await identity.getContractAddress());
+      expect(favorites).to.not.include(await identity.getContractAddress());
     });
   });
 
