@@ -557,8 +557,8 @@ Return value properties have the following meaning:
 
 ----------
 Parameters
-
 ----------
+
 #. ``options`` - ``DigitalIdentityOptions``: identity runtime options
     * ``contractLoader`` - |source contractLoader|_: |source contractLoader|_ instance
     * ``cryptoProvider`` - |source cryptoProvider|_: |source cryptoProvider|_ instance
