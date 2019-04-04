@@ -143,7 +143,7 @@ describe('DigitalIdentity (name pending)', function() {
       expect(validity.error).to.be.null;
     });
 
-    it.only('can handle identity as favorites within my profile', async () => {
+    it('can handle identity as favorites within my profile', async () => {
       const identity = await DigitalIdentity.create(runtime, defaultConfig);
       let favorites;
 
