@@ -469,7 +469,14 @@ Example
   const description = await container.getDescription();
   console.dir(description);
   // Output:
-  // 2DO
+  // { name: 'test identity',
+  //   description: 'identity from test run',
+  //   author: 'evan GmbH',
+  //   version: '0.1.0',
+  //   dbcpVersion: 2,
+  //   tags: [ 'evan-digital-identity' ],
+  //   identity:
+  //    '0x1a496043385fec8d52f61e2b700413f8e12eb6e7e11649f80c8f4716c1063d06' }
 
 
 
@@ -508,16 +515,30 @@ Example
   const description = await digitalIdentity.getDescription();
   console.dir(description);
   // Output:
-  // 2DO
+  // { name: 'test identity',
+  //   description: 'identity from test run',
+  //   author: 'evan GmbH',
+  //   version: '0.1.0',
+  //   dbcpVersion: 2,
+  //   tags: [ 'evan-digital-identity' ],
+  //   identity:
+  //    '0x1a496043385fec8d52f61e2b700413f8e12eb6e7e11649f80c8f4716c1063d06' }
 
   // update description
-  description.title = 'I have been changed';
+  description.version = '0.1.1';
   await digitalIdentity.setDescription(description);
 
   // fetch again
   console.dir(await digitalIdentity.getDescription());
   // Output:
-  // 2DO
+  // { name: 'test identity',
+  //   description: 'identity from test run',
+  //   author: 'evan GmbH',
+  //   version: '0.1.1',
+  //   dbcpVersion: 2,
+  //   tags: [ 'evan-digital-identity' ],
+  //   identity:
+  //    '0x1a496043385fec8d52f61e2b700413f8e12eb6e7e11649f80c8f4716c1063d06' }
 
 
 

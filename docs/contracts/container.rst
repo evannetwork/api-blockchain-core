@@ -774,7 +774,14 @@ Example
   const description = await container.getDescription();
   console.dir(description);
   // Output:
-  // 2DO
+  // { name: 'test container',
+  //   description: 'container from test run',
+  //   author: 'evan GmbH',
+  //   version: '0.1.0',
+  //   dbcpVersion: 2,
+  //   identity:
+  //    '0x70c969a64e880fc904110ce9ab72ba5f95f706a252ac085ae0525bd7a284337c',
+  //   dataSchema: { type: { type: 'string', '$id': 'type_schema' } } }
 
 
 
@@ -813,16 +820,30 @@ Example
   const description = await container.getDescription();
   console.dir(description);
   // Output:
-  // 2DO
+  // { name: 'test container',
+  //   description: 'container from test run',
+  //   author: 'evan GmbH',
+  //   version: '0.1.0',
+  //   dbcpVersion: 2,
+  //   identity:
+  //    '0x70c969a64e880fc904110ce9ab72ba5f95f706a252ac085ae0525bd7a284337c',
+  //   dataSchema: { type: { type: 'string', '$id': 'type_schema' } } }
 
   // update description
-  description.title = 'I have been changed';
+  description.version = '0.1.1';
   await container.setDescription(description);
 
   // fetch again
   console.dir(await container.getDescription());
   // Output:
-  // 2DO
+  // { name: 'test container',
+  //   description: 'container from test run',
+  //   author: 'evan GmbH',
+  //   version: '0.1.1',
+  //   dbcpVersion: 2,
+  //   identity:
+  //    '0x70c969a64e880fc904110ce9ab72ba5f95f706a252ac085ae0525bd7a284337c',
+  //   dataSchema: { type: { type: 'string', '$id': 'type_schema' } } }
 
 
 
