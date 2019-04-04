@@ -151,24 +151,26 @@ export class DigitalIdentity extends Logger {
     }
 
     // ensure, that the user can set an contract to the specified ens address
-    try {
-      const splitEns = config.address.split('.');
-      for (let i = splitEns.length - 1; i > -1; i--) {
-        const checkAddress = splitEns.slice(i, splitEns.length).join('.');
+    if (instanceConfig.address && instanceConfig.address.indexOf('0x') !== 0) {
+      try {
+        const splitEns = config.address.split('.');
+        for (let i = splitEns.length - 1; i > -1; i--) {
+          const checkAddress = splitEns.slice(i, splitEns.length).join('.');
 
-        const owner = await options.executor.executeContractCall(
-          options.nameResolver.ensContract, 'owner', options.nameResolver.namehash(checkAddress));
-        if (owner === '0x0000000000000000000000000000000000000000') {
-          await options.nameResolver.setAddress(
-            checkAddress,
-            '0x0000000000000000000000000000000000000000',
-            instanceConfig.accountId
-          );
+          const owner = await options.executor.executeContractCall(
+            options.nameResolver.ensContract, 'owner', options.nameResolver.namehash(checkAddress));
+          if (owner === '0x0000000000000000000000000000000000000000') {
+            await options.nameResolver.setAddress(
+              checkAddress,
+              '0x0000000000000000000000000000000000000000',
+              instanceConfig.accountId
+            );
+          }
         }
+      } catch (ex) {
+        throw new Error(`account is not permitted to create a contract for the ens address
+          ${ config.address }`);
       }
-    } catch (ex) {
-      throw new Error(`account is not permitted to create a contract for the ens address
-        ${ config.address }`);
     }
 
     // create contract
@@ -198,7 +200,7 @@ export class DigitalIdentity extends Logger {
     await options.description.setDescription(contractId, envelope, instanceConfig.accountId);
 
     // set to ENS if address was passed in config
-    if (instanceConfig.address) {
+    if (instanceConfig.address && instanceConfig.address.indexOf('0x') !== 0) {
       await options.nameResolver.setAddress(config.address, contractId, config.accountId);
     }
     instanceConfig.address = contractId;
@@ -209,6 +211,20 @@ export class DigitalIdentity extends Logger {
     const identity = new DigitalIdentity(options, instanceConfig);
     await identity.ensureContract();
     return identity;
+  }
+
+  /**
+   * Gets bookmarked identities from profile.
+   *
+   * @param      {DigitalIdentityOptions}  options  identity runtime options
+   */
+  public static async getFavorites(options: DigitalIdentityOptions): Promise<Array<string>> {
+    const favorites = (await options.profile.getBcContracts('identities.evan')) || { };
+    
+    // purge crypto info directly
+    delete favorites.cryptoInfo;
+
+    return Object.keys(favorites);
   }
 
   /**
@@ -248,18 +264,6 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * Gets the favorite identities.
-   */
-  public static async getFavorites(options: DigitalIdentityOptions): Promise<Array<string>> {
-    const favorites = (await options.profile.getBcContracts('identities.evan')) || { };
-    
-    // purge crypto info directly
-    delete favorites.cryptoInfo;
-
-    return Object.keys(favorites);
-  }
-
-  /**
    * Create new DititalIdentity instance. This will not create a smart contract contract but is used
    * to load existing containers. To create a new contract, use the static ``create`` function.
    *
@@ -271,6 +275,19 @@ export class DigitalIdentity extends Logger {
     this.options = options;
     this.config = config;
     this.mutexes = {};
+  }
+
+  /**
+   * Add the digital identity with given address to profile.
+   */
+  async addAsFavorite() {
+    await this.getMutex('profile').runExclusive(async () => {
+      const description = await this.getDescription();
+
+      await this.options.profile.loadForAccount(this.options.profile.treeLabels.contracts);
+      await this.options.profile.addBcContract('identities.evan', this.config.address, null);
+      await this.options.profile.storeForAccount(this.options.profile.treeLabels.contracts);
+    });
   }
 
   /**
@@ -449,6 +466,27 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
+   * Check if this digital identity is bookmarked in profile.
+   */
+  public async isFavorite(): Promise<boolean> {
+    const favorites = await DigitalIdentity.getFavorites(this.options);
+    return favorites.indexOf(this.config.address) !== -1;
+  }
+
+  /**
+   * Removes the current identity from the favorites in profile.
+   */
+  public async removeFromFavorites() {
+    await this.getMutex('profile').runExclusive(async () => {
+      const description = await this.getDescription();
+
+      await this.options.profile.loadForAccount(this.options.profile.treeLabels.contracts);
+      await this.options.profile.removeBcContract('identities.evan', this.config.address);
+      await this.options.profile.storeForAccount(this.options.profile.treeLabels.contracts);
+    });
+  }
+
+  /**
    * Write given description to digital identities DBCP.
    *
    * @param      {any}  description  description to set (`public` part)
@@ -456,14 +494,16 @@ export class DigitalIdentity extends Logger {
   public async setDescription(description: any): Promise<void> {
     await this.ensureContract();
 
-    // ensure, that the evan digital identity tag is set
-    description.tags = description.tags || [ ];
-    if (description.tags.indexOf('evan-digital-identity') === -1) {
-      description.tags.push('evan-digital-identity');
-    }
+    this.getMutex('description').runExclusive(async () => {
+      // ensure, that the evan digital identity tag is set
+      description.tags = description.tags || [ ];
+      if (description.tags.indexOf('evan-digital-identity') === -1) {
+        description.tags.push('evan-digital-identity');
+      }
 
-    await this.options.description.setDescription(
-      this.contract.options.address, { public: description }, this.config.accountId);
+      await this.options.description.setDescription(
+        this.contract.options.address, { public: description }, this.config.accountId);
+    });
   }
 
   /**
@@ -512,6 +552,19 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
+   * get mutex for keyword, this can be used to lock several sections during updates
+   *
+   * @param      {string}  name    name of a section; e.g. 'sharings', 'schema'
+   * @return     {Mutex}   Mutex instance
+   */
+  private getMutex(name: string): Mutex {
+    if (!this.mutexes[name]) {
+      this.mutexes[name] = new Mutex();
+    }
+    return this.mutexes[name];
+  }
+
+  /**
    * add type and value from raw value to entry
    *
    * @param      {DigitalIdentityIndexEntry}  entry   The entry
@@ -535,53 +588,6 @@ export class DigitalIdentity extends Logger {
         default:
           entry.value = entry.raw.value;
     }
-  }
-
-  /**
-   * Check if this digital identity is an favorite.
-   */
-  async isFavorite() {
-    const favorites = await DigitalIdentity.getFavorites(this.options);
-    return favorites.indexOf(this.config.address) !== -1;
-  }
-
-  /**
-   * Add the digital identity with the passed address to the profile contracts.
-   */
-  async addAsFavorite() {
-    await this.getMutex('profile').runExclusive(async () => {
-      const description = await this.getDescription();
-
-      await this.options.profile.loadForAccount(this.options.profile.treeLabels.contracts);
-      await this.options.profile.addBcContract('identities.evan', this.config.address, null);
-      await this.options.profile.storeForAccount(this.options.profile.treeLabels.contracts);
-    });
-  }
-
-  /**
-   * Removes the current identity from the favorites.
-   */
-  async removeFromFavorites() {
-    await this.getMutex('profile').runExclusive(async () => {
-      const description = await this.getDescription();
-
-      await this.options.profile.loadForAccount(this.options.profile.treeLabels.contracts);
-      await this.options.profile.removeBcContract('identities.evan', this.config.address);
-      await this.options.profile.storeForAccount(this.options.profile.treeLabels.contracts);
-    });
-  }
-
-  /**
-   * get mutex for keyword, this can be used to lock several sections during updates
-   *
-   * @param      {string}  name    name of a section; e.g. 'sharings', 'schema'
-   * @return     {Mutex}   Mutex instance
-   */
-  private getMutex(name: string): Mutex {
-    if (!this.mutexes[name]) {
-      this.mutexes[name] = new Mutex();
-    }
-    return this.mutexes[name];
   }
 }
 

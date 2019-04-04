@@ -469,7 +469,14 @@ Example
   const description = await container.getDescription();
   console.dir(description);
   // Output:
-  // 2DO
+  // { name: 'test identity',
+  //   description: 'identity from test run',
+  //   author: 'evan GmbH',
+  //   version: '0.1.0',
+  //   dbcpVersion: 2,
+  //   tags: [ 'evan-digital-identity' ],
+  //   identity:
+  //    '0x1a496043385fec8d52f61e2b700413f8e12eb6e7e11649f80c8f4716c1063d06' }
 
 
 
@@ -508,26 +515,193 @@ Example
   const description = await digitalIdentity.getDescription();
   console.dir(description);
   // Output:
-  // 2DO
+  // { name: 'test identity',
+  //   description: 'identity from test run',
+  //   author: 'evan GmbH',
+  //   version: '0.1.0',
+  //   dbcpVersion: 2,
+  //   tags: [ 'evan-digital-identity' ],
+  //   identity:
+  //    '0x1a496043385fec8d52f61e2b700413f8e12eb6e7e11649f80c8f4716c1063d06' }
 
   // update description
-  description.title = 'I have been changed';
+  description.version = '0.1.1';
   await digitalIdentity.setDescription(description);
 
   // fetch again
   console.dir(await digitalIdentity.getDescription());
   // Output:
-  // 2DO
+  // { name: 'test identity',
+  //   description: 'identity from test run',
+  //   author: 'evan GmbH',
+  //   version: '0.1.1',
+  //   dbcpVersion: 2,
+  //   tags: [ 'evan-digital-identity' ],
+  //   identity:
+  //    '0x1a496043385fec8d52f61e2b700413f8e12eb6e7e11649f80c8f4716c1063d06' }
 
 
 
 --------------------------------------------------------------------------------
 
-
 = Profile =
 ===========
 
-...
+.. _digital-identity_addAsFavorite:
+
+addAsFavorite
+================================================================================
+
+.. code-block:: typescript
+
+  digitalIdentity.addAsFavorite();
+
+Add the digital identity with given address to profile.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const digitalIdentity = new DigitalIdentity(options.config);
+  if (await digitalIdentity.isFavorite()) {
+    console.log('I know this digital identity!');
+  } else {
+    await digitalIdentity.addToFavorites();
+    console.log('bookmarked digital identity');
+  }
+
+
+
+--------------------------------------------------------------------------------
+.. _digital-identity_getFavorites:
+
+getFavorites
+================================================================================
+
+.. code-block:: typescript
+
+  DigitalIdentity.getFavorites();
+
+Gets bookmarked identities from profile.
+
+**Note, that this function is called on the Class DigitalIdentity and not on an instance of it.**
+
+----------
+Parameters
+----------
+
+#. ``options`` - ``ContainerOptions``: runtime-like object with required modules
+    * ``contractLoader`` - |source contractLoader|_: |source contractLoader|_ instance
+    * ``cryptoProvider`` - |source cryptoProvider|_: |source cryptoProvider|_ instance
+    * ``dataContract`` - |source dataContract|_: |source dataContract|_ instance
+    * ``description`` - |source description|_: |source description|_ instance
+    * ``executor`` - |source executor|_: |source executor|_ instance
+    * ``nameResolver`` - |source nameResolver|_: |source nameResolver|_ instance
+    * ``rightsAndRoles`` - |source rightsAndRoles|_: |source rightsAndRoles|_ instance
+    * ``sharing`` - |source sharing|_: |source sharing|_ instance
+    * ``verifications`` - |source verifications|_: |source verifications|_ instance
+    * ``web3`` - |source web3|_: |source web3|_ instance
+    * ``log`` - ``Function`` (optional): function to use for logging: ``(message, level) => {...}``
+    * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
+    * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
+    * ``logLogLevel`` - |source logLevel|_ (optional): messages with this level will be pushed to ``logLog``
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const favorites = await DigitalIdentity.getFavorites(options);
+  console.dir(favorites);
+  // Output:
+  // [
+  //  'example.somewhere.evan',
+  //  'another.example.somewhere.else.evan',
+  //  '0x0000000000000000000000000000000000001234'
+  // ]
+
+
+
+--------------------------------------------------------------------------------
+
+.. _digitalIdentity_isFavorite:
+
+isFavorite
+================================================================================
+
+.. code-block:: typescript
+
+  digitalIdentity.isFavorite();
+
+Check if this digital identity is bookmarked in profile.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``boolean``: true if bookmarked
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const digitalIdentity = new DigitalIdentity(options.config);
+  if (await digitalIdentity.isFavorite()) {
+    console.log('I know this digital identity!');
+  } else {
+    await digitalIdentity.addToFavorites();
+    console.log('bookmarked digital identity');
+  }
+
+
+
+--------------------------------------------------------------------------------
+
+.. _digitalIdentity_removeFromFavorites:
+
+removeFromFavorites
+================================================================================
+
+.. code-block:: typescript
+
+  digitalIdentity.removeFromFavorites();
+
+Removes the current identity from the favorites in profile.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const digitalIdentity = new DigitalIdentity(options.config);
+  if (await digitalIdentity.isFavorite()) {
+    await digitalIdentity.removeFromFavorites();
+    console.log('removed digital identity from favorites');
+  }
 
 
 
@@ -553,12 +727,12 @@ Return value properties have the following meaning:
 - ``exists``: ``true`` if a contract address could be found at given ENS address
 - ``error``: an error object, if one of the other properties is ``false``
 
-**Note, that this function is called on the Class ``DigitalIdentity`` and not on an instance of it.**
+**Note, that this function is called on the Class DigitalIdentity and not on an instance of it.**
 
 ----------
 Parameters
-
 ----------
+
 #. ``options`` - ``DigitalIdentityOptions``: identity runtime options
     * ``contractLoader`` - |source contractLoader|_: |source contractLoader|_ instance
     * ``cryptoProvider`` - |source cryptoProvider|_: |source cryptoProvider|_ instance
