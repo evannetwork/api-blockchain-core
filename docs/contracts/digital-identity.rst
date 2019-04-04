@@ -440,8 +440,8 @@ Example
 
 --------------------------------------------------------------------------------
 
-= Working with Digital Identity Descriptions =
-==============================================
+= Descriptions =
+================
 
 .. _digital-identity_getDescription:
 
@@ -707,8 +707,8 @@ Example
 
 --------------------------------------------------------------------------------
 
-= Tools =
-=========
+= Utilities =
+=============
 
 .. _digital-identity_getValidity:
 
