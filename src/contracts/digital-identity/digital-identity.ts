@@ -186,7 +186,8 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * check if a contract is located under the specified address
+   * Check if a valid contract is located under the specified address, which allows to check for
+   * identities before actually loading them.
    *
    * @param      {DigitalIdentityOptions}  options     identity runtime options
    * @param      {string}                  ensAddress  ens address that should be checked
@@ -194,7 +195,7 @@ export class DigitalIdentity extends Logger {
   public static async getValidity(
     options: DigitalIdentityOptions,
     ensAddress: string,
-  ): Promise<{valid: boolean, exists: boolean, error: Error}> {
+  ): Promise<{ valid: boolean, exists: boolean, error: Error }> {
     let valid = false, exists = false, error = null;
 
     // create temporary identity instance, to ensure the contract
@@ -213,7 +214,7 @@ export class DigitalIdentity extends Logger {
     }
 
     // set exists parameter
-    if (!error || error.message.indexOf('contract does not exists') === -1) {
+    if (!error || error.message.indexOf('contract does not exist') === -1) {
       exists = true;
     }
 
@@ -234,7 +235,7 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * add verifications to this identity; this will also add verifications to contract description
+   * Add verifications to this identity; this will also add verifications to contract description
    *
    * @param      {DigitalIdentityVerificationEntry[]}  verifications  list of verifications to add
    */
@@ -261,14 +262,14 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * create new `Container` instances and add them as entry to identity
+   * Create new `Container` instances and add them as entry to identity.
    *
    * @param      {{ [id: string]: Partial<ContainerConfig> }}  containers  object with containers to
    *                                                                       create, name is used as
    *                                                                       entry name in identity
    */
   public async createContainers(containers: { [id: string]: Partial<ContainerConfig> }
-  ): Promise<{ [id: string]: Partial<Container> }> {
+  ): Promise<{ [id: string]: Container }> {
     await this.ensureContract();
     const result = {};
     await Throttle.all(Object.keys(containers).map((name) => async () => {
@@ -280,9 +281,9 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * check if digital identity contract already has been loaded, load from address / ENS if required
-   * and throw an error, when no contract exists or the description machtes not the identity
-   * specifications
+   * Check if digital identity contract already has been loaded, load from address / ENS if required
+   * and throw an error, when no contract exists or the description doesn't match the identity
+   * specifications.
    */
   public async ensureContract(): Promise<void> {
     if (this.contract) {
@@ -295,7 +296,7 @@ export class DigitalIdentity extends Logger {
 
     // if no address is set, throw an error
     if (!address || address === nullAddress) {
-      throw new Error(`${ baseError } contract does not exists`);
+      throw new Error(`${ baseError } contract does not exist`);
     } else {
       try {
         description = (await this.options.description
@@ -307,18 +308,18 @@ export class DigitalIdentity extends Logger {
       }
     }
 
-    // if the evan digital identity tag does not exist, throw 
+    // if the evan digital identity tag does not exist, throw
     if (!description || !description.tags || description.tags
       .indexOf('evan-digital-identity') === -1) {
-      throw new Error(`${ baseError } match not the specification (missing
-        'evan-digital-identity' tag)`);
+      throw new Error(`${ baseError } doesn't match the specification (missing ` +
+        'evan-digital-identity\' tag)');
     }
 
     this.contract = this.options.contractLoader.loadContract('IndexContract', address);
   }
 
   /**
-   * get contract address of underlying IndexContract
+   * Get contract address of underlying IndexContract.
    */
   public async getContractAddress(): Promise<string> {
     await this.ensureContract();
@@ -326,7 +327,7 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * returns description from identity
+   * Returns description from digital identity.
    */
   public async getDescription(): Promise<any> {
     await this.ensureContract();
@@ -335,7 +336,7 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * get all entries from index contract
+   * Get all entries from index contract.
    */
   public async getEntries(): Promise<{[id: string]: DigitalIdentityIndexEntry}> {
     await this.ensureContract();
@@ -368,7 +369,7 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * get single entry from index contract
+   * Get single entry from index contract.
    *
    * @param      {string}  name    entry name
    */
@@ -391,7 +392,7 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * gets verifications from description and fetches list of verifications for each of them
+   * Gets verifications from description and fetches list of verifications for each of them.
    */
   public async getVerifications(): Promise<any[]> {
     await this.ensureContract();
@@ -409,9 +410,9 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * create description info
+   * Write given description to digital identities DBCP.
    *
-   * @param      {any}  description  description to set (only `public` part)
+   * @param      {any}  description  description to set (`public` part)
    */
   public async setDescription(description: any): Promise<void> {
     await this.ensureContract();
@@ -427,21 +428,23 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * set multiple entries at index contract
+   * Set multiple entries at index contract.
    *
-   * @param      {any}  entries  The entries
+   * @param      {{[id: string]: DigitalIdentityIndexEntry}}  entries  entries to set
    */
-  public async setEntries(entries: any): Promise<void> {
+  public async setEntries(entries: {[id: string]: DigitalIdentityIndexEntry}): Promise<void> {
     await this.ensureContract();
-    await Throttle.all(Object.keys(entries).map((name) => async () => this.setEntry(name, entries[name].value, entries[name].entryType)));
+    await Throttle.all(Object.keys(entries).map((name) => async () =>
+      this.setEntry(name, entries[name].value, entries[name].entryType)));
   }
 
   /**
-   * set entry in index contract; entries are uniquie, setting the same name a second time will
-   * overwrite the first value
+   * Set entry in index contract; entries are unique, setting the same name a second time will
+   * overwrite the first value.
    *
-   * @param      {string}  name    entry name
-   * @param      {string}  value   value to set (address or bytes32 value)
+   * @param      {string}                    name       entry name
+   * @param      {string}                    value      value to set
+   * @param      {DigitalIdentityEntryType}  entryType  type of given value
    */
   public async setEntry(
     name: string,
