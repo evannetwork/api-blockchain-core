@@ -56,7 +56,7 @@ export interface ContainerConfig {
   address?: string;
   /** description has to be passed to ``.create`` to apply it to to contract */
   description?: any;
-  /** factory address can be passed to ``.create`` for custome container factory */
+  /** factory address can be passed to ``.create`` for custom container factory */
   factoryAddress?: string;
   /** template to be used in ``.create``, can be string with name or a ``ContainerTemplate`` */
   template?: string | ContainerTemplate;
@@ -86,7 +86,7 @@ export interface ContainerShareConfig {
   accountId: string;
   /** list of properties, that are shared read-only */
   read?: string[];
-  /** list of properties, that are shared readable and writeable */
+  /** list of properties, that are shared readable and writable */
   readWrite?: string[];
 }
 

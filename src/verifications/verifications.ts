@@ -905,18 +905,21 @@ export class Verifications extends Logger {
    * Sets or creates a verification; this requires the issuer to have permissions for the parent
    * verification (if verification name seen as a path, the parent 'folder').
    *
-   * @param      {string}           issuer             issuer of the verification
-   * @param      {string}           subject            subject of the verification and the owner of
-   *                                                   the verification node
-   * @param      {string}           topic              name of the verification (full path)
-   * @param      {number}           expirationDate     expiration date, for the verification,
-   *                                                   defaults to `0` (does not expire)
-   * @param      {object}           verificationValue  json object which will be stored in the
-   *                                                   verification
-   * @param      {string}           descriptionDomain  domain of the verification, this is a
-   *                                                   subdomain under 'verifications.evan', so
-   *                                                   passing 'example' will link verifications
-   *                                                   description to 'example.verifications.evan'
+   * @param      {string}           issuer                   issuer of the verification
+   * @param      {string}           subject                  subject of the verification and the
+   *                                                         owner of the verification node
+   * @param      {string}           topic                    name of the verification (full path)
+   * @param      {number}           expirationDate           expiration date, for the verification,
+   *                                                         defaults to `0` (≈does not expire)
+   * @param      {any}              verificationValue        json object which will be stored in the
+   *                                                         verification
+   * @param      {string}           descriptionDomain        domain of the verification, this is a
+   *                                                         subdomain under 'verifications.evan',
+   *                                                         so passing 'example' will link
+   *                                                         verifications description to
+   *                                                         'example.verifications.evan'
+   * @param      {boolean}          disabelSubVerifications  if true, verifications created under
+   *                                                         this path are invalid
    * @return     {Promise<string>}  verificationId
    */
   public async setVerification(
@@ -926,7 +929,7 @@ export class Verifications extends Logger {
       expirationDate = 0,
       verificationValue?: any,
       descriptionDomain?: string,
-      disabelSubVerifications = false
+      disabelSubVerifications = false,
     ): Promise<string> {
     await this.ensureStorage();
     let targetIdentity;

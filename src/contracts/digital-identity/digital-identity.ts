@@ -44,26 +44,35 @@ import { Sharing } from '../sharing';
 import { Verifications } from '../../verifications/verifications';
 
 
+// empty address
+const nullAddress = '0x0000000000000000000000000000000000000000';
+
+
 /**
  * possible entry types for entries in index
  */
 export enum DigitalIdentityEntryType {
   AccountId,
-  GenericContract,
-  IndexContract,
   ContainerContract,
   FileHash,
-  Hash
+  GenericContract,
+  Hash,
+  IndexContract,
 }
 
 /**
  * config for digital identity
  */
 export interface DigitalIdentityConfig {
+  /** account id of user, that interacts with digital identity */
   accountId: string;
-  address?: string;
+  /** address of a ``DigitalIdentity`` instance, can be ENS or contract address */
   containerConfig: ContainerConfig;
+  /** address of a ``DigitalIdentity`` instance, can be ENS or contract address */
+  address?: string;
+  /** description has to be passed to ``.create`` to apply it to to contract */
   description?: any;
+  /** factory address can be passed to ``.create`` for customer digital identity factory*/
   factoryAddress?: string;
 }
 
@@ -71,8 +80,11 @@ export interface DigitalIdentityConfig {
  * container for digital identity entry values
  */
 export interface DigitalIdentityIndexEntry {
+  /** type of entry in index */
   entryType?: DigitalIdentityEntryType;
+  /** raw value (``bytes32`` hash) */
   raw?: any;
+  /** decrypted/loaded value */
   value?: any;
 }
 
@@ -80,11 +92,15 @@ export interface DigitalIdentityIndexEntry {
  * data for verifications for digital identities
  */
 export interface DigitalIdentityVerificationEntry {
-  subject: string;
+  /** name of the verification (full path) */
   topic: string;
+  /** domain of the verification, this is a subdomain under 'verifications.evan', so passing 'example' will link verifications */
   descriptionDomain?: string;
+  /** if true, verifications created under  this path are invalid, defaults to ``false`` */
   disableSubverifications?: boolean;
+  /** expiration date, for the verification, defaults to `0` (does not expire) */
   expirationDate?: number;
+  /** json object which will be stored in the verification */
   verificationValue?: string;
 }
 
@@ -92,10 +108,6 @@ export interface DigitalIdentityVerificationEntry {
  * options for DigitalIdentity constructor (uses same properties as ContainerOptions)
  */
 export interface DigitalIdentityOptions extends ContainerOptions { }
-
-
-// empty address
-const nullAddress = '0x0000000000000000000000000000000000000000';
 
 /**
  * helper class for managing digital identities
@@ -108,23 +120,7 @@ export class DigitalIdentity extends Logger {
   private options: DigitalIdentityOptions;
 
   /**
-   * check, that given subset of properties is present at config, collections missing properties and
-   * throws a single error
-   *
-   * @param      {ContainerConfig}  config      config for container instance
-   * @param      {string}           properties  list of property names, that should be present
-   */
-  public static checkConfigProperties(config: DigitalIdentityConfig, properties: string[]): void {
-    let missing = properties.filter(property => !config.hasOwnProperty(property));
-    if (missing.length === 1) {
-      throw new Error(`missing property in config: "${missing[0]}"`);
-    } else if (missing.length > 1) {
-      throw new Error(`missing properties in config: "${missing.join(', ')}"`);
-    }
-  }
-
-  /**
-   * create digital identity contract
+   * Create digital identity contract.
    *
    * @param      {DigitalIdentityOptions}  options  identity runtime options
    * @param      {DigitalIdentityConfig}   config   configuration for the new identity instance
@@ -133,7 +129,7 @@ export class DigitalIdentity extends Logger {
     options: DigitalIdentityOptions,
     config: DigitalIdentityConfig,
   ): Promise<DigitalIdentity> {
-    DigitalIdentity.checkConfigProperties(config, ['description']);
+    checkConfigProperties(config, ['description']);
     const instanceConfig = JSON.parse(JSON.stringify(config));
 
     // ensure, that the evan digital identity tag is set
@@ -225,7 +221,8 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * create new DititalIdentity instance
+   * Create new DititalIdentity instance. This will not create a smart contract contract but is used
+   * to load existing containers. To create a new contract, use the static ``create`` function.
    *
    * @param      {DigitalIdentityOptions}  options  runtime-like object with required modules
    * @param      {DigitalIdentityConfig}   config   digital identity related config
@@ -496,5 +493,22 @@ export class DigitalIdentity extends Logger {
         default:
           entry.value = entry.raw.value;
     }
+  }
+}
+
+
+/**
+ * Check, that given subset of properties is present at config, collections missing properties and
+ * throws a single error.
+ *
+ * @param      {ContainerConfig}  config      config for container instance
+ * @param      {string}           properties  list of property names, that should be present
+ */
+function checkConfigProperties(config: DigitalIdentityConfig, properties: string[]): void {
+  let missing = properties.filter(property => !config.hasOwnProperty(property));
+  if (missing.length === 1) {
+    throw new Error(`missing property in config: "${missing[0]}"`);
+  } else if (missing.length > 1) {
+    throw new Error(`missing properties in config: "${missing.join(', ')}"`);
   }
 }
