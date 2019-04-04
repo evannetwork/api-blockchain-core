@@ -592,6 +592,8 @@ getFavorites
 
 Gets bookmarked identities from profile.
 
+**Note, that this function is called on the Class DigitalIdentity and not on an instance of it.**
+
 ----------
 Parameters
 ----------
@@ -725,7 +727,7 @@ Return value properties have the following meaning:
 - ``exists``: ``true`` if a contract address could be found at given ENS address
 - ``error``: an error object, if one of the other properties is ``false``
 
-**Note, that this function is called on the Class ``DigitalIdentity`` and not on an instance of it.**
+**Note, that this function is called on the Class DigitalIdentity and not on an instance of it.**
 
 ----------
 Parameters
