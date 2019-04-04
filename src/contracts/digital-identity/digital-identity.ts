@@ -469,14 +469,16 @@ export class DigitalIdentity extends Logger {
   public async setDescription(description: any): Promise<void> {
     await this.ensureContract();
 
-    // ensure, that the evan digital identity tag is set
-    description.tags = description.tags || [ ];
-    if (description.tags.indexOf('evan-digital-identity') === -1) {
-      description.tags.push('evan-digital-identity');
-    }
+    this.getMutex('description').runExclusive(async () => {
+      // ensure, that the evan digital identity tag is set
+      description.tags = description.tags || [ ];
+      if (description.tags.indexOf('evan-digital-identity') === -1) {
+        description.tags.push('evan-digital-identity');
+      }
 
-    await this.options.description.setDescription(
-      this.contract.options.address, { public: description }, this.config.accountId);
+      await this.options.description.setDescription(
+        this.contract.options.address, { public: description }, this.config.accountId);
+    });
   }
 
   /**
