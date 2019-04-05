@@ -135,6 +135,13 @@ export interface DigitalIdentityOptions extends ContainerOptions {
  * @class      DigitalIdentity (name)
  */
 export class DigitalIdentity extends Logger {
+  public static defaultDescription = {
+    name: 'Digital Identity',
+    description: 'Digital Identity Contract',
+    author: '',
+    version: '0.1.0',
+    dbcpVersion: 2,
+  };
   private config: DigitalIdentityConfig;
   private contract: any;
   private options: DigitalIdentityOptions;
@@ -150,7 +157,6 @@ export class DigitalIdentity extends Logger {
     options: DigitalIdentityOptions,
     config: DigitalIdentityConfig,
   ): Promise<DigitalIdentity> {
-    checkConfigProperties(config, ['description']);
     const instanceConfig = JSON.parse(JSON.stringify(config));
 
     // ensure, that the evan digital identity tag is set
@@ -160,7 +166,9 @@ export class DigitalIdentity extends Logger {
     }
 
     // check description values and upload it
-    const envelope: Envelope = { public: instanceConfig.description };
+    const envelope: Envelope = {
+      public: instanceConfig.description || DigitalIdentity.defaultDescription,
+    };
     const validation = options.description.validateDescription(envelope);
     if (validation !== true) {
       throw new Error(`validation of description failed with: ${JSON.stringify(validation)}`);
@@ -346,7 +354,13 @@ export class DigitalIdentity extends Logger {
     const result = {};
     await Throttle.all(Object.keys(containers).map((name) => async () => {
       result[name] = await Container.create(
-        this.options, { ...this.config.containerConfig, ...containers[name] });
+        this.options,
+        {
+          accountId: this.config.accountId,
+          ...this.config.containerConfig,
+          ...containers[name],
+        },
+      );
       await this.setEntry(name, result[name], DigitalIdentityEntryType.ContainerContract);
     }));
     return result;
