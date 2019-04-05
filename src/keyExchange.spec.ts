@@ -37,13 +37,14 @@ import {
   NameResolver,
 } from '@evan.network/dbcp';
 
-import { accounts } from './test/accounts';
+import { Ipfs } from './dfs/ipfs';
+import { Ipld } from './dfs/ipld';
+import { KeyExchange, KeyExchangeOptions } from './keyExchange';
 import { Mail, Mailbox, MailboxOptions } from './mailbox';
 import { Profile } from './profile/profile';
-import { KeyExchange, KeyExchangeOptions } from './keyExchange';
+import { RightsAndRoles } from './contracts/rights-and-roles';
 import { TestUtils } from './test/test-utils';
-import { Ipld } from './dfs/ipld';
-import { Ipfs } from './dfs/ipfs';
+import { accounts } from './test/accounts';
 
 describe('KeyExchange class', function() {
   this.timeout(600000);
@@ -87,23 +88,25 @@ describe('KeyExchange class', function() {
     ipld = await TestUtils.getIpld(ipfs);
 
     profile = new Profile({
-      nameResolver: await TestUtils.getNameResolver(web3),
-      defaultCryptoAlgo: 'aes',
-      dataContract: await TestUtils.getDataContract(web3, ipfs),
-      contractLoader: await TestUtils.getContractLoader(web3),
-      ipld,
-      executor: await TestUtils.getExecutor(web3),
       accountId: accounts[0],
+      contractLoader: await TestUtils.getContractLoader(web3),
+      dataContract: await TestUtils.getDataContract(web3, ipfs),
+      defaultCryptoAlgo: 'aes',
+      executor: await TestUtils.getExecutor(web3),
+      ipld,
+      nameResolver: await TestUtils.getNameResolver(web3),
+      rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
     });
 
     profile2 = new Profile({
-      nameResolver: await TestUtils.getNameResolver(web3),
-      defaultCryptoAlgo: 'aes',
-      dataContract: await TestUtils.getDataContract(web3, ipfs),
-      contractLoader: await TestUtils.getContractLoader(web3),
-      ipld,
-      executor: await TestUtils.getExecutor(web3),
       accountId: accounts[1],
+      contractLoader: await TestUtils.getContractLoader(web3),
+      dataContract: await TestUtils.getDataContract(web3, ipfs),
+      defaultCryptoAlgo: 'aes',
+      executor: await TestUtils.getExecutor(web3),
+      ipld,
+      nameResolver: await TestUtils.getNameResolver(web3),
+      rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
     });
 
     mailbox = new Mailbox({
@@ -173,13 +176,14 @@ describe('KeyExchange class', function() {
     const keys = Object.keys(result.mails);
     expect(result.mails[keys[0]].content.attachments[0].type).to.equal('commKey');
     let profile = new Profile({
-      nameResolver: await TestUtils.getNameResolver(web3),
-      defaultCryptoAlgo: 'aes',
-      dataContract: await TestUtils.getDataContract(web3, ipfs),
-      contractLoader: await TestUtils.getContractLoader(web3),
-      ipld,
-      executor: await TestUtils.getExecutor(web3),
       accountId: result.mails[keys[0]].content.from,
+      contractLoader: await TestUtils.getContractLoader(web3),
+      dataContract: await TestUtils.getDataContract(web3, ipfs),
+      defaultCryptoAlgo: 'aes',
+      executor: await TestUtils.getExecutor(web3),
+      ipld,
+      nameResolver: await TestUtils.getNameResolver(web3),
+      rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
     });
 
     const publicKeyProfile = await profile.getPublicKey();
@@ -192,13 +196,14 @@ describe('KeyExchange class', function() {
     const keys = Object.keys(result.mails);
     expect(result.mails[keys[0]].content.attachments[0].type).to.equal('commKey');
     let profile = new Profile({
-      nameResolver: await TestUtils.getNameResolver(web3),
-      defaultCryptoAlgo: 'aes',
-      dataContract: await TestUtils.getDataContract(web3, ipfs),
-      contractLoader: await TestUtils.getContractLoader(web3),
-      ipld,
-      executor: await TestUtils.getExecutor(web3),
       accountId: result.mails[keys[0]].content.from,
+      contractLoader: await TestUtils.getContractLoader(web3),
+      dataContract: await TestUtils.getDataContract(web3, ipfs),
+      defaultCryptoAlgo: 'aes',
+      executor: await TestUtils.getExecutor(web3),
+      ipld,
+      nameResolver: await TestUtils.getNameResolver(web3),
+      rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
     });
     const keyExchangeOptions = {
       mailbox,
@@ -217,13 +222,14 @@ describe('KeyExchange class', function() {
   it('should be able to send an invitation to a remote account', async () => {
     const remoteAddress = '';
     const profileLocal = new Profile({
-      nameResolver: await TestUtils.getNameResolver(web3),
-      defaultCryptoAlgo: 'aes',
-      dataContract: await TestUtils.getDataContract(web3, ipfs),
-      contractLoader: await TestUtils.getContractLoader(web3),
-      ipld,
-      executor: await TestUtils.getExecutor(web3),
       accountId: accounts[1],
+      contractLoader: await TestUtils.getContractLoader(web3),
+      dataContract: await TestUtils.getDataContract(web3, ipfs),
+      defaultCryptoAlgo: 'aes',
+      executor: await TestUtils.getExecutor(web3),
+      ipld,
+      nameResolver: await TestUtils.getNameResolver(web3),
+      rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
     });
     const foreignPubkey = await profileLocal.getPublicKey();
     const commKey = await keyExchange1.generateCommKey();
