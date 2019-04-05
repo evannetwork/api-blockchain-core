@@ -49,6 +49,22 @@ import { Verifications } from '../../verifications/verifications';
 // empty address
 const nullAddress = '0x0000000000000000000000000000000000000000';
 
+/**
+ * Check, that given subset of properties is present at config, collections missing properties and
+ * throws a single error.
+ *
+ * @param      {ContainerConfig}  config      config for container instance
+ * @param      {string}           properties  list of property names, that should be present
+ */
+function checkConfigProperties(config: DigitalIdentityConfig, properties: string[]): void {
+  let missing = properties.filter(property => !config.hasOwnProperty(property));
+  if (missing.length === 1) {
+    throw new Error(`missing property in config: "${missing[0]}"`);
+  } else if (missing.length > 1) {
+    throw new Error(`missing properties in config: "${missing.join(', ')}"`);
+  }
+}
+
 
 /**
  * possible entry types for entries in index
@@ -159,10 +175,10 @@ export class DigitalIdentity extends Logger {
 
           const owner = await options.executor.executeContractCall(
             options.nameResolver.ensContract, 'owner', options.nameResolver.namehash(checkAddress));
-          if (owner === '0x0000000000000000000000000000000000000000') {
+          if (owner === nullAddress) {
             await options.nameResolver.setAddress(
               checkAddress,
-              '0x0000000000000000000000000000000000000000',
+              nullAddress,
               instanceConfig.accountId
             );
           }
@@ -220,7 +236,7 @@ export class DigitalIdentity extends Logger {
    */
   public static async getFavorites(options: DigitalIdentityOptions): Promise<Array<string>> {
     const favorites = (await options.profile.getBcContracts('identities.evan')) || { };
-    
+
     // purge crypto info directly
     delete favorites.cryptoInfo;
 
@@ -588,22 +604,5 @@ export class DigitalIdentity extends Logger {
         default:
           entry.value = entry.raw.value;
     }
-  }
-}
-
-
-/**
- * Check, that given subset of properties is present at config, collections missing properties and
- * throws a single error.
- *
- * @param      {ContainerConfig}  config      config for container instance
- * @param      {string}           properties  list of property names, that should be present
- */
-function checkConfigProperties(config: DigitalIdentityConfig, properties: string[]): void {
-  let missing = properties.filter(property => !config.hasOwnProperty(property));
-  if (missing.length === 1) {
-    throw new Error(`missing property in config: "${missing[0]}"`);
-  } else if (missing.length > 1) {
-    throw new Error(`missing properties in config: "${missing.join(', ')}"`);
   }
 }
