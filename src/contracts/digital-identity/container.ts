@@ -59,11 +59,15 @@ async function applyTemplate(
   config: ContainerConfig,
   container: Container,
 ): Promise<void> {
-  checkConfigProperties(config, ['template']);
   let tasks = [];
-  const template = typeof config.template === 'string' ?
-    Container.templates[config.template] :
-    config.template;
+
+  // use default template if omitted, get template properties
+  let template;
+  if (typeof config.template === 'undefined' || typeof config.template === 'string') {
+    template = Container.templates[config.template as string || Container.defaultTemplate];
+  } else {
+    template = config.template;
+  }
 
   // add type property
   const properties = JSON.parse(JSON.stringify(template.properties));
@@ -263,13 +267,20 @@ export interface ContainerVerificationEntry {
  * @class      Container (name)
  */
 export class Container extends Logger {
+  public static defaultDescription = {
+    name: 'Container Contract (DataContract)',
+    description: 'Container for Digital Identity Data',
+    author: '',
+    version: '0.1.0',
+    dbcpVersion: 2,
+  };
+  public static defaultTemplate = 'metadata';
   public static templates: { [id: string]: ContainerTemplate; } = {
     metadata: {
       type: 'metadata',
       properties: {},
     },
   };
-  public static defaultTemplate = 'metadata';
   private config: ContainerConfig;
   private contract: any;
   private mutexes: { [id: string]: Mutex; };
@@ -313,7 +324,7 @@ export class Container extends Logger {
     }
 
     // check description values and upload it
-    const envelope: Envelope = { public: instanceConfig.description };
+    const envelope: Envelope = { public: instanceConfig.description || Container.defaultDescription };
     const validation = options.description.validateDescription(envelope);
     if (validation !== true) {
       throw new Error(`validation of description failed with: ${JSON.stringify(validation)}`);
