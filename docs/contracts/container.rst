@@ -15,15 +15,18 @@ Container
    * - Examples
      - `container.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/digital-twin/container.spec.ts>`_
 
-Usage examples can be found :doc:`here <./digital-twin-usage-examples>`.
+TL;DR: usage examples and a data flow can be found :doc:`here <./digital-twin-usage-examples>`.
 
-This place is reserved for a more detailed explanation about what a container is and what it is used for. Examples offer clear and practical approach on how to interact with it and how someone can embed Containers in ones own code.
+The ``Container`` is an API layer over :doc:`DataContract <./data-contract>` and combines its functionalities into a more use case oriented straight forward interface.
 
-Amet sunt velit non dolor dolore culpa occaecat consectetur dolor consequat nisi nisi quis amet culpa laboris ut tempor elit laboris aute mollit in esse voluptate excepteur ea esse sint ut ullamco adipisicing esse irure in id.
+To reduce complexity the most common usage patterns from :doc:`DataContract <./data-contract>` have been set as fixed in the ``Container`` implementation. Therefore the ``Container`` follows these principles:
 
-Cillum irure eiusmod mollit et cupidatat laboris pariatur dolore in aliqua in dolor aute non do ex do sed amet exercitation culpa proident.
-
-Eiusmod ut mollit sed ea commodo aliqua reprehenderit veniam in dolore ut incididunt labore incididunt.
+- data is always encrypted
+- each entry gets an own key for encryption
+- each entry get an own role for granting write permissions
+- an identity always is created for the container
+- adding validations adds the validation topic to the contract description to allow listing of all validations
+- a property called ``type`` is added to the ``Container`` at creation type and marks its template type
 
 
 

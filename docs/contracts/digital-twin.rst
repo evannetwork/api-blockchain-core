@@ -1,5 +1,5 @@
 ================================================================================
-DigitalTwin
+Digital Twin
 ================================================================================
 
 .. list-table:: 
@@ -15,15 +15,14 @@ DigitalTwin
    * - Examples
      - `digital-twin.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/digital-twin/digital-twin.spec.ts>`_
 
-Usage examples can be found :doc:`here <./digital-twin-usage-examples>`.
+TL;DR: usage examples and a data flow can be found :doc:`here <./digital-twin-usage-examples>`.
 
-This place is reserved for a more detailed explanation about what a digital twin is and what it is used for. Examples offer clear and practical approach on how to interact with it and how someone can embed Digital Identities in ones own code.
+A ``DigitalTwin`` is a wrapper, that holds data or references to data. This data can be
 
-Amet sunt velit non dolor dolore culpa occaecat consectetur dolor consequat nisi nisi quis amet culpa laboris ut tempor elit laboris aute mollit in esse voluptate excepteur ea esse sint ut ullamco adipisicing esse irure in id.
-
-Cillum irure eiusmod mollit et cupidatat laboris pariatur dolore in aliqua in dolor aute non do ex do sed amet exercitation culpa proident.
-
-Eiusmod ut mollit sed ea commodo aliqua reprehenderit veniam in dolore ut incididunt labore incididunt.
+- a |source Container|_ - This is the most common use case, actual data is stored in the container and the ``DigitalTwin`` merely holds a reference to the container.
+- an ``DigitalTwin`` - DigitalTwins can be linked together, so an entry can be another ``DigitalTwin``, which allows to navigate through twins to retrieve data properties from linked twins, see :ref:`getEntry <digital-twin_getEntry>`
+- an account address / a contract address
+- ``bytes32`` hashes (e.g. file hashes)
 
 
 
@@ -63,7 +62,7 @@ Parameters
 #. ``config`` - ``DigitalTwinConfig``: digital twin related config
     * ``accountId`` - ``string``: account id of user, that interacts with digital twin
     * ``containerConfig`` - ``ContainerConfig``: address of a ``DigitalTwin`` instance, can be ENS or contract address
-    * ``address`` - ``string`` (optional): address of an ``IndexContract`` instance, can be ENS or contract address
+    * ``address`` - ``string`` (optional): address of an ``DigitalTwin`` instance, can be ENS or contract address
     * ``description`` - ``string``: description has to be passed to ``.create`` to apply it to to contract
     * ``factoryAddress`` - ``string`` (optional): factory address can be passed to ``.create`` for customer digital twin factory
 
@@ -139,7 +138,7 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``DigitalTwin``: new instance bound to new ``IndexContract``
+``Promise`` returns ``DigitalTwin``: new instance bound to new ``DigitalTwin``
 
 -------
 Example
@@ -300,11 +299,19 @@ getEntry
 
 Get single entry from index contract.
 
+When this twin has other twins as its entries, properties from those can be selected by building a path of properties.
+
+For example a twin called ``car`` may have a link to another twin under the name ``tire``. The twin ``tire`` has an entry called ``metadata``. It is possible to retrieve this entry from the twin ``car`` with:
+
+.. code-block:: typescript
+
+  const tireMetadata = await car.getEntry('tire/metadata');
+
 ----------
 Parameters
 ----------
 
-#. ``name`` - ``string``: entry name
+#. ``name`` - ``string``: entry name or path to data in linked twin
 
 -------
 Returns
@@ -821,7 +828,7 @@ getContractAddress
 
   digitalTwin.getContractAddress();
 
-Get contract address of underlying IndexContract.
+Get contract address of underlying DigitalTwin.
 
 -------
 Returns
@@ -887,11 +894,11 @@ DigitalTwinEntryType
 possible entry types for entries in index
 
 #. ``AccountId``
-#. ``ContainerContract``
+#. ``Container``
 #. ``FileHash``
 #. ``GenericContract``
 #. ``Hash``
-#. ``IndexContract``
+#. ``DigitalTwin``
 
 
 
@@ -908,7 +915,7 @@ config for digital twin
 
 #. ``accountId`` - ``string``: account id of user, that interacts with digital twin
 #. ``containerConfig`` - ``ContainerConfig``: address of a ``DigitalTwin`` instance, can be ENS or contract address
-#. ``address`` - ``string`` (optional): address of an ``IndexContract`` instance, can be ENS or contract address
+#. ``address`` - ``string`` (optional): address of an ``DigitalTwin`` instance, can be ENS or contract address
 #. ``description`` - ``string`` (optional): description has to be passed to ``.create`` to apply it to to contract
 #. ``factoryAddress`` - ``string`` (optional): factory address can be passed to ``.create`` for customer digital twin factory
 
@@ -946,14 +953,17 @@ data for verifications for digital twins
 
 .. required for building markup
 
+.. |source container| replace:: ``Container``
+.. _source container: ../contracts/container.html
+
 .. |source contractLoader| replace:: ``ContractLoader``
 .. _source contractLoader: ../contracts/contract-loader.html
 
-.. |source dataContract| replace:: ``DataContract``
-.. _source dataContract: ../contracts/data-contract.html
-
 .. |source cryptoProvider| replace:: ``CryptoProvider``
 .. _source cryptoProvider: ../encryption/crypto-provider.html
+
+.. |source dataContract| replace:: ``DataContract``
+.. _source dataContract: ../contracts/data-contract.html
 
 .. |source description| replace:: ``Description``
 .. _source description: ../blockchain/description.html
