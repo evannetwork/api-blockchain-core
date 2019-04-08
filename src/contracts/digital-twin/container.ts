@@ -269,7 +269,7 @@ export interface ContainerVerificationEntry {
 export class Container extends Logger {
   public static defaultDescription = {
     name: 'Container Contract (DataContract)',
-    description: 'Container for Digital Identity Data',
+    description: 'Container for Digital Twin Data',
     author: '',
     version: '0.1.0',
     dbcpVersion: 2,

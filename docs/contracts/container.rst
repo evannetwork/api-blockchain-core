@@ -60,7 +60,7 @@ Parameters
     * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
     * ``logLogLevel`` - |source logLevel|_ (optional): messages with this level will be pushed to ``logLog``
-#. ``config`` - ``DigitalIdentityConfig``: config for new container
+#. ``config`` - ``DigitalTwinconfIg``: config for new container
     * ``accountId`` - ``string``: account id of user, that interacts with container
     * ``address`` - ``string``: address of a ``DataContract`` instance, can be ENS or contract address
 
@@ -125,7 +125,7 @@ Parameters
     * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
     * ``logLogLevel`` - |source logLevel|_ (optional): messages with this level will be pushed to ``logLog``
-#. ``config`` - ``DigitalIdentityConfig``: config for new container
+#. ``config`` - ``DigitalTwinconfIg``: config for new container
     * ``accountId`` - ``string``: account id of user, that interacts with container
     * ``address`` - ``string``: ENS address used for container
     * ``description`` - ``string``: description has to be passed to ``.create`` to apply it to to contract
@@ -204,7 +204,7 @@ Parameters
     * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
     * ``logLogLevel`` - |source logLevel|_ (optional): messages with this level will be pushed to ``logLog``
-#. ``config`` - ``DigitalIdentityConfig``: config for new container
+#. ``config`` - ``DigitalTwinconfIg``: config for new container
     * ``accountId`` - ``string``: account id of user, that interacts with container
     * ``address`` - ``string``: ENS address used for container
     * ``description`` - ``string``: description has to be passed to ``.create`` to apply it to to contract

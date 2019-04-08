@@ -56,7 +56,7 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
  * @param      {ContainerConfig}  config      config for container instance
  * @param      {string}           properties  list of property names, that should be present
  */
-function checkConfigProperties(config: DigitalIdentityConfig, properties: string[]): void {
+function checkConfigProperties(config: DigitalTwinConfig, properties: string[]): void {
   let missing = properties.filter(property => !config.hasOwnProperty(property));
   if (missing.length === 1) {
     throw new Error(`missing property in config: "${missing[0]}"`);
@@ -69,7 +69,7 @@ function checkConfigProperties(config: DigitalIdentityConfig, properties: string
 /**
  * possible entry types for entries in index
  */
-export enum DigitalIdentityEntryType {
+export enum DigitalTwinEntryType {
   AccountId,
   ContainerContract,
   FileHash,
@@ -79,27 +79,27 @@ export enum DigitalIdentityEntryType {
 }
 
 /**
- * config for digital identity
+ * config for digital twin
  */
-export interface DigitalIdentityConfig {
-  /** account id of user, that interacts with digital identity */
+export interface DigitalTwinConfig {
+  /** account id of user, that interacts with digital twin */
   accountId: string;
-  /** address of a ``DigitalIdentity`` instance, can be ENS or contract address */
+  /** address of a ``DigitalTwin`` instance, can be ENS or contract address */
   containerConfig: ContainerConfig;
-  /** address of a ``DigitalIdentity`` instance, can be ENS or contract address */
+  /** address of a ``DigitalTwin`` instance, can be ENS or contract address */
   address?: string;
   /** description has to be passed to ``.create`` to apply it to to contract */
   description?: any;
-  /** factory address can be passed to ``.create`` for customer digital identity factory*/
+  /** factory address can be passed to ``.create`` for customer digital twin factory*/
   factoryAddress?: string;
 }
 
 /**
- * container for digital identity entry values
+ * container for digital twin entry values
  */
-export interface DigitalIdentityIndexEntry {
+export interface DigitalTwinIndexEntry {
   /** type of entry in index */
-  entryType?: DigitalIdentityEntryType;
+  entryType?: DigitalTwinEntryType;
   /** raw value (``bytes32`` hash) */
   raw?: any;
   /** decrypted/loaded value */
@@ -107,9 +107,9 @@ export interface DigitalIdentityIndexEntry {
 }
 
 /**
- * data for verifications for digital identities
+ * data for verifications for digital twins
  */
-export interface DigitalIdentityVerificationEntry {
+export interface DigitalTwinVerificationEntry {
   /** name of the verification (full path) */
   topic: string;
   /** domain of the verification, this is a subdomain under 'verifications.evan', so passing 'example' will link verifications */
@@ -123,51 +123,51 @@ export interface DigitalIdentityVerificationEntry {
 }
 
 /**
- * options for DigitalIdentity constructor (uses same properties as ContainerOptions)
+ * options for DigitalTwin constructor (uses same properties as ContainerOptions)
  */
-export interface DigitalIdentityOptions extends ContainerOptions {
+export interface DigitalTwinOptions extends ContainerOptions {
   profile: Profile;
 }
 
 /**
- * helper class for managing digital identities
+ * helper class for managing digital twins
  *
- * @class      DigitalIdentity (name)
+ * @class      DigitalTwin (name)
  */
-export class DigitalIdentity extends Logger {
+export class DigitalTwin extends Logger {
   public static defaultDescription = {
-    name: 'Digital Identity',
-    description: 'Digital Identity Contract',
+    name: 'Digital Twin',
+    description: 'Digital Twin Contract',
     author: '',
     version: '0.1.0',
     dbcpVersion: 2,
   };
-  private config: DigitalIdentityConfig;
+  private config: DigitalTwinConfig;
   private contract: any;
-  private options: DigitalIdentityOptions;
+  private options: DigitalTwinOptions;
   private mutexes: { [id: string]: Mutex; };
 
   /**
-   * Create digital identity contract.
+   * Create digital twin contract.
    *
-   * @param      {DigitalIdentityOptions}  options  identity runtime options
-   * @param      {DigitalIdentityConfig}   config   configuration for the new identity instance
+   * @param      {DigitalTwinOptions}  options  twin runtime options
+   * @param      {DigitalTwinConfig}   config   configuration for the new twin instance
    */
   public static async create(
-    options: DigitalIdentityOptions,
-    config: DigitalIdentityConfig,
-  ): Promise<DigitalIdentity> {
+    options: DigitalTwinOptions,
+    config: DigitalTwinConfig,
+  ): Promise<DigitalTwin> {
     const instanceConfig = JSON.parse(JSON.stringify(config));
 
-    // ensure, that the evan digital identity tag is set
+    // ensure, that the evan digital twin tag is set
     instanceConfig.description.tags = instanceConfig.description.tags || [ ];
-    if (instanceConfig.description.tags.indexOf('evan-digital-identity') === -1) {
-      instanceConfig.description.tags.push('evan-digital-identity');
+    if (instanceConfig.description.tags.indexOf('evan-digital-twin') === -1) {
+      instanceConfig.description.tags.push('evan-digital-twin');
     }
 
     // check description values and upload it
     const envelope: Envelope = {
-      public: instanceConfig.description || DigitalIdentity.defaultDescription,
+      public: instanceConfig.description || DigitalTwin.defaultDescription,
     };
     const validation = options.description.validateDescription(envelope);
     if (validation !== true) {
@@ -232,18 +232,18 @@ export class DigitalIdentity extends Logger {
     // create identity for index and write it to description
     await options.verifications.createIdentity(config.accountId, contractId);
 
-    const identity = new DigitalIdentity(options, instanceConfig);
-    await identity.ensureContract();
-    return identity;
+    const twin = new DigitalTwin(options, instanceConfig);
+    await twin.ensureContract();
+    return twin;
   }
 
   /**
-   * Gets bookmarked identities from profile.
+   * Gets bookmarked twins from profile.
    *
-   * @param      {DigitalIdentityOptions}  options  identity runtime options
+   * @param      {DigitalTwinOptions}  options  twin runtime options
    */
-  public static async getFavorites(options: DigitalIdentityOptions): Promise<Array<string>> {
-    const favorites = (await options.profile.getBcContracts('identities.evan')) || { };
+  public static async getFavorites(options: DigitalTwinOptions): Promise<Array<string>> {
+    const favorites = (await options.profile.getBcContracts('twins.evan')) || { };
 
     // purge crypto info directly
     delete favorites.cryptoInfo;
@@ -253,19 +253,19 @@ export class DigitalIdentity extends Logger {
 
   /**
    * Check if a valid contract is located under the specified address, which allows to check for
-   * identities before actually loading them.
+   * twins before actually loading them.
    *
-   * @param      {DigitalIdentityOptions}  options     identity runtime options
+   * @param      {DigitalTwinOptions}  options     twin runtime options
    * @param      {string}                  ensAddress  ens address that should be checked
    */
   public static async getValidity(
-    options: DigitalIdentityOptions,
+    options: DigitalTwinOptions,
     ensAddress: string,
   ): Promise<{ valid: boolean, exists: boolean, error: Error }> {
     let valid = false, exists = false, error = null;
 
-    // create temporary identity instance, to ensure the contract
-    const identityInstance = new DigitalIdentity(options, {
+    // create temporary twin instance, to ensure the contract
+    const twinInstance = new DigitalTwin(options, {
       accountId: nullAddress,
       address: ensAddress,
       containerConfig: { accountId: nullAddress }
@@ -273,7 +273,7 @@ export class DigitalIdentity extends Logger {
 
     // try to load the contract, this will throw, when the specification is invalid
     try {
-      await identityInstance.ensureContract();
+      await twinInstance.ensureContract();
       valid = true;
     } catch (ex) {
       error = ex;
@@ -288,13 +288,13 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * Create new DititalIdentity instance. This will not create a smart contract contract but is used
+   * Create new DigitalTwin instance. This will not create a smart contract contract but is used
    * to load existing containers. To create a new contract, use the static ``create`` function.
    *
-   * @param      {DigitalIdentityOptions}  options  runtime-like object with required modules
-   * @param      {DigitalIdentityConfig}   config   digital identity related config
+   * @param      {DigitalTwinOptions}  options  runtime-like object with required modules
+   * @param      {DigitalTwinConfig}   config   digital twin related config
    */
-  constructor(options: DigitalIdentityOptions, config: DigitalIdentityConfig) {
+  constructor(options: DigitalTwinOptions, config: DigitalTwinConfig) {
     super(options as LoggerOptions);
     this.options = options;
     this.config = config;
@@ -302,24 +302,24 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * Add the digital identity with given address to profile.
+   * Add the digital twin with given address to profile.
    */
   async addAsFavorite() {
     await this.getMutex('profile').runExclusive(async () => {
       const description = await this.getDescription();
 
       await this.options.profile.loadForAccount(this.options.profile.treeLabels.contracts);
-      await this.options.profile.addBcContract('identities.evan', this.config.address, null);
+      await this.options.profile.addBcContract('twins.evan', this.config.address, null);
       await this.options.profile.storeForAccount(this.options.profile.treeLabels.contracts);
     });
   }
 
   /**
-   * Add verifications to this identity; this will also add verifications to contract description
+   * Add verifications to this twin; this will also add verifications to contract description
    *
-   * @param      {DigitalIdentityVerificationEntry[]}  verifications  list of verifications to add
+   * @param      {DigitalTwinVerificationEntry[]}  verifications  list of verifications to add
    */
-  public async addVerifications(verifications: DigitalIdentityVerificationEntry[]): Promise<void> {
+  public async addVerifications(verifications: DigitalTwinVerificationEntry[]): Promise<void> {
     await this.ensureContract();
     await Throttle.all(verifications.map(verification => async () =>
       this.options.verifications.setVerification(
@@ -342,11 +342,11 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * Create new `Container` instances and add them as entry to identity.
+   * Create new `Container` instances and add them as entry to twin.
    *
    * @param      {{ [id: string]: Partial<ContainerConfig> }}  containers  object with containers to
    *                                                                       create, name is used as
-   *                                                                       entry name in identity
+   *                                                                       entry name in twin
    */
   public async createContainers(containers: { [id: string]: Partial<ContainerConfig> }
   ): Promise<{ [id: string]: Container }> {
@@ -361,14 +361,14 @@ export class DigitalIdentity extends Logger {
           ...containers[name],
         },
       );
-      await this.setEntry(name, result[name], DigitalIdentityEntryType.ContainerContract);
+      await this.setEntry(name, result[name], DigitalTwinEntryType.ContainerContract);
     }));
     return result;
   }
 
   /**
-   * Check if digital identity contract already has been loaded, load from address / ENS if required
-   * and throw an error, when no contract exists or the description doesn't match the identity
+   * Check if digital twin contract already has been loaded, load from address / ENS if required
+   * and throw an error, when no contract exists or the description doesn't match the twin
    * specifications.
    */
   public async ensureContract(): Promise<void> {
@@ -394,11 +394,11 @@ export class DigitalIdentity extends Logger {
       }
     }
 
-    // if the evan digital identity tag does not exist, throw
+    // if the evan digital twin tag does not exist, throw
     if (!description || !description.tags || description.tags
-      .indexOf('evan-digital-identity') === -1) {
+      .indexOf('evan-digital-twin') === -1) {
       throw new Error(`${ baseError } doesn't match the specification (missing ` +
-        'evan-digital-identity\' tag)');
+        'evan-digital-twin\' tag)');
     }
 
     this.contract = this.options.contractLoader.loadContract('IndexContract', address);
@@ -413,7 +413,7 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * Returns description from digital identity.
+   * Returns description from digital twin.
    */
   public async getDescription(): Promise<any> {
     await this.ensureContract();
@@ -424,7 +424,7 @@ export class DigitalIdentity extends Logger {
   /**
    * Get all entries from index contract.
    */
-  public async getEntries(): Promise<{[id: string]: DigitalIdentityIndexEntry}> {
+  public async getEntries(): Promise<{[id: string]: DigitalTwinIndexEntry}> {
     await this.ensureContract();
     // get all from contract
     let results = {};
@@ -459,10 +459,10 @@ export class DigitalIdentity extends Logger {
    *
    * @param      {string}  name    entry name
    */
-  public async getEntry(name: string): Promise<DigitalIdentityIndexEntry> {
+  public async getEntry(name: string): Promise<DigitalTwinIndexEntry> {
     await this.ensureContract();
     const [ , firstKey, remainder ] = /([^/]+)(?:\/(.+))?/.exec(name);
-    const result: DigitalIdentityIndexEntry = {
+    const result: DigitalTwinIndexEntry = {
       raw: await this.options.executor.executeContractCall(
         this.contract,
         'getEntry',
@@ -470,7 +470,7 @@ export class DigitalIdentity extends Logger {
       ),
     };
     this.processEntry(result);
-    if (remainder && result.entryType === DigitalIdentityEntryType.IndexContract) {
+    if (remainder && result.entryType === DigitalTwinEntryType.IndexContract) {
       return result.value.getEntry(remainder);
     } else {
       return result;
@@ -496,28 +496,28 @@ export class DigitalIdentity extends Logger {
   }
 
   /**
-   * Check if this digital identity is bookmarked in profile.
+   * Check if this digital twin is bookmarked in profile.
    */
   public async isFavorite(): Promise<boolean> {
-    const favorites = await DigitalIdentity.getFavorites(this.options);
+    const favorites = await DigitalTwin.getFavorites(this.options);
     return favorites.indexOf(this.config.address) !== -1;
   }
 
   /**
-   * Removes the current identity from the favorites in profile.
+   * Removes the current twin from the favorites in profile.
    */
   public async removeFromFavorites() {
     await this.getMutex('profile').runExclusive(async () => {
       const description = await this.getDescription();
 
       await this.options.profile.loadForAccount(this.options.profile.treeLabels.contracts);
-      await this.options.profile.removeBcContract('identities.evan', this.config.address);
+      await this.options.profile.removeBcContract('twins.evan', this.config.address);
       await this.options.profile.storeForAccount(this.options.profile.treeLabels.contracts);
     });
   }
 
   /**
-   * Write given description to digital identities DBCP.
+   * Write given description to digital twins DBCP.
    *
    * @param      {any}  description  description to set (`public` part)
    */
@@ -525,10 +525,10 @@ export class DigitalIdentity extends Logger {
     await this.ensureContract();
 
     this.getMutex('description').runExclusive(async () => {
-      // ensure, that the evan digital identity tag is set
+      // ensure, that the evan digital twin tag is set
       description.tags = description.tags || [ ];
-      if (description.tags.indexOf('evan-digital-identity') === -1) {
-        description.tags.push('evan-digital-identity');
+      if (description.tags.indexOf('evan-digital-twin') === -1) {
+        description.tags.push('evan-digital-twin');
       }
 
       await this.options.description.setDescription(
@@ -539,9 +539,9 @@ export class DigitalIdentity extends Logger {
   /**
    * Set multiple entries at index contract.
    *
-   * @param      {{[id: string]: DigitalIdentityIndexEntry}}  entries  entries to set
+   * @param      {{[id: string]: DigitalTwinIndexEntry}}  entries  entries to set
    */
-  public async setEntries(entries: {[id: string]: DigitalIdentityIndexEntry}): Promise<void> {
+  public async setEntries(entries: {[id: string]: DigitalTwinIndexEntry}): Promise<void> {
     await this.ensureContract();
     await Throttle.all(Object.keys(entries).map((name) => async () =>
       this.setEntry(name, entries[name].value, entries[name].entryType)));
@@ -553,12 +553,12 @@ export class DigitalIdentity extends Logger {
    *
    * @param      {string}                    name       entry name
    * @param      {string}                    value      value to set
-   * @param      {DigitalIdentityEntryType}  entryType  type of given value
+   * @param      {DigitalTwinEntryType}  entryType  type of given value
    */
   public async setEntry(
     name: string,
     value: string|Container,
-    entryType: DigitalIdentityEntryType,
+    entryType: DigitalTwinEntryType,
   ): Promise<void> {
     await this.ensureContract();
     // write value to contract
@@ -597,23 +597,23 @@ export class DigitalIdentity extends Logger {
   /**
    * add type and value from raw value to entry
    *
-   * @param      {DigitalIdentityIndexEntry}  entry   The entry
+   * @param      {DigitalTwinIndexEntry}  entry   The entry
    */
-  private processEntry(entry: DigitalIdentityIndexEntry): void {
+  private processEntry(entry: DigitalTwinIndexEntry): void {
     let address;
     entry.entryType = parseInt(entry.raw.entryType, 10);
     switch (entry.entryType) {
-        case DigitalIdentityEntryType.AccountId:
-        case DigitalIdentityEntryType.GenericContract:
+        case DigitalTwinEntryType.AccountId:
+        case DigitalTwinEntryType.GenericContract:
           entry.value = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
           break;
-        case DigitalIdentityEntryType.ContainerContract:
+        case DigitalTwinEntryType.ContainerContract:
           address = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
           entry.value = new Container(this.options, { ...this.config.containerConfig, address });
           break;
-        case DigitalIdentityEntryType.IndexContract:
+        case DigitalTwinEntryType.IndexContract:
           address = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
-          entry.value = new DigitalIdentity(this.options, { ...this.config, address });
+          entry.value = new DigitalTwin(this.options, { ...this.config, address });
           break;
         default:
           entry.value = entry.raw.value;

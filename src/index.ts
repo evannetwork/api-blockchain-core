@@ -68,9 +68,9 @@ export { Verifications, VerificationsStatus } from './verifications/verification
 export { Votings, MemberOptions, ProposalInfo, ProposalInfos, ProposalOptions, VotingsContractOptions } from './votings/votings';
 export { Wallet } from './contracts/wallet';
 export { Container, ContainerConfig, ContainerTemplate, ContainerTemplateProperty,
-  ContainerShareConfig, ContainerOptions } from './contracts/digital-identity/container';
-export { DigitalIdentity, DigitalIdentityEntryType, DigitalIdentityConfig, DigitalIdentityIndexEntry,
-  DigitalIdentityVerificationEntry } from './contracts/digital-identity/digital-identity';
+  ContainerShareConfig, ContainerOptions } from './contracts/digital-twin/container';
+export { DigitalTwin, DigitalTwinEntryType, DigitalTwinConfig, DigitalTwinIndexEntry,
+  DigitalTwinVerificationEntry } from './contracts/digital-twin/digital-twin';
 
 /******** export this libraries to be able to build the blockchain-core into an umd bundle ********/
 import Web3 = require('web3');
@@ -80,7 +80,7 @@ import keystore = require('../libs/eth-lightwallet/keystore.js');
 // assign to export Buffer;
 const buffer = Buffer;
 // load adjusted bitcore mnemonic lib and do not load the full API specification to reduce bundle size
-// !Be careful by using all functionallities!
+// be careful when used adjusted components!
 import Mnemonic = require('../libs/bitcore-mnemonic/mnemonic.js');
 let instanceId = Date.now() + Math.random();
 // used for global & shared available logLog

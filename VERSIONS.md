@@ -8,7 +8,7 @@
 - use correct defaultVerifications topics `loadActiveVerifications`
 - add support for passing `Logger` instance to `createDefaultRuntime`
 - return `Logger` instance from `createDefaultRuntime`
-- add `digital-identity` module (wrapper for `IdentityContracts`)
+- add `digital-twin` module (wrapper for `IdentityContracts`)
 - add `container` module (`DataContract` wrapper)
 - add support for type `array` in `data-contract` (if type is array, subproperty `.items` is used for list entry validation)
 - add support for templates to profile

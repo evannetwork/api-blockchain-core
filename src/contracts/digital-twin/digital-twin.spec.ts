@@ -39,27 +39,27 @@ import { Container, ContainerConfig } from './container';
 import { Ipld } from '../../dfs/ipld';
 import { TestUtils } from '../../test/test-utils';
 import {
-  DigitalIdentity,
-  DigitalIdentityConfig,
-  DigitalIdentityEntryType,
-  DigitalIdentityOptions,
-  DigitalIdentityVerificationEntry,
-} from './digital-identity';
+  DigitalTwin,
+  DigitalTwinConfig,
+  DigitalTwinEntryType,
+  DigitalTwinOptions,
+  DigitalTwinVerificationEntry,
+} from './digital-twin';
 
 
 use(chaiAsPromised);
 
-const ownedDomain = 'identitytest.fifs.registrar.test.evan';
+const ownedDomain = 'twintest.fifs.registrar.test.evan';
 
-describe('DigitalIdentity (name pending)', function() {
+describe('DigitalTwin (name pending)', function() {
   this.timeout(60000);
   let dfs: Ipfs;
   let ipld: Ipld;
-  let defaultConfig: DigitalIdentityConfig;
+  let defaultConfig: DigitalTwinConfig;
   let executor: Executor;
   const description = {
-    name: 'test identity',
-    description: 'identity from test run',
+    name: 'test twin',
+    description: 'twin from test run',
     author: 'evan GmbH',
     version: '0.1.0',
     dbcpVersion: 2,
@@ -71,7 +71,7 @@ describe('DigitalIdentity (name pending)', function() {
     version: '0.1.0',
     dbcpVersion: 2,
   };
-  let runtime: DigitalIdentityOptions;
+  let runtime: DigitalTwinOptions;
 
   before(async () => {
     dfs = await TestUtils.getIpfs();
@@ -102,94 +102,94 @@ describe('DigitalIdentity (name pending)', function() {
     // create factory for test
     const factory = await executor.createContract('IndexContractFactory', [], { from: accounts[0], gas: 3e6 });
     defaultConfig.factoryAddress = factory.options.address;
-    console.log(`using identity factory: ${defaultConfig.factoryAddress}`);
+    console.log(`using twin factory: ${defaultConfig.factoryAddress}`);
   });
 
-  describe('working with identities', () => {
+  describe('working with twins', () => {
     it('can can create new contracts', async () => {
-      const identity = await DigitalIdentity.create(runtime, defaultConfig);
-      expect(await identity.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
+      const twin = await DigitalTwin.create(runtime, defaultConfig);
+      expect(await twin.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
     });
 
-    it('empty description.tags identities should have tag \'evan-digital-identity\' after creation', async () => {
+    it('empty description.tags twins should have tag \'evan-digital-twin\' after creation', async () => {
       const customConfig = JSON.parse(JSON.stringify(defaultConfig));
       delete customConfig.description.tags;
-      const identity = await DigitalIdentity.create(runtime, customConfig);
-      const identityDescription = await identity.getDescription();
+      const twin = await DigitalTwin.create(runtime, customConfig);
+      const twinDescription = await twin.getDescription();
 
-      expect(identityDescription.tags).to.include('evan-digital-identity');
+      expect(twinDescription.tags).to.include('evan-digital-twin');
     });
 
-    it('loading a identity without the tag \'evan-digital-identity\' should be invalid', async () => {
-      const identity = await DigitalIdentity.create(runtime, defaultConfig);
-      const address = await identity.getContractAddress();
+    it('loading a twin without the tag \'evan-digital-twin\' should be invalid', async () => {
+      const twin = await DigitalTwin.create(runtime, defaultConfig);
+      const address = await twin.getContractAddress();
       const customDescription = JSON.parse(JSON.stringify(description));
       delete customDescription.tags;
 
       // reset filled tags
       await runtime.description.setDescription(address, { public: customDescription }, accounts[0]);
-      const validity = await DigitalIdentity.getValidity(runtime, address);
+      const validity = await DigitalTwin.getValidity(runtime, address);
 
       expect(validity.valid).to.be.false;
       expect(validity.error.message).to.include('match not the specification');
     });
 
-    it('loading a identity with the tag \'evan-digital-identity\' should be valid', async () => {
-      const identity = await DigitalIdentity.create(runtime, defaultConfig);
-      const address = await identity.getContractAddress();
-      const validity = await DigitalIdentity.getValidity(runtime, address);
+    it('loading a twin with the tag \'evan-digital-twin\' should be valid', async () => {
+      const twin = await DigitalTwin.create(runtime, defaultConfig);
+      const address = await twin.getContractAddress();
+      const validity = await DigitalTwin.getValidity(runtime, address);
 
       expect(validity.valid).to.be.true;
       expect(validity.error).to.be.null;
     });
 
-    it('can handle identity as favorites within my profile', async () => {
-      const identity = await DigitalIdentity.create(runtime, defaultConfig);
+    it('can handle twin as favorites within my profile', async () => {
+      const twin = await DigitalTwin.create(runtime, defaultConfig);
       let favorites;
 
       // check favorite adding
-      await identity.addAsFavorite();
-      favorites = await DigitalIdentity.getFavorites(runtime);
-      expect(favorites).to.include(await identity.getContractAddress());
+      await twin.addAsFavorite();
+      favorites = await DigitalTwin.getFavorites(runtime);
+      expect(favorites).to.include(await twin.getContractAddress());
 
       // check favorite remove
-      await identity.removeFromFavorites();
-      favorites = await DigitalIdentity.getFavorites(runtime);
-      expect(favorites).to.not.include(await identity.getContractAddress());
+      await twin.removeFromFavorites();
+      favorites = await DigitalTwin.getFavorites(runtime);
+      expect(favorites).to.not.include(await twin.getContractAddress());
     });
   });
 
   describe('when performing set/get operations', () => {
     describe('when performing basic set/get operations', () => {
       it('can add entries to index', async () => {
-        const identity = await DigitalIdentity.create(runtime, defaultConfig);
-        await identity.setEntry('sample', TestUtils.getRandomBytes32(), DigitalIdentityEntryType.Hash);
+        const twin = await DigitalTwin.create(runtime, defaultConfig);
+        await twin.setEntry('sample', TestUtils.getRandomBytes32(), DigitalTwinEntryType.Hash);
       });
 
       it('can get entries from index', async () => {
-        const identity = await DigitalIdentity.create(runtime, defaultConfig);
+        const twin = await DigitalTwin.create(runtime, defaultConfig);
         const value = TestUtils.getRandomBytes32();
-        await identity.setEntry('sample', value, DigitalIdentityEntryType.Hash);
-        const result = await identity.getEntry('sample');
+        await twin.setEntry('sample', value, DigitalTwinEntryType.Hash);
+        const result = await twin.getEntry('sample');
         expect(result.value).to.eq(value);
       });
 
       it('can set and get bytes32 values', async () => {
-        const identity = await DigitalIdentity.create(runtime, defaultConfig);
+        const twin = await DigitalTwin.create(runtime, defaultConfig);
         const value = TestUtils.getRandomBytes32();
-        await identity.setEntry('sample', value, DigitalIdentityEntryType.Hash);
-        const result = await identity.getEntry('sample');
+        await twin.setEntry('sample', value, DigitalTwinEntryType.Hash);
+        const result = await twin.getEntry('sample');
         expect(result.value).to.eq(value);
-        expect(result.entryType).to.eq(DigitalIdentityEntryType.Hash);
+        expect(result.entryType).to.eq(DigitalTwinEntryType.Hash);
       });
 
       it('can set and get address values', async () => {
-        const identity = await DigitalIdentity.create(runtime, defaultConfig);
+        const twin = await DigitalTwin.create(runtime, defaultConfig);
         const value = TestUtils.getRandomAddress();
-        await identity.setEntry('sample', value, DigitalIdentityEntryType.GenericContract);
-        const result = await identity.getEntry('sample');
+        await twin.setEntry('sample', value, DigitalTwinEntryType.GenericContract);
+        const result = await twin.getEntry('sample');
         expect(result.value).to.eq(value);
-        expect(result.entryType).to.eq(DigitalIdentityEntryType.GenericContract);
+        expect(result.entryType).to.eq(DigitalTwinEntryType.GenericContract);
       });
 
       it('can get multiple entries from index', async () => {
@@ -197,12 +197,12 @@ describe('DigitalIdentity (name pending)', function() {
         for (let i = 0; i < 3; i++) {
           samples['sample ' + i.toString().padStart(2, '0')] = {
             value: TestUtils.getRandomBytes32().replace(/.{4}$/, i.toString().padStart(4, '0')),
-            entryType: DigitalIdentityEntryType.Hash,
+            entryType: DigitalTwinEntryType.Hash,
           }
         };
-        const identity = await DigitalIdentity.create(runtime, defaultConfig);
-        await identity.setEntries(samples);
-        const result = await identity.getEntries();
+        const twin = await DigitalTwin.create(runtime, defaultConfig);
+        await twin.setEntries(samples);
+        const result = await twin.getEntries();
         for (let key of Object.keys(samples)) {
           expect(result[key].value).to.eq(samples[key].value);
           expect(result[key].entryType).to.eq(samples[key].entryType);
@@ -211,101 +211,101 @@ describe('DigitalIdentity (name pending)', function() {
     });
 
     describe('when paging entries', () => {
-      const checkIdentity = async (identity, samples) => {
-        const result = await identity.getEntries();
+      const checkTwin = async (twin, samples) => {
+        const result = await twin.getEntries();
         for (let key of Object.keys(samples)) {
           expect(result[key].value).to.eq(samples[key].value);
           expect(result[key].entryType).to.eq(samples[key].entryType);
         }
       };
-      const createIdentityWithEntries = async (entryCount): Promise<any> => {
+      const createTwinWithEntries = async (entryCount): Promise<any> => {
         const samples = {};
         for (let i = 0; i < entryCount; i++) {
           samples['sample ' + i.toString().padStart(2, '0')] = {
             value: TestUtils.getRandomBytes32().replace(/.{4}$/, i.toString().padStart(4, '0')),
-            entryType: DigitalIdentityEntryType.Hash,
+            entryType: DigitalTwinEntryType.Hash,
           }
         };
-        const identity = await DigitalIdentity.create(runtime, defaultConfig);
-        await identity.setEntries(samples);
-        return { identity, samples };
+        const twin = await DigitalTwin.create(runtime, defaultConfig);
+        await twin.setEntries(samples);
+        return { twin, samples };
       };
 
       it('can get handle result counts less than a page', async () => {
-        const { identity, samples } = await createIdentityWithEntries(4);
-        await checkIdentity(identity, samples);
+        const { twin, samples } = await createTwinWithEntries(4);
+        await checkTwin(twin, samples);
       });
 
       it('can get handle result counts equal to a page', async () => {
-        const { identity, samples } = await createIdentityWithEntries(10);
-        await checkIdentity(identity, samples);
+        const { twin, samples } = await createTwinWithEntries(10);
+        await checkTwin(twin, samples);
       });
 
       it('can get handle result counts more than a page', async () => {
-        const { identity, samples } = await createIdentityWithEntries(14);
-        await checkIdentity(identity, samples);
+        const { twin, samples } = await createTwinWithEntries(14);
+        await checkTwin(twin, samples);
       });
 
       it('can get handle result counts with two pages', async () => {
-        const { identity, samples } = await createIdentityWithEntries(20);
-        await checkIdentity(identity, samples);
+        const { twin, samples } = await createTwinWithEntries(20);
+        await checkTwin(twin, samples);
       });
 
       it('can get handle result counts with multiple pages', async () => {
-        const { identity, samples } = await createIdentityWithEntries(24);
-        await checkIdentity(identity, samples);
+        const { twin, samples } = await createTwinWithEntries(24);
+        await checkTwin(twin, samples);
       });
     });
 
     describe('when working with linked indices', () => {
-      it('can link two identities and fetch properties via entry path navigtion', async () => {
-        const car = await DigitalIdentity.create(runtime, defaultConfig);
-        const tire = await DigitalIdentity.create(runtime, defaultConfig);
+      it('can link two twins and fetch properties via entry path navigtion', async () => {
+        const car = await DigitalTwin.create(runtime, defaultConfig);
+        const tire = await DigitalTwin.create(runtime, defaultConfig);
 
         const carAddress = await car.getContractAddress();
         const tireAddress = await tire.getContractAddress();
 
         const container = TestUtils.getRandomAddress();
-        await tire.setEntry('metadata', container, DigitalIdentityEntryType.GenericContract);
-        await car.setEntry('tire', await tire.getContractAddress(), DigitalIdentityEntryType.IndexContract);
+        await tire.setEntry('metadata', container, DigitalTwinEntryType.GenericContract);
+        await car.setEntry('tire', await tire.getContractAddress(), DigitalTwinEntryType.IndexContract);
 
-        const otherIdentity = await car.getEntry('tire');
-        expect(otherIdentity.raw.value).to.eq(`0x000000000000000000000000${tireAddress.substr(2).toLowerCase()}`);
-        expect(otherIdentity.entryType).to.eq(DigitalIdentityEntryType.IndexContract);
-        expect(await otherIdentity.value.getContractAddress()).to.eq(tireAddress);
+        const otherTwin = await car.getEntry('tire');
+        expect(otherTwin.raw.value).to.eq(`0x000000000000000000000000${tireAddress.substr(2).toLowerCase()}`);
+        expect(otherTwin.entryType).to.eq(DigitalTwinEntryType.IndexContract);
+        expect(await otherTwin.value.getContractAddress()).to.eq(tireAddress);
 
         const entry = await car.getEntry('tire/metadata');
         expect(entry.value).to.eq(container);
-        expect(entry.entryType).to.eq(DigitalIdentityEntryType.GenericContract);
+        expect(entry.entryType).to.eq(DigitalTwinEntryType.GenericContract);
       });
 
-      it('can link three identities and fetch properties via entry path navigtion', async () => {
-        const car = await DigitalIdentity.create(runtime, defaultConfig);
-        const tire = await DigitalIdentity.create(runtime, defaultConfig);
-        const screw = await DigitalIdentity.create(runtime, defaultConfig);
+      it('can link three twins and fetch properties via entry path navigtion', async () => {
+        const car = await DigitalTwin.create(runtime, defaultConfig);
+        const tire = await DigitalTwin.create(runtime, defaultConfig);
+        const screw = await DigitalTwin.create(runtime, defaultConfig);
 
         const carAddress = await car.getContractAddress();
         const tireAddress = await tire.getContractAddress();
         const screwAddress = await screw.getContractAddress();
 
         const container = TestUtils.getRandomAddress();
-        await screw.setEntry('metadata', container, DigitalIdentityEntryType.GenericContract);
-        await car.setEntry('tire', tireAddress, DigitalIdentityEntryType.IndexContract);
-        await tire.setEntry('screw', screwAddress, DigitalIdentityEntryType.IndexContract);
+        await screw.setEntry('metadata', container, DigitalTwinEntryType.GenericContract);
+        await car.setEntry('tire', tireAddress, DigitalTwinEntryType.IndexContract);
+        await tire.setEntry('screw', screwAddress, DigitalTwinEntryType.IndexContract);
 
-        const otherIdentity1 = await car.getEntry('tire');
-        expect(otherIdentity1.raw.value).to.eq(`0x000000000000000000000000${tireAddress.substr(2).toLowerCase()}`);
-        expect(otherIdentity1.entryType).to.eq(DigitalIdentityEntryType.IndexContract);
-        expect(await otherIdentity1.value.getContractAddress()).to.eq(tireAddress);
+        const otherTwin1 = await car.getEntry('tire');
+        expect(otherTwin1.raw.value).to.eq(`0x000000000000000000000000${tireAddress.substr(2).toLowerCase()}`);
+        expect(otherTwin1.entryType).to.eq(DigitalTwinEntryType.IndexContract);
+        expect(await otherTwin1.value.getContractAddress()).to.eq(tireAddress);
 
-        const otherIdentity2 = await car.getEntry('tire/screw');
-        expect(otherIdentity2.raw.value).to.eq(`0x000000000000000000000000${screwAddress.substr(2).toLowerCase()}`);
-        expect(otherIdentity2.entryType).to.eq(DigitalIdentityEntryType.IndexContract);
-        expect(await otherIdentity2.value.getContractAddress()).to.eq(screwAddress);
+        const otherTwin2 = await car.getEntry('tire/screw');
+        expect(otherTwin2.raw.value).to.eq(`0x000000000000000000000000${screwAddress.substr(2).toLowerCase()}`);
+        expect(otherTwin2.entryType).to.eq(DigitalTwinEntryType.IndexContract);
+        expect(await otherTwin2.value.getContractAddress()).to.eq(screwAddress);
 
         const entry = await car.getEntry('tire/screw/metadata');
         expect(entry.value).to.eq(container);
-        expect(entry.entryType).to.eq(DigitalIdentityEntryType.GenericContract);
+        expect(entry.entryType).to.eq(DigitalTwinEntryType.GenericContract);
       });
     });
 
@@ -317,7 +317,7 @@ describe('DigitalIdentity (name pending)', function() {
       });
 
       it('creates new containers automatically', async() => {
-        const identity = await DigitalIdentity.create(runtime, defaultConfig);
+        const twin = await DigitalTwin.create(runtime, defaultConfig);
         const customTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
         customTemplate.properties.type = {
           dataSchema: { type: 'string' },
@@ -325,30 +325,30 @@ describe('DigitalIdentity (name pending)', function() {
           type: 'entry',
           value: 'customTemplate',
         };
-        const containers = await identity.createContainers({
+        const containers = await twin.createContainers({
           entry1: { template: 'metadata' },
           entry2: { template: customTemplate },
         });
         // new container has type property (default)
         expect(await containers.entry1.getEntry('type')).to.eq('metadata');
         expect(await containers.entry2.getEntry('type')).to.eq('customTemplate');
-        // new containers are linked to identity
+        // new containers are linked to twin
         let entry;
-        entry = await identity.getEntry('entry1');
+        entry = await twin.getEntry('entry1');
         expect(await entry.value.getEntry('type')).to.eq('metadata');
-        entry = await identity.getEntry('entry2');
+        entry = await twin.getEntry('entry2');
         expect(await entry.value.getEntry('type')).to.eq('customTemplate');
       });
     });
   });
 
   describe('when working with verifications', () => {
-    it('can set verifications to identity', async () => {
-      const identity = await DigitalIdentity.create(runtime, defaultConfig);
-      const verifications: DigitalIdentityVerificationEntry[] = [...Array(3)].map(
-        (_, i) => (<DigitalIdentityVerificationEntry> { topic: `verifcation_${i}` }));
-      await identity.addVerifications(verifications);
-      const verificationsResults = await identity.getVerifications();
+    it('can set verifications to twin', async () => {
+      const twin = await DigitalTwin.create(runtime, defaultConfig);
+      const verifications: DigitalTwinVerificationEntry[] = [...Array(3)].map(
+        (_, i) => (<DigitalTwinVerificationEntry> { topic: `verifcation_${i}` }));
+      await twin.addVerifications(verifications);
+      const verificationsResults = await twin.getVerifications();
       expect(verificationsResults.length).to.eq(3);
       // all validation lists should have at least 1 valid verification
       const allValid = verificationsResults.every(vs => vs.some(v => v.valid));
@@ -371,30 +371,30 @@ describe('DigitalIdentity (name pending)', function() {
     it('can save contracts to ENS', async () => {
       const randomName = Math.floor(Math.random() * 1e12).toString(36);
       const address = `${randomName}.${ownedDomain}`;
-      const identity = await DigitalIdentity.create(runtime, { ...defaultConfig, address });
+      const twin = await DigitalTwin.create(runtime, { ...defaultConfig, address });
 
-      expect(await identity.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
-      expect(await identity.getContractAddress()).to.eq(
+      expect(await twin.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
+      expect(await twin.getContractAddress()).to.eq(
         await runtime.nameResolver.getAddress(address));
     });
 
     it('can load indicdes from ENS', async () => {
       const randomName = Math.floor(Math.random() * 1e12).toString(36);
       const address = `${randomName}.${ownedDomain}`;
-      const identity = await DigitalIdentity.create(runtime, { ...defaultConfig, address });
-      const loadedIdentity = new DigitalIdentity(runtime, { ...defaultConfig, address });
+      const twin = await DigitalTwin.create(runtime, { ...defaultConfig, address });
+      const loadedTwin = new DigitalTwin(runtime, { ...defaultConfig, address });
 
-      expect(await loadedIdentity.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
-      expect(await loadedIdentity.getContractAddress()).to.eq(
+      expect(await loadedTwin.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
+      expect(await loadedTwin.getContractAddress()).to.eq(
         await runtime.nameResolver.getAddress(address));
     });
 
     it('loading an empty ens address should throw an error', async () => {
-      const isValidIdentity = await DigitalIdentity.getValidity(runtime,
-        'there.s.really.no.identity.evan');
+      const isValidTwin = await DigitalTwin.getValidity(runtime,
+        'there.s.really.no.twin.evan');
 
-      expect(isValidIdentity.valid).to.be.false;
-      expect(isValidIdentity.error.message).to.include('contract does not exist');
+      expect(isValidTwin.valid).to.be.false;
+      expect(isValidTwin.error.message).to.include('contract does not exist');
     });
   });
 });
