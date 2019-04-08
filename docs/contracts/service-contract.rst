@@ -632,22 +632,22 @@ Example
 .. required for building markup
 
 .. |source cryptoProvider| replace:: ``CryptoProvider``
-.. _source cryptoProvider: /encryption/crypto-provider.html
+.. _source cryptoProvider: ../encryption/crypto-provider.html
 
 .. |source dfsInterface| replace:: ``DfsInterface``
-.. _source dfsInterface: /dfs/dfs-interface.html
+.. _source dfsInterface: ../dfs/dfs-interface.html
 
 .. |source keyProvider| replace:: ``KeyProvider``
-.. _source keyProvider: /key-provider
+.. _source keyProvider: ../key-provider
 
 .. |source logLevel| replace:: ``LogLevel``
-.. _source logLevel: /common/logger.html#loglevel
+.. _source logLevel: ../common/logger.html#loglevel
 
 .. |source logLogInterface| replace:: ``LogLogInterface``
-.. _source logLogInterface: /common/logger.html#logloginterface
+.. _source logLogInterface: ../common/logger.html#logloginterface
 
 .. |source sharing| replace:: ``Sharing``
-.. _source sharing: /contracts/sharing.html
+.. _source sharing: ../contracts/sharing.html
 
 .. |source web3| replace:: ``Web3``
 .. _source web3: https://github.com/ethereum/web3.js/

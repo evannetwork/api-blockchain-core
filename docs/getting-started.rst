@@ -33,7 +33,7 @@ Configuring and initializing blockchain core
     const Web3 = require('web3');
 
     // require blockchain-core
-    const { Ipfs, createDefaultRuntime } = require('blockchain-core');
+    const { Ipfs, createDefaultRuntime } = require('@evan.network/api-blockchain-core');
 
     const runtimeConfig = {
       // account map to blockchain accounts with their private key

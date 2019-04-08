@@ -388,22 +388,22 @@ In most cases, this can be set the the member, thats status is updated or by a m
 .. required for building markup
 
 .. |source consumerState| replace:: ``ConsumerState``
-.. _source consumerState: /contracts/base-contract.html#base-contract-consumerstate
+.. _source consumerState: ../contracts/base-contract.html#base-contract-consumerstate
 
 .. |source contractLoader| replace:: ``ContractLoader``
-.. _source contractLoader: /contracts/contract-loader.html
+.. _source contractLoader: ../contracts/contract-loader.html
 
 .. |source contractState| replace:: ``ContractState``
-.. _source contractState: /contracts/base-contract.html#base-contract-contractstate
+.. _source contractState: ../contracts/base-contract.html#base-contract-contractstate
 
 .. |source executor| replace:: ``Executor``
-.. _source executor: /blockchain/executor.html
+.. _source executor: ../blockchain/executor.html
 
 .. |source logLevel| replace:: ``LogLevel``
-.. _source logLevel: /common/logger.html#loglevel
+.. _source logLevel: ../common/logger.html#loglevel
 
 .. |source logLogInterface| replace:: ``LogLogInterface``
-.. _source logLogInterface: /common/logger.html#logloginterface
+.. _source logLogInterface: ../common/logger.html#logloginterface
 
 .. |source nameResolver| replace:: ``NameResolver``
-.. _source nameResolver: /blockchain/name-resolver.html
+.. _source nameResolver: ../blockchain/name-resolver.html

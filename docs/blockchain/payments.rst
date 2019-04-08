@@ -616,13 +616,13 @@ MicroChannelInfo
 .. required for building markup
 
 .. |source contractLoader| replace:: ``ContractLoader``
-.. _source contractLoader: /contracts/contract-loader.html
+.. _source contractLoader: ../contracts/contract-loader.html
 
 .. |source executor| replace:: ``Executor``
-.. _source executor: /blockchain/executor.html
+.. _source executor: ../blockchain/executor.html
 
 .. |source accountStore| replace:: ``AccountStore``
-.. _source accountStore: /blockchain/account-store.html
+.. _source accountStore: ../blockchain/account-store.html
 
 .. |source microproof| replace:: ``MicroProof``
 .. _source microproof: #microproof

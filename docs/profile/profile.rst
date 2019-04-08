@@ -1333,28 +1333,28 @@ Example
 .. required for building markup
 
 .. |source contractLoader| replace:: ``ContractLoader``
-.. _source contractLoader: /contracts/contract-loader.html
+.. _source contractLoader: ../contracts/contract-loader.html
 
 .. |source cryptoProvider| replace:: ``CryptoProvider``
-.. _source cryptoProvider: /encryption/crypto-provider.html
+.. _source cryptoProvider: ../encryption/crypto-provider.html
 
 .. |source dataContract| replace:: ``DataContract``
-.. _source dataContract: /contracts/data-contract.html
+.. _source dataContract: ../contracts/data-contract.html
 
 .. |source executor| replace:: ``Executor``
-.. _source executor: /blockchain/executor.html
+.. _source executor: ../blockchain/executor.html
 
 .. |source ipld| replace:: ``Ipld``
-.. _source ipld: /dfs/ipld.html
+.. _source ipld: ../dfs/ipld.html
 
 .. |source keyExchange_getDiffieHellmanKeys| replace:: ``KeyExchange``
-.. _source keyExchange_getDiffieHellmanKeys: /profile/key-exchange.html#getdiffiehellmankeys
+.. _source keyExchange_getDiffieHellmanKeys: ../profile/key-exchange.html#getdiffiehellmankeys
 
 .. |source logLevel| replace:: ``LogLevel``
-.. _source logLevel: /common/logger.html#loglevel
+.. _source logLevel: ../common/logger.html#loglevel
 
 .. |source logLogInterface| replace:: ``LogLogInterface``
-.. _source logLogInterface: /common/logger.html#logloginterface
+.. _source logLogInterface: ../common/logger.html#logloginterface
 
 .. |source nameResolver| replace:: ``NameResolver``
-.. _source nameResolver: /blockchain/name-resolver.html
+.. _source nameResolver: ../blockchain/name-resolver.html

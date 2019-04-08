@@ -344,6 +344,8 @@ Example
 
 
 
+
+
 --------------------------------------------------------------------------------
 
 .. _verifications_getNestedVerifications:
@@ -873,25 +875,25 @@ Example
 .. required for building markup
 
 .. |source accountStore| replace:: ``AccountStore``
-.. _source accountStore: /blockchain/account-store.html
+.. _source accountStore: ../blockchain/account-store.html
 
 .. |source contractLoader| replace:: ``ContractLoader``
-.. _source contractLoader: /contracts/contract-loader.html
+.. _source contractLoader: ../contracts/contract-loader.html
 
 .. |source description| replace:: ``Description``
-.. _source description: /blockchain/description.html
+.. _source description: ../blockchain/description.html
 
 .. |source dfsInterface| replace:: ``DfsInterface``
-.. _source dfsInterface: /dfs/dfs-interface.html
+.. _source dfsInterface: ../dfs/dfs-interface.html
 
 .. |source executor| replace:: ``Executor``
-.. _source executor: /blockchain/executor.html
+.. _source executor: ../blockchain/executor.html
 
 .. |source logLevel| replace:: ``LogLevel``
-.. _source logLevel: /common/logger.html#loglevel
+.. _source logLevel: ../common/logger.html#loglevel
 
 .. |source logLogInterface| replace:: ``LogLogInterface``
-.. _source logLogInterface: /common/logger.html#logloginterface
+.. _source logLogInterface: ../common/logger.html#logloginterface
 
 .. |source nameResolver| replace:: ``NameResolver``
-.. _source nameResolver: /blockchain/name-resolver.html
+.. _source nameResolver: ../blockchain/name-resolver.html
