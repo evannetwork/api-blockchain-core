@@ -843,7 +843,35 @@ Example
 --------------------------------------------------------------------------------
 
 Additional Components
-======================
+=====================
+
+Public Properties
+=================
+
+.. _digital-identity_defaultDescription:
+
+------------------
+defaultDescription
+------------------
+
+Default description used when no specific description is given to :ref:`.create <digital-identity_create>`.
+
+
+.. code-block:: typescript
+
+  console.dir(DigitalIdentity.defaultDescription);
+  // Output:
+  // {
+  //   name: 'Digital Identity',
+  //   description: 'Digital Identity Contract',
+  //   author: '',
+  //   version: '0.1.0',
+  //   dbcpVersion: 2
+  // }
+
+
+
+--------------------------------------------------------------------------------
 
 Enums
 =====

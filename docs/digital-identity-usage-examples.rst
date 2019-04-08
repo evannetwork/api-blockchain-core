@@ -49,7 +49,7 @@ You can **and should** give your digital identity a `DBCP <https://dbcp.online/e
     const bigCrane250 = await DigitalIdentity.create(
       runtime, { accountId: manufacturer, description });
 
-If you do not set a description, at creation time, a default description is set. This description is available at the ``DigitalIdentity.defaultDescription`` and can be used as a starting point for your own description. A description can be updated later on as well, see |source digitalIdentity_setDescription|_.
+If you do not set a description, at creation time, a default description is set. This description is available at the |source digitalIdentity_defaultDescription|_ and can be used as a starting point for your own description. A description can be updated later on as well, see |source digitalIdentity_setDescription|_.
 
 So let's say, we have created a digital identity four our heavy machine with the setup from the last code example. We now have the following setup:
 
@@ -237,6 +237,9 @@ Now ``customer`` wants to invite ``serviceTechnician`` and allow this account to
 
 .. |source digitalIdentity_createContainers| replace:: ``digitalIdentity.createContainers``
 .. _source digitalIdentity_createContainers: ./contracts/digital-identity.html#createcontainers
+
+.. |source digitalIdentity_defaultDescription| replace:: ``digitalIdentity.defaultDescription``
+.. _source digitalIdentity_defaultDescription: ./contracts/digital-identity.html#defaultdescription
 
 .. |source digitalIdentity_setDescription| replace:: ``digitalIdentity.setDescription``
 .. _source digitalIdentity_setDescription: ./contracts/digital-identity.html#setdescription
