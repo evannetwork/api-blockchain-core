@@ -100,7 +100,7 @@ describe('DigitalTwin', function() {
       description,
     };
     // create factory for test
-    const factory = await executor.createContract('IndexContractFactory', [], { from: accounts[0], gas: 3e6 });
+    const factory = await executor.createContract('DigitalTwinFactory', [], { from: accounts[0], gas: 3e6 });
     defaultConfig.factoryAddress = factory.options.address;
     console.log(`using twin factory: ${defaultConfig.factoryAddress}`);
   });
@@ -268,11 +268,11 @@ describe('DigitalTwin', function() {
 
         const container = TestUtils.getRandomAddress();
         await tire.setEntry('metadata', container, DigitalTwinEntryType.GenericContract);
-        await car.setEntry('tire', await tire.getContractAddress(), DigitalTwinEntryType.IndexContract);
+        await car.setEntry('tire', await tire.getContractAddress(), DigitalTwinEntryType.DigitalTwin);
 
         const otherTwin = await car.getEntry('tire');
         expect(otherTwin.raw.value).to.eq(`0x000000000000000000000000${tireAddress.substr(2).toLowerCase()}`);
-        expect(otherTwin.entryType).to.eq(DigitalTwinEntryType.IndexContract);
+        expect(otherTwin.entryType).to.eq(DigitalTwinEntryType.DigitalTwin);
         expect(await otherTwin.value.getContractAddress()).to.eq(tireAddress);
 
         const entry = await car.getEntry('tire/metadata');
@@ -291,17 +291,17 @@ describe('DigitalTwin', function() {
 
         const container = TestUtils.getRandomAddress();
         await screw.setEntry('metadata', container, DigitalTwinEntryType.GenericContract);
-        await car.setEntry('tire', tireAddress, DigitalTwinEntryType.IndexContract);
-        await tire.setEntry('screw', screwAddress, DigitalTwinEntryType.IndexContract);
+        await car.setEntry('tire', tireAddress, DigitalTwinEntryType.DigitalTwin);
+        await tire.setEntry('screw', screwAddress, DigitalTwinEntryType.DigitalTwin);
 
         const otherTwin1 = await car.getEntry('tire');
         expect(otherTwin1.raw.value).to.eq(`0x000000000000000000000000${tireAddress.substr(2).toLowerCase()}`);
-        expect(otherTwin1.entryType).to.eq(DigitalTwinEntryType.IndexContract);
+        expect(otherTwin1.entryType).to.eq(DigitalTwinEntryType.DigitalTwin);
         expect(await otherTwin1.value.getContractAddress()).to.eq(tireAddress);
 
         const otherTwin2 = await car.getEntry('tire/screw');
         expect(otherTwin2.raw.value).to.eq(`0x000000000000000000000000${screwAddress.substr(2).toLowerCase()}`);
-        expect(otherTwin2.entryType).to.eq(DigitalTwinEntryType.IndexContract);
+        expect(otherTwin2.entryType).to.eq(DigitalTwinEntryType.DigitalTwin);
         expect(await otherTwin2.value.getContractAddress()).to.eq(screwAddress);
 
         const entry = await car.getEntry('tire/screw/metadata');

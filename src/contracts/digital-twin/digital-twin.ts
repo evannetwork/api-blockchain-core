@@ -71,11 +71,11 @@ function checkConfigProperties(config: DigitalTwinConfig, properties: string[]):
  */
 export enum DigitalTwinEntryType {
   AccountId,
-  ContainerContract,
+  Container,
   FileHash,
   GenericContract,
   Hash,
-  IndexContract,
+  DigitalTwin,
 }
 
 /**
@@ -208,13 +208,13 @@ export class DigitalTwin extends Logger {
       );
     }
     const factory = options.contractLoader.loadContract(
-      'IndexContractFactory', factoryAddress);
+      'DigitalTwinFactory', factoryAddress);
     const contractId = await options.executor.executeContractTransaction(
       factory,
       'createContract', {
         from: instanceConfig.accountId,
         autoGas: 1.1,
-        event: { target: 'IndexContractFactory', eventName: 'ContractCreated' },
+        event: { target: 'DigitalTwinFactory', eventName: 'ContractCreated' },
         getEventResult: (event, args) => args.newAddress,
       },
       instanceConfig.accountId,
@@ -361,7 +361,7 @@ export class DigitalTwin extends Logger {
           ...containers[name],
         },
       );
-      await this.setEntry(name, result[name], DigitalTwinEntryType.ContainerContract);
+      await this.setEntry(name, result[name], DigitalTwinEntryType.Container);
     }));
     return result;
   }
@@ -401,11 +401,11 @@ export class DigitalTwin extends Logger {
         'evan-digital-twin\' tag)');
     }
 
-    this.contract = this.options.contractLoader.loadContract('IndexContract', address);
+    this.contract = this.options.contractLoader.loadContract('DigitalTwin', address);
   }
 
   /**
-   * Get contract address of underlying IndexContract.
+   * Get contract address of underlying DigitalTwin.
    */
   public async getContractAddress(): Promise<string> {
     await this.ensureContract();
@@ -459,9 +459,10 @@ export class DigitalTwin extends Logger {
   }
 
   /**
-   * Get single entry from index contract.
+   * Get single entry from index contract. When this twin has other twins as its entries, properties
+   * from those can be selected by building a path of properties.
    *
-   * @param      {string}  name    entry name
+   * @param      {string}  name    entry name or path to data in linked twin
    */
   public async getEntry(name: string): Promise<DigitalTwinIndexEntry> {
     await this.ensureContract();
@@ -474,7 +475,7 @@ export class DigitalTwin extends Logger {
       ),
     };
     this.processEntry(result);
-    if (remainder && result.entryType === DigitalTwinEntryType.IndexContract) {
+    if (remainder && result.entryType === DigitalTwinEntryType.DigitalTwin) {
       return result.value.getEntry(remainder);
     } else {
       return result;
@@ -610,11 +611,11 @@ export class DigitalTwin extends Logger {
         case DigitalTwinEntryType.GenericContract:
           entry.value = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
           break;
-        case DigitalTwinEntryType.ContainerContract:
+        case DigitalTwinEntryType.Container:
           address = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
           entry.value = new Container(this.options, { ...this.config.containerConfig, address });
           break;
-        case DigitalTwinEntryType.IndexContract:
+        case DigitalTwinEntryType.DigitalTwin:
           address = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
           entry.value = new DigitalTwin(this.options, { ...this.config, address });
           break;
