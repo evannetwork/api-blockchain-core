@@ -438,6 +438,10 @@ export class DigitalTwin extends Logger {
       );
       itemsRetrieved += resultsPerPage;
       for (let i = 0; i < queryResult.names.length; i++) {
+        if (!queryResult.names[i]) {
+          // result pages have empty entries after valid results, so drop those
+          break;
+        }
         const resultId = i + singleQueryOffset;
         results[queryResult.names[i]] = {
           raw: { value: queryResult.values[i], entryType: queryResult.entryTypes[i] },

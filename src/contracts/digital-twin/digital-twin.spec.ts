@@ -203,6 +203,7 @@ describe('DigitalTwin', function() {
         const twin = await DigitalTwin.create(runtime, defaultConfig);
         await twin.setEntries(samples);
         const result = await twin.getEntries();
+        expect(Object.keys(result).length).to.eq(Object.keys(samples).length);
         for (let key of Object.keys(samples)) {
           expect(result[key].value).to.eq(samples[key].value);
           expect(result[key].entryType).to.eq(samples[key].entryType);
