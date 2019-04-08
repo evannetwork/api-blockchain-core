@@ -1,5 +1,5 @@
 ================================================================================
-DigitalIdentity
+DigitalTwin
 ================================================================================
 
 .. list-table:: 
@@ -7,15 +7,17 @@ DigitalIdentity
    :stub-columns: 1
 
    * - Class Name
-     - DigitalIdentity
+     - DigitalTwin
    * - Extends
      - `Logger <../common/logger.html>`_
    * - Source
-     - `digital-identity.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/digital-identity/digital-identity.ts>`_
+     - `digital-twin.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/digital-twin/digital-twin.ts>`_
    * - Examples
-     - `digital-identity.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/digital-identity/digital-identity.spec.ts>`_
+     - `digital-twin.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/digital-twin/digital-twin.spec.ts>`_
 
-This place is reserved for a more detailed explanation about what a digital identity is and what it is used for. Examples offer clear and practical approach on how to interact with it and how someone can embed Digital Identities in ones own code.
+Usage examples can be found :doc:`here <./digital-twin-usage-examples>`.
+
+This place is reserved for a more detailed explanation about what a digital twin is and what it is used for. Examples offer clear and practical approach on how to interact with it and how someone can embed Digital Identities in ones own code.
 
 Amet sunt velit non dolor dolore culpa occaecat consectetur dolor consequat nisi nisi quis amet culpa laboris ut tempor elit laboris aute mollit in esse voluptate excepteur ea esse sint ut ullamco adipisicing esse irure in id.
 
@@ -27,23 +29,23 @@ Eiusmod ut mollit sed ea commodo aliqua reprehenderit veniam in dolore ut incidi
 
 --------------------------------------------------------------------------------
 
-.. _digital-identity_constructor:
+.. _digital-twin_constructor:
 
 constructor
 ================================================================================
 
 .. code-block:: typescript
 
-  new DigitalIdentity(options, config);
+  new DigitalTwin(options, config);
 
-Create new ``DigitalIdentity`` instance. This will not create a smart contract contract but is used to
-load existing digital identities. To create a new contract, use the static :ref:`create <digital-identity_create>` function.
+Create new ``DigitalTwin`` instance. This will not create a smart contract contract but is used to
+load existing digital twins. To create a new contract, use the static :ref:`create <digital-twin_create>` function.
 
 ----------
 Parameters
 ----------
 
-#. ``options`` - ``DigitalIdentityOptions``: runtime-like object with required modules
+#. ``options`` - ``DigitalTwinOptions``: runtime-like object with required modules
     * ``contractLoader`` - |source contractLoader|_: |source contractLoader|_ instance
     * ``cryptoProvider`` - |source cryptoProvider|_: |source cryptoProvider|_ instance
     * ``dataContract`` - |source dataContract|_: |source dataContract|_ instance
@@ -58,18 +60,18 @@ Parameters
     * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
     * ``logLogLevel`` - |source logLevel|_ (optional): messages with this level will be pushed to ``logLog``
-#. ``config`` - ``DigitalIdentityConfig``: digital identity related config
-    * ``accountId`` - ``string``: account id of user, that interacts with digital identity
-    * ``containerConfig`` - ``ContainerConfig``: address of a ``DigitalIdentity`` instance, can be ENS or contract address
+#. ``config`` - ``DigitalTwinConfig``: digital twin related config
+    * ``accountId`` - ``string``: account id of user, that interacts with digital twin
+    * ``containerConfig`` - ``ContainerConfig``: address of a ``DigitalTwin`` instance, can be ENS or contract address
     * ``address`` - ``string`` (optional): address of an ``IndexContract`` instance, can be ENS or contract address
     * ``description`` - ``string``: description has to be passed to ``.create`` to apply it to to contract
-    * ``factoryAddress`` - ``string`` (optional): factory address can be passed to ``.create`` for customer digital identity factory
+    * ``factoryAddress`` - ``string`` (optional): factory address can be passed to ``.create`` for customer digital twin factory
 
 -------
 Returns
 -------
 
-``DigitalIdentity`` instance
+``DigitalTwin`` instance
 
 -------
 Example
@@ -77,11 +79,11 @@ Example
 
 .. code-block:: typescript
 
-  const digitalIdentity = new DigitalIdentity(
+  const digitalTwin = new DigitalTwin(
     runtime,
     {
       accountId: '0x0000000000000000000000000000000000000000',
-      address: 'sample-digital-identity.somewhere.evan',
+      address: 'sample-digital-twin.somewhere.evan',
     },
   );
 
@@ -92,20 +94,20 @@ Example
 = Creating Digital Identities =
 ===============================
 
-.. _digital-identity_create:
+.. _digital-twin_create:
 
 create
 ================================================================================
 
 .. code-block:: typescript
 
-  DigitalIdentity.create(runtime, config);
+  DigitalTwin.create(runtime, config);
 
-Create digital identity contract.
+Create digital twin contract.
 
-Note, that this function is static. It is used on the ``DigitalIdentity`` class object and returns a ``DigitalIdentity`` class instance.
+Note, that this function is static. It is used on the ``DigitalTwin`` class object and returns a ``DigitalTwin`` class instance.
 
-The options argument has the same structure as the options object that is passed to the constructor as it is used for the new ``DigitalIdentity`` instance. The ``config`` argument requires a proper value for the property ``description``.
+The options argument has the same structure as the options object that is passed to the constructor as it is used for the new ``DigitalTwin`` instance. The ``config`` argument requires a proper value for the property ``description``.
 
 ----------
 Parameters
@@ -126,18 +128,18 @@ Parameters
     * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
     * ``logLogLevel`` - |source logLevel|_ (optional): messages with this level will be pushed to ``logLog``
-#. ``config`` - ``DigitalIdentityConfig``: digital identity related config
-    * ``accountId`` - ``string``: account id of user, that interacts with digital identity
+#. ``config`` - ``DigitalTwinConfig``: digital twin related config
+    * ``accountId`` - ``string``: account id of user, that interacts with digital twin
     * ``containerConfig`` - ``ContainerConfig``: config, that will be used, when containers are created
-    * ``address`` - ``string`` (optional): ENS address used for digital identity
+    * ``address`` - ``string`` (optional): ENS address used for digital twin
     * ``description`` - ``string``: description has to be passed to ``.create`` to apply it to to contract
-    * ``factoryAddress`` - ``string`` (optional): factory address can be passed to ``.create`` for customer digital identity factory
+    * ``factoryAddress`` - ``string`` (optional): factory address can be passed to ``.create`` for customer digital twin factory
 
 -------
 Returns
 -------
 
-``Promise`` returns ``DigitalIdentity``: new instance bound to new ``IndexContract``
+``Promise`` returns ``DigitalTwin``: new instance bound to new ``IndexContract``
 
 -------
 Example
@@ -145,8 +147,8 @@ Example
 
 .. code-block:: typescript
 
-  const digitalIdentity = await DigitalIdentity.create(options, config);
-  console.log(await digitalIdentity.getContractAddress());
+  const digitalTwin = await DigitalTwin.create(options, config);
+  console.log(await digitalTwin.getContractAddress());
   // Output:
   // 0x0000000000000000000000000000000000001234
 
@@ -157,24 +159,24 @@ Example
 = Container =
 =============
 
-.. _digital-identity_createContainers:
+.. _digital-twin_createContainers:
 
 createContainers
 ================================================================================
 
 .. code-block:: typescript
 
-  digitalIdentity.createContainers(containers);
+  digitalTwin.createContainers(containers);
 
-Create new `Container` instances and add them as entry to identity.
+Create new `Container` instances and add them as entry to twin.
 
-When a container entry fetched with :ref:`getEntry <digital-identity_getEntry>` or :ref:`getEntry <digital-identity_getEntries>`, the value will become a ``Container`` instance and can be used as such.
+When a container entry fetched with :ref:`getEntry <digital-twin_getEntry>` or :ref:`getEntry <digital-twin_getEntries>`, the value will become a ``Container`` instance and can be used as such.
 
 ----------
 Parameters
 ----------
 
-#. ``containers`` - ``{ [id: string]: Partial<ContainerConfig> }``: object with containers to create, name is used as entry name in identity
+#. ``containers`` - ``{ [id: string]: Partial<ContainerConfig> }``: object with containers to create, name is used as entry name in twin
 
 -------
 Returns
@@ -188,7 +190,7 @@ Example
 
 .. code-block:: typescript
 
-  const containers = await identity.createContainers({
+  const containers = await twin.createContainers({
     entry1: { template: 'metadata' },
     entry2: { template: 'metadata' },
   });
@@ -200,14 +202,14 @@ Example
 = Entries =
 ===========
 
-.. _digital-identity_setEntry:
+.. _digital-twin_setEntry:
 
 setEntry
 ================================================================================
 
 .. code-block:: typescript
 
-  digitalIdentity.setEntry(name, value, entryType);
+  digitalTwin.setEntry(name, value, entryType);
 
 Set entry in index contract; entries are unique, setting the same name a second time will overwrite the first value.
 
@@ -217,7 +219,7 @@ Parameters
 
 #. ``name`` - ``string``: entry name
 #. ``value`` - ``string``: value to set
-#. ``entryType`` - ``DigitalIdentityType``: type of given value
+#. ``entryType`` - ``DigitalTwinType``: type of given value
 
 -------
 Returns
@@ -231,8 +233,8 @@ Example
 
 .. code-block:: typescript
 
-  await digitalIdentity.setEntry('myId', accountId, DigitalIdentityEntryType.AccountId);
-  console.log((await digitalIdentity.getEntry('myId')).value);
+  await digitalTwin.setEntry('myId', accountId, DigitalTwinEntryType.AccountId);
+  console.log((await digitalTwin.getEntry('myId')).value);
   // Output:
   // 0x0000000000000000000000000000000000000001
 
@@ -240,14 +242,14 @@ Example
 
 --------------------------------------------------------------------------------
 
-.. _digital-identity_setEntries:
+.. _digital-twin_setEntries:
 
 setEntries
 ================================================================================
 
 .. code-block:: typescript
 
-  digitalIdentity.setEntries(arguments);
+  digitalTwin.setEntries(arguments);
 
 Set multiple entries at index contract.
 
@@ -255,7 +257,7 @@ Set multiple entries at index contract.
 Parameters
 ----------
 
-#. ``entries`` - ``{[id: string]: DigitalIdentityIndexEntry}``: entries to set
+#. ``entries`` - ``{[id: string]: DigitalTwinIndexEntry}``: entries to set
 
 -------
 Returns
@@ -270,12 +272,12 @@ Example
 .. code-block:: typescript
 
   const sampleContractId = '0x00000000000000000000000000000000c0274ac7';
-  await digitalIdentity.setEntries({
-    'account':  { value: accountId, entryType: DigitalIdentityEntryType.AccountId },
-    'contract':  { value: sampleContractId, entryType: DigitalIdentityEntryType.GenericContract },
+  await digitalTwin.setEntries({
+    'account':  { value: accountId, entryType: DigitalTwinEntryType.AccountId },
+    'contract':  { value: sampleContractId, entryType: DigitalTwinEntryType.GenericContract },
   });
 
-  const result = (await digitalIdentity.getEntries()).map(entry => value);
+  const result = (await digitalTwin.getEntries()).map(entry => value);
   console.log(result.account.value);
   // Output:
   // 0x0000000000000000000000000000000000000001
@@ -287,14 +289,14 @@ Example
 
 --------------------------------------------------------------------------------
 
-.. _digital-identity_getEntry:
+.. _digital-twin_getEntry:
 
 getEntry
 ================================================================================
 
 .. code-block:: typescript
 
-  digitalIdentity.getEntry(name);
+  digitalTwin.getEntry(name);
 
 Get single entry from index contract.
 
@@ -308,7 +310,7 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``DigitalIdentityIndexEntry``: entry object
+``Promise`` returns ``DigitalTwinIndexEntry``: entry object
 
 -------
 Example
@@ -316,8 +318,8 @@ Example
 
 .. code-block:: typescript
 
-  await digitalIdentity.setEntry('myId', accountId, DigitalIdentityEntryType.AccountId);
-  console.log((await digitalIdentity.getEntry('myId')).value);
+  await digitalTwin.setEntry('myId', accountId, DigitalTwinEntryType.AccountId);
+  console.log((await digitalTwin.getEntry('myId')).value);
   // Output:
   // 0x0000000000000000000000000000000000000001
 
@@ -325,14 +327,14 @@ Example
 
 --------------------------------------------------------------------------------
 
-.. _digital-identity_getEntries:
+.. _digital-twin_getEntries:
 
 getEntries
 ================================================================================
 
 .. code-block:: typescript
 
-  digitalIdentity.getEntries();
+  digitalTwin.getEntries();
 
 Get all entries from index contract.
 
@@ -340,7 +342,7 @@ Get all entries from index contract.
 Returns
 -------
 
-``Promise`` returns ``{[id: string]: DigitalIdentityIndexEntry}``: key-value map with all entries
+``Promise`` returns ``{[id: string]: DigitalTwinIndexEntry}``: key-value map with all entries
 
 -------
 Example
@@ -349,12 +351,12 @@ Example
 .. code-block:: typescript
 
   const sampleContractId = '0x00000000000000000000000000000000c0274ac7';
-  await digitalIdentity.setEntries({
-    'account':  { value: accountId, entryType: DigitalIdentityEntryType.AccountId },
-    'contract':  { value: sampleContractId, entryType: DigitalIdentityEntryType.GenericContract },
+  await digitalTwin.setEntries({
+    'account':  { value: accountId, entryType: DigitalTwinEntryType.AccountId },
+    'contract':  { value: sampleContractId, entryType: DigitalTwinEntryType.GenericContract },
   });
 
-  const result = (await digitalIdentity.getEntries()).map(entry => value);
+  const result = (await digitalTwin.getEntries()).map(entry => value);
   console.log(result.account.value);
   // Output:
   // 0x0000000000000000000000000000000000000001
@@ -369,26 +371,26 @@ Example
 = Verifications =
 =================
 
-.. _digital-identity_addVerification:
+.. _digital-twin_addVerification:
 
 addVerification
 ================================================================================
 
 .. code-block:: typescript
 
-  digitalIdentity.addVerification(verifications);
+  digitalTwin.addVerification(verifications);
 
-Add verifications to this identity; this will also add verifications to contract description.
+Add verifications to this twin; this will also add verifications to contract description.
 
 Due to the automatic expansion of the contract description, this function can only be called by the container owner.
 
-See interface ``DigitalIdentityVerificationEntry`` for input data format.
+See interface ``DigitalTwinVerificationEntry`` for input data format.
 
 ----------
 Parameters
 ----------
 
-#. ``verifications`` - ``DigitalIdentityVerificationEntry[]``: list of verifications to add
+#. ``verifications`` - ``DigitalTwinVerificationEntry[]``: list of verifications to add
 
 -------
 Returns
@@ -402,20 +404,20 @@ Example
 
 .. code-block:: typescript
 
-  await digitalIdentity.addVerifications([{ topic: 'exampleVerification' }]);
+  await digitalTwin.addVerifications([{ topic: 'exampleVerification' }]);
 
 
 
 --------------------------------------------------------------------------------
 
-.. _digital-identity_getVerifications:
+.. _digital-twin_getVerifications:
 
 getVerifications
 ================================================================================
 
 .. code-block:: typescript
 
-  digitalIdentity.getVerifications();
+  digitalTwin.getVerifications();
 
 Gets verifications from description and fetches list of verifications for each of them.
 
@@ -433,8 +435,8 @@ Example
 
 .. code-block:: typescript
 
-  await digitalIdentity.addVerifications([{ topic: 'exampleVerification' }]);
-  const verifications = await digitalIdentity.getVerifications());
+  await digitalTwin.addVerifications([{ topic: 'exampleVerification' }]);
+  const verifications = await digitalTwin.getVerifications());
 
 
 
@@ -443,16 +445,16 @@ Example
 = Descriptions =
 ================
 
-.. _digital-identity_getDescription:
+.. _digital-twin_getDescription:
 
 getDescription
 ================================================================================
 
 .. code-block:: typescript
 
-  digitalIdentity.getDescription();
+  digitalTwin.getDescription();
 
-Returns description from digital identity.
+Returns description from digital twin.
 
 -------
 Returns
@@ -469,12 +471,12 @@ Example
   const description = await container.getDescription();
   console.dir(description);
   // Output:
-  // { name: 'test identity',
-  //   description: 'identity from test run',
+  // { name: 'test twin',
+  //   description: 'twin from test run',
   //   author: 'evan GmbH',
   //   version: '0.1.0',
   //   dbcpVersion: 2,
-  //   tags: [ 'evan-digital-identity' ],
+  //   tags: [ 'evan-digital-twin' ],
   //   identity:
   //    '0x1a496043385fec8d52f61e2b700413f8e12eb6e7e11649f80c8f4716c1063d06' }
 
@@ -482,16 +484,16 @@ Example
 
 --------------------------------------------------------------------------------
 
-.. _digital-identity_setDescription:
+.. _digital-twin_setDescription:
 
 setDescription
 ================================================================================
 
 .. code-block:: typescript
 
-  digitalIdentity.setDescription(description);
+  digitalTwin.setDescription(description);
 
-Write given description to digital identities DBCP.
+Write given description to digital twins DBCP.
 
 ----------
 Parameters
@@ -512,31 +514,31 @@ Example
 .. code-block:: typescript
 
   // get current description
-  const description = await digitalIdentity.getDescription();
+  const description = await digitalTwin.getDescription();
   console.dir(description);
   // Output:
-  // { name: 'test identity',
-  //   description: 'identity from test run',
+  // { name: 'test twin',
+  //   description: 'twin from test run',
   //   author: 'evan GmbH',
   //   version: '0.1.0',
   //   dbcpVersion: 2,
-  //   tags: [ 'evan-digital-identity' ],
+  //   tags: [ 'evan-digital-twin' ],
   //   identity:
   //    '0x1a496043385fec8d52f61e2b700413f8e12eb6e7e11649f80c8f4716c1063d06' }
 
   // update description
   description.version = '0.1.1';
-  await digitalIdentity.setDescription(description);
+  await digitalTwin.setDescription(description);
 
   // fetch again
-  console.dir(await digitalIdentity.getDescription());
+  console.dir(await digitalTwin.getDescription());
   // Output:
-  // { name: 'test identity',
-  //   description: 'identity from test run',
+  // { name: 'test twin',
+  //   description: 'twin from test run',
   //   author: 'evan GmbH',
   //   version: '0.1.1',
   //   dbcpVersion: 2,
-  //   tags: [ 'evan-digital-identity' ],
+  //   tags: [ 'evan-digital-twin' ],
   //   identity:
   //    '0x1a496043385fec8d52f61e2b700413f8e12eb6e7e11649f80c8f4716c1063d06' }
 
@@ -547,16 +549,16 @@ Example
 = Profile =
 ===========
 
-.. _digital-identity_addAsFavorite:
+.. _digital-twin_addAsFavorite:
 
 addAsFavorite
 ================================================================================
 
 .. code-block:: typescript
 
-  digitalIdentity.addAsFavorite();
+  digitalTwin.addAsFavorite();
 
-Add the digital identity with given address to profile.
+Add the digital twin with given address to profile.
 
 -------
 Returns
@@ -570,29 +572,29 @@ Example
 
 .. code-block:: typescript
 
-  const digitalIdentity = new DigitalIdentity(options.config);
-  if (await digitalIdentity.isFavorite()) {
-    console.log('I know this digital identity!');
+  const digitalTwin = new DigitalTwin(options.config);
+  if (await digitalTwin.isFavorite()) {
+    console.log('I know this digital twin!');
   } else {
-    await digitalIdentity.addToFavorites();
-    console.log('bookmarked digital identity');
+    await digitalTwin.addToFavorites();
+    console.log('bookmarked digital twin');
   }
 
 
 
 --------------------------------------------------------------------------------
-.. _digital-identity_getFavorites:
+.. _digital-twin_getFavorites:
 
 getFavorites
 ================================================================================
 
 .. code-block:: typescript
 
-  DigitalIdentity.getFavorites();
+  DigitalTwin.getFavorites();
 
-Gets bookmarked identities from profile.
+Gets bookmarked twins from profile.
 
-**Note, that this function is called on the Class DigitalIdentity and not on an instance of it.**
+**Note, that this function is called on the Class DigitalTwin and not on an instance of it.**
 
 ----------
 Parameters
@@ -626,7 +628,7 @@ Example
 
 .. code-block:: typescript
 
-  const favorites = await DigitalIdentity.getFavorites(options);
+  const favorites = await DigitalTwin.getFavorites(options);
   console.dir(favorites);
   // Output:
   // [
@@ -639,16 +641,16 @@ Example
 
 --------------------------------------------------------------------------------
 
-.. _digitalIdentity_isFavorite:
+.. _digital-twin_isFavorite:
 
 isFavorite
 ================================================================================
 
 .. code-block:: typescript
 
-  digitalIdentity.isFavorite();
+  digitalTwin.isFavorite();
 
-Check if this digital identity is bookmarked in profile.
+Check if this digital twin is bookmarked in profile.
 
 -------
 Returns
@@ -662,28 +664,28 @@ Example
 
 .. code-block:: typescript
 
-  const digitalIdentity = new DigitalIdentity(options.config);
-  if (await digitalIdentity.isFavorite()) {
-    console.log('I know this digital identity!');
+  const digitalTwin = new DigitalTwin(options.config);
+  if (await digitalTwin.isFavorite()) {
+    console.log('I know this digital twin!');
   } else {
-    await digitalIdentity.addToFavorites();
-    console.log('bookmarked digital identity');
+    await digitalTwin.addToFavorites();
+    console.log('bookmarked digital twin');
   }
 
 
 
 --------------------------------------------------------------------------------
 
-.. _digitalIdentity_removeFromFavorites:
+.. _digital-twin_removeFromFavorites:
 
 removeFromFavorites
 ================================================================================
 
 .. code-block:: typescript
 
-  digitalIdentity.removeFromFavorites();
+  digitalTwin.removeFromFavorites();
 
-Removes the current identity from the favorites in profile.
+Removes the current twin from the favorites in profile.
 
 -------
 Returns
@@ -697,10 +699,10 @@ Example
 
 .. code-block:: typescript
 
-  const digitalIdentity = new DigitalIdentity(options.config);
-  if (await digitalIdentity.isFavorite()) {
-    await digitalIdentity.removeFromFavorites();
-    console.log('removed digital identity from favorites');
+  const digitalTwin = new DigitalTwin(options.config);
+  if (await digitalTwin.isFavorite()) {
+    await digitalTwin.removeFromFavorites();
+    console.log('removed digital twin from favorites');
   }
 
 
@@ -710,30 +712,30 @@ Example
 = Utilities =
 =============
 
-.. _digital-identity_getValidity:
+.. _digital-twin_getValidity:
 
 getValidity
 ================================================================================
 
 .. code-block:: typescript
 
-  DigitalIdentity.getValidity(options, ensAddress);
+  DigitalTwin.getValidity(options, ensAddress);
 
-Check if a valid contract is located under the specified address, which allows to check for identities before actually loading them.
+Check if a valid contract is located under the specified address, which allows to check for twins before actually loading them.
 
 Return value properties have the following meaning:
 
-- ``valid``: ``true`` if contract could not be found or if it doesn't have the tag "evan-digital-identity"
+- ``valid``: ``true`` if contract could not be found or if it doesn't have the tag "evan-digital-twin"
 - ``exists``: ``true`` if a contract address could be found at given ENS address
 - ``error``: an error object, if one of the other properties is ``false``
 
-**Note, that this function is called on the Class DigitalIdentity and not on an instance of it.**
+**Note, that this function is called on the Class DigitalTwin and not on an instance of it.**
 
 ----------
 Parameters
 ----------
 
-#. ``options`` - ``DigitalIdentityOptions``: identity runtime options
+#. ``options`` - ``DigitalTwinOptions``: twin runtime options
     * ``contractLoader`` - |source contractLoader|_: |source contractLoader|_ instance
     * ``cryptoProvider`` - |source cryptoProvider|_: |source cryptoProvider|_ instance
     * ``dataContract`` - |source dataContract|_: |source dataContract|_ instance
@@ -762,28 +764,28 @@ Example
 
 .. code-block:: typescript
 
-  const { valid } = await DigitalIdentity.getValidity(runtime, address);
+  const { valid } = await DigitalTwin.getValidity(runtime, address);
   if (!valid) {
-    throw new Error(`no valid digital identity found at "${address}"`);
+    throw new Error(`no valid digital twin found at "${address}"`);
   }
 
 
 
 --------------------------------------------------------------------------------
 
-.. _digital-identity_ensureContract:
+.. _digital-twin_ensureContract:
 
 ensureContract
 ================================================================================
 
 .. code-block:: typescript
 
-  digitalIdentity.ensureContract();
+  digitalTwin.ensureContract();
 
-Check if digital identity contract already has been loaded, load from address / ENS if required.
+Check if digital twin contract already has been loaded, load from address / ENS if required.
 Throws if contract could not be loaded.
 
-This function is more commonly used for internal checks in the ``DigitalIdentity`` module. For checking, if a given address can be used, it is recommended to use :ref:`getValidity <digital-identity_getValidity>`.
+This function is more commonly used for internal checks in the ``DigitalTwin`` module. For checking, if a given address can be used, it is recommended to use :ref:`getValidity <digital-twin_getValidity>`.
 
 -------
 Returns
@@ -797,27 +799,27 @@ Example
 
 .. code-block:: typescript
 
-  let digitalIdentity;
+  let digitalTwin;
   try {
-    digitalIdentity = new DigitalIdentity(options, config);
-    await digitalIdentity.ensureContract();
-    // use digital identity
+    digitalTwin = new DigitalTwin(options, config);
+    await digitalTwin.ensureContract();
+    // use digital twin
   } catch (ex) {
-    console.error(`could use digital identity; ${ex.message || ex}`);
+    console.error(`could use digital twin; ${ex.message || ex}`);
   }
 
 
 
 --------------------------------------------------------------------------------
 
-.. _digital-identity_getContractAddress:
+.. _digital-twin_getContractAddress:
 
 getContractAddress
 ================================================================================
 
 .. code-block:: typescript
 
-  digitalIdentity.getContractAddress();
+  digitalTwin.getContractAddress();
 
 Get contract address of underlying IndexContract.
 
@@ -833,8 +835,8 @@ Example
 
 .. code-block:: typescript
 
-  const digitalIdentity = new DigitalIdentity(options, config);
-  console.log(await digitalIdentity.getContractAddress());
+  const digitalTwin = new DigitalTwin(options, config);
+  console.log(await digitalTwin.getContractAddress());
   // Output:
   // 0x000000000000000000000000000000001d327171
 
@@ -848,18 +850,18 @@ Additional Components
 Public Properties
 =================
 
-.. _digital-identity_defaultDescription:
+.. _digital-twin_defaultDescription:
 
 ------------------
 defaultDescription
 ------------------
 
-Default description used when no specific description is given to :ref:`.create <digital-identity_create>`.
+Default description used when no specific description is given to :ref:`.create <digital-twin_create>`.
 
 
 .. code-block:: typescript
 
-  console.dir(DigitalIdentity.defaultDescription);
+  console.dir(DigitalTwin.defaultDescription);
   // Output:
   // {
   //   name: 'Digital Identity',
@@ -876,10 +878,10 @@ Default description used when no specific description is given to :ref:`.create 
 Enums
 =====
 
-.. _digital-identity_DigitalIdentityEntryType:
+.. _digital-twin_DigitalTwinEntryType:
 
 ------------------------
-DigitalIdentityEntryType
+DigitalTwinEntryType
 ------------------------
 
 possible entry types for entries in index
@@ -896,43 +898,43 @@ possible entry types for entries in index
 Interfaces
 ==========
 
-.. _digital-identity_ContainerConfig:
+.. _digital-twin_ContainerConfig:
 
 ---------------------
-DigitalIdentityConfig
+DigitalTwinConfig
 ---------------------
 
-config for digital identity
+config for digital twin
 
-#. ``accountId`` - ``string``: account id of user, that interacts with digital identity
-#. ``containerConfig`` - ``ContainerConfig``: address of a ``DigitalIdentity`` instance, can be ENS or contract address
+#. ``accountId`` - ``string``: account id of user, that interacts with digital twin
+#. ``containerConfig`` - ``ContainerConfig``: address of a ``DigitalTwin`` instance, can be ENS or contract address
 #. ``address`` - ``string`` (optional): address of an ``IndexContract`` instance, can be ENS or contract address
 #. ``description`` - ``string`` (optional): description has to be passed to ``.create`` to apply it to to contract
-#. ``factoryAddress`` - ``string`` (optional): factory address can be passed to ``.create`` for customer digital identity factory
+#. ``factoryAddress`` - ``string`` (optional): factory address can be passed to ``.create`` for customer digital twin factory
 
 
 
-.. _digital-identity_DigitalIdentityIndexEntry:
+.. _digital-twin_DigitalTwinIndexEntry:
 
 -------------------------
-DigitalIdentityIndexEntry
+DigitalTwinIndexEntry
 -------------------------
 
-container for digital identity entry values
+container for digital twin entry values
 
-#. ``entryType`` - ``DigitalIdentityEntryType`` (optional): type of entry in index
+#. ``entryType`` - ``DigitalTwinEntryType`` (optional): type of entry in index
 #. ``raw`` - ``any`` (optional): raw value (``bytes32`` hash)
 #. ``value`` - ``any`` (optional): decrypted/loaded value
 
 
 
-.. _digital-identity_DigitalIdentityVerificationEntry:
+.. _digital-twin_DigitalTwinVerificationEntry:
 
 --------------------------------
-DigitalIdentityVerificationEntry
+DigitalTwinVerificationEntry
 --------------------------------
 
-data for verifications for digital identities
+data for verifications for digital twins
 
 #. ``topic`` - ``string``: name of the verification (full path)
 #. ``descriptionDomain`` - ``string`` (optional): domain of the verification, this is a subdomain under 'verifications.evan', so passing 'example' will link verifications

@@ -11,9 +11,11 @@ Container
    * - Extends
      - `Logger <../common/logger.html>`_
    * - Source
-     - `container.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/digital-identity/container.ts>`_
+     - `container.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/digital-twin/container.ts>`_
    * - Examples
-     - `container.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/digital-identity/container.spec.ts>`_
+     - `container.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/digital-twin/container.spec.ts>`_
+
+Usage examples can be found :doc:`here <./digital-twin-usage-examples>`.
 
 This place is reserved for a more detailed explanation about what a container is and what it is used for. Examples offer clear and practical approach on how to interact with it and how someone can embed Containers in ones own code.
 

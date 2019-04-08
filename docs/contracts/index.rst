@@ -12,7 +12,8 @@ Contracts
     base-contract
     data-contract
     service-contract
-    digital-identity
+    digital-twin-usage-examples
+    digital-twin
     container
 
 
