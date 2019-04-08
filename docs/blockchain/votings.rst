@@ -680,10 +680,10 @@ VotingsContractOptions
 
 .. required for building markup
 .. |source contractLoader| replace:: ``ContractLoader``
-.. _source contractLoader: /contracts/contract-loader.html
+.. _source contractLoader: ../contracts/contract-loader.html
 
 .. |source executor| replace:: ``Executor``
-.. _source executor: /blockchain/executor.html
+.. _source executor: ../blockchain/executor.html
 
 .. |source memberinfo| replace:: ``MemberInfo``
 .. _source memberinfo: #memberinfo

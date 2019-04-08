@@ -458,19 +458,19 @@ When wanting to perform a contract creation without a factory contract, this con
 
 .. required for building markup
 .. |source dataContract| replace:: ``DataContract``
-.. _source dataContract: /contracts/data-contract.html
+.. _source dataContract: ../contracts/data-contract.html
 
 .. |source eventHub| replace:: ``EventHub``
-.. _source eventHub: /blockchain/event-hub.html
+.. _source eventHub: ../blockchain/event-hub.html
 
 .. |source logLevel| replace:: ``LogLevel``
-.. _source logLevel: /common/logger.html#loglevel
+.. _source logLevel: ../common/logger.html#loglevel
 
 .. |source logLogInterface| replace:: ``LogLogInterface``
-.. _source logLogInterface: /common/logger.html#logloginterface
+.. _source logLogInterface: ../common/logger.html#logloginterface
 
 .. |source signerInterface| replace:: ``SignerInterface``
-.. _source signerInterface: /blockchain/signer.html
+.. _source signerInterface: ../blockchain/signer.html
 
 .. |source web3| replace:: ``Web3``
 .. _source web3: https://github.com/ethereum/web3.js/

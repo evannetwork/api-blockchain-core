@@ -286,22 +286,22 @@ createContract
 
 .. required for building markup
 .. |source signerInterface| replace:: ``SignerInterface``
-.. _source signerInterface: /blockchain/signer.html
+.. _source signerInterface: ../blockchain/signer.html
 
 .. |source eventHub| replace:: ``EventHub``
-.. _source eventHub: /blockchain/event-hub.html
+.. _source eventHub: ../blockchain/event-hub.html
 
 .. |source executor| replace:: ``Executor``
-.. _source executor: /blockchain/executor.html
+.. _source executor: ../blockchain/executor.html
 
 .. |source logLevel| replace:: ``LogLevel``
-.. _source logLevel: /common/logger.html#loglevel
+.. _source logLevel: ../common/logger.html#loglevel
 
 .. |source logLogInterface| replace:: ``LogLogInterface``
-.. _source logLogInterface: /common/logger.html#logloginterface
+.. _source logLogInterface: ../common/logger.html#logloginterface
 
 .. |source wallet| replace:: ``Wallet``
-.. _source wallet: /blockchain/wallet.html
+.. _source wallet: ../blockchain/wallet.html
 
 .. |source web3| replace:: ``Web3``
 .. _source web3: https://github.com/ethereum/web3.js/
