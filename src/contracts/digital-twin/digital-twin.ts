@@ -523,8 +523,7 @@ export class DigitalTwin extends Logger {
    */
   public async setDescription(description: any): Promise<void> {
     await this.ensureContract();
-
-    this.getMutex('description').runExclusive(async () => {
+    await this.getMutex('description').runExclusive(async () => {
       // ensure, that the evan digital twin tag is set
       description.tags = description.tags || [ ];
       if (description.tags.indexOf('evan-digital-twin') === -1) {
