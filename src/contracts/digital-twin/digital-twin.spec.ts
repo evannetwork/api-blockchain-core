@@ -51,7 +51,7 @@ use(chaiAsPromised);
 
 const ownedDomain = 'twintest.fifs.registrar.test.evan';
 
-describe('DigitalTwin (name pending)', function() {
+describe('DigitalTwin', function() {
   this.timeout(60000);
   let dfs: Ipfs;
   let ipld: Ipld;
@@ -131,7 +131,7 @@ describe('DigitalTwin (name pending)', function() {
       const validity = await DigitalTwin.getValidity(runtime, address);
 
       expect(validity.valid).to.be.false;
-      expect(validity.error.message).to.include('match not the specification');
+      expect(validity.error.message).to.include('doesn\'t match the specification');
     });
 
     it('loading a twin with the tag \'evan-digital-twin\' should be valid', async () => {
