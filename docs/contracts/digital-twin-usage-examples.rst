@@ -1,5 +1,5 @@
 ===============================
-Digital Twin Usage Examples 
+Digital Twin Usage Examples
 ===============================
 
 This section shows a few usage examples that can occur in common digital twin usage scenarios and cover handling of the modules :doc:`DigitalTwin <../contracts/digital-twin>` and :doc:`Container <../contracts/container>`. The examples in here are build around the management of data for heavy construction machines and cover common events link storing data, sharing data, etc.
@@ -31,7 +31,7 @@ So let's create a digital twin four our heavy machine "Big Crane 250", which is 
 
     const bigCrane250 = await DigitalTwin.create(runtime, { accountId: manufacturer });
 
-This creates a new digital twin for the account ``manufacturer``, which can now add containers to it or set other properties. 
+This creates a new digital twin for the account ``manufacturer``, which can now add containers to it or set other properties.
 
 The |source digitalTwin_create|_ `config` argument function supports more properties than just `accountId`.
 
@@ -74,10 +74,10 @@ Continuing with the digital twin from the last section we add a container, that 
 .. code-block:: typescript
 
   const { data } = await bigCrane250.createContainers({
-    data: { template: 'metadata' },
+    data: {},
   });
 
-The manufacturer account now has created a :doc:`Container <../contracts/container>` instance with the default template ``metadata``. This can be customized as described at |source container_create|_.
+The manufacturer account now has created a :doc:`Container <../contracts/container>` instance called ``data``. This can be customized as described at |source container_create|_.
 
 .. figure::  ../_static/digital-twin-apidoc-images-2-add-container.png
    :align:   center
@@ -179,21 +179,21 @@ This clone can be linked to a digital twin owner by ``customer``. So let's creat
 
 .. code-block:: typescript
 
-  const customersDescription = description: {
-      name: 'My own Big Crane 250',
-      description: 'I bought a Big Crane 250 and this is my collection of data for it',
-      author: 'Customer',
-      version: '0.1.0',
-      dbcpVersion: 2,
-    };
-    const customersBigCrane250 = await DigitalTwin.create(
-      runtime, { accountId: customer, description: customersDescription });
+  const customersDescription = {
+    name: 'My own Big Crane 250',
+    description: 'I bought a Big Crane 250 and this is my collection of data for it',
+    author: 'Customer',
+    version: '0.1.0',
+    dbcpVersion: 2,
+  };
+  const customersBigCrane250 = await DigitalTwin.create(
+    runtime, { accountId: customer, description: customersDescription });
 
-    await customersBigCrane250.setEntry(
-      'machine-data',
-      dataClone,
-      DigitalTwinEntryType.ContainerContract,
-    );
+  await customersBigCrane250.setEntry(
+    'machine-data',
+    dataClone,
+    DigitalTwinEntryType.ContainerContract,
+  );
 
 Note that the container is not named ``data`` like in the original twin but called ``machine-data`` here. Names can be reassigned as desired.
 
@@ -218,7 +218,7 @@ Properties at :doc:`Containers <../contracts/container>` can be "entries" as use
 
   await dataClone.addListEntries(
     'usagelog',
-    [ 'I started using my net Big Crane 250' ]
+    [ 'I started using my new Big Crane 250' ]
   );
 
 Now ``customer`` wants to invite ``serviceTechnician`` and allow this account to add entries to the list ``usagelog`` as well. To do this, the list is shared the same way as in the previous example, but the field is shared as ``readWrite``:
@@ -246,10 +246,10 @@ Now ``customer`` wants to invite ``serviceTechnician`` and allow this account to
 .. |source container_addListEntries| replace:: ``container.addListEntries``
 .. _source container_addListEntries: ../contracts/container.html#addlistentries
 
-.. |source container_clone| replace:: ``container.clone``
+.. |source container_clone| replace:: ``Container.clone``
 .. _source container_clone: ../contracts/container.html#clone
 
-.. |source container_create| replace:: ``container.create``
+.. |source container_create| replace:: ``Container.create``
 .. _source container_create: ../contracts/container.html#create
 
 .. |source container_getEntry| replace:: ``container.getEntry``
@@ -261,13 +261,13 @@ Now ``customer`` wants to invite ``serviceTechnician`` and allow this account to
 .. |source container_shareProperties| replace:: ``container.shareProperties``
 .. _source container_shareProperties: ../contracts/container.html#shareproperties
 
-.. |source digitalTwin_create| replace:: ``digitalTwin.create``
+.. |source digitalTwin_create| replace:: ``DigitalTwin.create``
 .. _source digitalTwin_create: ../contracts/digital-twin.html#create
 
 .. |source digitalTwin_createContainers| replace:: ``digitalTwin.createContainers``
 .. _source digitalTwin_createContainers: ../contracts/digital-twin.html#createcontainers
 
-.. |source digitalTwin_defaultDescription| replace:: ``digitalTwin.defaultDescription``
+.. |source digitalTwin_defaultDescription| replace:: ``DigitalTwin.defaultDescription``
 .. _source digitalTwin_defaultDescription: ../contracts/digital-twin.html#defaultdescription
 
 .. |source digitalTwin_setDescription| replace:: ``digitalTwin.setDescription``

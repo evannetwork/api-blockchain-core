@@ -2,7 +2,7 @@
 Container
 ================================================================================
 
-.. list-table:: 
+.. list-table::
    :widths: auto
    :stub-columns: 1
 
@@ -78,7 +78,7 @@ Example
 -------
 
 .. code-block:: typescript
-  
+
   const container = new Container(
     runtime,
     {
@@ -632,7 +632,7 @@ Share configurations are given per user, that receives gets data shared with. Th
       - if not already done so, a role, that has ``Set`` permissions will be added for this field
       - given ``accountId`` will be added to the group responsible for this field
       - aforementioned roles roles start at role 64, the first 64 roles are system reserved for smart contract custom logic or in-detail role configurations
-      - possible roles can go up to 255, so it is possible to add up to 192 properties to a container 
+      - possible roles can go up to 255, so it is possible to add up to 192 properties to a container
 
 ----------
 Parameters
@@ -735,7 +735,7 @@ See |source verifications|_ documentation for details on output data format.
 Returns
 -------
 
-``Promise`` returns ``any``: list of verification lists from |source verifications|_, ``getVerifications`` 
+``Promise`` returns ``any``: list of verification lists from |source verifications|_, ``getVerifications``
 
 -------
 Example
@@ -891,6 +891,7 @@ Example
 
 Additional Components
 ======================
+
 
 Interfaces
 ==========
