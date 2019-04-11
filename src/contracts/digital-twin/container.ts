@@ -504,6 +504,59 @@ export class Container extends Logger {
   }
 
   /**
+   * Check permissions for given account and return them as ContainerShareConfig object.
+   *
+   * @param      {string}  accountId  account to check permissions for
+   */
+  public async getContainerShareConfigForAccount(accountId: string): Promise<ContainerShareConfig> {
+    const result: ContainerShareConfig = {
+      accountId,
+    };
+    const read = [];
+    const readWrite = [];
+    const sha3 = (...args) => this.options.nameResolver.soliditySha3(...args);
+    const [description, sharings] = await Promise.all([
+      this.getDescription(),
+      this.options.sharing.getSharingsFromContract(this.contract),
+    ]);
+    if (description.dataSchema) {
+      const authority = this.options.contractLoader.loadContract(
+        'DSRolesPerContract',
+        await this.options.executor.executeContractCall(this.contract, 'authority'),
+      );
+      const getCanWrite = async (property, type) => {
+        const enumType = type === 'array' ? PropertyType.ListEntry : PropertyType.Entry;
+        return this.options.executor.executeContractCall(
+          authority,
+          'canCallOperation',
+          accountId,
+          '0x0000000000000000000000000000000000000000',
+          this.options.rightsAndRoles.getOperationCapabilityHash(property, enumType, ModificationType.Set),
+        );
+      };
+      const tasks = Object.keys(description.dataSchema).map(property => async () => {
+        if (property === 'type') {
+          // do not list type property
+          return;
+        }
+        if (await getCanWrite(property, description.dataSchema[property].type)) {
+          readWrite.push(property);
+        } else if (sharings[sha3(accountId)] && sharings[sha3(accountId)][sha3(property)]) {
+          read.push(property);
+        }
+      });
+      await Throttle.all(tasks);
+    }
+    if (read.length) {
+      result.read = read;
+    }
+    if (readWrite.length) {
+      result.readWrite = readWrite;
+    }
+    return result;
+  }
+
+  /**
    * Gets verifications from description and fetches list of verifications for each of them.
    */
   public async getVerifications(): Promise<any[]> {

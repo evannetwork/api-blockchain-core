@@ -676,6 +676,69 @@ Example
 
 
 
+--------------------------------------------------------------------------------
+
+.. _container_getContainerShareConfigForAccounrt:
+
+getContainerShareConfigForAccounrt
+================================================================================
+
+.. code-block:: typescript
+
+  container.getContainerShareConfigForAccounrt(accountId);
+
+Check permissions for given account and return them as ContainerShareConfig object.
+
+----------
+Parameters
+----------
+
+#. ``accountId`` - ``string``: account to check permissions for
+
+-------
+Returns
+-------
+
+``Promise`` returns ``ContainerShareConfig``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const accountId1 = '0x0000000000000000000000000000000000000001';
+  const accountId2 = '0x0000000000000000000000000000000000000002';
+
+  // create container with accountId1
+  const container = await Container.create(options, { ...config, accountId: accountId1 });
+  await container.setEntry('myField', 123);
+  console.log(await container.getEntry('myField'));
+  // Output:
+  // 123
+
+  // share field from accountId1 to accountId2
+  await container.shareProperties([{
+    accountId: accountId2,
+    read: ['myField'],
+  }]);
+
+  // fetch value with accountId2
+  const accountId2Container = new Container(options, { ...config, accountId: accountId2 });
+  console.log(await accountId2Container.getEntry('myField'));
+  // Output:
+  // 123
+
+  const shareConfig = await container.getContainerShareConfigForAccount(accountId2);
+  console.dir(shareConfig);
+  // Output:
+  // {
+  //   accountId: '0x0000000000000000000000000000000000000002',
+  //   read: ['myField']
+  // }
+
+
+
 = Validating Containers =
 =========================
 

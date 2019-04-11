@@ -251,6 +251,10 @@ describe('Container', function() {
           { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
         );
         expect(await consumerContainer.getEntry('testField')).to.eq(randomString);
+
+        const shareConfig = await container.getContainerShareConfigForAccount(consumer);
+        expect(shareConfig).to.haveOwnProperty('read');
+        expect(shareConfig.read).to.include('testField');
       });
 
       it('can share write access a property from owner to another user', async() => {
@@ -277,6 +281,10 @@ describe('Container', function() {
         await consumerContainer.setEntry('testField', newRandomString);
         expect(await consumerContainer.getEntry('testField')).to.eq(newRandomString);
         expect(await container.getEntry('testField')).to.eq(newRandomString);
+
+        const shareConfig = await container.getContainerShareConfigForAccount(consumer);
+        expect(shareConfig).to.haveOwnProperty('readWrite');
+        expect(shareConfig.readWrite).to.include('testField');
       });
     });
 
