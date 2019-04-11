@@ -33,7 +33,7 @@ Configuring and initializing blockchain core
     const Web3 = require('web3');
 
     // require blockchain-core
-    const { Ipfs, createDefaultRuntime } = require('blockchain-core');
+    const { Ipfs, createDefaultRuntime } = require('@evan.network/api-blockchain-core');
 
     const runtimeConfig = {
       // account map to blockchain accounts with their private key
@@ -42,7 +42,7 @@ Configuring and initializing blockchain core
           'PRIVATE KEY',
       },
       // ipfs configuration for evan.network storage
-      ipfs: {host: 'ipfs.evan.network', port: '443', protocol: 'https'},
+      ipfs: {host: 'ipfs.test.evan.network', port: '443', protocol: 'https'},
       // web3 provider config (currently evan.network testcore)
       web3Provider: 'wss://testcore.evan.network/ws',
     };
@@ -55,6 +55,6 @@ Configuring and initializing blockchain core
     // create runtime
     const runtime = await createDefaultRuntime(web3, dfs, { accountMap: runtimeConfig.accountMap, });
 
-That's it! now you can use the ``runtime`` object and interact with the evan.network blockchain.
+That's it! Now you can use the ``runtime`` object and interact with the evan.network blockchain.
 
 The blockchain-core api is a set of modules which can be plugged in individually. So the above ``runtime`` is a full blown entry point to the api. You can also plug your own runtime with needed modules together.

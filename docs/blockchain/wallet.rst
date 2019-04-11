@@ -169,7 +169,7 @@ load
 
 .. code-block:: typescript
 
-  wallet.load(contractId);
+  wallet.load(contractId[, walletType]);
 
 Load wallet contract from address and uses it as its wallet contract.
 
@@ -178,6 +178,7 @@ Parameters
 ----------
 
 #. ``contractid`` - ``string``: a wallet contract address
+#. ``walletType`` - ``string`` (optional): wallet contract type, defaults to ``MultiSigWallet``
 
 -------
 Returns
@@ -350,25 +351,25 @@ Example
 
 .. required for building markup
 .. |source contractLoader| replace:: ``ContractLoader``
-.. _source contractLoader: /contracts/contract-loader.html
+.. _source contractLoader: ../contracts/contract-loader.html
 
 .. |source description| replace:: ``Description``
-.. _source description: /blockchain/description.html
+.. _source description: ../blockchain/description.html
 
 .. |source eventHub| replace:: ``EventHub``
-.. _source eventHub: /blockchain/event-hub.html
+.. _source eventHub: ../blockchain/event-hub.html
 
 .. |source executor| replace:: ``Executor``
-.. _source executor: /blockchain/executor.html
+.. _source executor: ../blockchain/executor.html
 
 .. |source executorWallet| replace:: ``ExecutorWallet``
-.. _source executorWallet: /blockchain/executor-wallet.html
+.. _source executorWallet: ../blockchain/executor-wallet.html
 
 .. |source logLevel| replace:: ``LogLevel``
-.. _source logLevel: /common/logger.html#loglevel
+.. _source logLevel: ../common/logger.html#loglevel
 
 .. |source logLogInterface| replace:: ``LogLogInterface``
-.. _source logLogInterface: /common/logger.html#logloginterface
+.. _source logLogInterface: ../common/logger.html#logloginterface
 
 .. |source nameResolver| replace:: ``NameResolver``
-.. _source nameResolver: /blockchain/name-resolver.html
+.. _source nameResolver: ../blockchain/name-resolver.html

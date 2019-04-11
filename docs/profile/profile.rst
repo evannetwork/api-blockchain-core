@@ -873,7 +873,7 @@ addContract
 
 .. code-block:: typescript
 
-  profile.addContract(bc, address, data);
+  profile.addContract(address, data);
 
 Add a contract to the current profile.
 
@@ -881,8 +881,7 @@ Add a contract to the current profile.
 Parameters
 ----------
 
-#. ``bc`` - ``string``: business center ens address or contract address
-#. ``address`` - ``string``: contact address
+#. ``address`` - ``string``: contract address
 #. ``data`` - ``any``: bookmark metadata
 
 -------
@@ -897,45 +896,7 @@ Example
 
 .. code-block:: typescript
 
-  await profile.addBcContract('testbc.evan', '0x', contractDescription);
-
-
-
-------------------------------------------------------------------------------
-
-
-
-.. _profile_removeContract:
-
-removeContract
-================================================================================
-
-.. code-block:: typescript
-
-  profile.removeContract(address, data);
-
-removes a contract (task contract etc. ) from a business center scope of the current profile
-
-----------
-Parameters
-----------
-
-#. ``bc`` - ``string``: business center ens address or contract address
-#. ``address`` - ``any``: contact address
-
--------
-Returns
--------
-
-``Promise`` returns ``void``: resolved when done
-
--------
-Example
--------
-
-.. code-block:: typescript
-
-  await profile.removeBcContract('testbc.evan', '0x');
+  await profile.addContract('0x...', contractDescription);
 
 
 
@@ -1120,6 +1081,44 @@ Example
 
 ------------------------------------------------------------------------------
 
+
+
+.. _profile_removeBcContract:
+
+removeContract
+================================================================================
+
+.. code-block:: typescript
+
+  profile.removeBcContract(address, data);
+
+removes a contract (task contract etc. ) from a business center scope of the current profile
+
+----------
+Parameters
+----------
+
+#. ``bc`` - ``string``: business center ens address or contract address
+#. ``address`` - ``any``: contact address
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await profile.removeBcContract('testbc.evan', '0x');
+
+
+
+------------------------------------------------------------------------------
+
 = publicKey =
 ==============================================================================
 
@@ -1191,6 +1190,8 @@ Example
 
   const key = await profile.getPublicKey();
 
+
+
 ------------------------------------------------------------------------------
 
 .. _profile_loadActiveVerifications:
@@ -1223,6 +1224,8 @@ Example
 .. code-block:: typescript
 
   const topics = await bcc.profile.loadActiveVerifications();
+
+
 
 ------------------------------------------------------------------------------
 
@@ -1258,31 +1261,100 @@ Example
   await bcc.profile.setActiveVerifications([ '/company/tuev', '/test/1234' ]);
 
 
+
+--------------------------------------------------------------------------------
+= templates =
+================================================================================
+
+
+
+.. _profile_setTemplates:
+
+setTemplates
+================================================================================
+
+.. code-block:: typescript
+
+  profile.setTemplates(templates);
+
+Save set of templates to profile.
+
+----------
+Parameters
+----------
+
+#. ``templates`` - ``any``: entire collections of templates to store in profile 
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await profile.setTemplates({ customMetadata: {} });
+
+
+
+--------------------------------------------------------------------------------
+
+.. _profile_getTemplates:
+
+getTemplates
+================================================================================
+
+.. code-block:: typescript
+
+  profile.getTemplates();
+
+Get entire set of templates from profile.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``any``: all templates from profile
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const templates = await profile.getTemplates();
+
+
+
 .. required for building markup
 
 .. |source contractLoader| replace:: ``ContractLoader``
-.. _source contractLoader: /contracts/contract-loader.html
+.. _source contractLoader: ../contracts/contract-loader.html
 
 .. |source cryptoProvider| replace:: ``CryptoProvider``
-.. _source cryptoProvider: /encryption/crypto-provider.html
+.. _source cryptoProvider: ../encryption/crypto-provider.html
 
 .. |source dataContract| replace:: ``DataContract``
-.. _source dataContract: /contracts/data-contract.html
+.. _source dataContract: ../contracts/data-contract.html
 
 .. |source executor| replace:: ``Executor``
-.. _source executor: /blockchain/executor.html
+.. _source executor: ../blockchain/executor.html
 
 .. |source ipld| replace:: ``Ipld``
-.. _source ipld: /dfs/ipld.html
+.. _source ipld: ../dfs/ipld.html
 
 .. |source keyExchange_getDiffieHellmanKeys| replace:: ``KeyExchange``
-.. _source keyExchange_getDiffieHellmanKeys: /profile/key-exchange.html#getdiffiehellmankeys
+.. _source keyExchange_getDiffieHellmanKeys: ../profile/key-exchange.html#getdiffiehellmankeys
 
 .. |source logLevel| replace:: ``LogLevel``
-.. _source logLevel: /common/logger.html#loglevel
+.. _source logLevel: ../common/logger.html#loglevel
 
 .. |source logLogInterface| replace:: ``LogLogInterface``
-.. _source logLogInterface: /common/logger.html#logloginterface
+.. _source logLogInterface: ../common/logger.html#logloginterface
 
 .. |source nameResolver| replace:: ``NameResolver``
-.. _source nameResolver: /blockchain/name-resolver.html
+.. _source nameResolver: ../blockchain/name-resolver.html

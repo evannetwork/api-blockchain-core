@@ -63,6 +63,7 @@ export class Wallet extends Logger {
     }
   };
   receipts = {};
+  walletType: string;
   walletContract: any;
 
   get walletAddress() {
@@ -103,12 +104,23 @@ export class Wallet extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async addOwner(accountId: string, toAdd: string): Promise<void> {
-    await this.options.executor.executeContractTransaction(
-      this.ensureContract(),
-      'addOwner',
-      { from: accountId, },
-      toAdd
-    );
+    if (this.walletType === 'MultiSigWallet') {
+      await this.options.executor.executeContractTransaction(
+        this.ensureContract(),
+        'addOwner',
+        { from: accountId, },
+        toAdd
+      );
+    } else if (this.walletType === 'MultiSigWalletSG') {
+      await this.submitTransaction(
+        this.walletContract,
+        'addOwner',
+        { from: accountId },
+        toAdd,
+      );
+    } else {
+      throw new Error(`unknown wallet type: ${this.walletType}`);
+    }
   }
 
   public async confirmTransaction(accountId: string, transactionId: string|number): Promise<any> {
@@ -157,7 +169,8 @@ export class Wallet extends Logger {
     await this.options.description.setDescriptionToContract(
       contractId, this.defaultDescription, accountId);
 
-    this.walletContract = this.options.contractLoader.loadContract('MultiSigWallet', contractId);
+    this.walletType = 'MultiSigWallet';
+    this.walletContract = this.options.contractLoader.loadContract(this.walletType, contractId);
   }
 
   /**
@@ -172,11 +185,13 @@ export class Wallet extends Logger {
   /**
    * load wallet contract from address
    *
-   * @param      {string}  contractId  a wallet contract address
-   * @return     {void}
+   * @param      {string}      contractId  a wallet contract address
+   * @param      {walletType}  walletType  (optional) wallet contract type, defaults to
+   *                                       'MultiSigWallet'
    */
-  public load(contractId: string): void {
-    this.walletContract = this.options.contractLoader.loadContract('MultiSigWallet', contractId);
+  public load(contractId: string, walletType = 'MultiSigWallet'): void {
+    this.walletType = walletType;
+    this.walletContract = this.options.contractLoader.loadContract(walletType, contractId);
   }
 
   /**
@@ -187,12 +202,23 @@ export class Wallet extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async removeOwner(accountId: string, toRemove: string): Promise<void> {
-    await this.options.executor.executeContractTransaction(
-      this.ensureContract(),
-      'removeOwner',
-      { from: accountId, },
-      toRemove
-    );
+    if (this.walletType === 'MultiSigWallet') {
+      await this.options.executor.executeContractTransaction(
+        this.ensureContract(),
+        'removeOwner',
+        { from: accountId, },
+        toRemove
+      );
+    } else if (this.walletType === 'MultiSigWalletSG') {
+      await this.submitTransaction(
+        this.walletContract,
+        'removeOwner',
+        { from: accountId },
+        toRemove,
+      );
+    } else {
+      throw new Error(`unknown wallet type: ${this.walletType}`);
+    }
   }
 
   /**

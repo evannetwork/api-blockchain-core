@@ -71,7 +71,7 @@ export const sampleContext = 'context sample';
 const web3Provider = <any>process.env.CHAIN_ENDPOINT || 'wss://testcore.evan.network/ws';
 const wsp = new Web3.providers.WebsocketProvider(
       web3Provider, { clientConfig: { keepalive: true, keepaliveInterval: 5000 } });
-const web3 = new Web3(wsp);
+const web3 = new Web3(wsp, { transactionConfirmationBlocks: 1 });
 const sampleKeys = {};
 // dataKeys
 sampleKeys[web3.utils.soliditySha3(accounts[0])] =
@@ -125,14 +125,14 @@ export class TestUtils {
     });
   };
 
-  static async getVerifications(web3, dfs): Promise<Verifications> {
+  static async getVerifications(web3, dfs, requestedKeys?: string[]): Promise<Verifications> {
     const eventHub = await this.getEventHub(web3);
     const executor = await this.getExecutor(web3);
     executor.eventHub = eventHub;
     return new Verifications({
       config,
       contractLoader: await TestUtils.getContractLoader(web3),
-      description: await TestUtils.getDescription(web3, dfs),
+      description: await TestUtils.getDescription(web3, dfs, requestedKeys),
       executor,
       nameResolver: await this.getNameResolver(web3),
       accountStore: this.getAccountStore({}),
@@ -201,9 +201,9 @@ export class TestUtils {
     return new CryptoProvider(cryptoConfig);
   }
 
-  static async getDataContract(web3, dfs) {
-    const sharing = await this.getSharing(web3, dfs);
-    const description = await this.getDescription(web3, dfs);
+  static async getDataContract(web3, dfs, requestedKeys?: string[]) {
+    const sharing = await this.getSharing(web3, dfs, requestedKeys);
+    const description = await this.getDescription(web3, dfs, requestedKeys);
     description.sharing = sharing;
     const eventHub = await this.getEventHub(web3);
     const executor = await this.getExecutor(web3);
@@ -221,7 +221,7 @@ export class TestUtils {
     });
   }
 
-  static async getDescription(web3, dfsParam?: DfsInterface): Promise<Description> {
+  static async getDescription(web3, dfsParam?: DfsInterface, requestedKeys?: string[]): Promise<Description> {
     const executor = await this.getExecutor(web3);
     const contracts = await this.getContracts();
     const contractLoader = await this.getContractLoader(web3);
@@ -233,7 +233,7 @@ export class TestUtils {
       cryptoProvider,
       dfs,
       executor,
-      keyProvider: this.getKeyProvider(),
+      keyProvider: this.getKeyProvider(requestedKeys),
       nameResolver,
       sharing: null,
       web3,
@@ -318,7 +318,7 @@ export class TestUtils {
   static async getIpfs(): Promise<Ipfs> {
     const pk = await this.getAccountStore(null).getPrivateKey(accounts[0]);
     const ipfs = new Ipfs({
-      dfsConfig: {host: 'ipfs.evan.network', port: '443', protocol: 'https'},
+      dfsConfig: {host: 'ipfs.test.evan.network', port: '443', protocol: 'https'},
       disablePin: true,
       accountId: accounts[0],
       privateKey: `0x${pk}`,
@@ -390,6 +390,7 @@ export class TestUtils {
       executor,
       ipld: ipld || await TestUtils.getIpld(ipfs),
       nameResolver: await TestUtils.getNameResolver(web3),
+      rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
     });
     return profile;
   }
@@ -428,15 +429,15 @@ export class TestUtils {
     });
   }
 
-  static async getSharing(web3, dfsParam?: DfsInterface): Promise<Sharing> {
+  static async getSharing(web3, dfsParam?: DfsInterface, requestedKeys?: string[]): Promise<Sharing> {
     const dfs = dfsParam ? dfsParam : await TestUtils.getIpfs();
     return new Sharing({
       contractLoader: await TestUtils.getContractLoader(web3),
       cryptoProvider: TestUtils.getCryptoProvider(),
-      description: await TestUtils.getDescription(web3, dfs),
+      description: await TestUtils.getDescription(web3, dfs, requestedKeys),
       executor: await TestUtils.getExecutor(web3),
       dfs,
-      keyProvider: TestUtils.getKeyProvider(),
+      keyProvider: TestUtils.getKeyProvider(requestedKeys),
       nameResolver: await TestUtils.getNameResolver(web3),
       defaultCryptoAlgo: 'aes',
     });

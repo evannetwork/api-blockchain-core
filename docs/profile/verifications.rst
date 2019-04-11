@@ -9,7 +9,7 @@ Verifications
    * - Class Name
      - Verifications
    * - Extends
-     - `Logger </common/logger.html>`_
+     - `Logger <../common/logger.html>`_
    * - Source
      - `verifications.ts <https://github.com/evannetwork/api-blockchain-core/blob/master/src/verifications/verifications.ts>`_
    * - Tests
@@ -53,6 +53,7 @@ Under this "path" a set of values can be found. These value describe the verific
   id of the current verification
 - ``valid``
   check if the verification has a valid signature
+
 
 
 --------------------------------------------------------------------------------
@@ -156,6 +157,7 @@ Example
 
 
 --------------------------------------------------------------------------------
+
 .. _verifications_identityAvailable:
 
 identityAvailable
@@ -278,6 +280,7 @@ Example
     accounts[0], accounts[1], '/company', expirationDate, verificationValue, 'example');
 
 
+
 --------------------------------------------------------------------------------
 
 .. _verifications_getVerifications:
@@ -314,32 +317,39 @@ Example
   await verifications.setVerification(accounts[0], accounts[1], '/company');
   console.dir(await verifications.getVerifications(accounts[1], '/company'));
   // Output:
-  [{
-    creationDate: 1234567890,
-    data: '0x0000000000000000000000000000000000000000000000000000000000000000',
-    description: {
-      name: 'sample verification',
-      description: 'I\'m a sample verification',
-      author: 'evan.network',
-      version: '1.0.0',
-      dbcpVersion: 1,
-    },
-    expirationDate: 1234567890,
-    id: '0x0000000000000000000000000000000000000000000000000000000000000000',
-    issuer: '0x0000000000000000000000000000000000000001',
-    name: '/company',
-    rejectReason: {
-      "rejected": "rejection message"
-    },
-    signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
-    status: 0 (Issued) || 1 (Confirmed) || 2 (Rejected), 
-    subject: '0x0000000000000000000000000000000000000002',
-    uri: '',
-    signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
-    valid: true
-  }]
+  // [{
+  //   creationDate: 1234567890,
+  //   data: '0x0000000000000000000000000000000000000000000000000000000000000000',
+  //   description: {
+  //     name: 'sample verification',
+  //     description: 'I\'m a sample verification',
+  //     author: 'evan.network',
+  //     version: '1.0.0',
+  //     dbcpVersion: 1,
+  //   },
+  //   expirationDate: 1234567890,
+  //   id: '0x0000000000000000000000000000000000000000000000000000000000000000',
+  //   issuer: '0x0000000000000000000000000000000000000001',
+  //   name: '/company',
+  //   rejectReason: {
+  //     "rejected": "rejection message"
+  //   },
+  //   signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
+  //   status: 0 (Issued) || 1 (Confirmed) || 2 (Rejected), 
+  //   subject: '0x0000000000000000000000000000000000000002',
+  //   uri: '',
+  //   signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
+  //   valid: true
+  // }]
+
+
+
+
 
 --------------------------------------------------------------------------------
+
+.. _verifications_getNestedVerifications:
+
 getNestedVerifications
 ================================================================================
 
@@ -417,7 +427,11 @@ Example
     }
   ]
 
+
+
 --------------------------------------------------------------------------------
+
+.. _verifications_computeVerifications:
 
 computeVerifications
 ================================================================================
@@ -465,7 +479,10 @@ Example
   //   }
 
 
+
 --------------------------------------------------------------------------------
+
+.. _verifications_getComputedVerification:
 
 getComputedVerification
 ================================================================================
@@ -511,45 +528,8 @@ Example
   //   }
 
 
---------------------------------------------------------------------------------
-
-.. _verifications_identityAvailable:
-
-identityAvailable
-================================================================================
-
-.. code-block:: typescript
-
-  verifications.identityAvailable(subject);
-
-checks if a account has already a identity contract
-
-----------
-Parameters
-----------
-
-#. ``subject`` - ``string``: subject of the verifications
-
--------
-Returns
--------
-
-``Promise`` returns ``any``: true if identity exists, otherwise false
-
--------
-Example
--------
-
-.. code-block:: typescript
-
-  console.dir(await verifications.identityAvailable(accounts[1]));
-  // Output:
-  true
-
-
 
 --------------------------------------------------------------------------------
-
 
 .. _verifications_validateVerification:
 
@@ -588,6 +568,8 @@ Example
   );
   // Output:
   true
+
+
 
 --------------------------------------------------------------------------------
 
@@ -668,11 +650,8 @@ Example
 
 --------------------------------------------------------------------------------
 
-
 = Subjects =
 ==========================
-
-
 
 .. _verifications_confirmVerification:
 
@@ -711,7 +690,6 @@ Example
 
 
 --------------------------------------------------------------------------------
-
 
 = Descriptions =
 ==========================
@@ -783,6 +761,8 @@ Example
   //   dbcpVersion: 1,
   // }
 
+
+
 --------------------------------------------------------------------------------
 
 .. _verifications_getVerificationEnsAddress:
@@ -817,7 +797,11 @@ Example
   const ensAddress = verifications.getVerificationEnsAddress('/evan/test');
   // will return test.verifications.evan
 
+
+
 --------------------------------------------------------------------------------
+
+.. _verifications_ensureVerificationDescription:
 
 ensureVerificationDescription
 ================================================================================
@@ -842,13 +826,12 @@ Example
 
   verifications.ensureVerificationDescription(verification);
 
---------------------------------------------------------------------------------
 
+
+--------------------------------------------------------------------------------
 
 = Deployment =
 ==========================
-
-
 
 .. _verifications_createStructure:
 
@@ -892,25 +875,25 @@ Example
 .. required for building markup
 
 .. |source accountStore| replace:: ``AccountStore``
-.. _source accountStore: /blockchain/account-store.html
+.. _source accountStore: ../blockchain/account-store.html
 
 .. |source contractLoader| replace:: ``ContractLoader``
-.. _source contractLoader: /contracts/contract-loader.html
+.. _source contractLoader: ../contracts/contract-loader.html
 
 .. |source description| replace:: ``Description``
-.. _source description: /blockchain/description.html
+.. _source description: ../blockchain/description.html
 
 .. |source dfsInterface| replace:: ``DfsInterface``
-.. _source dfsInterface: /dfs/dfs-interface.html
+.. _source dfsInterface: ../dfs/dfs-interface.html
 
 .. |source executor| replace:: ``Executor``
-.. _source executor: /blockchain/executor.html
+.. _source executor: ../blockchain/executor.html
 
 .. |source logLevel| replace:: ``LogLevel``
-.. _source logLevel: /common/logger.html#loglevel
+.. _source logLevel: ../common/logger.html#loglevel
 
 .. |source logLogInterface| replace:: ``LogLogInterface``
-.. _source logLogInterface: /common/logger.html#logloginterface
+.. _source logLogInterface: ../common/logger.html#logloginterface
 
 .. |source nameResolver| replace:: ``NameResolver``
-.. _source nameResolver: /blockchain/name-resolver.html
+.. _source nameResolver: ../blockchain/name-resolver.html

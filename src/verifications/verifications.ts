@@ -238,10 +238,10 @@ export class Verifications extends Logger {
    * @return     {Promise<string>}  new identity
    */
   public async createIdentity(accountId: string, contractId?: string): Promise<string> {
+    await this.ensureStorage();
     let identity;
     if (!contractId) {
       // create Identity contract
-      await this.ensureStorage();
       const identityContract = await this.options.executor.createContract(
         'VerificationHolder', [ accountId ], { from: accountId, gas: 3000000, });
 
@@ -345,8 +345,9 @@ export class Verifications extends Logger {
   public async ensureVerificationDescription(verification: any) {
     // map the topic to the verification ens name and extract the top level verifications domain to check, if
     // the user can set the verification tree
-    const ensAddress = this.getVerificationEnsAddress(verification.name);
-    const topLevelDomain = ensAddress.split('.').splice(-3, 3).join('.');
+    const fullDomain = this.getVerificationEnsAddress(verification.name);
+    const topLevelDomain = fullDomain.replace('.verifications.evan', '').split('.').reverse()[0];
+    const ensAddress = this.getFullDescriptionDomainWithHash(verification.name, topLevelDomain);
 
     // if no description was set, use the latest one or load it
     if (!verification.description) {
@@ -398,7 +399,7 @@ export class Verifications extends Logger {
     if (!this.ensOwners[topLevelDomain]) {
       this.ensOwners[topLevelDomain] = (async () => {
         // transform the ens domain into a namehash and load the ens top level topic owner
-        const namehash = this.options.nameResolver.namehash(topLevelDomain);
+        const namehash = this.options.nameResolver.namehash(topLevelDomain + '.verifications.evan');
         return await this.options.executor.executeContractCall(
           this.options.nameResolver.ensContract, 'owner', namehash);
       })();
@@ -619,7 +620,8 @@ export class Verifications extends Logger {
 
             // if isser === subject and only if a parent is passed, so if the root one is empty and no
             // slash is available
-            if (verification.issuerAccount === verification.subject && verification.parent) {
+            if (verification.issuerAccount === verification.subject && verification.parent &&
+                verification.issuerAccount !== this.options.config.ensRootOwner) {
               verification.warnings.push('selfIssued');
             }
 
@@ -686,9 +688,7 @@ export class Verifications extends Logger {
             subject: subject,
             tree: [ ],
             warnings: [ 'missing' ],
-            subjectIdentity: isValidAddress ?
-              await this.options.executor.executeContractCall(
-                this.contracts.storage, 'users', subject) :
+            subjectIdentity: isValidAddress ? subjectIdentity :
               '0x0000000000000000000000000000000000000000',
           });
 
@@ -905,18 +905,21 @@ export class Verifications extends Logger {
    * Sets or creates a verification; this requires the issuer to have permissions for the parent
    * verification (if verification name seen as a path, the parent 'folder').
    *
-   * @param      {string}           issuer             issuer of the verification
-   * @param      {string}           subject            subject of the verification and the owner of
-   *                                                   the verification node
-   * @param      {string}           topic              name of the verification (full path)
-   * @param      {number}           expirationDate     expiration date, for the verification,
-   *                                                   defaults to `0` (does not expire)
-   * @param      {object}           verificationValue  json object which will be stored in the
-   *                                                   verification
-   * @param      {string}           descriptionDomain  domain of the verification, this is a
-   *                                                   subdomain under 'verifications.evan', so
-   *                                                   passing 'example' will link verifications
-   *                                                   description to 'example.verifications.evan'
+   * @param      {string}           issuer                   issuer of the verification
+   * @param      {string}           subject                  subject of the verification and the
+   *                                                         owner of the verification node
+   * @param      {string}           topic                    name of the verification (full path)
+   * @param      {number}           expirationDate           expiration date, for the verification,
+   *                                                         defaults to `0` (≈does not expire)
+   * @param      {any}              verificationValue        json object which will be stored in the
+   *                                                         verification
+   * @param      {string}           descriptionDomain        domain of the verification, this is a
+   *                                                         subdomain under 'verifications.evan',
+   *                                                         so passing 'example' will link
+   *                                                         verifications description to
+   *                                                         'example.verifications.evan'
+   * @param      {boolean}          disabelSubVerifications  if true, verifications created under
+   *                                                         this path are invalid
    * @return     {Promise<string>}  verificationId
    */
   public async setVerification(
@@ -926,7 +929,7 @@ export class Verifications extends Logger {
       expirationDate = 0,
       verificationValue?: any,
       descriptionDomain?: string,
-      disabelSubVerifications = false
+      disabelSubVerifications = false,
     ): Promise<string> {
     await this.ensureStorage();
     let targetIdentity;
@@ -965,7 +968,7 @@ export class Verifications extends Logger {
         const stringified = JSON.stringify(verificationValue);
         const stateMd5 = crypto.createHash('md5').update(stringified).digest('hex');
         verificationData = await this.options.dfs.add(stateMd5, Buffer.from(stringified));
-        verificationDataUrl = `https://ipfs.evan.network/ipfs/${Ipfs.bytes32ToIpfsHash(verificationData)}`;
+        verificationDataUrl = `https://ipfs.test.evan.network/ipfs/${Ipfs.bytes32ToIpfsHash(verificationData)}`;
       } catch (e) {
         const msg = `error parsing verificationValue -> ${e.message}`;
         this.log(msg, 'info');

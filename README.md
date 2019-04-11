@@ -20,6 +20,10 @@ The blockchain core is a helper library, that offers helpers for interacting wit
 - updates, develop HowTos and more cool stuff about what evan.network is doing can be found on our [Medium channel](https://medium.com/evan-network)<sup>[+]</sup>
 
 
+## DApp library
+This project is bundled using browserify and directly loadable from dapps within the evan.network. The dbcp.json can be found in this [wrapping project](https://github.com/evannetwork/ui-core/tree/master/dapps/bcc). 
+
+
 ## Tests
 The tests are written with mocha and chai and the files (`*.spec.js`) are located next to the files, they contain tests for.
 The tests are in between unit tests and integration tests. They each cover a single class but do not mock external dependencies and use the live blockchain for its contract and transaction related components. They act as a living documentation and examples for using the modules can be found in them.

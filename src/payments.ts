@@ -34,7 +34,7 @@ import {
 } from '@evan.network/dbcp';
 
 import * as BigNumber from 'bignumber.js';
-import { typedSignatureHash, signTypedDataLegacy, recoverTypedSignatureLegacy } from 'eth-sig-util';
+import { typedSignatureHash, signTypedDataLegacy, recoverTypedSignatureLegacy, concatSig } from 'eth-sig-util';
 
 /**
  * parameters for Payments constructor
@@ -144,6 +144,9 @@ export class Payments extends Logger {
     super(options);
     this.options = options;
     this.startBlock = 0;
+    if (concatSig) {
+      const sig = concatSig;
+    }
     if (options.channelManager) {
       this.channelManager = this.options.contractLoader.loadContract(
         'RaidenMicroTransferChannels',
@@ -360,7 +363,7 @@ export class Payments extends Logger {
         { data: params }
       );
 
-      if (result.error){
+      if (result.error) {
         throw result.error;
       }
       sig = result;
@@ -404,7 +407,10 @@ export class Payments extends Logger {
    * @param amount  Amount to increment in current balance
    * @returns  Promise to signature
    */
-  async incrementBalanceAndSign(amount: BigNumber): Promise<MicroProof> {
+  async incrementBalanceAndSign(amount: BigNumber|string): Promise<MicroProof> {
+    if (!(amount instanceof BigNumber)) {
+      amount = new BigNumber(amount);
+    }
     if (!this.isChannelValid()) {
       throw new Error('No valid channelInfo');
     }
@@ -473,12 +479,13 @@ export class Payments extends Logger {
 
     const stillOpen = openEvents.filter((ev) => {
       for (let sev of settleEvents) {
-        if (sev.args._open_block_number.eq(ev.blockNumber))
+        if (sev.args._open_block_number.eq(ev.blockNumber)) {
           return false;
+        }
       }
       for (let cev of closeEvents) {
         if (cev.args._open_block_number.eq(ev.blockNumber) &&
-            cev.blockNumber + challenge > currentBlock)
+            cev.blockNumber + challenge > currentBlock) {}
           return false;
       }
       return true;
@@ -515,10 +522,13 @@ export class Payments extends Logger {
    *
    * @param account  Sender/client's account address
    * @param receiver  Receiver/server's account address
-   * @param deposit  Tokens to be initially deposited in the channel
+   * @param deposit  Tokens to be initially deposited in the channel (in Wei)
    * @returns  Promise to MicroChannel info object
    */
-  async openChannel(account: string, receiver: string, deposit: BigNumber): Promise<MicroChannel> {
+  async openChannel(account: string, receiver: string, deposit: BigNumber|string): Promise<MicroChannel> {
+    if (!(deposit instanceof BigNumber)) {
+      deposit = new BigNumber(deposit);
+    }
     if (this.isChannelValid()) {
       this.log(`Already valid channel will be forgotten: ${this.channel}`, 'warning');
     }
@@ -643,7 +653,7 @@ export class Payments extends Logger {
     if (!this.isChannelValid()) {
       throw new Error('No valid channelInfo');
     }
-    this.log(`signNewProof ${proof}`, 'debug');
+    this.log(`signNewProof, balance: ${proof.balance.toString()}, sig: ${proof.sig}`, 'debug');
     if (!proof) {
       proof = this.channel.proof;
     }
@@ -676,7 +686,7 @@ export class Payments extends Logger {
     const recovered = this.options.web3.utils.toChecksumAddress(recoverTypedSignatureLegacy({ data: params, sig }));
     this.log(`signTypedData = ${sig}, ${recovered}`, 'debug');
     if (recovered !== this.channel.account) {
-      throw new Error(`Invalid recovered signature: ${recovered} != ${this.channel.account}. Do your provider support eth_signTypedData?`);
+      throw new Error(`Invalid recovered signature: ${recovered} != ${this.channel.account}. Does your provider support eth_signTypedData?`);
     }
 
     proof.sig = sig;
@@ -727,7 +737,18 @@ export class Payments extends Logger {
    * @param deposit  Tokens to be deposited in the channel
    * @returns  Promise to tx hash
    */
-  async topUpChannel(deposit: BigNumber): Promise<void> {
+
+  /**
+   * Top up current channel, by depositing some [more] EVE to it
+   *
+   * @param      {BigNumber|string}  deposit  amount  to topup channel
+   * @return     {Promise<void>}  resolved when done
+   */
+  async topUpChannel(deposit: BigNumber|string): Promise<void> {
+    if (!(deposit instanceof BigNumber)) {
+      deposit = new BigNumber(deposit);
+    }
+
     if (!this.isChannelValid()) {
       throw new Error('No valid channelInfo');
     }
@@ -754,6 +775,15 @@ export class Payments extends Logger {
       this.channel.receiver,
       this.channel.block,
     );
+  }
+
+  /**
+   * converts a input string to a bigNumber.js object
+   *
+   * @param      {string}  input  to converted string
+   */
+  public toBigNumber(input: string) {
+    return new BigNumber(input);
   }
 
   private getClosingProofSignatureParams(): MsgParam[] {

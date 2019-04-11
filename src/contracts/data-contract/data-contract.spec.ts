@@ -118,10 +118,6 @@ describe('DataContract', function() {
     }
   });
 
-  after(async () => {
-    await dfs.stop();
-  });
-
   async function createContract(addSharing = false, schema?) {
     let description;
     if (schema) {
@@ -422,6 +418,41 @@ describe('DataContract', function() {
           } else {
             await expect(promise).to.be.rejected;
           }
+        });
+
+        it('allows specifying item based schemata', async () => {
+          const contract = await createContract(!storeInDfs, testSchema);
+          const values = [ !storeInDfs ? sampleValues[0] : {
+            foo: 'sample',
+            bar: 123,
+          }];
+          const promise = dc.addListEntries(contract, 'list_settable_by_member', values, accounts[0], storeInDfs, encryptHashes);
+          await expect(promise).to.be.fulfilled;
+        });
+        it('allows specifying list based schemata', async () => {
+          const customSchema = JSON.parse(JSON.stringify(testSchema));
+          /* tslint:disable:quotemark */
+          customSchema.list_settable_by_member = {
+            "$id": "list_settable_by_member_schema",
+            "$comment": "{\"entryType\": \"list\"}",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "foo": { "type": "string" },
+                "bar": { "type": "integer" }
+              }
+            }
+          };
+          /* tslint:enable:quotemark */
+          const contract = await createContract(!storeInDfs, customSchema);
+          const values = [ !storeInDfs ? sampleValues[0] : {
+            foo: 'sample',
+            bar: 123,
+          }];
+          const promise = dc.addListEntries(contract, 'list_settable_by_member', values, accounts[0], storeInDfs, encryptHashes);
+          await expect(promise).to.be.fulfilled;
         });
       });
       describe('when working with multiple lists at a time', async () => {

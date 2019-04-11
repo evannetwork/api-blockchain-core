@@ -502,22 +502,22 @@ Example
 .. required for building markup
 
 .. |source contractLoader| replace:: ``ContractLoader``
-.. _source contractLoader: /contracts/contract-loader.html
+.. _source contractLoader: ../contracts/contract-loader.html
 
 .. |source cryptoProvider| replace:: ``CryptoProvider``
-.. _source cryptoProvider: /encryption/crypto-provider.html
+.. _source cryptoProvider: ../encryption/crypto-provider.html
 
 .. |source ipfs| replace:: ``Ipfs``
-.. _source ipfs: /dfs/ipfs.html
+.. _source ipfs: ../dfs/ipfs.html
 
 .. |source keyProviderInterface| replace:: ``KeyProviderInterface``
-.. _source keyProviderInterface: /encryption/key-provider.html
+.. _source keyProviderInterface: ../encryption/key-provider.html
 
 .. |source logLevel| replace:: ``LogLevel``
-.. _source logLevel: /common/logger.html#loglevel
+.. _source logLevel: ../common/logger.html#loglevel
 
 .. |source logLogInterface| replace:: ``LogLogInterface``
-.. _source logLogInterface: /common/logger.html#logloginterface
+.. _source logLogInterface: ../common/logger.html#logloginterface
 
 .. |source nameResolver| replace:: ``NameResolver``
-.. _source nameResolver: /blockchain/name-resolver.html
+.. _source nameResolver: ../blockchain/name-resolver.html

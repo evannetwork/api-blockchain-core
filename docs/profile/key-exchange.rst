@@ -415,16 +415,16 @@ Example
 .. required for building markup
 
 .. |source cryptoProvider| replace:: ``CryptoProvider``
-.. _source cryptoProvider: /encryption/crypto-provider.html
+.. _source cryptoProvider: ../encryption/crypto-provider.html
 
 .. |source keyProviderInterface| replace:: ``KeyProviderInterface``
-.. _source keyProviderInterface: /encryption/key-provider.html
+.. _source keyProviderInterface: ../encryption/key-provider.html
 
 .. |source logLevel| replace:: ``LogLevel``
-.. _source logLevel: /common/logger.html#loglevel
+.. _source logLevel: ../common/logger.html#loglevel
 
 .. |source logLogInterface| replace:: ``LogLogInterface``
-.. _source logLogInterface: /common/logger.html#logloginterface
+.. _source logLogInterface: ../common/logger.html#logloginterface
 
 .. |source mailbox| replace:: ``Mailbox``
-.. _source mailbox: /profile/mailbox.html
+.. _source mailbox: ../profile/mailbox.html

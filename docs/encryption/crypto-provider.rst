@@ -188,4 +188,4 @@ CryptoInfo
 .. required for building markup
 
 .. |source cryptors| replace:: ``Cryptors``
-.. _source cryptors: /encryption/crypto-provider.html#cryptors
+.. _source cryptors: ../encryption/crypto-provider.html#cryptors

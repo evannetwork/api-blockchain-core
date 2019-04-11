@@ -91,7 +91,7 @@ create
 
 .. code-block:: javascript
 
-    dataContract.create(factoryName, accountId[, businessCenterDomain, contractDescription, allowConsumerInvite]);
+    dataContract.create(factoryName, accountId[, businessCenterDomain, contractDescription, allowConsumerInvite, sharingsHash]);
 
 Create and initialize new contract.
 
@@ -243,7 +243,7 @@ Parameters
 
 #. ``contract`` - ``any|string``: contract or contractId
 #. ``entryName`` - ``string``: entry name
-#. ``value`` - ``any``: value to add
+#. ``value`` - ``any``: value to set
 #. ``accountId`` - ``string``: Ethereum account id
 #. ``dfsStorage`` - ``Function`` (optional): store values in dfs, defaults to ``true``
 #. ``encryptedHashes`` - ``boolean`` (optional): encrypt hashes from values, defaults to ``true``
@@ -302,7 +302,7 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``any[]``: list entries
+``Promise`` returns ``any``: entry
 
 -------
 Example
@@ -338,7 +338,7 @@ addListEntries
 
 .. code-block:: typescript
 
-    dataContract.addListEntries(contract, listName, values, accountId[, dfsStorage, encryptedHashes, encryption];
+    dataContract.addListEntries(contract, listName, values, accountId[, dfsStorage, encryptedHashes, encryption]);
 
 Add list entries to lists.
 
@@ -352,7 +352,7 @@ Parameters
 
 #. ``contract`` - ``any|string``: contract or contractId
 #. ``listName`` - ``string``: name of the list in the data contract
-#. ``values`` - ``any``: values to add
+#. ``values`` - ``any[]``: values to add
 #. ``accountId`` - ``string``: Ethereum account id
 #. ``dfsStorage`` - ``string`` (optional): store values in dfs, defaults to ``true``
 #. ``encryptedHashes`` - ``boolean`` (optional): encrypt hashes from values, defaults to ``true``
@@ -534,7 +534,7 @@ Parameters
 
 #. ``contract`` - ``any|string``: contract or contractId
 #. ``listName`` - ``string``: name of the list in the data contract
-#. ``index`` - ``number``: index of the entry to move in the origin list
+#. ``index`` - ``number``: index of the entry to remove from list
 #. ``accountId`` - ``string``: Ethereum account id
 
 -------
@@ -872,25 +872,25 @@ Example
 .. required for building markup
 
 .. |source contractLoader| replace:: ``ContractLoader``
-.. _source contractLoader: /contracts/contract-loader.html
+.. _source contractLoader: ../contracts/contract-loader.html
 
 .. |source cryptoProvider| replace:: ``CryptoProvider``
-.. _source cryptoProvider: /encryption/crypto-provider.html
+.. _source cryptoProvider: ../encryption/crypto-provider.html
 
 .. |source dfsInterface| replace:: ``DfsInterface``
-.. _source dfsInterface: /dfs/dfs-interface.html
+.. _source dfsInterface: ../dfs/dfs-interface.html
 
 .. |source executor| replace:: ``Executor``
-.. _source executor: /blockchain/executor.html
+.. _source executor: ../blockchain/executor.html
 
 .. |source logLevel| replace:: ``LogLevel``
-.. _source logLevel: /common/logger.html#loglevel
+.. _source logLevel: ../common/logger.html#loglevel
 
 .. |source logLogInterface| replace:: ``LogLogInterface``
-.. _source logLogInterface: /common/logger.html#logloginterface
+.. _source logLogInterface: ../common/logger.html#logloginterface
 
 .. |source nameResolver| replace:: ``NameResolver``
-.. _source nameResolver: /blockchain/name-resolver.html
+.. _source nameResolver: ../blockchain/name-resolver.html
 
 .. |source sharing| replace:: ``Sharing``
-.. _source sharing: /contracts/sharing.html
+.. _source sharing: ../contracts/sharing.html

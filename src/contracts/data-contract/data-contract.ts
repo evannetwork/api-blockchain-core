@@ -95,7 +95,7 @@ export class DataContract extends BaseContract {
       factoryName: string,
       accountId: string,
       businessCenterDomain?: string,
-      contractDescription = '0x0000000000000000000000000000000000000000000000000000000000000000',
+      contractDescription: any = '0x0000000000000000000000000000000000000000000000000000000000000000',
       allowConsumerInvite = true,
       sharingsHash = null,
   ): Promise<any> {
@@ -252,10 +252,19 @@ export class DataContract extends BaseContract {
     const envelope: Envelope = JSON.parse(toDecrypt);
     if (envelope.cryptoInfo) {
       const cryptor = this.options.cryptoProvider.getCryptorByCryptoInfo(envelope.cryptoInfo);
-      const contentKey = await this.options.sharing.getKey(dataContract.options.address, accountId, propertyName, envelope.cryptoInfo.block);
-      if (!contentKey && envelope.cryptoInfo.algorithm !== 'unencrypted') {
-        throw new Error(`no content key found for contract "${dataContract.options.address}" and account "${accountId}"`);
+      let contentKey;
+
+      // only load the contentKey when the algorithm isn't unencrypted if we try to load the content
+      // key for the current user and this user has no profile, it would break
+      if (envelope.cryptoInfo.algorithm !== 'unencrypted') {
+        contentKey = await this.options.sharing.getKey(dataContract.options.address, accountId,
+          propertyName, envelope.cryptoInfo.block);
+
+        if (!contentKey) {
+          throw new Error(`no content key found for contract "${dataContract.options.address}" and account "${accountId}"`);
+        }
       }
+
       const decryptedBuffer = await cryptor.decrypt(
         Buffer.from(envelope.private, this.encodingEncrypted), { key: contentKey, });
       envelope.private = decryptedBuffer;
@@ -313,6 +322,7 @@ export class DataContract extends BaseContract {
     if (!contentKey) {
       throw new Error(`no content key found for contract "${dataContract.options.address}" and account "${accountId}"`);
     }
+
     // encrypt with content key
     const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(encryption);
     const encryptedBuffer = await cryptor.encrypt(toEncrypt.private, { key: contentKey, });
@@ -718,7 +728,12 @@ export class DataContract extends BaseContract {
     const merged = {...description.public, ...description.private};
     if (merged.dataSchema && merged.dataSchema[fieldName]) {
       // check values if description found
-      const validator = new Validator({ schema: merged.dataSchema[fieldName] });
+      let schema = merged.dataSchema[fieldName];
+      if (schema.type === 'array') {
+        // for list types, check only items
+        schema = schema.items;
+      }
+      const validator = new Validator({ schema });
       let values;
       if (Array.isArray(toCheck)) {
         values = toCheck;

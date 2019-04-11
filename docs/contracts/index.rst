@@ -12,6 +12,9 @@ Contracts
     base-contract
     data-contract
     service-contract
+    digital-twin-usage-examples
+    digital-twin
+    container
 
 
 This section includes modules, that deal with smart contract interactions, which includes:

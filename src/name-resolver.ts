@@ -77,7 +77,7 @@ export class NameResolver extends Dbcp.NameResolver {
       registrar,
       'register',
       { from: accountId, value },
-      this.soliditySha3(node),
+      this.web3.utils.sha3(`${node}`),
       domainOwnerId,
     );
   }

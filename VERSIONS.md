@@ -5,6 +5,33 @@
 ### Fixes
 ### Deprecations
 
+
+## Version 2.1.0
+### Features
+- add support for `MultiSigWalletSG` wallets to wallet `wallet` module
+- add tracking for  file hashes saved with `ipld` module
+- fix `ensureVerificationDescription` to match `getFullDescriptionDomainWithHash` ens paths
+- use correct defaultVerifications topics `loadActiveVerifications`
+- add support for passing `Logger` instance to `createDefaultRuntime`
+- return `Logger` instance from `createDefaultRuntime`
+- add `digital-twin` module (wrapper for `DigitalTwin` contracts)
+- add `container` module (`DataContract` wrapper)
+- add support for type `array` in `data-contract` (if type is array, subproperty `.items` is used for list entry validation)
+- add support for templates to profile
+- add support to automatically add property to profile when storing properties
+- add support to check if an account can perform an operation to `RightsAndRoles`
+
+### Fixes
+- fix `DataContract` `getEntry` to load unencrypted data, when no profile for the requesting account exists
+- fix empty verification missing subjectIdentity
+- verifications from the root evan user are never self issued
+
+### Deprecations
+- remove build scripts for browserify bundle
+- remove `bcc/bundles/bcc.ts` file and switch to generalized `index.ts` for both, node and ui bundle (ui build job was moved to [ui-core/dapps/bcc](https://github.com/evannetwork/ui-core/tree/master/dapps/bcc))
+- add dependency to `RightsAndRoles` to `Profile`
+
+
 ## Version 2.0.0
 ### Features
 - add support for contract creation to `executor-wallet`
@@ -39,10 +66,12 @@
 ### Fixes
 - remove `OriginIdentity`, as `ClaimHolder` is used for identities 
 
+
 ## Version 1.6.1
 ### Fixes
 - remove web3 initialization within the `ServiceContract`
 - use 1.0.0-beta.33, beta.37 will cause Websocket errors in Edge browser
+
 
 ## Version 1.6.0
 ### Features
@@ -55,6 +84,7 @@
 - add support for permanent ENS address on payable registrar
 - add support for retrieving proposals paged
 - add support for setting claims on contracts
+
 
 ## Version 1.5.0
 ### Features

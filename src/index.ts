@@ -28,19 +28,25 @@
 export {
   AccountStore,
   ContractLoader,
+  DfsInterface,
+  Envelope,
   EventHub,
   Executor,
   KeyProvider,
-  NameResolver,
+  KeyProviderInterface,
+  Logger,
+  LogLevel,
+  SignerExternal,
   SignerInternal,
   Unencrypted,
+  Validator,
 } from '@evan.network/dbcp'
 
 export { Aes } from './encryption/aes';
 export { AesBlob } from './encryption/aes-blob';
 export { AesEcb } from './encryption/aes-ecb';
-export { Verifications, VerificationsStatus } from './verifications/verifications';
-export { ContractState } from './contracts/base-contract/base-contract';
+export { BusinessCenterProfile } from './profile/business-center-profile';
+export { ContractState, BaseContract } from './contracts/base-contract/base-contract';
 export { createDefaultRuntime, Runtime } from './runtime';
 export { CryptoProvider } from './encryption/crypto-provider';
 export { DataContract } from './contracts/data-contract/data-contract';
@@ -50,11 +56,36 @@ export { ExecutorWallet } from './contracts/executor-wallet';
 export { Ipfs } from './dfs/ipfs';
 export { Ipld } from './dfs/ipld';
 export { KeyExchange } from './keyExchange';
-export { Mailbox } from './mailbox';
+export { Mailbox, Mail } from './mailbox';
+export { NameResolver } from './name-resolver';
+export { Onboarding } from './onboarding';
+export { Payments } from './payments';
 export { Profile } from './profile/profile';
 export { RightsAndRoles, ModificationType, PropertyType } from './contracts/rights-and-roles';
 export { ServiceContract, Answer, AnswerResult, Call, CallResult } from './contracts/service-contract/service-contract';
 export { Sharing } from './contracts/sharing';
+export { Verifications, VerificationsStatus } from './verifications/verifications';
 export { Votings, MemberOptions, ProposalInfo, ProposalInfos, ProposalOptions, VotingsContractOptions } from './votings/votings';
-export { Payments } from './payments';
 export { Wallet } from './contracts/wallet';
+export { Container, ContainerConfig, ContainerTemplate, ContainerTemplateProperty,
+  ContainerShareConfig, ContainerOptions } from './contracts/digital-twin/container';
+export { DigitalTwin, DigitalTwinEntryType, DigitalTwinConfig, DigitalTwinIndexEntry,
+  DigitalTwinVerificationEntry } from './contracts/digital-twin/digital-twin';
+
+/******** export this libraries to be able to build the blockchain-core into an umd bundle ********/
+import Web3 = require('web3');
+import prottle = require('prottle');
+import crypto = require('crypto');
+import keystore = require('../libs/eth-lightwallet/keystore.js');
+// assign to export Buffer;
+const buffer = Buffer;
+// load adjusted bitcore mnemonic lib and do not load the full API specification to reduce bundle size
+// be careful when used adjusted components!
+import Mnemonic = require('../libs/bitcore-mnemonic/mnemonic.js');
+let instanceId = Date.now() + Math.random();
+// used for global & shared available logLog
+let logLog = [ ];
+// push everything into the logLog
+let logLogLevel = 0;
+
+export { Web3, prottle, crypto, keystore, Mnemonic, instanceId, logLog, logLogLevel, buffer }

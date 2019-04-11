@@ -729,28 +729,28 @@ Example
 .. required for building markup
 
 .. |source contractLoader| replace:: ``ContractLoader``
-.. _source contractLoader: /contracts/contract-loader.html
+.. _source contractLoader: ../contracts/contract-loader.html
 
 .. |source cryptoProvider| replace:: ``CryptoProvider``
-.. _source cryptoProvider: /encryption/crypto-provider.html
+.. _source cryptoProvider: ../encryption/crypto-provider.html
 
 .. |source description| replace:: ``Description``
-.. _source description: /blockchain/description.html
+.. _source description: ../blockchain/description.html
 
 .. |source dfsInterface| replace:: ``DfsInterface``
-.. _source dfsInterface: /dfs/dfs-interface.html
+.. _source dfsInterface: ../dfs/dfs-interface.html
 
 .. |source executor| replace:: ``Executor``
-.. _source executor: /blockchain/executor.html
+.. _source executor: ../blockchain/executor.html
 
 .. |source keyProvider| replace:: ``KeyProvider``
-.. _source keyProvider: /key-provider
+.. _source keyProvider: ../key-provider
 
 .. |source logLevel| replace:: ``LogLevel``
-.. _source logLevel: /common/logger.html#loglevel
+.. _source logLevel: ../common/logger.html#loglevel
 
 .. |source logLogInterface| replace:: ``LogLogInterface``
-.. _source logLogInterface: /common/logger.html#logloginterface
+.. _source logLogInterface: ../common/logger.html#logloginterface
 
 .. |source nameResolver| replace:: ``NameResolver``
-.. _source nameResolver: /blockchain/name-resolver.html
+.. _source nameResolver: ../blockchain/name-resolver.html

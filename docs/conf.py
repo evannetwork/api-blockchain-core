@@ -20,8 +20,8 @@
 # -- Project information -----------------------------------------------------
 
 project = u'blockchain-core'
-copyright = u'2018, evan.network GmbH'
-author = u'evan.network GmbH'
+copyright = u'2018-present, evan GmbH'
+author = u'evan GmbH'
 
 # The short X.Y version
 version = u''

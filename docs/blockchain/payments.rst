@@ -295,7 +295,7 @@ Ask user for signing a payment, which is previous balance incremented of amount.
 Parameters
 ----------
 
-#. ``amount`` - ``BigNumber``: Amount to increment in current balance
+#. ``amount`` - ``BigNumber|string``: Amount to increment in current balance
 
 -------
 Returns
@@ -360,7 +360,7 @@ openChannel
 
   payments.openChannel(account, receiver, deposit);
 
-Open a channel for account to receiver, depositing some eve on it. Replaces current channel data
+Open a channel for account to receiver, depositing some EVE on it. Replaces current channel data
 
 ----------
 Parameters
@@ -368,7 +368,7 @@ Parameters
 
 #. ``account`` - ``string``: Sender/client's account address
 #. ``receiver`` - ``string``: Receiver/server's account address
-#. ``deposit`` - ``BigNumber``: deposit in WEI
+#. ``deposit`` - ``BigNumber|string``: deposit in WEI
 
 -------
 Returns
@@ -546,13 +546,13 @@ topUpChannel
 
   payments.topUpChannel(deposit);
 
-Top up current channel, by depositing some [more] eve to it
+Top up current channel, by depositing some [more] EVE to it
 
 ----------
 Parameters
 ----------
 
-#. ``deposit`` - ``BigNumber``: eve (in wei) to be deposited in the channel
+#. ``deposit`` - ``BigNumber|string``: EVE (in wei) to be deposited in the channel
 
 -------
 Returns
@@ -588,9 +588,9 @@ MicroProof
 
 .. _payments_MicroChannel:
 
-----------
+------------
 MicroChannel
-----------
+------------
 
 #. ``account`` - ``string``: Sender/client's account address
 #. ``receiver`` - ``string``: Receiver/server's account address
@@ -602,9 +602,9 @@ MicroChannel
 
 .. _payments_MicroChannelInfo:
 
-----------
+----------------
 MicroChannelInfo
-----------
+----------------
 
 #. ``state`` - ``string``: Current channel state, one of 'opened', 'closed' or 'settled'
 #. ``block`` - ``number``: Block of current state (opened=open block number, closed=channel close requested block number, settled=settlement block number)
@@ -614,14 +614,15 @@ MicroChannelInfo
 
 
 .. required for building markup
+
 .. |source contractLoader| replace:: ``ContractLoader``
-.. _source contractLoader: /contracts/contract-loader.html
+.. _source contractLoader: ../contracts/contract-loader.html
 
 .. |source executor| replace:: ``Executor``
-.. _source executor: /blockchain/executor.html
+.. _source executor: ../blockchain/executor.html
 
 .. |source accountStore| replace:: ``AccountStore``
-.. _source accountStore: /blockchain/account-store.html
+.. _source accountStore: ../blockchain/account-store.html
 
 .. |source microproof| replace:: ``MicroProof``
 .. _source microproof: #microproof
