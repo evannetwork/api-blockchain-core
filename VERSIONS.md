@@ -2,13 +2,19 @@
 
 ## Next Version
 ### Features
+### Fixes
+### Deprecations
+
+
+## Version 2.1.0
+### Features
 - add support for `MultiSigWalletSG` wallets to wallet `wallet` module
 - add tracking for  file hashes saved with `ipld` module
 - fix `ensureVerificationDescription` to match `getFullDescriptionDomainWithHash` ens paths
 - use correct defaultVerifications topics `loadActiveVerifications`
 - add support for passing `Logger` instance to `createDefaultRuntime`
 - return `Logger` instance from `createDefaultRuntime`
-- add `digital-twin` module (wrapper for `IdentityContracts`)
+- add `digital-twin` module (wrapper for `DigitalTwin` contracts)
 - add `container` module (`DataContract` wrapper)
 - add support for type `array` in `data-contract` (if type is array, subproperty `.items` is used for list entry validation)
 - add support for templates to profile
