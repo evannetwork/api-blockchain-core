@@ -557,6 +557,18 @@ export class Container extends Logger {
   }
 
   /**
+   * Gets the owner account id.
+   */
+  async getOwner(): Promise<string> {
+    const authContract = this.options.contractLoader.loadContract(
+      'DSAuth',
+      await this.getContractAddress()
+    );
+
+    return await this.options.executor.executeContractCall(authContract, 'owner')
+  }
+
+  /**
    * Gets verifications from description and fetches list of verifications for each of them.
    */
   public async getVerifications(): Promise<any[]> {
@@ -756,6 +768,20 @@ export class Container extends Logger {
 
     // fetch description, add fields from data schema
     const description = await this.getDescription();
+
+    // if values should be loaded, load permissions first, so we won't load unreadable data
+    let readableEntries;
+    if (getValues) {
+      const containerShareConfig = await this.getContainerShareConfigForAccount(
+        this.config.accountId
+      );
+
+      readableEntries = [ ].concat(
+        containerShareConfig.read || [],
+        containerShareConfig.readWrite || [ ]
+      );
+    }
+
     if (description.dataSchema) {
       const authority = this.options.contractLoader.loadContract(
         'DSRolesPerContract',
@@ -775,9 +801,19 @@ export class Container extends Logger {
           type,
         };
         if (getValues && dataSchema.type !== 'array') {
-          const value = await this.getEntry(property);
-          if (value !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
-            template.properties[property].value = value;
+          if (readableEntries.indexOf(property) !== -1) {
+            let value;
+            try {
+              value = await this.getEntry(property);
+            } catch(ex) {
+              this.log(`Could not load value for entry ${ property } in toTemplate:
+                ${ ex.message }`, 'error');
+            }
+
+            if (value &&
+                value !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
+              template.properties[property].value = value;
+            }
           }
         }
         template.properties[property].permissions =

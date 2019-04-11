@@ -781,6 +781,34 @@ Example
 
 --------------------------------------------------------------------------------
 
+.. _container_getOwner:
+
+getOwner
+================================================================================
+
+.. code-block:: typescript
+
+  container.getOwner();
+
+Gets the owner account id for the container.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``string``: owner account id
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const isOwner = (await container.getOwner()) === runtime.activeAccount;
+
+
+--------------------------------------------------------------------------------
+
 .. _container_getVerifications:
 
 getVerifications

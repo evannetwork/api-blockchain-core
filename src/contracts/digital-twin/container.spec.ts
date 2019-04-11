@@ -98,9 +98,15 @@ describe('Container', function() {
   });
 
   describe('when setting entries', async () => {
-    it('can can create new contracts', async () => {
+    it('can create new contracts', async () => {
       const container = await Container.create(runtimes[owner], defaultConfig);
       expect(await container.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
+    });
+
+    it('can get the correct owner for contracts', async () => {
+      const container = await Container.create(runtimes[owner], defaultConfig);
+
+      expect(await container.getOwner()).to.be.eq(owner);
     });
 
     it('writes template type to automatic field "type"', async () => {
