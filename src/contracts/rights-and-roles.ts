@@ -75,6 +75,28 @@ export class RightsAndRoles extends Logger {
   }
 
   /**
+   * check if given account can use operation (capability) on given contract; operation hashes can
+   * be build with `getOperationCapabilityHash`
+   *
+   * @param      {string|any}  contract   contract to check for
+   * @param      {string}      accountId  account id to check call for
+   * @param      {string}      hash       hash from `getOperationCapabilityHash`
+   */
+  public async canCallOperation(contract: string|any, accountId: string, hash: string): Promise<boolean> {
+    const contractId = typeof contract === 'string' ? contract : contract.options.address;
+    const auth = this.options.contractLoader.loadContract('DSAuth', contractId);
+    const dsRolesAddress = await this.options.executor.executeContractCall(auth, 'authority');
+    const dsRolesContract = this.options.contractLoader.loadContract('DSRolesPerContract', dsRolesAddress);
+    return await this.options.executor.executeContractCall(
+      dsRolesContract,
+      'canCallOperation',
+      accountId,
+      '0x0000000000000000000000000000000000000000',
+      hash,
+    );
+  }
+
+  /**
    * returns all roles with all members
    *
    * @param      {any|string}    contract  contractId or contract instance
@@ -99,6 +121,24 @@ export class RightsAndRoles extends Logger {
     // run these function windowed, chain .then()s, return result array
     await prottle(simultaneousRolesProcessed, retrievals);
     return result;
+  }
+
+  /**
+   * get hash for operation capability, this creates the hashes, that are used in
+   * `DSRolesPerContract` to check operation capabilities
+   *
+   * @param      {string}            name              property name
+   * @param      {PropertyType}      propertyType      type of property
+   * @param      {ModificationType}  modificationType  set or remove
+   * @return     {string}            bytes32 hash as string
+   */
+  public getOperationCapabilityHash(
+    name: string,
+    propertyType: PropertyType,
+    modificationType: ModificationType,
+  ): string {
+    const keccak256 = this.options.web3.utils.soliditySha3;
+    return keccak256(keccak256(propertyType, keccak256(name)), modificationType);
   }
 
   /**

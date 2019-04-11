@@ -302,7 +302,7 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``any[]``: list entries
+``Promise`` returns ``any``: entry
 
 -------
 Example
@@ -338,7 +338,7 @@ addListEntries
 
 .. code-block:: typescript
 
-    dataContract.addListEntries(contract, listName, values, accountId[, dfsStorage, encryptedHashes, encryption];
+    dataContract.addListEntries(contract, listName, values, accountId[, dfsStorage, encryptedHashes, encryption]);
 
 Add list entries to lists.
 
@@ -352,7 +352,7 @@ Parameters
 
 #. ``contract`` - ``any|string``: contract or contractId
 #. ``listName`` - ``string``: name of the list in the data contract
-#. ``values`` - ``any``: values to add
+#. ``values`` - ``any[]``: values to add
 #. ``accountId`` - ``string``: Ethereum account id
 #. ``dfsStorage`` - ``string`` (optional): store values in dfs, defaults to ``true``
 #. ``encryptedHashes`` - ``boolean`` (optional): encrypt hashes from values, defaults to ``true``

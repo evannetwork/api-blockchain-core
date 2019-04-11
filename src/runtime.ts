@@ -226,6 +226,14 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     nameResolver,
   });
 
+  const rightsAndRoles = options.rightsAndRoles || new RightsAndRoles({
+    contractLoader,
+    executor,
+    log,
+    nameResolver,
+    web3,
+  });
+
   // 'own' key provider, that won't be linked to profile and used in 'own' ipld
   // this prevents key lookup infinite loops
   const keyProviderOwn = new KeyProvider({ keys: runtimeConfig.keyConfig, log, });
@@ -269,18 +277,11 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     ipld: ipldOwn,
     log,
     nameResolver,
+    rightsAndRoles,
   });
   // this key provider is linked to profile for key retrieval
-  // keyProviderOwn is not liked to profile to prevent profile key lookups
+  // keyProviderOwn is not linked to profile to prevent profile key lookups
   keyProvider.init(profile);
-
-  const rightsAndRoles = options.rightsAndRoles || new RightsAndRoles({
-    contractLoader,
-    executor,
-    log,
-    nameResolver,
-    web3,
-  });
 
   const serviceContract = options.serviceContract || new ServiceContract({
     cryptoProvider,

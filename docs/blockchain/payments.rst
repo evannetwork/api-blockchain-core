@@ -588,9 +588,9 @@ MicroProof
 
 .. _payments_MicroChannel:
 
-----------
+------------
 MicroChannel
-----------
+------------
 
 #. ``account`` - ``string``: Sender/client's account address
 #. ``receiver`` - ``string``: Receiver/server's account address
@@ -602,9 +602,9 @@ MicroChannel
 
 .. _payments_MicroChannelInfo:
 
-----------
+----------------
 MicroChannelInfo
-----------
+----------------
 
 #. ``state`` - ``string``: Current channel state, one of 'opened', 'closed' or 'settled'
 #. ``block`` - ``number``: Block of current state (opened=open block number, closed=channel close requested block number, settled=settlement block number)
@@ -614,6 +614,7 @@ MicroChannelInfo
 
 
 .. required for building markup
+
 .. |source contractLoader| replace:: ``ContractLoader``
 .. _source contractLoader: ../contracts/contract-loader.html
 

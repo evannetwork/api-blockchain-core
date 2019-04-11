@@ -264,6 +264,7 @@ export class DataContract extends BaseContract {
           throw new Error(`no content key found for contract "${dataContract.options.address}" and account "${accountId}"`);
         }
       }
+
       const decryptedBuffer = await cryptor.decrypt(
         Buffer.from(envelope.private, this.encodingEncrypted), { key: contentKey, });
       envelope.private = decryptedBuffer;
@@ -321,6 +322,7 @@ export class DataContract extends BaseContract {
     if (!contentKey) {
       throw new Error(`no content key found for contract "${dataContract.options.address}" and account "${accountId}"`);
     }
+
     // encrypt with content key
     const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(encryption);
     const encryptedBuffer = await cryptor.encrypt(toEncrypt.private, { key: contentKey, });
@@ -726,7 +728,12 @@ export class DataContract extends BaseContract {
     const merged = {...description.public, ...description.private};
     if (merged.dataSchema && merged.dataSchema[fieldName]) {
       // check values if description found
-      const validator = new Validator({ schema: merged.dataSchema[fieldName] });
+      let schema = merged.dataSchema[fieldName];
+      if (schema.type === 'array') {
+        // for list types, check only items
+        schema = schema.items;
+      }
+      const validator = new Validator({ schema });
       let values;
       if (Array.isArray(toCheck)) {
         values = toCheck;

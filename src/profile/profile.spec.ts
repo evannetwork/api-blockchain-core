@@ -123,6 +123,7 @@ describe('Profile helper', function() {
       ipld,
       executor,
       accountId: accounts[0],
+      rightsAndRoles,
     });
     await profile.addContactKey(accounts[0], 'context a', 'key 0x01_a');
     await profile.addContactKey(accounts[1], 'context a', 'key 0x02_a');
@@ -143,6 +144,7 @@ describe('Profile helper', function() {
       ipld,
       executor,
       accountId: accounts[0],
+      rightsAndRoles,
     });
     await profile.addDappBookmark('sample1.test', sampleDesc);
 
@@ -156,6 +158,43 @@ describe('Profile helper', function() {
       .to.eq('sampleUpdateTest');
   });
 
+  it('should be able to store templates', async () => {
+    let profile = new Profile({
+      nameResolver,
+      defaultCryptoAlgo: 'aes',
+      dataContract,
+      contractLoader,
+      ipld,
+      executor,
+      accountId: accounts[0],
+      rightsAndRoles,
+    });
+    const templates = {
+      templates: 'can',
+      have: {
+        any: 'format'
+      },
+      depending: ['on', 'your', 'needs'],
+    };
+    await profile.loadForAccount(profile.treeLabels.templates);
+    await profile.setTemplates(templates);
+    expect(await profile.getTemplates()).to.eq(templates);
+
+    await profile.storeForAccount(profile.treeLabels.templates);
+    profile = new Profile({
+      nameResolver,
+      defaultCryptoAlgo: 'aes',
+      dataContract,
+      contractLoader,
+      ipld,
+      executor,
+      accountId: accounts[0],
+      rightsAndRoles,
+    });
+    await profile.loadForAccount(profile.treeLabels.templates);
+    expect(await profile.getTemplates()).to.deep.eq(templates);
+  });
+
   it('should be able to save an encrypted profile to IPLD', async () => {
     let profile = new Profile({
       nameResolver,
@@ -165,6 +204,7 @@ describe('Profile helper', function() {
       ipld,
       executor,
       accountId: accounts[0],
+      rightsAndRoles,
     });
     await profile.addContactKey(accounts[0], 'context a', 'key 0x01_a');
     await profile.addContactKey(accounts[1], 'context a', 'key 0x02_a');
@@ -184,6 +224,7 @@ describe('Profile helper', function() {
       ipld,
       executor,
       accountId: accounts[0],
+      rightsAndRoles,
     });
     await loadedProfile.loadFromIpld(profile.treeLabels.addressBook, ipldIpfsHash);
 
@@ -232,6 +273,7 @@ describe('Profile helper', function() {
       ipld,
       executor,
       accountId: accounts[0],
+      rightsAndRoles,
     });
     await profile.createProfile(keyExchange.getDiffieHellmanKeys());
     await profile.addContactKey(accounts[0], 'context a', 'key 0x01_a');
@@ -252,6 +294,7 @@ describe('Profile helper', function() {
       ipld,
       executor,
       accountId: accounts[0],
+      rightsAndRoles,
     });
 
     // test contacts
@@ -273,6 +316,7 @@ describe('Profile helper', function() {
       ipld,
       executor,
       accountId: '0xbbF5029Fd710d227630c8b7d338051B8E76d50B3',
+      rightsAndRoles,
     });
     expect(await profile.exists()).to.be.false;
 
@@ -284,6 +328,7 @@ describe('Profile helper', function() {
       ipld,
       executor,
       accountId: accounts[0],
+      rightsAndRoles,
     });
     expect(await profile.exists()).to.be.true;
   });
@@ -297,6 +342,7 @@ describe('Profile helper', function() {
       ipld,
       executor,
       accountId: accounts[0],
+      rightsAndRoles,
     });
     await profile.addDappBookmark('sample1.test', sampleDesc);
     await profile.addDappBookmark('sample2.test', sampleDesc);
@@ -321,6 +367,7 @@ describe('Profile helper', function() {
       ipld,
       executor,
       accountId: accounts[0],
+      rightsAndRoles,
     });
 
     // create new profile, set private key and keyexchange partial key
@@ -341,6 +388,7 @@ describe('Profile helper', function() {
       ipld,
       executor,
       accountId: accounts[0],
+      rightsAndRoles,
     });
     // test contacts
     expect(await profile.getDappBookmark('sample1.test')).to.deep.eq(sampleDesc);
@@ -355,6 +403,7 @@ describe('Profile helper', function() {
       ipld,
       executor,
       accountId: accounts[0],
+      rightsAndRoles,
     });
 
     const mailbox = new Mailbox({
@@ -393,6 +442,7 @@ describe('Profile helper', function() {
       ipld,
       executor,
       accountId: accounts[0],
+      rightsAndRoles,
     });
 
     const pubKey = await newProfile.getPublicKey();
@@ -414,6 +464,7 @@ describe('Profile helper', function() {
       ipld,
       executor,
       accountId: accounts[0],
+      rightsAndRoles,
     });
 
     await profile.createProfile(keyExchange.getDiffieHellmanKeys());
@@ -433,6 +484,7 @@ describe('Profile helper', function() {
       ipld,
       executor,
       accountId: accounts[0],
+      rightsAndRoles,
     });
 
     await profile.createProfile(keyExchange.getDiffieHellmanKeys());
@@ -471,6 +523,7 @@ describe('Profile helper', function() {
       ipld: await getKeyIpld(profileReceiver),
       executor,
       accountId: profileReceiver,
+      rightsAndRoles,
     });
 
     // create profile data with profileReceiver (profileReceiver is the account, that will own the profile)
@@ -551,6 +604,7 @@ describe('Profile helper', function() {
       ipld: await getKeyIpld(profileReceiver),
       executor,
       accountId: profileReceiver,
+      rightsAndRoles,
     });
 
     // can read public key
