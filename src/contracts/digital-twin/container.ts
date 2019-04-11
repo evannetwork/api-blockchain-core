@@ -509,6 +509,7 @@ export class Container extends Logger {
    * @param      {string}  accountId  account to check permissions for
    */
   public async getContainerShareConfigForAccount(accountId: string): Promise<ContainerShareConfig> {
+    await this.ensureContract();
     const result: ContainerShareConfig = {
       accountId,
     };
