@@ -31,6 +31,7 @@ Contracts, that use `DSRolesPerContract <https://github.com/evannetwork/smart-co
 - `Described <https://github.com/evannetwork/smart-contracts/blob/master/contracts/Described.sol>`_
 - `BusinessCenter <https://github.com/evannetwork/smart-contracts/blob/master/contracts/BusinessCenter.sol>`_
 
+Also have a look at the  `Smart Contract Permissioning <https://evannetwork.github.io/docs/developers/concepts/contract_permissioning.html>`_ section in the evan.network wiki.
 
 ------------------------------------------------------------------------------
 

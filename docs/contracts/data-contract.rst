@@ -25,7 +25,7 @@ The following functions support the ``encryptionContext`` argument:
 
 If this argument is set, the data key in the data contracts sharing is encrypted by using a context key instead of the communication key between owner and contract member. This allows to omit key exchanges between contract owner and members and therefore enables the owner to write content to the smart contract, that can be used by a group of accounts, which only needs to hold the context key. So the ``encryptionContext`` can be used to address a group of accounts instead of single accounts.
 
-For more information about DataContracts purpose and their authorities see `Data Contract <https://evannetwork.github.io/dev/data-contract>`_ in the evan.network wiki.
+For more information about DataContracts purpose and their authorities see `Data Contract <https://evannetwork.github.io/docs/developers/concepts/data-contract.html>`_ in the evan.network wiki.
 
 
 
