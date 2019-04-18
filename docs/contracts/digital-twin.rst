@@ -379,18 +379,21 @@ Example
 = Verifications =
 =================
 
-.. _digital-twin_addVerification:
+.. _digital-twin_addVerifications:
 
-addVerification
+addVerifications
 ================================================================================
 
 .. code-block:: typescript
 
-  digitalTwin.addVerification(verifications);
+  digitalTwin.addVerifications(verifications);
 
 Add verifications to this twin; this will also add verifications to contract description.
 
-Due to the automatic expansion of the contract description, this function can only be called by the container owner.
+If the calling account is the owner of the identity of the digital twin
+
+- the description will is automatically updated with tags for verifications
+- verifications issued with this function will be accepted automatically
 
 See interface ``DigitalTwinVerificationEntry`` for input data format.
 

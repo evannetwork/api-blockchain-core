@@ -36,6 +36,7 @@ import {
 
 import { accounts } from '../../test/accounts';
 import { TestUtils } from '../../test/test-utils';
+import { VerificationsStatus } from '../../verifications/verifications';
 import {
   Container,
   ContainerConfig,
@@ -481,7 +482,11 @@ describe('Container', function() {
       expect(verificationsResults.length).to.eq(3);
       // all validation lists should have at least 1 valid verification
       const allValid = verificationsResults.every(vs => vs.some(v => v.valid));
-      expect(allValid).to.be.true;
+      expect(allValid).to.be.true
+      // all validations should be confirmed, as issuing account is owner
+      const allConfirmed = verificationsResults.every(
+        vs => vs.some(v => v.status === VerificationsStatus.Confirmed));
+      expect(allConfirmed).to.be.true;
     });
   });
 });

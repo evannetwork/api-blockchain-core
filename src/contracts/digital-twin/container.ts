@@ -482,8 +482,10 @@ export class Container extends Logger {
   */
   public async addVerifications(verifications: ContainerVerificationEntry[]): Promise<void> {
     await this.ensureContract();
-    await Throttle.all(verifications.map(verification => async () =>
-      this.options.verifications.setVerification(
+    const owner = await this.options.executor.executeContractCall(this.contract, 'owner');
+    const isOwner = owner === this.config.accountId;
+    await Throttle.all(verifications.map(verification => async () => {
+      const verificationId = await this.options.verifications.setVerification(
         this.config.accountId,
         this.contract.options.address,
         verification.topic,
@@ -491,17 +493,29 @@ export class Container extends Logger {
         verification.verificationValue,
         verification.descriptionDomain,
         verification.disableSubverifications,
-    )));
-    const verificationTags = verifications.map(verification => `verification:${verification.topic}`);
-    await this.getMutex('description').runExclusive(async () => {
-      const description = await this.getDescription();
-      const oldTags = description.tags || [];
-      const toAdd = verificationTags.filter(tag => !oldTags.includes(tag));
-      if (toAdd.length) {
-        description.tags = oldTags.concat(toAdd);
-        await this.setDescription(description);
+      );
+      if (isOwner) {
+        // auto-accept if current user is owner
+        await this.options.verifications.confirmVerification(
+          this.config.accountId,
+          await this.getContractAddress(),
+          verificationId,
+        );
       }
-    });
+    }));
+    // update description if current user is owner
+    if (owner === this.config.accountId) {
+      const verificationTags = verifications.map(verification => `verification:${verification.topic}`);
+      await this.getMutex('description').runExclusive(async () => {
+        const description = await this.getDescription();
+        const oldTags = description.tags || [];
+        const toAdd = verificationTags.filter(tag => !oldTags.includes(tag));
+        if (toAdd.length) {
+          description.tags = oldTags.concat(toAdd);
+          await this.setDescription(description);
+        }
+      });
+    }
   }
 
   /**
