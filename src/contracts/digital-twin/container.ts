@@ -40,7 +40,9 @@ import {
 
 import { DataContract } from '../data-contract/data-contract';
 import { Description } from '../../shared-description';
+import { Ipld } from '../../dfs/ipld';
 import { NameResolver } from '../../name-resolver';
+import { Profile } from '../../profile/profile';
 import { RightsAndRoles, ModificationType, PropertyType } from '../rights-and-roles';
 import { Sharing } from '../sharing';
 import { Verifications } from '../../verifications/verifications';
@@ -276,6 +278,7 @@ export class Container extends Logger {
     dbcpVersion: 2,
   };
   public static defaultTemplate = 'metadata';
+  public static profileTemplatesKey = 'templates.datacontainer.digitaltwin.evan';
   public static templates: { [id: string]: ContainerTemplate; } = {
     metadata: {
       type: 'metadata',
@@ -355,6 +358,73 @@ export class Container extends Logger {
     await applyTemplate(options, instanceConfig, container);
 
     return container;
+  }
+
+  /**
+   * Remove a container template from a users profile.
+   *
+   * @param      {Profile}  profile  profile instance
+   * @param      {string}   name     template name
+   */
+  public static async deleteContainerTemplate(
+    profile: Profile,
+    name: string
+  ): Promise<void> {
+    await profile.loadForAccount(profile.treeLabels.contracts);
+    await profile.removeBcContract(Container.profileTemplatesKey, name);
+    await profile.storeForAccount(profile.treeLabels.contracts);
+  }
+
+  /**
+   * Get one container template for a users profile by name.
+   *
+   * @param      {Profile}  profile  profile instance
+   * @param      {string}   name     template name
+   */
+  public static async getContainerTemplate(
+    profile: Profile,
+    name: string
+  ): Promise<Array<ContainerTemplate>> {
+    const template = await profile.getBcContract(Container.profileTemplatesKey, name);
+    Ipld.purgeCryptoInfo(template);
+    return template;
+  }
+
+  /**
+   * Get all container templates for a users profile.
+   *
+   * @param      {Profile}            profile      profile instance
+   */
+  public static async getContainerTemplates(
+    profile: Profile
+  ): Promise<{[id: string]: ContainerTemplate }> {
+    const templates = { };
+    const bcContracts = await profile.getBcContracts(Container.profileTemplatesKey);
+    Ipld.purgeCryptoInfo(bcContracts);
+
+    // request all templates
+    await Promise.all(Object.keys(bcContracts).map(async (templateName: string) => {
+      templates[templateName] = await Container.getContainerTemplate(profile, templateName)
+    }));
+
+    return templates;
+  }
+
+  /**
+   * Persists a template including an dbcp description to the users profile.
+   *
+   * @param      {Profile}            profile      profile instance
+   * @param      {string}             name         template name
+   * @param      {ContainerTemplate}  template     container template object
+   */
+  public static async saveContainerTemplate(
+    profile: Profile,
+    name: string,
+    template: ContainerTemplate
+  ): Promise<void> {
+    await profile.loadForAccount(profile.treeLabels.contracts);
+    await profile.addBcContract(Container.profileTemplatesKey, name, template);
+    await profile.storeForAccount(profile.treeLabels.contracts);
   }
 
   /**

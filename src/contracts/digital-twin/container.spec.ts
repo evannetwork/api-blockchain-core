@@ -235,6 +235,36 @@ describe('Container', function() {
       const clonedContainer = await Container.clone(runtimes[owner], defaultConfig, container, true);
       expect(await clonedContainer.getEntry('testField')).to.eq(randomString);
     });
+
+    it.only('can save templates to users profile', async () => {
+      const profile = await TestUtils.getProfile(runtimes[owner].web3, dfs, null, owner);
+
+      // setup template
+      const templateName = 'awesometemplate';
+      const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
+      template.properties.testField = {
+        dataSchema: { type: 'string' },
+        permissions: { 0: ['set'] },
+        type: 'entry',
+      };
+      
+      // save it to the profile
+      await Container.saveContainerTemplate(profile, templateName, template);
+
+      // load single template
+      const loadedTemplate = await Container.getContainerTemplate(profile, templateName);
+      expect(loadedTemplate).to.deep.equal(template);
+
+      // load multiple templates
+      let templates = await Container.getContainerTemplates(profile);
+      expect(templates).to.have.property(templateName);
+      expect(templates[templateName]).to.deep.equal(template);
+
+      // remove template
+      await Container.deleteContainerTemplate(profile, templateName);
+      templates = await Container.getContainerTemplates(profile);
+      expect(templates).to.not.have.property(templateName);
+    });
   });
 
   describe('when sharing properties', async () => {

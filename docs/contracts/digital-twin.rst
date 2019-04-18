@@ -50,15 +50,16 @@ Parameters
     * ``dataContract`` - |source dataContract|_: |source dataContract|_ instance
     * ``description`` - |source description|_: |source description|_ instance
     * ``executor`` - |source executor|_: |source executor|_ instance
-    * ``nameResolver`` - |source nameResolver|_: |source nameResolver|_ instance
-    * ``rightsAndRoles`` - |source rightsAndRoles|_: |source rightsAndRoles|_ instance
-    * ``sharing`` - |source sharing|_: |source sharing|_ instance
-    * ``verifications`` - |source verifications|_: |source verifications|_ instance
-    * ``web3`` - |source web3|_: |source web3|_ instance
     * ``log`` - ``Function`` (optional): function to use for logging: ``(message, level) => {...}``
     * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
     * ``logLogLevel`` - |source logLevel|_ (optional): messages with this level will be pushed to ``logLog``
+    * ``nameResolver`` - |source nameResolver|_: |source nameResolver|_ instance
+    * ``profile`` - |source profile|_: |source profile|_ instance
+    * ``rightsAndRoles`` - |source rightsAndRoles|_: |source rightsAndRoles|_ instance
+    * ``sharing`` - |source sharing|_: |source sharing|_ instance
+    * ``verifications`` - |source verifications|_: |source verifications|_ instance
+    * ``web3`` - |source web3|_: |source web3|_ instance
 #. ``config`` - ``DigitalTwinConfig``: digital twin related config
     * ``accountId`` - ``string``: account id of user, that interacts with digital twin
     * ``containerConfig`` - ``ContainerConfig``: address of a ``DigitalTwin`` instance, can be ENS or contract address
@@ -979,6 +980,9 @@ data for verifications for digital twins
 
 .. |source nameResolver| replace:: ``NameResolver``
 .. _source nameResolver: ../blockchain/name-resolver.html
+
+.. |source profile| replace:: ``Profile``
+.. _source profile: ../profile/profile.html
 
 .. |source rightsAndRoles| replace:: ``RightsAndRoles``
 .. _source rightsAndRoles: ../contracts/rights-and-roles.html

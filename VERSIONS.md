@@ -2,6 +2,8 @@
 
 ## Next Version
 ### Features
+- add static functions to `Container` to save, get and delete templates on users profile
+
 ### Fixes
 ### Deprecations
 

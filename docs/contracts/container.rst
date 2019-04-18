@@ -239,8 +239,175 @@ Example
   // 0x0000000000000000000000000000000000005678
 
 
+--------------------------------------------------------------------------------
+
+.. _container_deleteContainerTemplate:
+
+deleteContainerTemplate
+================================================================================
+
+.. code-block:: typescript
+
+  container.deleteContainerTemplate(profile);
+
+Remove a container template from a users profile.
+
+----------
+Parameters
+----------
+
+#. ``Profile`` - |source profile|_: profile instance
+#. ``name`` - ``string``: template name
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await Container.deleteContainerTemplate(profile, 'awesometemplate');
+
 
 --------------------------------------------------------------------------------
+
+
+
+.. _container_getContainerTemplate:
+
+getContainerTemplate
+================================================================================
+
+.. code-block:: typescript
+
+  container.getContainerTemplate(profile, name);
+
+Get one container template for a users profile by name.
+
+----------
+Parameters
+----------
+
+#. ``Profile`` - |source profile|_: profile instance
+#. ``name`` - ``string``: template name
+
+-------
+Returns
+-------
+
+``Promise`` returns ``ContainerTemplate``
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const accountId1 = '0x0000000000000000000000000000000000000001';
+  const template = await Container.getContainerTemplate(profile, 'awesometemplate');
+
+  // create container with accountId1
+  const container = await Container.create(options, {
+    ...config,
+    accountId: accountId1,
+    template,
+  });
+
+
+
+--------------------------------------------------------------------------------
+
+
+.. _container_getContainerTemplates:
+
+getContainerTemplates
+================================================================================
+
+.. code-block:: typescript
+
+  container.getContainerTemplates(profile);
+
+Get all container templates for a users profile.
+
+----------
+Parameters
+----------
+
+#. ``Profile`` - |source profile|_: profile instance
+
+-------
+Returns
+-------
+
+``Promise`` returns ``Array<ContainerTemplate>``
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const accountId1 = '0x0000000000000000000000000000000000000001';
+  const templates = await Container.getContainerTemplates(profile);
+
+  // create container with accountId1
+  const container = await Container.create(options, {
+    ...config,
+    accountId: accountId1,
+    templates['awesometemplate'],
+  });
+
+
+--------------------------------------------------------------------------------
+
+
+.. _container_saveContainerTemplate:
+
+saveContainerTemplate
+================================================================================
+
+.. code-block:: typescript
+
+  container.saveContainerTemplate(profile);
+
+Persists a template including an dbcp description to the users profile.
+
+----------
+Parameters
+----------
+
+#. ``Profile`` - |source profile|_: profile instance
+#. ``name`` - ``string``: template name
+#. ``template`` - ``ContainerTemplate``: container template object
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const templates = await Container.saveContainerTemplate(
+    profile,
+    'awesometemplate',
+    { ... }
+  );
+
+
+
+
+--------------------------------------------------------------------------------
+
 
 .. _container_toTemplate:
 
@@ -1086,6 +1253,9 @@ data for verifications for containers
 
 .. |source nameResolver| replace:: ``NameResolver``
 .. _source nameResolver: ../blockchain/name-resolver.html
+
+.. |source profile| replace:: ``Profile``
+.. _source profile: ../profile/profile.html
 
 .. |source rightsAndRoles| replace:: ``RightsAndRoles``
 .. _source rightsAndRoles: ../contracts/rights-and-roles.html
