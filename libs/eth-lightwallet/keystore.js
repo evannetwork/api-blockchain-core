@@ -15,8 +15,8 @@ var HDPrivateKey = require('bitcore-lib/lib/hdprivatekey.js');
 var Mnemonic = require('../bitcore-mnemonic/mnemonic');
 var nacl = require('tweetnacl');
 var scrypt = require('scrypt-async');
-var Transaction = require("../../node_modules/ethereumjs-tx/index.js")
-var util = require("ethereumjs-util")
+var Transaction = require('ethereumjs-tx/index.js')
+var util = require('ethereumjs-util')
 
 var signTx = function (keystore, pwDerivedKey, rawTx, signingAddress) {
 

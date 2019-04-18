@@ -113,6 +113,7 @@ Following is a sample for a sharing info with these properties:
     }
   }
 
+More information about sharings can be fout at the `evan.network wiki <https://evannetwork.github.io/docs/developers/concepts/sharings.html>`_.
 
 
 --------------------------------------------------------------------------------

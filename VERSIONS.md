@@ -6,6 +6,12 @@
 ### Deprecations
 
 
+## Version 2.1.1
+### Fixes
+- allow remove spaces and special characters from `ajv` schema `$id` in `DigitalTwin DataContainer`
+- fix relative loaded `ethereumjs-tx/index.js` from `libs/eth-lightwallet/keystore.js`
+
+
 ## Version 2.1.0
 ### Features
 - add support for `MultiSigWalletSG` wallets to wallet `wallet` module
