@@ -3,7 +3,8 @@
 ## Next Version
 ### Features
 ### Fixes
-- allow remove spaces and special characters from `ajv` schema `$id` in `DigitalTwin DataContainer` 
+- allow remove spaces and special characters from `ajv` schema `$id` in `DigitalTwin DataContainer`
+- fix relative loaded `ethereumjs-tx/index.js` from `libs/eth-lightwallet/keystore.js`
 
 ### Deprecations
 
