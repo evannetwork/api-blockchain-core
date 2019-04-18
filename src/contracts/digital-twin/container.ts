@@ -384,7 +384,7 @@ export class Container extends Logger {
   public static async getContainerTemplate(
     profile: Profile,
     name: string
-  ): Promise<Array<ContainerTemplate>> {
+  ): Promise<{ description: any, template: ContainerTemplate }> {
     const template = await profile.getBcContract(Container.profileTemplatesKey, name);
     Ipld.purgeCryptoInfo(template);
     return template;
@@ -396,18 +396,24 @@ export class Container extends Logger {
    * @param      {Profile}            profile      profile instance
    */
   public static async getContainerTemplates(
-    profile: Profile
-  ): Promise<{[id: string]: ContainerTemplate }> {
-    const templates = { };
+    profile: Profile,
+    loadContracts = true
+  ): Promise<{[id: string]: { description: any, template: ContainerTemplate }}> {
     const bcContracts = await profile.getBcContracts(Container.profileTemplatesKey);
     Ipld.purgeCryptoInfo(bcContracts);
 
-    // request all templates
-    await Promise.all(Object.keys(bcContracts).map(async (templateName: string) => {
-      templates[templateName] = await Container.getContainerTemplate(profile, templateName)
-    }));
+    if (loadContracts) {
+      const templates: any = { };
 
-    return templates;
+      // request all templates
+      await Promise.all(Object.keys(bcContracts).map(async (templateName: string) => {
+        templates[templateName] = await Container.getContainerTemplate(profile, templateName)
+      }));
+
+      return templates;
+    } else {
+      return bcContracts;
+    }
   }
 
   /**
@@ -415,15 +421,17 @@ export class Container extends Logger {
    *
    * @param      {Profile}            profile      profile instance
    * @param      {string}             name         template name
+   * @param      {any}                description  predefined template dbcp description
    * @param      {ContainerTemplate}  template     container template object
    */
   public static async saveContainerTemplate(
     profile: Profile,
     name: string,
+    description: any,
     template: ContainerTemplate
   ): Promise<void> {
     await profile.loadForAccount(profile.treeLabels.contracts);
-    await profile.addBcContract(Container.profileTemplatesKey, name, template);
+    await profile.addBcContract(Container.profileTemplatesKey, name, { description, template });
     await profile.storeForAccount(profile.treeLabels.contracts);
   }
 

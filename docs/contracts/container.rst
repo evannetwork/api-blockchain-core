@@ -315,7 +315,8 @@ Example
   const container = await Container.create(options, {
     ...config,
     accountId: accountId1,
-    template,
+    description: template.description,
+    template: template.template,
   });
 
 
@@ -339,6 +340,7 @@ Parameters
 ----------
 
 #. ``Profile`` - |source profile|_: profile instance
+#. ``loadContracts`` - boolean (default = true): run loadBcContract directly for all saved entries (if false, unresolved ipld tree will be returned as value)
 
 -------
 Returns
@@ -359,7 +361,8 @@ Example
   const container = await Container.create(options, {
     ...config,
     accountId: accountId1,
-    templates['awesometemplate'],
+    description: templates['awesometemplate'].description,
+    template: templates['awesometemplate'].template,
   });
 
 
@@ -383,6 +386,7 @@ Parameters
 
 #. ``Profile`` - |source profile|_: profile instance
 #. ``name`` - ``string``: template name
+#. ``description`` - ``any``: predefined template dbcp description
 #. ``template`` - ``ContainerTemplate``: container template object
 
 -------

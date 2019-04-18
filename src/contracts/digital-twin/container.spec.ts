@@ -236,7 +236,7 @@ describe('Container', function() {
       expect(await clonedContainer.getEntry('testField')).to.eq(randomString);
     });
 
-    it.only('can save templates to users profile', async () => {
+    it('can save templates to users profile', async () => {
       const profile = await TestUtils.getProfile(runtimes[owner].web3, dfs, null, owner);
 
       // setup template
@@ -249,16 +249,16 @@ describe('Container', function() {
       };
       
       // save it to the profile
-      await Container.saveContainerTemplate(profile, templateName, template);
+      await Container.saveContainerTemplate(profile, templateName, description, template);
 
       // load single template
       const loadedTemplate = await Container.getContainerTemplate(profile, templateName);
-      expect(loadedTemplate).to.deep.equal(template);
+      expect(loadedTemplate.template).to.deep.equal(template);
 
       // load multiple templates
       let templates = await Container.getContainerTemplates(profile);
       expect(templates).to.have.property(templateName);
-      expect(templates[templateName]).to.deep.equal(template);
+      expect(templates[templateName].template).to.deep.equal(template);
 
       // remove template
       await Container.deleteContainerTemplate(profile, templateName);
