@@ -167,7 +167,8 @@ function toJsonSchema(properties: any): any {
   const jsonSchema = {};
 
   for (let field of Object.keys(properties)) {
-    jsonSchema[field] = { $id: `${field}_schema`, ...properties[field].dataSchema };
+    const fieldId = field.replace(/[^a-zA-Z0-9]/g, '');
+    jsonSchema[field] = { $id: `${fieldId}_schema`, ...properties[field].dataSchema };
   }
 
   return jsonSchema;
@@ -955,8 +956,9 @@ export class Container extends Logger {
         description.dataSchema = {};
       }
       if (!description.dataSchema[name]) {
+        const fieldId = name.replace(/[^a-zA-Z0-9]/g, '');
         description.dataSchema[name] = this.deriveSchema(value);
-        description.dataSchema[name].$id = `${name}_schema`;
+        description.dataSchema[name].$id = `${fieldId}_schema`;
         await this.setDescription(description);
       }
     });

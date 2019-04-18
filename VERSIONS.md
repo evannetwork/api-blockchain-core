@@ -3,6 +3,8 @@
 ## Next Version
 ### Features
 ### Fixes
+- allow remove spaces and special characters from `ajv` schema `$id` in `DigitalTwin DataContainer` 
+
 ### Deprecations
 
 
