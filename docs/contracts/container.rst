@@ -849,14 +849,14 @@ Example
 
 --------------------------------------------------------------------------------
 
-.. _container_getContainerShareConfigForAccounrt:
+.. _container_getContainerShareConfigForAccount:
 
-getContainerShareConfigForAccounrt
+getContainerShareConfigForAccount
 ================================================================================
 
 .. code-block:: typescript
 
-  container.getContainerShareConfigForAccounrt(accountId);
+  container.getContainerShareConfigForAccount(accountId);
 
 Check permissions for given account and return them as ContainerShareConfig object.
 
