@@ -41,6 +41,10 @@ Configuring and initializing blockchain core
         'ACCOUNTID':
           'PRIVATE KEY',
       },
+      // key configuration for private data handling
+      keyConfig: {
+        'ACCOUNTID': 'PASSWORD',
+      },
       // ipfs configuration for evan.network storage
       ipfs: {host: 'ipfs.test.evan.network', port: '443', protocol: 'https'},
       // web3 provider config (currently evan.network testcore)
@@ -53,7 +57,7 @@ Configuring and initializing blockchain core
     const dfs = new Ipfs({ remoteNode: new IpfsApi(runtimeConfig.ipfs), });
 
     // create runtime
-    const runtime = await createDefaultRuntime(web3, dfs, { accountMap: runtimeConfig.accountMap, });
+    const runtime = await createDefaultRuntime(web3, dfs, { accountMap: runtimeConfig.accountMap, keyConfig: runtimeConfig.keyConfig });
 
 That's it! Now you can use the ``runtime`` object and interact with the evan.network blockchain.
 
