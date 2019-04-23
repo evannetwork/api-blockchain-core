@@ -910,6 +910,56 @@ Example
 
 
 
+--------------------------------------------------------------------------------
+
+.. _container_getContainerShareConfigs:
+
+getContainerShareConfigs
+================================================================================
+
+.. code-block:: typescript
+
+  container.getContainerShareConfigs();
+
+Check permissions for given account and return them as ContainerShareConfig object.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``ContainerShareConfig[]``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const accountId1 = '0x0000000000000000000000000000000000000001';  // account in runtime
+  const accountId2 = '0x0000000000000000000000000000000000000002';  // account to invite
+
+  const container = await Container.create(runtime, defaultConfig);
+  const randomString1 = Math.floor(Math.random() * 1e12).toString(36);
+  await container.setEntry('testField1', randomString1);
+  const randomString2 = Math.floor(Math.random() * 1e12).toString(36);
+  await container.setEntry('testField2', randomString2);
+
+  await container.shareProperties([
+    { accountId: accountId2, readWrite: ['testField1'], read: ['testField2'] },
+  ]);
+
+  console.dir(await container.getContainerShareConfigs());
+  // Output:
+  // [ { accountId: '0x0000000000000000000000000000000000000001',
+  //   readWrite: [ 'testField1', 'testField2' ] },
+  // { accountId: '0x0000000000000000000000000000000000000002',
+  //   read: [ 'testField2' ],
+  //   readWrite: [ 'testField1' ] } ]
+
+
+
+--------------------------------------------------------------------------------
+
 = Validating Containers =
 =========================
 
