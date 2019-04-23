@@ -2,6 +2,7 @@
 
 ## Next Version
 ### Features
+- add the ability to parse accountid + password in key config for runtime
 ### Fixes
 ### Deprecations
 
@@ -70,7 +71,7 @@
 - add licenses to dbcp files
 
 ### Fixes
-- remove `OriginIdentity`, as `ClaimHolder` is used for identities 
+- remove `OriginIdentity`, as `ClaimHolder` is used for identities
 
 
 ## Version 1.6.1
@@ -200,7 +201,7 @@
 - fix unbound entry retrieval in DataContract.getListEntries by adding paging to it
 - add `removeAccountFromRole` and `transferOwnership` to `RightsAndRoles` for better permission management
 - make `extendSharings` publicly accessible for adding properties to sharings withou saving them
-- add `createSharing` to `DataContract` and accept a sharings hash in `createContract` , which allows to decouple sharing creation and contract creation 
+- add `createSharing` to `DataContract` and accept a sharings hash in `createContract` , which allows to decouple sharing creation and contract creation
 - accept ipld hashes in `storeForAccount` in `Profile` to decouple tree encryption and property storing
 - add support for multi-sharings to `Sharings` module
 - add multi-sharing support to `ServiceContract` module
