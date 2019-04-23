@@ -36,6 +36,7 @@ import {
 
 import { accounts } from '../../test/accounts';
 import { TestUtils } from '../../test/test-utils';
+import { VerificationsStatus } from '../../verifications/verifications';
 import {
   Container,
   ContainerConfig,
@@ -234,6 +235,36 @@ describe('Container', function() {
 
       const clonedContainer = await Container.clone(runtimes[owner], defaultConfig, container, true);
       expect(await clonedContainer.getEntry('testField')).to.eq(randomString);
+    });
+
+    it('can save templates to users profile', async () => {
+      const profile = await TestUtils.getProfile(runtimes[owner].web3, dfs, null, owner);
+
+      // setup template
+      const templateName = 'awesometemplate';
+      const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
+      template.properties.testField = {
+        dataSchema: { type: 'string' },
+        permissions: { 0: ['set'] },
+        type: 'entry',
+      };
+      
+      // save it to the profile
+      await Container.saveContainerTemplate(profile, templateName, description, template);
+
+      // load single template
+      const loadedTemplate = await Container.getContainerTemplate(profile, templateName);
+      expect(loadedTemplate.template).to.deep.equal(template);
+
+      // load multiple templates
+      let templates = await Container.getContainerTemplates(profile);
+      expect(templates).to.have.property(templateName);
+      expect(templates[templateName].template).to.deep.equal(template);
+
+      // remove template
+      await Container.deleteContainerTemplate(profile, templateName);
+      templates = await Container.getContainerTemplates(profile);
+      expect(templates).to.not.have.property(templateName);
     });
   });
 
@@ -451,7 +482,11 @@ describe('Container', function() {
       expect(verificationsResults.length).to.eq(3);
       // all validation lists should have at least 1 valid verification
       const allValid = verificationsResults.every(vs => vs.some(v => v.valid));
-      expect(allValid).to.be.true;
+      expect(allValid).to.be.true
+      // all validations should be confirmed, as issuing account is owner
+      const allConfirmed = verificationsResults.every(
+        vs => vs.some(v => v.status === VerificationsStatus.Confirmed));
+      expect(allConfirmed).to.be.true;
     });
   });
 });

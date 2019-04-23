@@ -239,8 +239,179 @@ Example
   // 0x0000000000000000000000000000000000005678
 
 
+--------------------------------------------------------------------------------
+
+.. _container_deleteContainerTemplate:
+
+deleteContainerTemplate
+================================================================================
+
+.. code-block:: typescript
+
+  container.deleteContainerTemplate(profile);
+
+Remove a container template from a users profile.
+
+----------
+Parameters
+----------
+
+#. ``Profile`` - |source profile|_: profile instance
+#. ``name`` - ``string``: template name
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await Container.deleteContainerTemplate(profile, 'awesometemplate');
+
 
 --------------------------------------------------------------------------------
+
+
+
+.. _container_getContainerTemplate:
+
+getContainerTemplate
+================================================================================
+
+.. code-block:: typescript
+
+  container.getContainerTemplate(profile, name);
+
+Get one container template for a users profile by name.
+
+----------
+Parameters
+----------
+
+#. ``Profile`` - |source profile|_: profile instance
+#. ``name`` - ``string``: template name
+
+-------
+Returns
+-------
+
+``Promise`` returns ``ContainerTemplate``
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const accountId1 = '0x0000000000000000000000000000000000000001';
+  const template = await Container.getContainerTemplate(profile, 'awesometemplate');
+
+  // create container with accountId1
+  const container = await Container.create(options, {
+    ...config,
+    accountId: accountId1,
+    description: template.description,
+    template: template.template,
+  });
+
+
+
+--------------------------------------------------------------------------------
+
+
+.. _container_getContainerTemplates:
+
+getContainerTemplates
+================================================================================
+
+.. code-block:: typescript
+
+  container.getContainerTemplates(profile);
+
+Get all container templates for a users profile.
+
+----------
+Parameters
+----------
+
+#. ``Profile`` - |source profile|_: profile instance
+#. ``loadContracts`` - boolean (default = true): run loadBcContract directly for all saved entries (if false, unresolved ipld tree will be returned as value)
+
+-------
+Returns
+-------
+
+``Promise`` returns ``Array<ContainerTemplate>``
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const accountId1 = '0x0000000000000000000000000000000000000001';
+  const templates = await Container.getContainerTemplates(profile);
+
+  // create container with accountId1
+  const container = await Container.create(options, {
+    ...config,
+    accountId: accountId1,
+    description: templates['awesometemplate'].description,
+    template: templates['awesometemplate'].template,
+  });
+
+
+--------------------------------------------------------------------------------
+
+
+.. _container_saveContainerTemplate:
+
+saveContainerTemplate
+================================================================================
+
+.. code-block:: typescript
+
+  container.saveContainerTemplate(profile);
+
+Persists a template including an dbcp description to the users profile.
+
+----------
+Parameters
+----------
+
+#. ``Profile`` - |source profile|_: profile instance
+#. ``name`` - ``string``: template name
+#. ``description`` - ``any``: predefined template dbcp description
+#. ``template`` - ``ContainerTemplate``: container template object
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const templates = await Container.saveContainerTemplate(
+    profile,
+    'awesometemplate',
+    { ... }
+  );
+
+
+
+
+--------------------------------------------------------------------------------
+
 
 .. _container_toTemplate:
 
@@ -753,7 +924,10 @@ addVerifications
 
 Add verifications to this container; this will also add verifications to contract description.
 
-Due to the automatic expansion of the contract description, this function can only be called by the container owner.
+If the calling account is the owner of the identity of the container
+
+- the description will is automatically updated with tags for verifications
+- verifications issued with this function will be accepted automatically
 
 See interface ``ContainerVerificationEntry`` for input data format.
 
@@ -1086,6 +1260,9 @@ data for verifications for containers
 
 .. |source nameResolver| replace:: ``NameResolver``
 .. _source nameResolver: ../blockchain/name-resolver.html
+
+.. |source profile| replace:: ``Profile``
+.. _source profile: ../profile/profile.html
 
 .. |source rightsAndRoles| replace:: ``RightsAndRoles``
 .. _source rightsAndRoles: ../contracts/rights-and-roles.html

@@ -3,6 +3,7 @@
 ## Next Version
 ### Features
 - add the ability to parse accountid + password in key config for runtime
+- add static functions to `Container` to save, get and delete templates on users profile
 ### Fixes
 ### Deprecations
 
