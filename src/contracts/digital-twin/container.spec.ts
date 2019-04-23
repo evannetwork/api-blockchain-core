@@ -124,9 +124,23 @@ describe('Container', function() {
       const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
       expect(await container.getEntry('type')).to.eq(template.type);
     });
-  });
 
-  describe('when setting entries', async () => {
+    it('can add new entry properties', async() => {
+      const container = await Container.create(runtimes[owner], defaultConfig);
+      await container.ensureProperty('testField', Container.defaultSchemas.stringEntry);
+      await container.shareProperties([{ accountId: consumer, readWrite: ['testField'] }]);
+
+      const randomString = Math.floor(Math.random() * 1e12).toString(36);
+      const consumerContainer = new Container(
+        runtimes[consumer],
+        { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
+      );
+      await consumerContainer.setEntry('testField', randomString);
+
+      expect(await container.getEntry('testField')).to.eq(randomString);
+      expect(await consumerContainer.getEntry('testField')).to.eq(randomString);
+    });
+
     it('can set and get entries for properties defined in (custom) template', async () => {
       const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
       template.properties.testField = {
@@ -153,6 +167,21 @@ describe('Container', function() {
       const containerDescription = await container.getDescription();
       expect(containerDescription.dataSchema.testField).to.deep.eq(expectedSchema);
     });
+  });
+
+  describe('when setting list entries', async () => {
+    it('can set and get entries for properties defined in (custom) template', async () => {
+      const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
+      template.properties.testList = {
+        dataSchema: { type: 'array', items: { type: 'number' } },
+        permissions: { 0: ['set'] },
+        type: 'list',
+      };
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+      const randomNumbers = [...Array(8)].map(() => Math.floor(Math.random() * 1e12));
+      await container.addListEntries('testList', randomNumbers);
+      expect(await container.getListEntries('testList')).to.deep.eq(randomNumbers);
+    });
 
     it('can set list entries if not defined in template (auto adds properties)', async () => {
       const container = await Container.create(runtimes[owner], defaultConfig);
@@ -168,20 +197,21 @@ describe('Container', function() {
       const containerDescription = await container.getDescription();
       expect(containerDescription.dataSchema.testList).to.deep.eq(expectedSchema);
     });
-  });
 
-  describe('when setting list entries', async () => {
-    it('can set and get entries for properties defined in (custom) template', async () => {
-      const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
-      template.properties.testList = {
-        dataSchema: { type: 'array', items: { type: 'number' } },
-        permissions: { 0: ['set'] },
-        type: 'list',
-      };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
-      const randomNumbers = [...Array(8)].map(() => Math.floor(Math.random() * 1e12));
-      await container.addListEntries('testList', randomNumbers);
-      expect(await container.getListEntries('testList')).to.deep.eq(randomNumbers);
+    it('can add new list properties', async() => {
+      const container = await Container.create(runtimes[owner], defaultConfig);
+      await container.ensureProperty('testList', Container.defaultSchemas.stringList);
+      await container.shareProperties([{ accountId: consumer, readWrite: ['testList'] }]);
+
+      const randomStrings = [...Array(3)].map(() => Math.floor(Math.random() * 1e12).toString(36));
+      const consumerContainer = new Container(
+        runtimes[consumer],
+        { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
+      );
+      await consumerContainer.addListEntries('testList', randomStrings);
+
+      expect(await container.getListEntries('testList')).to.deep.eq(randomStrings);
+      expect(await consumerContainer.getListEntries('testList')).to.deep.eq(randomStrings);
     });
   });
 
@@ -248,7 +278,7 @@ describe('Container', function() {
         permissions: { 0: ['set'] },
         type: 'entry',
       };
-      
+
       // save it to the profile
       await Container.saveContainerTemplate(profile, templateName, description, template);
 

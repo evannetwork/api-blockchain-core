@@ -863,9 +863,9 @@ Public Properties
 
 .. _digital-twin_defaultDescription:
 
-------------------
-defaultDescription
-------------------
+---------------------------
+defaultDescription (static)
+---------------------------
 
 Default description used when no specific description is given to :ref:`.create <digital-twin_create>`.
 

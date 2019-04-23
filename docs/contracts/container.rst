@@ -1154,6 +1154,35 @@ Example
 
 --------------------------------------------------------------------------------
 
+.. _container_ensureProperty:
+
+ensureProperty
+================================================================================
+
+.. code-block:: typescript
+
+  container.ensureProperty(propertyName, dataSchema[, propertyType]);
+
+Ensure that container supports given property.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await container.ensureProperty('testField', Container.defaultSchemas.stringEntry);
+
+
+
+--------------------------------------------------------------------------------
+
 Additional Components
 ======================
 
@@ -1234,6 +1263,63 @@ data for verifications for containers
 #. ``verificationValue`` - ``string`` (optional): reference to additional validation details
 
 
+
+--------------------------------------------------------------------------------
+
+Public Properties
+=================
+
+.. _container_defaultDescription:
+
+---------------------------
+defaultDescription (static)
+---------------------------
+
+Default description used when no specific description is given to :ref:`.create <container_create>`.
+
+
+
+.. _container_defaultSchemas:
+
+-----------------------
+defaultSchemas (static)
+-----------------------
+
+Predefined simple schemas, contains basic schemas for number, object, string entries and their list variant.
+
+
+
+.. _container_defaultTemplate:
+
+------------------------
+defaultTemplate (static)
+------------------------
+
+Default template used when no specific description is given to :ref:`.create <container_create>`. Default template is ``metadata``.
+
+
+
+.. _container_profileTemplatesKey:
+
+----------------------------
+profileTemplatesKey (static)
+----------------------------
+
+Key that is used in user profile to store templates, default is ``templates.datacontainer.digitaltwin.evan``
+
+
+
+.. _container_templates:
+
+------------------
+templates (static)
+------------------
+
+Predefined templates for containers, currently only contains the ``metadata`` template.
+
+
+
+--------------------------------------------------------------------------------
 
 .. required for building markup
 

@@ -277,6 +277,14 @@ export class Container extends Logger {
     version: '0.1.0',
     dbcpVersion: 2,
   };
+  public static defaultSchemas = {
+    numberEntry: { type: 'number' },
+    numberList: { type: 'array', items: { type: 'number' } },
+    objectEntry: { type: 'object' },
+    objectList: { type: 'array', items: { type: 'object' } },
+    stringEntry: { type: 'string' },
+    stringList: { type: 'array', items: { type: 'string' } },
+  };
   public static defaultTemplate = 'metadata';
   public static profileTemplatesKey = 'templates.datacontainer.digitaltwin.evan';
   public static templates: { [id: string]: ContainerTemplate; } = {
@@ -463,14 +471,12 @@ export class Container extends Logger {
    */
   public async addListEntries(listName: string, values: any[]): Promise<void> {
     await this.ensureContract();
-    await this.ensurePermissionOnField(listName, 'list');
-    await this.ensureKeyInSharing(listName);
+    await this.ensureProperty(listName, this.deriveSchema(values), 'list');
     await this.wrapPromise(
       'add list entries to contract',
       this.options.dataContract.addListEntries(
         this.contract, listName, values, this.config.accountId),
     );
-    await this.ensureTypeInSchema(listName, values);
   }
 
   /**
@@ -516,6 +522,24 @@ export class Container extends Logger {
         }
       });
     }
+  }
+
+  /**
+   * Ensure that container supports given property.
+   *
+   * @param      {string}  propertyName  name of an entry or list
+   * @param      {any}     dataSchema    ajv data schema
+   * @param      {string}  propertyType  (optional) 'list' if dataSchema.type is 'array', otherwise 'entry'
+   */
+  public async ensureProperty(
+    propertyName: string,
+    dataSchema: any,
+    propertyType = dataSchema.type === 'array' ? 'list' : 'entry',
+  ): Promise<void> {
+    await this.ensureContract();
+    await this.ensurePermissionOnField(propertyName, propertyType);
+    await this.ensureKeyInSharing(propertyName);
+    await this.ensureTypeInSchema(propertyName, dataSchema);
   }
 
   /**
@@ -702,13 +726,11 @@ export class Container extends Logger {
    */
   public async setEntry(entryName: string, value: any): Promise<void> {
     await this.ensureContract();
-    await this.ensurePermissionOnField(entryName, 'entry');
-    await this.ensureKeyInSharing(entryName);
+    await this.ensureProperty(entryName, this.deriveSchema(value), 'entry');
     await this.wrapPromise(
       'set entry',
       this.options.dataContract.setEntry(this.contract, entryName, value, this.config.accountId),
     );
-    await this.ensureTypeInSchema(entryName, value);
   }
 
   /**
@@ -1041,7 +1063,7 @@ export class Container extends Logger {
    * @param      {string}  name    property name
    * @param      {any}     value   property value
    */
-  private async ensureTypeInSchema(name: string, value: any): Promise<void> {
+  private async ensureTypeInSchema(name: string, schema: any): Promise<void> {
     await this.getMutex('schema').runExclusive(async () => {
       const description = await this.getDescription();
       if (!description.dataSchema) {
@@ -1049,7 +1071,7 @@ export class Container extends Logger {
       }
       if (!description.dataSchema[name]) {
         const fieldId = name.replace(/[^a-zA-Z0-9]/g, '');
-        description.dataSchema[name] = this.deriveSchema(value);
+        description.dataSchema[name] = JSON.parse(JSON.stringify(schema));
         description.dataSchema[name].$id = `${fieldId}_schema`;
         await this.setDescription(description);
       }
