@@ -26,8 +26,9 @@
 */
 
 import 'mocha';
-import { expect, use } from 'chai';
+import * as Throttle from 'promise-parallel-throttle';
 import chaiAsPromised = require('chai-as-promised');
+import { expect, use } from 'chai';
 
 import {
   ContractLoader,
@@ -91,6 +92,16 @@ describe('Rights and Roles handler', function() {
      expect(members[0]).to.eq(accounts[0]);
      expect(members[1]).to.eq(accounts[1]);
      expect(members[2]).to.eq(accounts[2]);
+  });
+
+  it('should be able to retrieve more than 10 members per role', async () => {
+     const contract = await dc.create('testdatacontract', accounts[0], null);
+     const invitees = [...Array(31)].map(() => TestUtils.getRandomAddress());
+     await Promise.all(invitees.map(invitee =>
+       dc.inviteToContract(null, contract.options.address, accounts[0], invitee)));
+     const contractParticipants = await rar.getMembers(contract);
+     const membersResult = contractParticipants[1].sort();
+     expect(membersResult).to.deep.eq([accounts[0], ...invitees].sort());
   });
 
   it('should be able to retrieve members from a business center', async () => {

@@ -8,6 +8,8 @@
 - add default schemas for property types
 
 ### Fixes
+- fix `getMembers` user fetching (now returns all accounts and not only the first 10)
+
 ### Deprecations
 
 
