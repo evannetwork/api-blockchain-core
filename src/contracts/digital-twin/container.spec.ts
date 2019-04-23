@@ -568,7 +568,7 @@ describe('Container', function() {
         { accountId: owner, readWrite: ['testField1', 'testField2'] },
         { accountId: consumer, readWrite: ['testField1'], read: ['testField2'] },
       ];
-      const shareConfigs = await container.getContainerShareConfig();
+      const shareConfigs = await container.getContainerShareConfigs();
       const byAccountId = (e1, e2) => { return e1.accountId < e2.accountId ? -1 : 1; };
       expect(shareConfigs.sort(byAccountId)).to.deep.eq(expected.sort(byAccountId));
     });

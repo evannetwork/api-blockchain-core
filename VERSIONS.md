@@ -6,7 +6,7 @@
 - add static functions to `Container` to save, get and delete templates on users profile
 - add `ensureProperty`, that allows to add entries or lists to containers without setting values
 - add default schemas for property types
-- add `getContainerShareConfig` to retrieve all share configs
+- add `getContainerShareConfigs` to retrieve all share configs
 
 ### Fixes
 - fix `getMembers` user fetching (now returns all accounts and not only the first 10)
