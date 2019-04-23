@@ -519,4 +519,58 @@ describe('Container', function() {
       expect(allConfirmed).to.be.true;
     });
   });
+
+  describe('when fetching permissions from container', async() => {
+    it('can fetch permissions for a single account', async() => {
+      const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
+      template.properties.testField = {
+        dataSchema: { type: 'string' },
+        permissions: { 0: ['set'] },
+        type: 'entry',
+      };
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+      const randomString = Math.floor(Math.random() * 1e12).toString(36);
+      await container.setEntry('testField', randomString);
+      expect(await container.getEntry('testField')).to.eq(randomString);
+
+      await container.shareProperties([{ accountId: consumer, read: ['testField'] }]);
+      const consumerContainer = new Container(
+        runtimes[consumer],
+        { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
+      );
+      expect(await consumerContainer.getEntry('testField')).to.eq(randomString);
+
+      const shareConfig = await container.getContainerShareConfigForAccount(consumer);
+      expect(shareConfig).to.haveOwnProperty('read');
+      expect(shareConfig.read).to.include('testField');
+    });
+
+    it('can fetch permissions for all accounts', async() => {
+      const container = await Container.create(runtimes[owner], defaultConfig);
+      const randomString1 = Math.floor(Math.random() * 1e12).toString(36);
+      await container.setEntry('testField1', randomString1);
+      const randomString2 = Math.floor(Math.random() * 1e12).toString(36);
+      await container.setEntry('testField2', randomString2);
+
+      await container.shareProperties([
+        { accountId: consumer, readWrite: ['testField1'] },
+        { accountId: consumer, read: ['testField2'] },
+      ]);
+      const consumerContainer = new Container(
+        runtimes[consumer],
+        { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
+      );
+      expect(await consumerContainer.getEntry('testField1')).to.eq(randomString1);
+      expect(await consumerContainer.getEntry('testField2')).to.eq(randomString2);
+
+
+      const expected = [
+        { accountId: owner, readWrite: ['testField1', 'testField2'] },
+        { accountId: consumer, readWrite: ['testField1'], read: ['testField2'] },
+      ];
+      const shareConfigs = await container.getContainerShareConfig();
+      const byAccountId = (e1, e2) => { return e1.accountId < e2.accountId ? -1 : 1; };
+      expect(shareConfigs.sort(byAccountId)).to.deep.eq(expected.sort(byAccountId));
+    });
+  });
 });

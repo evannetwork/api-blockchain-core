@@ -621,6 +621,17 @@ export class Container extends Logger {
   }
 
   /**
+   * Check permissions for all members and return them as array of ContainerShareConfig.
+   */
+  public async getContainerShareConfig(): Promise<ContainerShareConfig[]> {
+    await this.ensureContract();
+    const roleMap = await this.options.rightsAndRoles.getMembers(this.contract);
+    const unique = Array.from(new Set([].concat(...Object.values(roleMap))));
+    return Throttle.all(unique.map(accountId => async () =>
+      this.getContainerShareConfigForAccount(accountId)));
+  }
+
+  /**
    * Check permissions for given account and return them as ContainerShareConfig object.
    *
    * @param      {string}  accountId  account to check permissions for
