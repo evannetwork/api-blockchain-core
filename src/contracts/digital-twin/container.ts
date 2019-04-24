@@ -194,6 +194,18 @@ export interface ContainerConfig {
 }
 
 /**
+ * description and content of a single file, usually used in arrays (add/get/set operations)
+ */
+export interface ContainerFile {
+  /** filename, e.g. 'animal-animal-photography-cat-96938.jpg' */
+  name: string;
+  /** mime type of the file, e.g. 'image/jpeg' */
+  fileType: string;
+  /** file data as Buffer */
+  file: Buffer;
+}
+
+/**
  * options for Container constructor
  */
 export interface ContainerOptions extends LoggerOptions {
@@ -278,6 +290,8 @@ export class Container extends Logger {
     dbcpVersion: 2,
   };
   public static defaultSchemas = {
+    filesEntry: { type: 'string', $comment: '{"isEncryptedFile": true}' },
+    filesList: { type: 'array', items: { type: 'string', $comment: '{"isEncryptedFile": true}' } },
     numberEntry: { type: 'number' },
     numberList: { type: 'array', items: { type: 'number' } },
     objectEntry: { type: 'object' },
@@ -336,7 +350,9 @@ export class Container extends Logger {
     }
 
     // check description values and upload it
-    const envelope: Envelope = { public: instanceConfig.description || Container.defaultDescription };
+    const envelope: Envelope = {
+      public: instanceConfig.description || Container.defaultDescription,
+    };
     const validation = options.description.validateDescription(envelope);
     if (validation !== true) {
       throw new Error(`validation of description failed with: ${JSON.stringify(validation)}`);
@@ -474,8 +490,11 @@ export class Container extends Logger {
     await this.ensureProperty(listName, this.deriveSchema(values), 'list');
     await this.wrapPromise(
       'add list entries to contract',
-      this.options.dataContract.addListEntries(
-        this.contract, listName, values, this.config.accountId),
+      (async () => {
+        const toSet = await this.encryptFilesIfRequired(listName, values);
+        await this.options.dataContract.addListEntries(
+          this.contract, listName, toSet, this.config.accountId)
+      })(),
     );
   }
 
@@ -511,11 +530,11 @@ export class Container extends Logger {
     }));
     // update description if current user is owner
     if (owner === this.config.accountId) {
-      const verificationTags = verifications.map(verification => `verification:${verification.topic}`);
+      const tags = verifications.map(verification => `verification:${verification.topic}`);
       await this.getMutex('description').runExclusive(async () => {
         const description = await this.getDescription();
         const oldTags = description.tags || [];
-        const toAdd = verificationTags.filter(tag => !oldTags.includes(tag));
+        const toAdd = tags.filter(tag => !oldTags.includes(tag));
         if (toAdd.length) {
           description.tags = oldTags.concat(toAdd);
           await this.setDescription(description);
@@ -529,7 +548,8 @@ export class Container extends Logger {
    *
    * @param      {string}  propertyName  name of an entry or list
    * @param      {any}     dataSchema    ajv data schema
-   * @param      {string}  propertyType  (optional) 'list' if dataSchema.type is 'array', otherwise 'entry'
+   * @param      {string}  propertyType  (optional) 'list' if dataSchema.type is 'array', otherwise
+   *                                     'entry'
    */
   public async ensureProperty(
     propertyName: string,
@@ -568,7 +588,11 @@ export class Container extends Logger {
     await this.ensureContract();
     return this.wrapPromise(
       'get entry',
-      this.options.dataContract.getEntry(this.contract, entryName, this.config.accountId),
+      (async () => {
+        let value = await this.options.dataContract.getEntry(
+          this.contract, entryName, this.config.accountId);
+        return this.decryptFilesIfRequired(entryName, value);
+      })(),
     );
   }
 
@@ -587,8 +611,11 @@ export class Container extends Logger {
     await this.ensureContract();
     return this.wrapPromise(
       'get list entries',
-      this.options.dataContract.getListEntries(
-        this.contract, listName, this.config.accountId, true, true, count, offset, reverse),
+      (async () => {
+        const values = await this.options.dataContract.getListEntries(
+          this.contract, listName, this.config.accountId, true, true, count, offset, reverse);
+        return this.decryptFilesIfRequired(listName, values);
+      })(),
     );
   }
 
@@ -602,7 +629,11 @@ export class Container extends Logger {
     await this.ensureContract();
     return this.wrapPromise(
       'get list entry',
-      this.options.dataContract.getListEntry(this.contract, listName, index, this.config.accountId),
+      (async () => {
+        const value = await this.options.dataContract.getListEntry(
+          this.contract, listName, index, this.config.accountId);
+        return this.decryptFilesIfRequired(listName, value);
+      })(),
     );
   }
 
@@ -649,7 +680,8 @@ export class Container extends Logger {
           'canCallOperation',
           accountId,
           '0x0000000000000000000000000000000000000000',
-          this.options.rightsAndRoles.getOperationCapabilityHash(property, enumType, ModificationType.Set),
+          this.options.rightsAndRoles.getOperationCapabilityHash(
+            property, enumType, ModificationType.Set),
         );
       };
       const tasks = Object.keys(description.dataSchema).map(property => async () => {
@@ -738,9 +770,10 @@ export class Container extends Logger {
   public async setEntry(entryName: string, value: any): Promise<void> {
     await this.ensureContract();
     await this.ensureProperty(entryName, this.deriveSchema(value), 'entry');
+    const toSet = await this.encryptFilesIfRequired(entryName, value);
     await this.wrapPromise(
       'set entry',
-      this.options.dataContract.setEntry(this.contract, entryName, value, this.config.accountId),
+      this.options.dataContract.setEntry(this.contract, entryName, toSet, this.config.accountId),
     );
   }
 
@@ -954,6 +987,75 @@ export class Container extends Logger {
   }
 
   /**
+   * Helper function for encrypting and decrypting, checks if a given property requires file
+   * encryption.
+   *
+   * @param      {any}       subSchema  schema to check in
+   * @param      {any}       toInspect  value to inspect
+   * @param      {Function}  toApply    function, that will be applied to values in `toInspect`
+   */
+  private async applyIfEncrypted(subSchema: any, toInspect: any, toApply: Function) {
+    const usesEnryption = (schema) => {
+      if (schema.type === 'string' && schema.$comment) {
+        try {
+          return JSON.parse(schema.$comment).isEncryptedFile;
+        } catch (ex) {
+          // ignore non-JSON comments
+        }
+      }
+      return false;
+    };
+
+    if (usesEnryption(subSchema)) {
+      // simple entry
+      return toApply(toInspect);
+    } else if (subSchema.type === 'array' && usesEnryption(subSchema.items)) {
+      // list/array with entries
+      return Promise.all(toInspect.map(entry => toApply(entry)));
+    } else {
+      // check if nested
+      if (subSchema.type === 'array') {
+        return Promise.all(toInspect.map(entry => this.applyIfEncrypted(subSchema.items, entry, toApply)));
+      } else if (subSchema.type === 'object') {
+        // check objects subproperties
+        const transformed = {};
+        for (let key of Object.keys(toInspect)) {
+          transformed[key] = await this.applyIfEncrypted(subSchema.properties[key], toInspect[key], toApply);
+        }
+        return transformed;
+      }
+      // no encryption required
+      return toInspect;
+    }
+  }
+
+  /**
+   * checks if given property is a `ContainerFile` array and decrypts in that case
+   *
+   * @param      {string}  entryName  name of the property
+   * @param      {any}     value      (raw) value to analyze
+   */
+  private async decryptFilesIfRequired(propertyName: string, value: any): Promise<ContainerFile[]> {
+    let result = value;
+    const description = await this.getDescription();
+    if (!description.dataSchema || !description.dataSchema[propertyName]) {
+      throw new Error(`could not find description for entry "${propertyName}"`);
+    }
+
+    const decrypt = async (toDecrypt) => {
+      return (await this.options.dataContract.decrypt(
+        toDecrypt,
+        this.contract,
+        this.config.accountId,
+        propertyName,
+      )).private;
+    };
+    result = await this.applyIfEncrypted(description.dataSchema[propertyName], value, decrypt);
+
+    return result;
+  }
+
+  /**
    * create ajv schema (without $id value) by analyzing value
    *
    * @param      {any}    value    value to analyze
@@ -980,6 +1082,37 @@ export class Container extends Logger {
       }
     }
     return schema;
+  }
+
+  /**
+   * checks if given property is a `ContainerFile` array and encrypts in that case
+   *
+   * @param      {string}             propertyName  name of the property
+   * @param      {ContainerFile|any}  value         value to encrypt (if required)
+   */
+  private async encryptFilesIfRequired(
+    propertyName: string,
+    value: ContainerFile[]|any,
+  ): Promise<any> {
+    let result = value;
+    const description = await this.getDescription();
+    if (!description.dataSchema || !description.dataSchema[propertyName]) {
+      throw new Error(`could not find description for entry "${propertyName}"`);
+    }
+    const blockNr = await this.options.web3.eth.getBlockNumber();
+    const encrypt = async (toEncrypt) => {
+      return this.options.dataContract.encrypt(
+        { private: toEncrypt },
+        this.contract,
+        this.config.accountId,
+        propertyName,
+        blockNr,
+        'aesBlob',
+      );
+    };
+    result = await this.applyIfEncrypted(description.dataSchema[propertyName], value, encrypt);
+
+    return result;
   }
 
   /**
@@ -1173,7 +1306,7 @@ export class Container extends Logger {
   /**
    * wrap try, catch around promise and throw error with message if rejected
    *
-   * @param      {string}      task     name of a task, is inlcuded in error message
+   * @param      {string}      task     name of a task, is included in error message
    * @param      {Promise<any>}  promise  promise to await
    */
   private async wrapPromise(task: string, promise: Promise<any>): Promise<any> {

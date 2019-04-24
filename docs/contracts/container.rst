@@ -1256,6 +1256,20 @@ config properties, specific to `Container` instances
 
 
 
+.. _container_ContainerFile:
+
+-------------
+ContainerFile
+-------------
+
+description and content of a single file, usually used in arrays (add/get/set operations)
+
+#. ``name`` - ``string``: filename, e.g. ``animal-animal-photography-cat-96938.jpg``
+#. ``fileType`` - ``string``: mime type of the file, e.g. ``image/jpeg``
+#. ``file`` - ``Buffer``: file data as Buffer
+
+
+
 .. _container_ContainerShareConfig:
 
 --------------------
@@ -1335,7 +1349,7 @@ Default description used when no specific description is given to :ref:`.create 
 defaultSchemas (static)
 -----------------------
 
-Predefined simple schemas, contains basic schemas for number, object, string entries and their list variant.
+Predefined simple schemas, contains basic schemas for files, number, object, string entries and their list variants.
 
 
 

@@ -7,6 +7,7 @@
 - add `ensureProperty`, that allows to add entries or lists to containers without setting values
 - add default schemas for property types
 - add `getContainerShareConfigs` to retrieve all share configs
+- add file handling to `Container` module
 
 ### Fixes
 - fix `getMembers` user fetching (now returns all accounts and not only the first 10)
