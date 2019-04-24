@@ -44,6 +44,7 @@ import {
 import { accountMap } from './accounts';
 import { accounts } from './accounts';
 import { Aes } from '../encryption/aes';
+import { AesBlob } from '../encryption/aes-blob';
 import { AesEcb } from '../encryption/aes-ecb';
 import { BaseContract } from '../contracts/base-contract/base-contract';
 import { Verifications } from '../verifications/verifications';
@@ -190,7 +191,7 @@ export class TestUtils {
     return contracts;
   }
 
-  static getCryptoProvider() {
+  static getCryptoProvider(dfs?: any) {
     const cryptor = new Aes();
     const unencryptedCryptor = new Unencrypted();
     const cryptoConfig = {};
@@ -198,6 +199,9 @@ export class TestUtils {
     cryptoConfig['aes'] = cryptor;
     cryptoConfig['aesEcb'] = new AesEcb();
     cryptoConfig['unencrypted'] = unencryptedCryptor;
+    if (dfs) {
+      cryptoConfig['aesBlob'] = new AesBlob({ dfs });
+    }
     return new CryptoProvider(cryptoConfig);
   }
 
@@ -209,7 +213,7 @@ export class TestUtils {
     const executor = await this.getExecutor(web3);
     executor.eventHub = eventHub;
     return new DataContract({
-      cryptoProvider: this.getCryptoProvider(),
+      cryptoProvider: this.getCryptoProvider(dfs),
       dfs,
       executor,
       loader: await this.getContractLoader(web3),
