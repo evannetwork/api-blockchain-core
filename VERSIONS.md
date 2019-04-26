@@ -1,6 +1,12 @@
-# blockchain-core
+# api-blockchain-core
 
 ## Next Version
+### Features
+### Fixes
+### Deprecations
+
+
+## Version 2.2.0
 ### Features
 - add the ability to parse accountid + password in key config for runtime
 - add static functions to `Container` to save, get and delete templates on users profile
@@ -11,8 +17,6 @@
 
 ### Fixes
 - fix `getMembers` user fetching (now returns all accounts and not only the first 10)
-
-### Deprecations
 
 
 ## Version 2.1.1
