@@ -112,10 +112,14 @@ export class RightsAndRoles extends Logger {
     // array of functions that retrieve an element as a promise
     const retrievals = [...Array(parseInt(roleCount, 10))].map(
       (_, role) => role).reverse().map(role => async () => {
+        const count = parseInt(
+          await this.options.executor.executeContractCall(rolesContract, 'role2userCount', role),
+          10);
         result[role] = await this.options.nameResolver.getArrayFromUintMapping(
           rolesContract,
           () => this.options.executor.executeContractCall(rolesContract, 'role2userCount', role),
           (i) => this.options.executor.executeContractCall(rolesContract, 'role2index2user', role, i + 1),
+          count,
         );
       });
     // run these function windowed, chain .then()s, return result array

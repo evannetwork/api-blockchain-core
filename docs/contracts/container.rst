@@ -239,8 +239,179 @@ Example
   // 0x0000000000000000000000000000000000005678
 
 
+--------------------------------------------------------------------------------
+
+.. _container_deleteContainerTemplate:
+
+deleteContainerTemplate
+================================================================================
+
+.. code-block:: typescript
+
+  container.deleteContainerTemplate(profile);
+
+Remove a container template from a users profile.
+
+----------
+Parameters
+----------
+
+#. ``Profile`` - |source profile|_: profile instance
+#. ``name`` - ``string``: template name
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await Container.deleteContainerTemplate(profile, 'awesometemplate');
+
 
 --------------------------------------------------------------------------------
+
+
+
+.. _container_getContainerTemplate:
+
+getContainerTemplate
+================================================================================
+
+.. code-block:: typescript
+
+  container.getContainerTemplate(profile, name);
+
+Get one container template for a users profile by name.
+
+----------
+Parameters
+----------
+
+#. ``Profile`` - |source profile|_: profile instance
+#. ``name`` - ``string``: template name
+
+-------
+Returns
+-------
+
+``Promise`` returns ``ContainerTemplate``
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const accountId1 = '0x0000000000000000000000000000000000000001';
+  const template = await Container.getContainerTemplate(profile, 'awesometemplate');
+
+  // create container with accountId1
+  const container = await Container.create(options, {
+    ...config,
+    accountId: accountId1,
+    description: template.description,
+    template: template.template,
+  });
+
+
+
+--------------------------------------------------------------------------------
+
+
+.. _container_getContainerTemplates:
+
+getContainerTemplates
+================================================================================
+
+.. code-block:: typescript
+
+  container.getContainerTemplates(profile);
+
+Get all container templates for a users profile.
+
+----------
+Parameters
+----------
+
+#. ``Profile`` - |source profile|_: profile instance
+#. ``loadContracts`` - boolean (default = true): run loadBcContract directly for all saved entries (if false, unresolved ipld tree will be returned as value)
+
+-------
+Returns
+-------
+
+``Promise`` returns ``Array<ContainerTemplate>``
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const accountId1 = '0x0000000000000000000000000000000000000001';
+  const templates = await Container.getContainerTemplates(profile);
+
+  // create container with accountId1
+  const container = await Container.create(options, {
+    ...config,
+    accountId: accountId1,
+    description: templates['awesometemplate'].description,
+    template: templates['awesometemplate'].template,
+  });
+
+
+--------------------------------------------------------------------------------
+
+
+.. _container_saveContainerTemplate:
+
+saveContainerTemplate
+================================================================================
+
+.. code-block:: typescript
+
+  container.saveContainerTemplate(profile);
+
+Persists a template including an dbcp description to the users profile.
+
+----------
+Parameters
+----------
+
+#. ``Profile`` - |source profile|_: profile instance
+#. ``name`` - ``string``: template name
+#. ``description`` - ``any``: predefined template dbcp description
+#. ``template`` - ``ContainerTemplate``: container template object
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const templates = await Container.saveContainerTemplate(
+    profile,
+    'awesometemplate',
+    { ... }
+  );
+
+
+
+
+--------------------------------------------------------------------------------
+
 
 .. _container_toTemplate:
 
@@ -678,14 +849,14 @@ Example
 
 --------------------------------------------------------------------------------
 
-.. _container_getContainerShareConfigForAccounrt:
+.. _container_getContainerShareConfigForAccount:
 
-getContainerShareConfigForAccounrt
+getContainerShareConfigForAccount
 ================================================================================
 
 .. code-block:: typescript
 
-  container.getContainerShareConfigForAccounrt(accountId);
+  container.getContainerShareConfigForAccount(accountId);
 
 Check permissions for given account and return them as ContainerShareConfig object.
 
@@ -739,6 +910,56 @@ Example
 
 
 
+--------------------------------------------------------------------------------
+
+.. _container_getContainerShareConfigs:
+
+getContainerShareConfigs
+================================================================================
+
+.. code-block:: typescript
+
+  container.getContainerShareConfigs();
+
+Check permissions for given account and return them as ContainerShareConfig object.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``ContainerShareConfig[]``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const accountId1 = '0x0000000000000000000000000000000000000001';  // account in runtime
+  const accountId2 = '0x0000000000000000000000000000000000000002';  // account to invite
+
+  const container = await Container.create(runtime, defaultConfig);
+  const randomString1 = Math.floor(Math.random() * 1e12).toString(36);
+  await container.setEntry('testField1', randomString1);
+  const randomString2 = Math.floor(Math.random() * 1e12).toString(36);
+  await container.setEntry('testField2', randomString2);
+
+  await container.shareProperties([
+    { accountId: accountId2, readWrite: ['testField1'], read: ['testField2'] },
+  ]);
+
+  console.dir(await container.getContainerShareConfigs());
+  // Output:
+  // [ { accountId: '0x0000000000000000000000000000000000000001',
+  //   readWrite: [ 'testField1', 'testField2' ] },
+  // { accountId: '0x0000000000000000000000000000000000000002',
+  //   read: [ 'testField2' ],
+  //   readWrite: [ 'testField1' ] } ]
+
+
+
+--------------------------------------------------------------------------------
+
 = Validating Containers =
 =========================
 
@@ -753,7 +974,10 @@ addVerifications
 
 Add verifications to this container; this will also add verifications to contract description.
 
-Due to the automatic expansion of the contract description, this function can only be called by the container owner.
+If the calling account is the owner of the identity of the container
+
+- the description will is automatically updated with tags for verifications
+- verifications issued with this function will be accepted automatically
 
 See interface ``ContainerVerificationEntry`` for input data format.
 
@@ -980,6 +1204,35 @@ Example
 
 --------------------------------------------------------------------------------
 
+.. _container_ensureProperty:
+
+ensureProperty
+================================================================================
+
+.. code-block:: typescript
+
+  container.ensureProperty(propertyName, dataSchema[, propertyType]);
+
+Ensure that container supports given property.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await container.ensureProperty('testField', Container.defaultSchemas.stringEntry);
+
+
+
+--------------------------------------------------------------------------------
+
 Additional Components
 ======================
 
@@ -1000,6 +1253,20 @@ config properties, specific to `Container` instances
 #. ``description`` - ``string`` (optional): description has to be passed to ``.create`` to apply it to to contract
 #. ``factoryAddress`` - ``string`` (optional): factory address can be passed to ``.create`` for customer container factory
 #. ``template`` - ``string|ContainerTemplate`` (optional): template to be used in ``.create``, can be string with name or a ``ContainerTemplate``
+
+
+
+.. _container_ContainerFile:
+
+-------------
+ContainerFile
+-------------
+
+description and content of a single file, usually used in arrays (add/get/set operations)
+
+#. ``name`` - ``string``: filename, e.g. ``animal-animal-photography-cat-96938.jpg``
+#. ``fileType`` - ``string``: mime type of the file, e.g. ``image/jpeg``
+#. ``file`` - ``Buffer``: file data as Buffer
 
 
 
@@ -1061,6 +1328,63 @@ data for verifications for containers
 
 
 
+--------------------------------------------------------------------------------
+
+Public Properties
+=================
+
+.. _container_defaultDescription:
+
+---------------------------
+defaultDescription (static)
+---------------------------
+
+Default description used when no specific description is given to :ref:`.create <container_create>`.
+
+
+
+.. _container_defaultSchemas:
+
+-----------------------
+defaultSchemas (static)
+-----------------------
+
+Predefined simple schemas, contains basic schemas for files, number, object, string entries and their list variants.
+
+
+
+.. _container_defaultTemplate:
+
+------------------------
+defaultTemplate (static)
+------------------------
+
+Default template used when no specific description is given to :ref:`.create <container_create>`. Default template is ``metadata``.
+
+
+
+.. _container_profileTemplatesKey:
+
+----------------------------
+profileTemplatesKey (static)
+----------------------------
+
+Key that is used in user profile to store templates, default is ``templates.datacontainer.digitaltwin.evan``
+
+
+
+.. _container_templates:
+
+------------------
+templates (static)
+------------------
+
+Predefined templates for containers, currently only contains the ``metadata`` template.
+
+
+
+--------------------------------------------------------------------------------
+
 .. required for building markup
 
 .. |source contractLoader| replace:: ``ContractLoader``
@@ -1086,6 +1410,9 @@ data for verifications for containers
 
 .. |source nameResolver| replace:: ``NameResolver``
 .. _source nameResolver: ../blockchain/name-resolver.html
+
+.. |source profile| replace:: ``Profile``
+.. _source profile: ../profile/profile.html
 
 .. |source rightsAndRoles| replace:: ``RightsAndRoles``
 .. _source rightsAndRoles: ../contracts/rights-and-roles.html
