@@ -67,10 +67,10 @@ export { Sharing } from './contracts/sharing';
 export { Verifications, VerificationsStatus } from './verifications/verifications';
 export { Votings, MemberOptions, ProposalInfo, ProposalInfos, ProposalOptions, VotingsContractOptions } from './votings/votings';
 export { Wallet } from './contracts/wallet';
-export { Container, ContainerConfig, ContainerTemplate, ContainerTemplateProperty,
-  ContainerShareConfig, ContainerOptions } from './contracts/digital-twin/container';
+export { Container, ContainerConfig, ContainerFile, ContainerTemplate, ContainerTemplateProperty,
+  ContainerShareConfig, ContainerOptions, } from './contracts/digital-twin/container';
 export { DigitalTwin, DigitalTwinEntryType, DigitalTwinConfig, DigitalTwinIndexEntry,
-  DigitalTwinVerificationEntry } from './contracts/digital-twin/digital-twin';
+  DigitalTwinVerificationEntry, } from './contracts/digital-twin/digital-twin';
 
 /******** export this libraries to be able to build the blockchain-core into an umd bundle ********/
 import Web3 = require('web3');
