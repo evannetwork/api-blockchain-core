@@ -399,7 +399,7 @@ export class Container extends Logger {
     profile: Profile,
     loadContracts = true
   ): Promise<{[id: string]: { description: any, template: ContainerTemplate }}> {
-    const bcContracts = await profile.getBcContracts(Container.profileTemplatesKey);
+    const bcContracts = (await profile.getBcContracts(Container.profileTemplatesKey)) || { };
     Ipld.purgeCryptoInfo(bcContracts);
 
     if (loadContracts) {
