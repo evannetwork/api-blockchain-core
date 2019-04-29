@@ -1,11 +1,22 @@
-# blockchain-core
+# api-blockchain-core
 
 ## Next Version
 ### Features
-- add static functions to `Container` to save, get and delete templates on users profile
-
 ### Fixes
 ### Deprecations
+
+
+## Version 2.2.0
+### Features
+- add the ability to parse accountid + password in key config for runtime
+- add static functions to `Container` to save, get and delete templates on users profile
+- add `ensureProperty`, that allows to add entries or lists to containers without setting values
+- add default schemas for property types
+- add `getContainerShareConfigs` to retrieve all share configs
+- add file handling to `Container` module
+
+### Fixes
+- fix `getMembers` user fetching (now returns all accounts and not only the first 10)
 
 
 ## Version 2.1.1
@@ -72,7 +83,7 @@
 - add licenses to dbcp files
 
 ### Fixes
-- remove `OriginIdentity`, as `ClaimHolder` is used for identities 
+- remove `OriginIdentity`, as `ClaimHolder` is used for identities
 
 
 ## Version 1.6.1
@@ -202,7 +213,7 @@
 - fix unbound entry retrieval in DataContract.getListEntries by adding paging to it
 - add `removeAccountFromRole` and `transferOwnership` to `RightsAndRoles` for better permission management
 - make `extendSharings` publicly accessible for adding properties to sharings withou saving them
-- add `createSharing` to `DataContract` and accept a sharings hash in `createContract` , which allows to decouple sharing creation and contract creation 
+- add `createSharing` to `DataContract` and accept a sharings hash in `createContract` , which allows to decouple sharing creation and contract creation
 - accept ipld hashes in `storeForAccount` in `Profile` to decouple tree encryption and property storing
 - add support for multi-sharings to `Sharings` module
 - add multi-sharing support to `ServiceContract` module

@@ -25,10 +25,12 @@
   https://evan.network/license/
 */
 
-import 'mocha';
-import { expect, use } from 'chai';
-import * as chaiAsPromised from 'chai-as-promised';
+import { promisify } from 'util';
+import { readFile } from 'fs';
 
+import 'mocha';
+import * as chaiAsPromised from 'chai-as-promised';
+import { expect, use } from 'chai';
 import {
   Executor,
   Ipfs,
@@ -36,6 +38,7 @@ import {
 
 import { accounts } from '../../test/accounts';
 import { TestUtils } from '../../test/test-utils';
+import { VerificationsStatus } from '../../verifications/verifications';
 import {
   Container,
   ContainerConfig,
@@ -74,7 +77,7 @@ describe('Container', function() {
       const requestedKeys = [sha3(accountId), ...accounts.map(partner => sha9(accountId, partner))];
       runtimes[accountId] = {
         contractLoader: await TestUtils.getContractLoader(web3),
-        cryptoProvider: await TestUtils.getCryptoProvider(),
+        cryptoProvider: await TestUtils.getCryptoProvider(dfs),
         dataContract: await TestUtils.getDataContract(web3, dfs, requestedKeys),
         description: await TestUtils.getDescription(web3, dfs, requestedKeys),
         executor,
@@ -92,7 +95,8 @@ describe('Container', function() {
       template: 'metadata',
     };
     // create factory for test
-    const factory = await executor.createContract('ContainerDataContractFactory', [], { from: accounts[0], gas: 6e6 });
+    const factory = await executor.createContract(
+      'ContainerDataContractFactory', [], { from: accounts[0], gas: 6e6 });
     defaultConfig.factoryAddress = factory.options.address;
     console.log(`Container tests are using factory "${defaultConfig.factoryAddress}"`);
   });
@@ -123,9 +127,23 @@ describe('Container', function() {
       const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
       expect(await container.getEntry('type')).to.eq(template.type);
     });
-  });
 
-  describe('when setting entries', async () => {
+    it('can add new entry properties', async() => {
+      const container = await Container.create(runtimes[owner], defaultConfig);
+      await container.ensureProperty('testField', Container.defaultSchemas.stringEntry);
+      await container.shareProperties([{ accountId: consumer, readWrite: ['testField'] }]);
+
+      const randomString = Math.floor(Math.random() * 1e12).toString(36);
+      const consumerContainer = new Container(
+        runtimes[consumer],
+        { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
+      );
+      await consumerContainer.setEntry('testField', randomString);
+
+      expect(await container.getEntry('testField')).to.eq(randomString);
+      expect(await consumerContainer.getEntry('testField')).to.eq(randomString);
+    });
+
     it('can set and get entries for properties defined in (custom) template', async () => {
       const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
       template.properties.testField = {
@@ -153,19 +171,63 @@ describe('Container', function() {
       expect(containerDescription.dataSchema.testField).to.deep.eq(expectedSchema);
     });
 
-    it('can set list entries if not defined in template (auto adds properties)', async () => {
+    it('can handle files', async () => {
       const container = await Container.create(runtimes[owner], defaultConfig);
-      const randomString = Math.floor(Math.random() * 1e12).toString(36);
-      await container.addListEntries('testList', [ randomString ]);
+      await container.ensureProperty('sampleFiles', Container.defaultSchemas.filesEntry);
 
-      expect(await container.getListEntries('testList')).to.deep.eq([ randomString ]);
-      const expectedSchema = {
-        $id: 'testList_schema',
-        type: 'array',
-        items: { type: 'string'},
+      const file = await promisify(readFile)(
+        `${__dirname}/testfiles/animal-animal-photography-cat-96938.jpg`);
+      const sampleFiles = [{
+        name: 'animal-animal-photography-cat-96938.jpg',
+        fileType: 'image/jpeg',
+        file,
+      }];
+      const sampleFilesBackup = [{
+        name: 'animal-animal-photography-cat-96938.jpg',
+        fileType: 'image/jpeg',
+        file,
+      }];
+      await container.setEntry('sampleFiles', sampleFiles);
+
+      expect(await container.getEntry('sampleFiles')).to.deep.eq(sampleFilesBackup);
+    });
+
+    it('can handle files in complex objects', async () => {
+      const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
+      template.properties.complexItem = {
+        dataSchema: {
+          type: 'object',
+          properties: {
+            description: Container.defaultSchemas.stringEntry,
+            images: Container.defaultSchemas.filesEntry
+          },
+        },
+        permissions: { 0: ['set'] },
+        type: 'entry',
       };
-      const containerDescription = await container.getDescription();
-      expect(containerDescription.dataSchema.testList).to.deep.eq(expectedSchema);
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+
+      const file = await promisify(readFile)(
+        `${__dirname}/testfiles/animal-animal-photography-cat-96938.jpg`);
+      const sampleValue = {
+        description: 'what a cute kitten',
+        images: [{
+          name: 'animal-animal-photography-cat-96938.jpg',
+          fileType: 'image/jpeg',
+          file,
+        }],
+      }
+      const sampleValueBackup = {
+        description: 'what a cute kitten',
+        images: [{
+          name: 'animal-animal-photography-cat-96938.jpg',
+          fileType: 'image/jpeg',
+          file,
+        }],
+      };
+      await container.setEntry('complexItem', sampleValue);
+
+      expect(await container.getEntry('complexItem')).to.deep.eq(sampleValueBackup);
     });
   });
 
@@ -181,6 +243,137 @@ describe('Container', function() {
       const randomNumbers = [...Array(8)].map(() => Math.floor(Math.random() * 1e12));
       await container.addListEntries('testList', randomNumbers);
       expect(await container.getListEntries('testList')).to.deep.eq(randomNumbers);
+    });
+
+    it('can set list entries if not defined in template (auto adds properties)', async () => {
+      const container = await Container.create(runtimes[owner], defaultConfig);
+      const randomString = Math.floor(Math.random() * 1e12).toString(36);
+      await container.addListEntries('testList', [ randomString ]);
+
+      expect(await container.getListEntries('testList')).to.deep.eq([ randomString ]);
+      const expectedSchema = {
+        $id: 'testList_schema',
+        type: 'array',
+        items: { type: 'string'},
+      };
+      const containerDescription = await container.getDescription();
+      expect(containerDescription.dataSchema.testList).to.deep.eq(expectedSchema);
+    });
+
+    it('can add new list properties', async() => {
+      const container = await Container.create(runtimes[owner], defaultConfig);
+      await container.ensureProperty('testList', Container.defaultSchemas.stringList);
+      await container.shareProperties([{ accountId: consumer, readWrite: ['testList'] }]);
+
+      const randomStrings = [...Array(3)].map(() => Math.floor(Math.random() * 1e12).toString(36));
+      const consumerContainer = new Container(
+        runtimes[consumer],
+        { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
+      );
+      await consumerContainer.addListEntries('testList', randomStrings);
+
+      expect(await container.getListEntries('testList')).to.deep.eq(randomStrings);
+      expect(await consumerContainer.getListEntries('testList')).to.deep.eq(randomStrings);
+    });
+
+    it('can handle files', async () => {
+      const container = await Container.create(runtimes[owner], defaultConfig);
+      await container.ensureProperty('testList', Container.defaultSchemas.filesList);
+
+      const file1 = await promisify(readFile)(
+        `${__dirname}/testfiles/animal-animal-photography-cat-96938.jpg`);
+      const file2 = await promisify(readFile)(
+        `${__dirname}/testfiles/adorable-animal-animal-photography-774731.jpg`);
+      const sampleFiles = [
+        [{
+          name: 'animal-animal-photography-cat-96938.jpg',
+          fileType: 'image/jpeg',
+          file: file1,
+        }],
+        [{
+          name: 'adorable-animal-animal-photography-774731.jpg',
+          fileType: 'image/jpeg',
+          file: file2,
+        }],
+      ];
+      const sampleFilesBackup = [
+        [{
+          name: 'animal-animal-photography-cat-96938.jpg',
+          fileType: 'image/jpeg',
+          file: file1,
+        }],
+        [{
+          name: 'adorable-animal-animal-photography-774731.jpg',
+          fileType: 'image/jpeg',
+          file: file2,
+        }],
+      ];
+      await container.addListEntries('testList', sampleFiles);
+
+      expect(await container.getListEntries('testList')).to.deep.eq(sampleFilesBackup);
+    });
+
+    it('can handle files in complex objects', async () => {
+      const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
+      template.properties.complexItemList = {
+        dataSchema: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              description: Container.defaultSchemas.stringEntry,
+              images: Container.defaultSchemas.filesEntry
+            },
+          },
+        },
+        permissions: { 0: ['set'] },
+        type: 'entry',
+      };
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+
+      const file1 = await promisify(readFile)(
+        `${__dirname}/testfiles/animal-animal-photography-cat-96938.jpg`);
+      const file2 = await promisify(readFile)(
+        `${__dirname}/testfiles/adorable-animal-animal-photography-774731.jpg`);
+      const sampleFiles = [
+        {
+          description: 'what a cute kitten',
+          images: [{
+            name: 'animal-animal-photography-cat-96938.jpg',
+            fileType: 'image/jpeg',
+            file: file1,
+          }]
+        },
+        {
+          description: 'this one is even cuter',
+          images: [{
+            name: 'adorable-animal-animal-photography-774731.jpg',
+            fileType: 'image/jpeg',
+            file: file2,
+          }],
+        },
+      ];
+      const sampleFilesBackup = [
+        {
+          description: 'what a cute kitten',
+          images: [{
+            name: 'animal-animal-photography-cat-96938.jpg',
+            fileType: 'image/jpeg',
+            file: file1,
+          }]
+        },
+        {
+          description: 'this one is even cuter',
+          images: [{
+            name: 'adorable-animal-animal-photography-774731.jpg',
+            fileType: 'image/jpeg',
+            file: file2,
+          }],
+        },
+      ];
+      await container.addListEntries('complexItemList', sampleFiles);
+
+      expect(await container.getListEntries('complexItemList')).to.deep.eq(sampleFilesBackup);
     });
   });
 
@@ -247,7 +440,7 @@ describe('Container', function() {
         permissions: { 0: ['set'] },
         type: 'entry',
       };
-      
+
       // save it to the profile
       await Container.saveContainerTemplate(profile, templateName, description, template);
 
@@ -367,8 +560,10 @@ describe('Container', function() {
         // now add list entry with invited user
         const newRandomString = Math.floor(Math.random() * 1e12).toString(36);
         await consumerContainer.addListEntries('testList', [newRandomString]);
-        expect(await consumerContainer.getListEntries('testList')).to.deep.eq([randomString, newRandomString]);
-        expect(await container.getListEntries('testList')).to.deep.eq([randomString, newRandomString]);
+        expect(await consumerContainer.getListEntries('testList'))
+          .to.deep.eq([randomString, newRandomString]);
+        expect(await container.getListEntries('testList'))
+          .to.deep.eq([randomString, newRandomString]);
       });
     });
 
@@ -482,6 +677,64 @@ describe('Container', function() {
       // all validation lists should have at least 1 valid verification
       const allValid = verificationsResults.every(vs => vs.some(v => v.valid));
       expect(allValid).to.be.true;
+      // all validations should be confirmed, as issuing account is owner
+      const allConfirmed = verificationsResults.every(
+        vs => vs.some(v => v.status === VerificationsStatus.Confirmed));
+      expect(allConfirmed).to.be.true;
+    });
+  });
+
+  describe('when fetching permissions from container', async() => {
+    it('can fetch permissions for a single account', async() => {
+      const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
+      template.properties.testField = {
+        dataSchema: { type: 'string' },
+        permissions: { 0: ['set'] },
+        type: 'entry',
+      };
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+      const randomString = Math.floor(Math.random() * 1e12).toString(36);
+      await container.setEntry('testField', randomString);
+      expect(await container.getEntry('testField')).to.eq(randomString);
+
+      await container.shareProperties([{ accountId: consumer, read: ['testField'] }]);
+      const consumerContainer = new Container(
+        runtimes[consumer],
+        { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
+      );
+      expect(await consumerContainer.getEntry('testField')).to.eq(randomString);
+
+      const shareConfig = await container.getContainerShareConfigForAccount(consumer);
+      expect(shareConfig).to.haveOwnProperty('read');
+      expect(shareConfig.read).to.include('testField');
+    });
+
+    it('can fetch permissions for all accounts', async() => {
+      const container = await Container.create(runtimes[owner], defaultConfig);
+      const randomString1 = Math.floor(Math.random() * 1e12).toString(36);
+      await container.setEntry('testField1', randomString1);
+      const randomString2 = Math.floor(Math.random() * 1e12).toString(36);
+      await container.setEntry('testField2', randomString2);
+
+      await container.shareProperties([
+        { accountId: consumer, readWrite: ['testField1'] },
+        { accountId: consumer, read: ['testField2'] },
+      ]);
+      const consumerContainer = new Container(
+        runtimes[consumer],
+        { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
+      );
+      expect(await consumerContainer.getEntry('testField1')).to.eq(randomString1);
+      expect(await consumerContainer.getEntry('testField2')).to.eq(randomString2);
+
+
+      const expected = [
+        { accountId: owner, readWrite: ['testField1', 'testField2'] },
+        { accountId: consumer, readWrite: ['testField1'], read: ['testField2'] },
+      ];
+      const shareConfigs = await container.getContainerShareConfigs();
+      const byAccountId = (e1, e2) => { return e1.accountId < e2.accountId ? -1 : 1; };
+      expect(shareConfigs.sort(byAccountId)).to.deep.eq(expected.sort(byAccountId));
     });
   });
 });

@@ -38,6 +38,7 @@ import { config } from '../../config';
 import { Container, ContainerConfig } from './container';
 import { Ipld } from '../../dfs/ipld';
 import { TestUtils } from '../../test/test-utils';
+import { VerificationsStatus } from '../../verifications/verifications';
 import {
   DigitalTwin,
   DigitalTwinConfig,
@@ -354,6 +355,10 @@ describe('DigitalTwin', function() {
       // all validation lists should have at least 1 valid verification
       const allValid = verificationsResults.every(vs => vs.some(v => v.valid));
       expect(allValid).to.be.true;
+      // all validations should be confirmed, as issuing account is owner
+      const allConfirmed = verificationsResults.every(
+        vs => vs.some(v => v.status === VerificationsStatus.Confirmed));
+      expect(allConfirmed).to.be.true;
     });
   });
 

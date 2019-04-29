@@ -169,6 +169,30 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   cryptoConfig['aesBlob'] = new AesBlob({ dfs, log });
   cryptoConfig['aesEcb'] = new AesEcb({ log });
   const cryptoProvider = new CryptoProvider(cryptoConfig);
+
+
+  // check and modify if any accountid with password is provided
+  if (runtimeConfig.keyConfig) {
+    for (let accountId in runtimeConfig.keyConfig) {
+      // check if the key is a valid accountId
+      if (accountId.length === 42) {
+        const sha9Account = web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
+  [web3.utils.soliditySha3(accountId), web3.utils.soliditySha3(accountId)].sort());
+        const sha3Account = web3.utils.soliditySha3(accountId)
+        const dataKey = web3.utils
+          .soliditySha3(accountId + runtimeConfig.keyConfig[accountId])
+          .replace(/0x/g, '');
+        // now add the different hashed accountids and datakeys to the runtimeconfig
+        runtimeConfig.keyConfig[sha3Account] = dataKey;
+        runtimeConfig.keyConfig[sha9Account] = dataKey;
+
+        // at least delete the old key
+        delete runtimeConfig.keyConfig[accountId];
+      }
+    }
+  }
+
+
   const keyProvider = options.keyProvider || new KeyProvider({ keys: runtimeConfig.keyConfig, log, });
 
   // description

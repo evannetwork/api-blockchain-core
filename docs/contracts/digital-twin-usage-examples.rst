@@ -241,6 +241,79 @@ Now ``customer`` wants to invite ``serviceTechnician`` and allow this account to
 
 --------------------------------------------------------------------------------
 
+.. _granting-handling-files:
+
+Handling Files
+==============
+
+Containers can hold files as well. File handling follows a few simple principles:
+
+- files are stored encrypted (as everything in containers is stored encrypted)
+- files are always stored as an array of files (think of it like a folder with files)
+- files are encrypted, uploaded and a reference is stored as a file at the contract (sounds like the default `Hybrid Storage <https://evannetwork.github.io/docs/how_it_works/services/ipfsfilehandling.html#hybrid-storage>`_) approach, but is a reapplication to itself, as encrypted additional files with references to the original encrypted files are stored at the contract
+
+Okay, let's add some files to a container (taken from our `tests <https://github.com/evannetwork/api-blockchain-core/blob/master/src/contracts/digital-twin/container.spec.ts>`_).
+
+A file needs to be provided as a buffer. In NodeJs, this can be done with ``fs.readFile``
+
+.. code-block:: typescript
+
+  import { promisify } from 'util';
+  import { readFile } from 'fs';
+
+  const file = await promisify(readFile)(
+  `${__dirname}/testfiles/animal-animal-photography-cat-96938.jpg`);
+
+The file is expected to be wrapped in a specific container format, which is defined in the |source container_containerFile|_ interface. So let's build such a file object and store it in an array, as files are always provided as arrays of |source container_containerFile|_ instances to the API:
+
+.. code-block:: typescript
+
+  const sampleFiles = [{
+    name: 'animal-animal-photography-cat-96938.jpg',
+    fileType: 'image/jpeg',
+    file,
+  }];
+
+If not already done, create (or load) a container:
+
+.. code-block:: typescript
+
+  const container = await Container.create(runtime, config);
+
+If not already done, add a field for files to our container, for this the static property ``Container.defaultTemplates`` can be useful:
+
+.. code-block:: typescript
+
+  await container.ensureProperty('sampleFiles', Container.defaultSchemas.filesEntry);
+
+So now everything is set up and we can store our file:
+
+.. code-block:: typescript
+
+  await container.setEntry('sampleFiles', sampleFiles);
+
+And later on we can retrieve our file with:
+
+.. code-block:: typescript
+
+  await container.getEntry('sampleFiles');
+
+That's it for the simple case. If you want to get fancy, you can have a look at the more complex examples in the tests. With the build in file handling you can:
+
+- store lists of files in an entry (this example) |br|
+  test path: |source container_testEntrySimple|_
+- store lists of files in complex objects (e.g. if you want to annotate them) |br|
+  test path: |source container_testEntryComplex|_
+- store a list of lists of files (hands up, who tripped, when reading this, *me too*, it's basically a list of directories),
+  this can be used to store different versions of files or separate file groups which have no relations between them
+  test path: |source container_testListSimple|_
+- store a list of lists of files (a combination between lists and complex objects) |br|
+  test path: |source container_testListComplex|_
+
+
+
+--------------------------------------------------------------------------------
+
 .. required for building markup
 
 .. |source container_addListEntries| replace:: ``container.addListEntries``
@@ -252,6 +325,9 @@ Now ``customer`` wants to invite ``serviceTechnician`` and allow this account to
 .. |source container_create| replace:: ``Container.create``
 .. _source container_create: ../contracts/container.html#create
 
+.. |source container_containerFile| replace:: ``ContainerFile``
+.. _source container_containerFile: ../contracts/container.html#containerfile
+
 .. |source container_getEntry| replace:: ``container.getEntry``
 .. _source container_getEntry: ../contracts/container.html#getentry
 
@@ -260,6 +336,18 @@ Now ``customer`` wants to invite ``serviceTechnician`` and allow this account to
 
 .. |source container_shareProperties| replace:: ``container.shareProperties``
 .. _source container_shareProperties: ../contracts/container.html#shareproperties
+
+.. |source container_testEntrySimple| replace:: ``Container/when setting entries/can handle files``
+.. _source container_testEntrySimple: https://github.com/evannetwork/api-blockchain-core/blob/master/src/contracts/digital-twin/container.spec.ts
+
+.. |source container_testEntryComplex| replace:: ``Container/when setting entries/can handle files in complex objects``
+.. _source container_testEntryComplex: https://github.com/evannetwork/api-blockchain-core/blob/master/src/contracts/digital-twin/container.spec.ts
+
+.. |source container_testListSimple| replace:: ``Container/when setting list entries/can handle files``
+.. _source container_testListSimple: https://github.com/evannetwork/api-blockchain-core/blob/master/src/contracts/digital-twin/container.spec.ts
+
+.. |source container_testListComplex| replace:: ``Container/when setting list entries/can handle files in complex objects``
+.. _source container_testListComplex: https://github.com/evannetwork/api-blockchain-core/blob/master/src/contracts/digital-twin/container.spec.ts
 
 .. |source digitalTwin_create| replace:: ``DigitalTwin.create``
 .. _source digitalTwin_create: ../contracts/digital-twin.html#create
@@ -272,3 +360,7 @@ Now ``customer`` wants to invite ``serviceTechnician`` and allow this account to
 
 .. |source digitalTwin_setDescription| replace:: ``digitalTwin.setDescription``
 .. _source digitalTwin_setDescription: ../contracts/digital-twin.html#setdescription
+
+.. |br| raw:: html
+
+   <br />
