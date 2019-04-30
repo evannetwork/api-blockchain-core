@@ -28,6 +28,7 @@
 import * as Throttle from 'promise-parallel-throttle';
 import BigNumber from 'bignumber.js';
 import { Mutex } from 'async-mutex';
+import { cloneDeep } from 'lodash';
 import {
   ContractLoader,
   CryptoProvider,
@@ -72,7 +73,7 @@ async function applyTemplate(
   }
 
   // add type property
-  const properties = JSON.parse(JSON.stringify(template.properties));
+  const properties = cloneDeep(template.properties);
   if (!properties.type) {
     properties.type = {
       dataSchema: { $id: 'type_schema', type: 'string' },
@@ -291,7 +292,7 @@ export class Container extends Logger {
   };
   public static defaultSchemas = {
     filesEntry: { type: 'string', $comment: '{"isEncryptedFile": true}' },
-    filesList: { type: 'array', items: { type: 'object', $comment: '{"isEncryptedFile": true}' } },
+    filesList: { type: 'array', items: { type: 'string', $comment: '{"isEncryptedFile": true}' } },
     numberEntry: { type: 'number' },
     numberList: { type: 'array', items: { type: 'number' } },
     objectEntry: { type: 'object' },
@@ -342,7 +343,7 @@ export class Container extends Logger {
     config: ContainerConfig,
   ): Promise<Container> {
     checkConfigProperties(config, ['description']);
-    const instanceConfig = JSON.parse(JSON.stringify(config));
+    const instanceConfig = cloneDeep(config);
 
     // convert template properties to jsonSchema
     if (instanceConfig.template.properties) {
@@ -591,7 +592,12 @@ export class Container extends Logger {
       (async () => {
         let value = await this.options.dataContract.getEntry(
           this.contract, entryName, this.config.accountId);
-        return this.decryptFilesIfRequired(entryName, value);
+
+        if (entryName !== 'type') {
+          value = await this.decryptFilesIfRequired(entryName, value);
+        }
+
+        return value;
       })(),
     );
   }
@@ -996,7 +1002,7 @@ export class Container extends Logger {
    */
   private async applyIfEncrypted(subSchema: any, toInspect: any, toApply: Function) {
     const usesEnryption = (schema) => {
-      if (schema.type === 'object' && schema.$comment) {
+      if (schema.type === 'string' && schema.$comment) {
         try {
           return !!JSON.parse(schema.$comment).isEncryptedFile;
         } catch (ex) {
@@ -1215,7 +1221,7 @@ export class Container extends Logger {
       }
       if (!description.dataSchema[name]) {
         const fieldId = name.replace(/[^a-zA-Z0-9]/g, '');
-        description.dataSchema[name] = JSON.parse(JSON.stringify(schema));
+        description.dataSchema[name] = cloneDeep(schema);
         description.dataSchema[name].$id = `${fieldId}_schema`;
         await this.setDescription(description);
       }

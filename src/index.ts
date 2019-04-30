@@ -76,6 +76,7 @@ export { DigitalTwin, DigitalTwinEntryType, DigitalTwinConfig, DigitalTwinIndexE
 import Web3 = require('web3');
 import prottle = require('prottle');
 import crypto = require('crypto');
+import lodash = require('lodash');
 import keystore = require('../libs/eth-lightwallet/keystore.js');
 // assign to export Buffer;
 const buffer = Buffer;
@@ -88,4 +89,4 @@ let logLog = [ ];
 // push everything into the logLog
 let logLogLevel = 0;
 
-export { Web3, prottle, crypto, keystore, Mnemonic, instanceId, logLog, logLogLevel, buffer }
+export { Web3, prottle, crypto, keystore, Mnemonic, instanceId, logLog, logLogLevel, buffer, lodash }
