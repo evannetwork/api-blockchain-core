@@ -291,7 +291,7 @@ export class Container extends Logger {
   };
   public static defaultSchemas = {
     filesEntry: { type: 'string', $comment: '{"isEncryptedFile": true}' },
-    filesList: { type: 'array', items: { type: 'string', $comment: '{"isEncryptedFile": true}' } },
+    filesList: { type: 'array', items: { type: 'object', $comment: '{"isEncryptedFile": true}' } },
     numberEntry: { type: 'number' },
     numberList: { type: 'array', items: { type: 'number' } },
     objectEntry: { type: 'object' },
@@ -996,9 +996,9 @@ export class Container extends Logger {
    */
   private async applyIfEncrypted(subSchema: any, toInspect: any, toApply: Function) {
     const usesEnryption = (schema) => {
-      if (schema.type === 'string' && schema.$comment) {
+      if (schema.type === 'object' && schema.$comment) {
         try {
-          return JSON.parse(schema.$comment).isEncryptedFile;
+          return !!JSON.parse(schema.$comment).isEncryptedFile;
         } catch (ex) {
           // ignore non-JSON comments
         }
