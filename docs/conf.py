@@ -17,6 +17,24 @@
 # sys.path.insert(0, os.path.abspath('.'))
 
 
+# -- Download needed additional documentation
+import os
+#https://raw.githubusercontent.com/evannetwork/dbcp/develop/docs/
+    
+    	# retrieve required docu files from dbcp
+#	wget  -P blockchain -N "https://raw.githubusercontent.com/evannetwork/dbcp/develop/docs/blockchain/account-store.rst"
+#	wget  -P blockchain -N "https://raw.githubusercontent.com/evannetwork/dbcp/develop/docs/blockchain/event-hub.rst"
+#	wget  -P blockchain -N "https://raw.githubusercontent.com/evannetwork/dbcp/develop/docs/blockchain/executor.rst"
+#	wget  -P blockchain -N "https://raw.githubusercontent.com/evannetwork/dbcp/develop/docs/blockchain/signer.rst"
+#	wget  -P common -N "https://raw.githubusercontent.com/evannetwork/dbcp/develop/docs/common/logger.rst"
+#	wget  -P common -N "https://raw.githubusercontent.com/evannetwork/dbcp/develop/docs/common/validator.rst"
+#	wget  -P contracts -N "https://raw.githubusercontent.com/evannetwork/dbcp/develop/docs/contracts/contract-loader.rst"
+#	wget  -P dfs -N "https://raw.githubusercontent.com/evannetwork/dbcp/develop/docs/dfs/dfs-interface.rst"
+#	wget  -P dfs -N "https://raw.githubusercontent.com/evannetwork/dbcp/develop/docs/dfs/ipfs.rst"
+#	wget  -P encryption -N "https://raw.githubusercontent.com/evannetwork/dbcp/develop/docs/encryption/cryptor-unencrypted.rst"
+os.system('wget  -P blockchain -N "https://raw.githubusercontent.com/evannetwork/dbcp/develop/docs/blockchain/account-store.rst"')
+
+
 # -- Project information -----------------------------------------------------
 
 project = u'blockchain-core'
