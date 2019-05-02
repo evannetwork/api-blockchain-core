@@ -2,7 +2,7 @@
 Sharing
 ================================================================================
 
-.. list-table:: 
+.. list-table::
    :widths: auto
    :stub-columns: 1
 
@@ -141,7 +141,7 @@ Parameters
     * ``executor`` - |source executor|_: |source executor|_ instance
     * ``keyProvider`` - |source keyProvider|_: |source keyProvider|_ instance
     * ``nameResolver`` - |source nameResolver|_: |source nameResolver|_ instance
-    * ``defaultCryptoAlgo`` - ``string`` (optional): crypto algorith name from |source cryptoProvider|, defaults to ``aes`` 
+    * ``defaultCryptoAlgo`` - ``string`` (optional): crypto algorith name from |source cryptoProvider|, defaults to ``aes``
     * ``log`` - ``Function`` (optional): function to use for logging: ``(message, level) => {...}``
     * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
@@ -477,7 +477,7 @@ Example
     const hashCryptor = cryptoProvider.getCryptorByCryptoAlgo('aesEcb');
     const hashKey = await hashCryptor.generateKey();
     await sharing.ensureHashKey(contract.options.address, accounts[0], accounts[1], hashKey);
-    const rerieved = sharing.ensureHashKey(contract.options.address, accounts[1]);
+    const retrieved = sharing.getHashKey(contract.options.address, accounts[1]);
     console.log(hashKey === retrieved);
     // Output:
     // true
