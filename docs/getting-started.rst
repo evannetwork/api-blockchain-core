@@ -51,13 +51,21 @@ Configuring and initializing blockchain core
       web3Provider: 'wss://testcore.evan.network/ws',
     };
 
-    // initialize dependencies
-    const web3 = new Web3();
-    web3.setProvider(new web3.providers.WebsocketProvider(runtimeConfig.web3Provider));
-    const dfs = new Ipfs({ remoteNode: new IpfsApi(runtimeConfig.ipfs), });
 
-    // create runtime
-    const runtime = await createDefaultRuntime(web3, dfs, { accountMap: runtimeConfig.accountMap, keyConfig: runtimeConfig.keyConfig });
+    async function init() {
+      // initialize dependencies
+      const provider = new Web3.providers.WebsocketProvider(
+        runtimeConfig.web3Provider,
+        { clientConfig: { keepalive: true, keepaliveInterval: 5000 } });
+      const web3 = new Web3(provider, { transactionConfirmationBlocks: 1 });
+      const dfs = new Ipfs({ remoteNode: new IpfsApi(runtimeConfig.ipfs), });
+
+      // create runtime
+      const runtime = await createDefaultRuntime(web3, dfs, { accountMap: runtimeConfig.accountMap, keyConfig: runtimeConfig.keyConfig });
+      console.dir(runtime);
+    }
+    
+    init();
 
 That's it! Now you can use the ``runtime`` object and interact with the evan.network blockchain.
 
