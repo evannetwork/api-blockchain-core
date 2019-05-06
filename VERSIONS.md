@@ -6,6 +6,7 @@
 - use lodash for cloning `Container` templates
 - export lodash from index.ts for ui libraries
 - use object dataSchema for `DataContainer` - `ContainerFile`
+- fix deprecation warnings on node 11+
 
 ### Deprecations
 
