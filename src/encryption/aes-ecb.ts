@@ -109,7 +109,11 @@ export class AesEcb extends Logger implements Cryptor {
       if (!options.key) {
         throw new Error('no key given');
       }
-      const cipher = crypto.createCipher(this.options.algorithm, new Buffer(options.key, 'hex'));
+      const cipher = crypto.createCipheriv(
+        this.options.algorithm,
+        Buffer.from(options.key, 'hex'),
+        null
+      );
       cipher.setAutoPadding(false);
       const encrypted = Buffer.concat([cipher.update(message), cipher.final()]);
 
@@ -132,7 +136,11 @@ export class AesEcb extends Logger implements Cryptor {
       if (!options.key) {
         throw new Error('no key given');
       }
-      const decipher = crypto.createDecipher(this.options.algorithm, new Buffer(options.key, 'hex'));
+      const decipher = crypto.createDecipheriv(
+        this.options.algorithm,
+        Buffer.from(options.key, 'hex'),
+        null
+      );
       decipher.setAutoPadding(false);
       const decrypted = Buffer.concat([decipher.update(message), decipher.final()]);
       return Promise.resolve(decrypted);

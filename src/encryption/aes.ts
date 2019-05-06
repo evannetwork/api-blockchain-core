@@ -121,7 +121,7 @@ export class Aes extends Logger implements Cryptor {
       }
       const initialVector = generateInitialVector();
       const bufferedMessage = Buffer.from(JSON.stringify(message), this.encodingUnencrypted);
-      const cipher = crypto.createCipheriv(this.options.algorithm, new Buffer(options.key, 'hex'), initialVector);
+      const cipher = crypto.createCipheriv(this.options.algorithm, Buffer.from(options.key, 'hex'), initialVector);
       const encrypted = Buffer.concat([cipher.update(bufferedMessage), cipher.final()]);
 
       return Promise.resolve(Buffer.concat([initialVector, encrypted]));
@@ -146,7 +146,7 @@ export class Aes extends Logger implements Cryptor {
       const initialVector = message.slice(0, 16);
       const encrypted = message.slice(16);
 
-      const decipher = crypto.createDecipheriv(this.options.algorithm, new Buffer(options.key, 'hex'), initialVector);
+      const decipher = crypto.createDecipheriv(this.options.algorithm, Buffer.from(options.key, 'hex'), initialVector);
       const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
 
       const result = JSON.parse(decrypted.toString(this.encodingUnencrypted));

@@ -351,19 +351,19 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   })
 
   if (await profile.exists()) {
-    log(`profile for ${activeAccount} exists, fetching keys`, 'debug');
+    logger.log(`profile for ${activeAccount} exists, fetching keys`, 'debug');
     try {
       keyExchange.setPublicKey(
         await profile.getPublicKey(),
         await profile.getContactKey(activeAccount, 'dataKey'),
       );
     } catch (ex) {
-      log(`fetching keys for ${activeAccount} failed with "${ex.msg || ex}", removing profile from runtime`, 'warning');
+      logger.log(`fetching keys for ${activeAccount} failed with "${ex.msg || ex}", removing profile from runtime`, 'warning');
       profile = null;
       keyProvider.profile = null;
     }
   } else {
-    log(`profile for ${activeAccount} doesn't exist`, 'debug')
+    logger.log(`profile for ${activeAccount} doesn't exist`, 'debug')
   }
 
   const onboarding = options.onboarding || new Onboarding({
