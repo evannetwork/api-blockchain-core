@@ -109,14 +109,14 @@ export class AesEcb extends Logger implements Cryptor {
       if (!options.key) {
         throw new Error('no key given');
       }
+      const computedKey = this.computeSecret(Buffer.from(options.key, 'hex'));
       const cipher = crypto.createCipheriv(
         this.options.algorithm,
-        Buffer.from(options.key, 'hex'),
+        Buffer.from(computedKey, 'hex'),
         null
       );
       cipher.setAutoPadding(false);
       const encrypted = Buffer.concat([cipher.update(message), cipher.final()]);
-
       return Promise.resolve(encrypted);
     } catch (ex) {
       this.log(`could not encrypt; ${ex.message || ex}`, 'error');
@@ -136,10 +136,11 @@ export class AesEcb extends Logger implements Cryptor {
       if (!options.key) {
         throw new Error('no key given');
       }
+      const computedKey = this.computeSecret(Buffer.from(options.key, 'hex'));
       const decipher = crypto.createDecipheriv(
         this.options.algorithm,
-        Buffer.from(options.key, 'hex'),
-        null
+        Buffer.from(computedKey, 'hex'),
+        ''
       );
       decipher.setAutoPadding(false);
       const decrypted = Buffer.concat([decipher.update(message), decipher.final()]);
@@ -147,6 +148,32 @@ export class AesEcb extends Logger implements Cryptor {
     } catch (ex) {
       this.log(`could not decrypt; ${ex.message || ex}`, 'error');
       return Promise.reject(ex);
+    }
+  }
+
+  /**
+   * calculates a secret out of a given ecb passphrase
+   * https://gist.github.com/bnoordhuis/2de2766d3d3a47ebe41aaaec7e8b14df
+   *
+   * @param      {Buffer}  passphrase  given passphrase to createCipher
+   * @return     {string}  secret of the passphrase.
+   */
+  private computeSecret(passphrase: Buffer): string {
+    let nkey = 32;
+    let niv = 0;
+    for (let key = '', iv = '', p = '';;) {
+      const h = crypto.createHash('md5');
+      h.update(p, 'hex');
+      h.update(passphrase);
+      p = h.digest('hex');
+      let n, i = 0;
+      n = Math.min(p.length - i, 2 * nkey);
+      nkey -= n / 2, key += p.slice(i, i + n), i += n;
+      n = Math.min(p.length - i, 2 * niv);
+      niv -= n / 2, iv += p.slice(i, i + n), i += n;
+      if (nkey + niv === 0) {
+        return key;
+      }
     }
   }
 }
