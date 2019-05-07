@@ -25,18 +25,18 @@ function pbkdf2(key, salt, iterations, dkLen) {
   }
 
   if (typeof key === 'string') {
-    key = new Buffer(key);
+    key = Buffer.from(key);
   }
 
   if (typeof salt === 'string') {
-    salt = new Buffer(salt);
+    salt = Buffer.from(salt);
   }
 
-  var DK = new Buffer(dkLen);
+  var DK = Buffer.from(dkLen);
 
-  var U = new Buffer(hLen);
-  var T = new Buffer(hLen);
-  var block1 = new Buffer(salt.length + 4);
+  var U = Buffer.from(hLen);
+  var T = Buffer.from(hLen);
+  var block1 = Buffer.from(salt.length + 4);
 
   var l = Math.ceil(dkLen / hLen);
   var r = dkLen - (l - 1) * hLen;
