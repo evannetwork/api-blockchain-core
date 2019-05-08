@@ -60,6 +60,8 @@ import { Sharing } from './contracts/sharing';
 import { Verifications } from './verifications/verifications';
 import { Votings } from './votings/votings';
 
+const KeyStore = require('../libs/eth-lightwallet/keystore');
+
 /**
  * runtime for interacting with dbcp, including helpers for transactions & co
  */
@@ -170,7 +172,23 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   cryptoConfig['aesEcb'] = new AesEcb({ log });
   const cryptoProvider = new CryptoProvider(cryptoConfig);
 
-
+  // check if mnemonic and password are given
+  if (runtimeConfig.mnemonic && runtimeConfig.password) {
+    const tempConfig: any = await Onboarding.generateRuntimeConfig(
+      runtimeConfig.mnemonic,
+      runtimeConfig.password,
+      web3
+    );
+    if (!runtimeConfig.accountMap) {
+      runtimeConfig.accountMap = {};
+    }
+    if (!runtimeConfig.keyConfig) {
+      runtimeConfig.keyConfig = {};
+    }
+    Object.assign(runtimeConfig.accountMap, tempConfig.accountMap);
+    Object.assign(runtimeConfig.keyConfig, tempConfig.keyConfig);
+  }
+  console.dir(runtimeConfig)
   // check and modify if any accountid with password is provided
   if (runtimeConfig.keyConfig) {
     for (let accountId in runtimeConfig.keyConfig) {

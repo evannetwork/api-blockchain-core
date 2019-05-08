@@ -2,6 +2,8 @@
 
 ## Next Version
 ### Features
+- add profile creation in one line of code to Onboarding
+- add the ability to initialize the runtime with a mnemnoic and password
 ### Fixes
 - use lodash for cloning `Container` templates
 - export lodash from index.ts for ui libraries
