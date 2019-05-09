@@ -188,7 +188,6 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     Object.assign(runtimeConfig.accountMap, tempConfig.accountMap);
     Object.assign(runtimeConfig.keyConfig, tempConfig.keyConfig);
   }
-  console.dir(runtimeConfig)
   // check and modify if any accountid with password is provided
   if (runtimeConfig.keyConfig) {
     for (let accountId in runtimeConfig.keyConfig) {

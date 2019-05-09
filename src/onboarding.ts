@@ -233,7 +233,6 @@ export class Onboarding extends Logger {
 
       const pk = '0x' + pKey;
       const signature = runtime.web3.eth.accounts.sign('Gimme Gimme Gimme!', pk).signature;
-      console.dir(fileHashes)
       const data = JSON.stringify({
         accountId: accountId,
         signature: signature,
@@ -252,13 +251,11 @@ export class Onboarding extends Logger {
 
       const req = https.request(options, (res) => {
         res.on('data', (d) => {
-          console.dir(d.toString())
           resolve()
         })
       })
 
       req.on('error', (error) => {
-        console.dir(error)
         reject(error)
       })
 
