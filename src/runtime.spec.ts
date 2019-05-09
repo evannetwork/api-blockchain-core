@@ -67,4 +67,23 @@ describe('Runtime', function() {
     expect(Object.keys(runtime.keyProvider.keys).length).to.eq(3);
   });
 
+  it('should create a new and valid runtime with a mnemonic and a password', async () => {
+    const runtime = await createDefaultRuntime(web3, dfs, {
+      mnemonic: 'annual lyrics orbit slight object space jeans ethics broccoli umbrella entry couch',
+      password: 'Test1234'
+    });
+    expect(runtime).to.be.ok;
+    expect(Object.keys(runtime.keyProvider.keys).length).to.eq(2);
+  });
+
+  it('should create a new and valid runtime with a mnemonic and a password and merge with given accounts', async () => {
+    const tmpRuntimeConfig = runtimeConfig;
+    tmpRuntimeConfig.keyConfig[accounts[0]] =  'Test1234';
+    tmpRuntimeConfig.mnemonic = 'annual lyrics orbit slight object space jeans ethics broccoli umbrella entry couch';
+    tmpRuntimeConfig.password = 'Test1234';
+    const runtime = await createDefaultRuntime(web3, dfs, tmpRuntimeConfig);
+    expect(runtime).to.be.ok;
+    expect(Object.keys(runtime.keyProvider.keys).length).to.eq(5);
+  });
+
 })

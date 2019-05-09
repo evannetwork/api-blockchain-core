@@ -2,7 +2,7 @@
 Rights and Roles
 ================================================================================
 
-.. list-table:: 
+.. list-table::
    :widths: auto
    :stub-columns: 1
 
@@ -20,7 +20,7 @@ The `RightsAndRoles <https://github.com/evannetwork/api-blockchain-core/tree/mas
 - `Function Permissions <https://evannetwork.github.io/dev/security#function-permissions>`_
 - `Operation Permissions <https://evannetwork.github.io/dev/security#operations-permissions>`_
 
-It allows to manage permissions for contracts, that use the authority `DSRolesPerContract.sol <https://github.com/evannetwork/smart-contracts/blob/master/contracts/DSRolesPerContract.sol>`_ for as its permission approach. 
+It allows to manage permissions for contracts, that use the authority `DSRolesPerContract.sol <https://github.com/evannetwork/smart-contracts/blob/master/contracts/DSRolesPerContract.sol>`_ for as its permission approach.
 
 Contracts, that use `DSRolesPerContract <https://github.com/evannetwork/smart-contracts/blob/master/contracts/DSRolesPerContract.sol>`_ and therefore allow to configure its permissions with the ``RightsAndRoles`` module are:
 
@@ -71,7 +71,7 @@ Example
 -------
 
 .. code-block:: typescript
-  
+
   const rightsAndRoles = new RightsAndRoles({
     contractLoader,
     executor,
@@ -318,7 +318,7 @@ Example
 .. code-block:: typescript
 
   // make sure, you have required the enums from rights-and-roles.ts
-  import { ModificationType, PropertyType } from 'blockchain-core';
+  import { ModificationType, PropertyType } from '@evan.network/api-blockchain-core';
   const contractOwner = '0x0000000000000000000000000000000000000001';
   const memberRole = 1;
   await rightsAndRoles.setOperationPermission(
@@ -365,7 +365,7 @@ Example
 -------
 
 .. code-block:: typescript
-  
+
   const accountToCheck = '0x0000000000000000000000000000000000000002';
   const memberRole = 1;
   const hasRole = await rightsAndRoles.hashUserRole(contract, null, accountToCheck, memberRole);

@@ -89,6 +89,22 @@ describe('Onboarding helper', function() {
 
   });
 
+  it('should create a new random mnemonic', () => {
+    const mnemonic = Onboarding.createMnemonic();
+    expect(mnemonic).to.be.an('string');
+  })
+
+  it('should create a new profile with a new mnemonic on the testcore', async () => {
+    const mnemonic = Onboarding.createMnemonic();
+    await Onboarding.createNewProfile(mnemonic, 'Test1234');
+    expect(mnemonic).to.be.an('string');
+  })
+
+  it.skip('should create a new profile with a new mnemonic on the core', async () => {
+    const mnemonic = Onboarding.createMnemonic();
+    await Onboarding.createNewProfile(mnemonic, 'Test1234', 'core');
+    expect(mnemonic).to.be.an('string');
+  })
   it('should be able to send an invitation via smart agent', async () => {
     await onboarding.sendInvitation({
       fromAlias: 'example inviter',

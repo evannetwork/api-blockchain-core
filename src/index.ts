@@ -67,15 +67,16 @@ export { Sharing } from './contracts/sharing';
 export { Verifications, VerificationsStatus } from './verifications/verifications';
 export { Votings, MemberOptions, ProposalInfo, ProposalInfos, ProposalOptions, VotingsContractOptions } from './votings/votings';
 export { Wallet } from './contracts/wallet';
-export { Container, ContainerConfig, ContainerTemplate, ContainerTemplateProperty,
-  ContainerShareConfig, ContainerOptions } from './contracts/digital-twin/container';
+export { Container, ContainerConfig, ContainerFile, ContainerTemplate, ContainerTemplateProperty,
+  ContainerShareConfig, ContainerOptions, } from './contracts/digital-twin/container';
 export { DigitalTwin, DigitalTwinEntryType, DigitalTwinConfig, DigitalTwinIndexEntry,
-  DigitalTwinVerificationEntry } from './contracts/digital-twin/digital-twin';
+  DigitalTwinVerificationEntry, } from './contracts/digital-twin/digital-twin';
 
 /******** export this libraries to be able to build the blockchain-core into an umd bundle ********/
 import Web3 = require('web3');
 import prottle = require('prottle');
 import crypto = require('crypto');
+import lodash = require('lodash');
 import keystore = require('../libs/eth-lightwallet/keystore.js');
 // assign to export Buffer;
 const buffer = Buffer;
@@ -88,4 +89,4 @@ let logLog = [ ];
 // push everything into the logLog
 let logLogLevel = 0;
 
-export { Web3, prottle, crypto, keystore, Mnemonic, instanceId, logLog, logLogLevel, buffer }
+export { Web3, prottle, crypto, keystore, Mnemonic, instanceId, logLog, logLogLevel, buffer, lodash }

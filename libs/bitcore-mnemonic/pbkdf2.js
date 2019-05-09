@@ -25,11 +25,11 @@ function pbkdf2(key, salt, iterations, dkLen) {
   }
 
   if (typeof key === 'string') {
-    key = new Buffer(key);
+    key = Buffer.from(key);
   }
 
   if (typeof salt === 'string') {
-    salt = new Buffer(salt);
+    salt = Buffer.from(salt);
   }
 
   var DK = new Buffer(dkLen);

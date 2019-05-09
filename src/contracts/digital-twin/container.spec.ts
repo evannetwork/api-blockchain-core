@@ -171,28 +171,32 @@ describe('Container', function() {
       expect(containerDescription.dataSchema.testField).to.deep.eq(expectedSchema);
     });
 
-    it('can handle files', async () => {
+    it.only('can handle files', async () => {
       const container = await Container.create(runtimes[owner], defaultConfig);
       await container.ensureProperty('sampleFiles', Container.defaultSchemas.filesEntry);
 
       const file = await promisify(readFile)(
         `${__dirname}/testfiles/animal-animal-photography-cat-96938.jpg`);
-      const sampleFiles = [{
-        name: 'animal-animal-photography-cat-96938.jpg',
-        fileType: 'image/jpeg',
-        file,
-      }];
-      const sampleFilesBackup = [{
-        name: 'animal-animal-photography-cat-96938.jpg',
-        fileType: 'image/jpeg',
-        file,
-      }];
+      const sampleFiles = {
+        files: [{
+          name: 'animal-animal-photography-cat-96938.jpg',
+          fileType: 'image/jpeg',
+          file,
+        }]
+      };
+      const sampleFilesBackup = {
+        files: [{
+          name: 'animal-animal-photography-cat-96938.jpg',
+          fileType: 'image/jpeg',
+          file,
+        }]
+      };
       await container.setEntry('sampleFiles', sampleFiles);
 
       expect(await container.getEntry('sampleFiles')).to.deep.eq(sampleFilesBackup);
     });
 
-    it('can handle files in complex objects', async () => {
+    it.only('can handle files in complex objects', async () => {
       const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
       template.properties.complexItem = {
         dataSchema: {
@@ -211,19 +215,23 @@ describe('Container', function() {
         `${__dirname}/testfiles/animal-animal-photography-cat-96938.jpg`);
       const sampleValue = {
         description: 'what a cute kitten',
-        images: [{
-          name: 'animal-animal-photography-cat-96938.jpg',
-          fileType: 'image/jpeg',
-          file,
-        }],
+        images: {
+          files: [{
+            name: 'animal-animal-photography-cat-96938.jpg',
+            fileType: 'image/jpeg',
+            file,
+          }],
+        },
       }
       const sampleValueBackup = {
         description: 'what a cute kitten',
-        images: [{
-          name: 'animal-animal-photography-cat-96938.jpg',
-          fileType: 'image/jpeg',
-          file,
-        }],
+        images: {
+          files: [{
+            name: 'animal-animal-photography-cat-96938.jpg',
+            fileType: 'image/jpeg',
+            file,
+          }],
+        },
       };
       await container.setEntry('complexItem', sampleValue);
 
@@ -276,7 +284,7 @@ describe('Container', function() {
       expect(await consumerContainer.getListEntries('testList')).to.deep.eq(randomStrings);
     });
 
-    it('can handle files', async () => {
+    it.only('can handle files', async () => {
       const container = await Container.create(runtimes[owner], defaultConfig);
       await container.ensureProperty('testList', Container.defaultSchemas.filesList);
 
@@ -285,35 +293,43 @@ describe('Container', function() {
       const file2 = await promisify(readFile)(
         `${__dirname}/testfiles/adorable-animal-animal-photography-774731.jpg`);
       const sampleFiles = [
-        [{
-          name: 'animal-animal-photography-cat-96938.jpg',
-          fileType: 'image/jpeg',
-          file: file1,
-        }],
-        [{
-          name: 'adorable-animal-animal-photography-774731.jpg',
-          fileType: 'image/jpeg',
-          file: file2,
-        }],
+        {
+          files: [{
+            name: 'animal-animal-photography-cat-96938.jpg',
+            fileType: 'image/jpeg',
+            file: file1,
+          }],
+        },
+        {
+          files: [{
+            name: 'adorable-animal-animal-photography-774731.jpg',
+            fileType: 'image/jpeg',
+            file: file2,
+          }],
+        }
       ];
       const sampleFilesBackup = [
-        [{
-          name: 'animal-animal-photography-cat-96938.jpg',
-          fileType: 'image/jpeg',
-          file: file1,
-        }],
-        [{
-          name: 'adorable-animal-animal-photography-774731.jpg',
-          fileType: 'image/jpeg',
-          file: file2,
-        }],
+        {
+          files: [{
+            name: 'animal-animal-photography-cat-96938.jpg',
+            fileType: 'image/jpeg',
+            file: file1,
+          }],
+        },
+        {
+          files: [{
+            name: 'adorable-animal-animal-photography-774731.jpg',
+            fileType: 'image/jpeg',
+            file: file2,
+          }],
+        }
       ];
       await container.addListEntries('testList', sampleFiles);
 
       expect(await container.getListEntries('testList')).to.deep.eq(sampleFilesBackup);
     });
 
-    it('can handle files in complex objects', async () => {
+    it.only('can handle files in complex objects', async () => {
       const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
       template.properties.complexItemList = {
         dataSchema: {
@@ -338,37 +354,45 @@ describe('Container', function() {
       const sampleFiles = [
         {
           description: 'what a cute kitten',
-          images: [{
-            name: 'animal-animal-photography-cat-96938.jpg',
-            fileType: 'image/jpeg',
-            file: file1,
-          }]
+          images: {
+            files: [{
+              name: 'animal-animal-photography-cat-96938.jpg',
+              fileType: 'image/jpeg',
+              file: file1,
+            }],
+          },
         },
         {
           description: 'this one is even cuter',
-          images: [{
-            name: 'adorable-animal-animal-photography-774731.jpg',
-            fileType: 'image/jpeg',
-            file: file2,
-          }],
+          images: {
+            files: [{
+              name: 'adorable-animal-animal-photography-774731.jpg',
+              fileType: 'image/jpeg',
+              file: file2,
+            }],
+          },
         },
       ];
       const sampleFilesBackup = [
         {
           description: 'what a cute kitten',
-          images: [{
-            name: 'animal-animal-photography-cat-96938.jpg',
-            fileType: 'image/jpeg',
-            file: file1,
-          }]
+          images: {
+            files: [{
+              name: 'animal-animal-photography-cat-96938.jpg',
+              fileType: 'image/jpeg',
+              file: file1,
+            }],
+          },
         },
         {
           description: 'this one is even cuter',
-          images: [{
-            name: 'adorable-animal-animal-photography-774731.jpg',
-            fileType: 'image/jpeg',
-            file: file2,
-          }],
+          images: {
+            files: [{
+              name: 'adorable-animal-animal-photography-774731.jpg',
+              fileType: 'image/jpeg',
+              file: file2,
+            }],
+          },
         },
       ];
       await container.addListEntries('complexItemList', sampleFiles);

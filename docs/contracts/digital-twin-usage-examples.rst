@@ -264,15 +264,17 @@ A file needs to be provided as a buffer. In NodeJs, this can be done with ``fs.r
   const file = await promisify(readFile)(
   `${__dirname}/testfiles/animal-animal-photography-cat-96938.jpg`);
 
-The file is expected to be wrapped in a specific container format, which is defined in the |source container_containerFile|_ interface. So let's build such a file object and store it in an array, as files are always provided as arrays of |source container_containerFile|_ instances to the API:
+The file is expected to be wrapped in a specific container format, which is defined in the |source container_containerFile|_ interface. So let's build such a file object and store it in an object including a property called files, as files are always provided as arrays of |source container_containerFile|_ instances to the API:
 
 .. code-block:: typescript
 
-  const sampleFiles = [{
-    name: 'animal-animal-photography-cat-96938.jpg',
-    fileType: 'image/jpeg',
-    file,
-  }];
+  const sampleFiles = {
+    files:[{
+      name: 'animal-animal-photography-cat-96938.jpg',
+      fileType: 'image/jpeg',
+      file,
+    }]
+  };
 
 If not already done, create (or load) a container:
 

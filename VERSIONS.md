@@ -6,6 +6,18 @@
 ### Deprecations
 
 
+## Version 2.3.0
+### Features
+- add profile creation in one line of code to Onboarding
+- add the ability to initialize the runtime with a mnemnoic and password
+
+### Fixes
+- use lodash for cloning `Container` templates
+- export lodash from index.ts for ui libraries
+- use object dataSchema for `DataContainer` - `ContainerFile`
+- fix deprecation warnings on node 11+
+
+
 ## Version 2.2.0
 ### Features
 - add the ability to parse accountid + password in key config for runtime

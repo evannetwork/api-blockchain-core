@@ -28,6 +28,7 @@
 import * as Throttle from 'promise-parallel-throttle';
 import BigNumber from 'bignumber.js';
 import { Mutex } from 'async-mutex';
+import { cloneDeep } from 'lodash';
 import {
   ContractLoader,
   CryptoProvider,
@@ -72,7 +73,7 @@ async function applyTemplate(
   }
 
   // add type property
-  const properties = JSON.parse(JSON.stringify(template.properties));
+  const properties = cloneDeep(template.properties);
   if (!properties.type) {
     properties.type = {
       dataSchema: { $id: 'type_schema', type: 'string' },
@@ -290,8 +291,31 @@ export class Container extends Logger {
     dbcpVersion: 2,
   };
   public static defaultSchemas = {
-    filesEntry: { type: 'string', $comment: '{"isEncryptedFile": true}' },
-    filesList: { type: 'array', items: { type: 'string', $comment: '{"isEncryptedFile": true}' } },
+    filesEntry: {
+      type: 'object',
+      $comment: '{"isEncryptedFile": true}',
+      properties: {
+        additionalProperties: false,
+        files: {
+          type: 'array', items: { type: 'string', }
+        },
+      },
+      required: [ 'files' ],
+    },
+    filesList: {
+      type: 'array',
+      items: {
+        type: 'object',
+        $comment: '{"isEncryptedFile": true}',
+        properties: {
+          additionalProperties: false,
+          files: {
+            type: 'array', items: { type: 'string', }
+          },
+        },
+        required: [ 'files' ],
+      },
+    },
     numberEntry: { type: 'number' },
     numberList: { type: 'array', items: { type: 'number' } },
     objectEntry: { type: 'object' },
@@ -342,7 +366,7 @@ export class Container extends Logger {
     config: ContainerConfig,
   ): Promise<Container> {
     checkConfigProperties(config, ['description']);
-    const instanceConfig = JSON.parse(JSON.stringify(config));
+    const instanceConfig = cloneDeep(config);
 
     // convert template properties to jsonSchema
     if (instanceConfig.template.properties) {
@@ -353,6 +377,14 @@ export class Container extends Logger {
     const envelope: Envelope = {
       public: instanceConfig.description || Container.defaultDescription,
     };
+
+    // ensure abi definition is saved to the data container
+    if (!envelope.public.abis) {
+      envelope.public.abis = {
+        own: JSON.parse(options.contractLoader.contracts.DataContract.interface)
+      };
+    }
+
     const validation = options.description.validateDescription(envelope);
     if (validation !== true) {
       throw new Error(`validation of description failed with: ${JSON.stringify(validation)}`);
@@ -423,7 +455,7 @@ export class Container extends Logger {
     profile: Profile,
     loadContracts = true
   ): Promise<{[id: string]: { description: any, template: ContainerTemplate }}> {
-    const bcContracts = await profile.getBcContracts(Container.profileTemplatesKey);
+    const bcContracts = (await profile.getBcContracts(Container.profileTemplatesKey)) || { };
     Ipld.purgeCryptoInfo(bcContracts);
 
     if (loadContracts) {
@@ -591,7 +623,12 @@ export class Container extends Logger {
       (async () => {
         let value = await this.options.dataContract.getEntry(
           this.contract, entryName, this.config.accountId);
-        return this.decryptFilesIfRequired(entryName, value);
+
+        if (entryName !== 'type') {
+          value = await this.decryptFilesIfRequired(entryName, value);
+        }
+
+        return value;
       })(),
     );
   }
@@ -960,6 +997,8 @@ export class Container extends Logger {
           permissions: {},
           type,
         };
+        // only load values for entries (if it's an array and the items are type of encrypted files,
+        // it's also an entry)
         if (getValues && dataSchema.type !== 'array') {
           if (readableEntries.indexOf(property) !== -1) {
             let value;
@@ -995,21 +1034,10 @@ export class Container extends Logger {
    * @param      {Function}  toApply    function, that will be applied to values in `toInspect`
    */
   private async applyIfEncrypted(subSchema: any, toInspect: any, toApply: Function) {
-    const usesEnryption = (schema) => {
-      if (schema.type === 'string' && schema.$comment) {
-        try {
-          return JSON.parse(schema.$comment).isEncryptedFile;
-        } catch (ex) {
-          // ignore non-JSON comments
-        }
-      }
-      return false;
-    };
-
-    if (usesEnryption(subSchema)) {
+    if (this.isEncryptedFile(subSchema)) {
       // simple entry
       return toApply(toInspect);
-    } else if (subSchema.type === 'array' && usesEnryption(subSchema.items)) {
+    } else if (subSchema.type === 'array' && this.isEncryptedFile(subSchema.items)) {
       // list/array with entries
       return Promise.all(toInspect.map(entry => toApply(entry)));
     } else {
@@ -1030,7 +1058,7 @@ export class Container extends Logger {
   }
 
   /**
-   * checks if given property is a `ContainerFile` array and decrypts in that case
+   * checks if given property is a `ContainerFile` object and decrypts in that case
    *
    * @param      {string}  entryName  name of the property
    * @param      {any}     value      (raw) value to analyze
@@ -1041,14 +1069,19 @@ export class Container extends Logger {
     if (!description.dataSchema || !description.dataSchema[propertyName]) {
       throw new Error(`could not find description for entry "${propertyName}"`);
     }
+    const decrypt = async (toEncrypt) => {
+      const encryptedFiles = await Throttle.all(toEncrypt.files.map(file => async () => {
+        const decrypted = await this.options.dataContract.decrypt(
+          file,
+          this.contract,
+          this.config.accountId,
+          propertyName,
+        );
 
-    const decrypt = async (toDecrypt) => {
-      return (await this.options.dataContract.decrypt(
-        toDecrypt,
-        this.contract,
-        this.config.accountId,
-        propertyName,
-      )).private;
+        return decrypted.private;
+      }));
+
+      return { files: encryptedFiles };
     };
     result = await this.applyIfEncrypted(description.dataSchema[propertyName], value, decrypt);
 
@@ -1099,17 +1132,25 @@ export class Container extends Logger {
     if (!description.dataSchema || !description.dataSchema[propertyName]) {
       throw new Error(`could not find description for entry "${propertyName}"`);
     }
+
+    // encrypt files and map them into the correct object format
     const blockNr = await this.options.web3.eth.getBlockNumber();
     const encrypt = async (toEncrypt) => {
-      return this.options.dataContract.encrypt(
-        { private: toEncrypt },
-        this.contract,
-        this.config.accountId,
-        propertyName,
-        blockNr,
-        'aesBlob',
-      );
+      const encryptedFiles = await Throttle.all(toEncrypt.files.map(file => async () =>
+        this.options.dataContract.encrypt(
+          { private: file },
+          this.contract,
+          this.config.accountId,
+          propertyName,
+          blockNr,
+          'aesBlob',
+        )
+      ));
+
+      return { files: encryptedFiles };
     };
+
+    // check for encrypted files
     result = await this.applyIfEncrypted(description.dataSchema[propertyName], value, encrypt);
 
     return result;
@@ -1215,7 +1256,7 @@ export class Container extends Logger {
       }
       if (!description.dataSchema[name]) {
         const fieldId = name.replace(/[^a-zA-Z0-9]/g, '');
-        description.dataSchema[name] = JSON.parse(JSON.stringify(schema));
+        description.dataSchema[name] = cloneDeep(schema);
         description.dataSchema[name].$id = `${fieldId}_schema`;
         await this.setDescription(description);
       }
@@ -1301,6 +1342,24 @@ export class Container extends Logger {
       });
     }
     return permissions;
+  }
+
+  /**
+   * Checks a ajv data schema is type of encrypted files.
+   *
+   * @param      {any}      schema  ajv data sub schema
+   * @return     {boolean}  True if encrypted file, False otherwise
+   */
+  private isEncryptedFile(schema): boolean {
+    if (schema.type === 'object' && schema.$comment) {
+      try {
+        return !!JSON.parse(schema.$comment).isEncryptedFile;
+      } catch (ex) {
+        // ignore non-JSON comments
+      }
+    }
+
+    return false;
   }
 
   /**
