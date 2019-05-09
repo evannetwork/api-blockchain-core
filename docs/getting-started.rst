@@ -19,7 +19,9 @@ Adding blockchain core
 
 First you need to get blockchain core and its dependencies into your project. This can be done using the following methods:
 
-- npm: ``npm install @evan.network/api-blockchain-core ipfs-api web3``
+- npm: ``npm install @evan.network/api-blockchain-core ipfs-api web3@1.0.0-beta.37``
+
+**NOTE THE WEB3 CUSTOM VERSION!**
 
 After that you need to create a blockchain core runtime with a predefined configuration.
 

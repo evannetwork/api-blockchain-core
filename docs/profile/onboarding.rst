@@ -2,7 +2,7 @@
 Onboarding
 ================================================================================
 
-.. list-table:: 
+.. list-table::
    :widths: auto
    :stub-columns: 1
 
@@ -66,7 +66,7 @@ Example
 -------
 
 .. code-block:: typescript
-  
+
   const onboarding = new Onboarding({
     mailbox,
     smartAgentId: config.smartAgents.onboarding.accountId,
@@ -115,6 +115,83 @@ Example
     body: 'I\'d like to welcome you on board.',
   }, web3.utils.toWei('1'));
 
+
+
+--------------------------------------------------------------------------------
+
+.. _onboarding_createMnemonic:
+
+createMnemonic
+================================================================================
+
+.. code-block:: typescript
+
+  Onboarding.createMnemonic();
+
+(static class function)
+
+
+Generates a new random Mnemonic
+
+-------
+Returns
+-------
+
+``string``
+
+-------
+Example
+-------
+
+To show the difference, without purging:
+
+.. code-block:: typescript
+
+  const mnemnonic = Onboarding.createMnemnonic();
+  console.log(mnemnoic);
+  // prints out a random 12 word mnemnonic
+
+
+--------------------------------------------------------------------------------
+
+.. _onboarding_createNewProfile:
+
+createNewProfile
+================================================================================
+
+.. code-block:: typescript
+
+  Onboarding.createNewProfile(mnemnonic, password, network);
+
+(static class function)
+
+
+Creates a new full blown profile on a given evan network (testcore/core) and returns the mnemonic, password and a configuration for the runtime initalization
+
+----------
+Parameters
+----------
+
+#. ``mnemnonic`` - ``string``: 12 word mnemnonic as string
+#. ``password`` - ``string``: password of the new created profile
+#. ``network`` - ``string``: target network for the profile (testcore/core)
+
+-------
+Returns
+-------
+
+``Promise`` returns ``any``: object with the mnemonic, password and the config object for the runtime
+
+-------
+Example
+-------
+
+To show the difference, without purging:
+
+.. code-block:: typescript
+
+  const mnemonic = Onboarding.createMnemonic();
+  await Onboarding.createNewProfile(mnemonic, 'Test1234');
 
 .. required for building markup
 
