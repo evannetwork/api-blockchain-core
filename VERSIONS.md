@@ -3,9 +3,12 @@
 ## Next Version
 ### Features
 ### Fixes
-- fix hashing of passwords for generated profiles
 ### Deprecations
 
+
+## Version 2.3.1
+### Fixes
+- fix hashing of passwords for generated profiles
 
 ## Version 2.3.0
 ### Features
