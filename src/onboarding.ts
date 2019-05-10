@@ -167,7 +167,7 @@ export class Onboarding extends Logger {
       [web3.utils.soliditySha3(accountId), web3.utils.soliditySha3(accountId)].sort());
     const sha3Account = web3.utils.soliditySha3(accountId)
     const dataKey = web3.utils
-      .soliditySha3(accountId + password)
+      .keccak256(accountId + password)
       .replace(/0x/g, '');
     const runtimeConfig = {
       accountMap: {

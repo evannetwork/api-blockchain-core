@@ -6,6 +6,10 @@
 ### Deprecations
 
 
+## Version 2.3.1
+### Fixes
+- fix hashing of passwords for generated profiles
+
 ## Version 2.3.0
 ### Features
 - add profile creation in one line of code to Onboarding
