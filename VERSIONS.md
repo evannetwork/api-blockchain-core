@@ -3,6 +3,7 @@
 ## Next Version
 ### Features
 ### Fixes
+- fix hashing of passwords for generated profiles
 ### Deprecations
 
 
