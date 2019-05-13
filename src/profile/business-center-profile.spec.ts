@@ -38,7 +38,7 @@ import { accounts } from '../test/accounts';
 import { accountMap } from '../test/accounts';
 import { Aes } from '../encryption/aes';
 import { BusinessCenterProfile } from './business-center-profile';
-import { config } from '../config';
+import { configTestcore as config } from '../config-testcore';
 import { CryptoProvider } from '../encryption/crypto-provider';
 import { Ipld } from '../dfs/ipld';
 import { TestUtils } from '../test/test-utils';

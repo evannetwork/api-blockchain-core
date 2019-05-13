@@ -31,7 +31,7 @@ import { expect, use } from 'chai';
 import chaiAsPromised = require('chai-as-promised');
 
 import { accounts } from './test/accounts';
-import { config } from './config';
+import { configTestcore as config } from './config-testcore';
 import { NameResolver } from './name-resolver';
 import { TestUtils } from './test/test-utils';
 

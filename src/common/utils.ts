@@ -24,6 +24,19 @@
   For more information, please contact evan GmbH at this address:
   https://evan.network/license/
 */
+
+/**
+ * retrieves chain name from web3's connected networks id, testcore is 508674158, core is 49262, if
+ * not matching any of both, chain is threaded as testcore
+ *
+ * @param      {any}  web3    connected web3 instance
+ * @return     {Promise<string>}  name of current chain
+ */
+export async function getEnvironment(web3: any): Promise<string> {
+  const chainId = await web3.eth.net.getId();
+  return chainId === 49262 ? 'core' : 'testcore';
+}
+
 /**
  * obfuscates strings by replacing each character but the last two with 'x'
  *

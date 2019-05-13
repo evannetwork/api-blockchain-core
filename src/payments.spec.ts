@@ -31,7 +31,7 @@ import { expect } from 'chai';
 import { KeyProvider } from '@evan.network/dbcp';
 
 import { accounts } from './test/accounts';
-import { config } from './config';
+import { configTestcore as config } from './config-testcore';
 import { KeyExchange } from './keyExchange';
 import { Ipfs }  from './dfs/ipfs';
 import { Ipld } from './dfs/ipld';

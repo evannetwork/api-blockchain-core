@@ -37,7 +37,7 @@ import {
 
 import { accounts } from '../test/accounts';
 import { Aes } from '../encryption/aes';
-import { config } from '../config';
+import { configTestcore as config } from '../config-testcore';
 import { CryptoProvider } from '../encryption/crypto-provider';
 import { Ipld } from './ipld'
 import { TestUtils } from '../test/test-utils'

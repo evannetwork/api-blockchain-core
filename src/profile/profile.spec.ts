@@ -39,7 +39,7 @@ import {
 import { accountMap } from '../test/accounts';
 import { accounts } from '../test/accounts';
 import { Aes } from '../encryption/aes';
-import { config } from '../config';
+import { configTestcore as config } from '../config-testcore';
 import { CryptoProvider } from '../encryption/crypto-provider';
 import { DataContract } from '../contracts/data-contract/data-contract';
 import { Ipld } from '../dfs/ipld';
