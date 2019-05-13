@@ -3,6 +3,8 @@
 ## Next Version
 ### Features
 ### Fixes
+- replace null with empty string for `aes-ecb` createCipheriv 
+
 ### Deprecations
 
 
