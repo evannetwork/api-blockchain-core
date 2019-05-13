@@ -41,7 +41,7 @@ import {
 
 import { accounts } from '../../test/accounts';
 import { ConsumerState, ContractState } from '../base-contract/base-contract';
-import { config } from '../../config';
+import { configTestcore as config } from '../../config-testcore';
 import { CryptoProvider } from '../../encryption/crypto-provider';
 import { DataContract } from './data-contract';
 import { Sharing } from '../../contracts/sharing';

@@ -41,7 +41,7 @@ import { accounts } from '../../test/accounts';
 import { ContractState } from '../base-contract/base-contract';
 import { Ipfs } from '../../dfs/ipfs';
 import { ServiceContract } from './service-contract';
-import { config } from '../../config';
+import { configTestcore as config } from '../../config-testcore';
 import { TestUtils } from '../../test/test-utils';
 
 use(chaiAsPromised);

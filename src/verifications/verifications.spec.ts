@@ -34,7 +34,7 @@ import { ContractLoader, Executor } from '@evan.network/dbcp';
 import { accounts } from '../test/accounts';
 import { BaseContract } from '../contracts/base-contract/base-contract';
 import { Verifications, VerificationsStatus, } from './verifications';
-import { config } from '../config';
+import { configTestcore as config } from '../config-testcore';
 import { Description } from '../shared-description';
 import { TestUtils } from '../test/test-utils';
 

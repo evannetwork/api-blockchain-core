@@ -38,7 +38,7 @@ import {
 
 import { accounts } from '../../test/accounts';
 import { BaseContract, ConsumerState, ContractState } from './base-contract';
-import { config } from '../../config';
+import { configTestcore as config } from '../../config-testcore';
 import { Ipfs } from '../../dfs/ipfs';
 import { Ipld } from '../../dfs/ipld';
 import { Profile } from '../../profile/profile';

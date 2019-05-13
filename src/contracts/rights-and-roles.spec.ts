@@ -37,7 +37,7 @@ import {
 } from '@evan.network/dbcp';
 
 import { accounts } from '../test/accounts';
-import { config } from '../config';
+import { configTestcore as config } from '../config-testcore';
 import { DataContract } from './data-contract/data-contract';
 import { RightsAndRoles, ModificationType, PropertyType } from './rights-and-roles';
 import { ServiceContract } from './service-contract/service-contract';

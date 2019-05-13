@@ -34,7 +34,7 @@ import {
 } from '@evan.network/dbcp';
 
 import { accounts } from '../../test/accounts';
-import { config } from '../../config';
+import { configTestcore as config } from '../../config-testcore';
 import { Container, ContainerConfig } from './container';
 import { Ipld } from '../../dfs/ipld';
 import { TestUtils } from '../../test/test-utils';

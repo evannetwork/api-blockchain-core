@@ -35,7 +35,7 @@ import {
 } from '@evan.network/dbcp';
 
 import { accounts } from '../../test/accounts';
-import { config } from '../../config';
+import { configTestcore as config } from '../../config-testcore';
 import { TestUtils } from '../../test/test-utils';
 
 use(chaiAsPromised);

@@ -48,7 +48,7 @@ import { AesBlob } from '../encryption/aes-blob';
 import { AesEcb } from '../encryption/aes-ecb';
 import { BaseContract } from '../contracts/base-contract/base-contract';
 import { Verifications } from '../verifications/verifications';
-import { config } from './../config';
+import { configTestcore as config } from './../config-testcore';
 import { CryptoProvider } from '../encryption/crypto-provider';
 import { DataContract } from '../contracts/data-contract/data-contract';
 import { ExecutorWallet } from '../contracts/executor-wallet';
