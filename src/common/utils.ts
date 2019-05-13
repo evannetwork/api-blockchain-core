@@ -24,6 +24,15 @@
   For more information, please contact evan GmbH at this address:
   https://evan.network/license/
 */
+/**
+ * obfuscates strings by replacing each character but the last two with 'x'
+ *
+ * @param      {string}  text    text to obfuscate
+ * @return     {string}  obfuscated text
+ */
+export function obfuscate(text: string): string {
+  return text ? `${[...Array(text.length - 2)].map(() => 'x').join('')}${text.substr(text.length - 2)}` : text;
+}
 
 /**
 * run given function from this, use function(error, result) {...} callback for promise resolve/reject
@@ -56,14 +65,4 @@ export async function promisify(funThis, functionName, ...args): Promise<any> {
      reject(ex.message);
    }
  });
-};
-
-/**
- * obfuscates strings by replacing each character but the last two with 'x'
- *
- * @param      {string}  text    text to obfuscate
- * @return     {string}  obfuscated text
- */
-export function obfuscate(text: string): string {
-  return text ? `${[...Array(text.length - 2)].map(() => 'x').join('')}${text.substr(text.length - 2)}` : text;
 }
