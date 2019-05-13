@@ -209,7 +209,7 @@ export class BusinessCenterProfile extends Logger {
    * @param      {string}  businessCenterDomain  The business center domain
    * @param      {string}  contractType          The contract type
    * @param      {string}  account               current accountId
-   * @return     {Array}   Array with all registered bc contracts 
+   * @return     {Array}   Array with all registered bc contracts
    */
   async getMyBusinessCenterContracts(businessCenterDomain: string, contractType: string, account: string): Promise<any> {
     const address = await this.nameResolver.getAddress(businessCenterDomain);

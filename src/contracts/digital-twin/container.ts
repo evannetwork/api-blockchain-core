@@ -1004,7 +1004,7 @@ export class Container extends Logger {
             let value;
             try {
               value = await this.getEntry(property);
-            } catch(ex) {
+            } catch (ex) {
               this.log(`Could not load value for entry ${ property } in toTemplate:
                 ${ ex.message }`, 'error');
             }

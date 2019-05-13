@@ -1,5 +1,6 @@
 {
   "rulesDirectory": [
+    "tslint-no-unused-expression-chai"
   ],
   "rules": {
     "class-name": true,
@@ -45,7 +46,7 @@
     "no-string-literal": false,
     "no-switch-case-fall-through": true,
     "no-trailing-whitespace": true,
-    "no-unused-expression": true,
+    "no-unused-expression-chai": true,
     "no-use-before-declare": true,
     "no-var-keyword": true,
     "object-literal-sort-keys": false,

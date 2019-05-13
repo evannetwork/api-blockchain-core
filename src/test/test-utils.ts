@@ -72,40 +72,40 @@ export const sampleContext = 'context sample';
 const web3Provider = <any>process.env.CHAIN_ENDPOINT || 'wss://testcore.evan.network/ws';
 const wsp = new Web3.providers.WebsocketProvider(
       web3Provider, { clientConfig: { keepalive: true, keepaliveInterval: 5000 } });
-const web3 = new Web3(wsp, { transactionConfirmationBlocks: 1 });
+const localWeb3 = new Web3(wsp, { transactionConfirmationBlocks: 1 });
 const sampleKeys = {};
 // dataKeys
-sampleKeys[web3.utils.soliditySha3(accounts[0])] =
+sampleKeys[localWeb3.utils.soliditySha3(accounts[0])] =
   '001de828935e8c7e4cb56fe610495cae63fb2612000000000000000000000000';    // plain acc0 key
-sampleKeys[web3.utils.soliditySha3(accounts[1])] =
+sampleKeys[localWeb3.utils.soliditySha3(accounts[1])] =
   '0030c5e7394585400b1fb193ddbcb45a37ab916e000000000000000000000011';    // plain acc1 key
-sampleKeys[web3.utils.soliditySha3(sampleContext)] =
+sampleKeys[localWeb3.utils.soliditySha3(sampleContext)] =
   '00000000000000000000000000000000000000000000000000000000005a3973';
-sampleKeys[web3.utils.soliditySha3(publicMailBoxExchange)] =
+sampleKeys[localWeb3.utils.soliditySha3(publicMailBoxExchange)] =
   '346c22768f84f3050f5c94cec98349b3c5cbfa0b7315304e13647a4918ffff22';    // accX <--> mailbox edge key
-sampleKeys[web3.utils.soliditySha3('wulfwulf.test')] =
+sampleKeys[localWeb3.utils.soliditySha3('wulfwulf.test')] =
   '00000000000000000000000000000000000000000000000000000000005a3973';
-sampleKeys[web3.utils.soliditySha3(accounts[2])] =
+sampleKeys[localWeb3.utils.soliditySha3(accounts[2])] =
   '00d1267b27c3a80080f9e1b6ba01de313b53ab58000000000000000000000022';
 
 // commKeys
-sampleKeys[web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
-  [web3.utils.soliditySha3(accounts[0]), web3.utils.soliditySha3(accounts[0])].sort())] =
+sampleKeys[localWeb3.utils.soliditySha3.apply(localWeb3.utils.soliditySha3,
+  [localWeb3.utils.soliditySha3(accounts[0]), localWeb3.utils.soliditySha3(accounts[0])].sort())] =
     '001de828935e8c7e4cb56fe610495cae63fb2612000000000000000000000000';    // acc0 <--> acc0 edge key
-sampleKeys[web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
-  [web3.utils.soliditySha3(accounts[0]), web3.utils.soliditySha3(accounts[1])].sort())] =
+sampleKeys[localWeb3.utils.soliditySha3.apply(localWeb3.utils.soliditySha3,
+  [localWeb3.utils.soliditySha3(accounts[0]), localWeb3.utils.soliditySha3(accounts[1])].sort())] =
     '001de828935e8c7e4cb50030c5e7394585400b1f000000000000000000000001';    // acc0 <--> acc1 edge key
-sampleKeys[web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
-  [web3.utils.soliditySha3(accounts[0]), web3.utils.soliditySha3(accounts[2])].sort())] =
+sampleKeys[localWeb3.utils.soliditySha3.apply(localWeb3.utils.soliditySha3,
+  [localWeb3.utils.soliditySha3(accounts[0]), localWeb3.utils.soliditySha3(accounts[2])].sort())] =
     '001de828935e8c7e4cb500d1267b27c3a80080f9000000000000000000000002';    // acc0 <--> acc1 edge key
-sampleKeys[web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
-  [web3.utils.soliditySha3(accounts[1]), web3.utils.soliditySha3(accounts[1])].sort())] =
+sampleKeys[localWeb3.utils.soliditySha3.apply(localWeb3.utils.soliditySha3,
+  [localWeb3.utils.soliditySha3(accounts[1]), localWeb3.utils.soliditySha3(accounts[1])].sort())] =
     '0030c5e7394585400b1fb193ddbcb45a37ab916e000000000000000000000011';
-sampleKeys[web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
-  [web3.utils.soliditySha3(accounts[1]), web3.utils.soliditySha3(accounts[2])].sort())] =
+sampleKeys[localWeb3.utils.soliditySha3.apply(localWeb3.utils.soliditySha3,
+  [localWeb3.utils.soliditySha3(accounts[1]), localWeb3.utils.soliditySha3(accounts[2])].sort())] =
     '0030c5e7394585400b1f00d1267b27c3a80080f9000000000000000000000012';    // acc1 <--> acc2 edge key
-sampleKeys[web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
-  [web3.utils.soliditySha3(accounts[2]), web3.utils.soliditySha3(accounts[2])].sort())] =
+sampleKeys[localWeb3.utils.soliditySha3.apply(localWeb3.utils.soliditySha3,
+  [localWeb3.utils.soliditySha3(accounts[2]), localWeb3.utils.soliditySha3(accounts[2])].sort())] =
     '00d1267b27c3a80080f9e1b6ba01de313b53ab58000000000000000000000022';
 
 
@@ -195,7 +195,7 @@ export class TestUtils {
     const cryptor = new Aes();
     const unencryptedCryptor = new Unencrypted();
     const cryptoConfig = {};
-    const cryptoInfo = cryptor.getCryptoInfo(web3.utils.soliditySha3(accounts[0]));
+    const cryptoInfo = cryptor.getCryptoInfo(localWeb3.utils.soliditySha3(accounts[0]));
     cryptoConfig['aes'] = cryptor;
     cryptoConfig['aesEcb'] = new AesEcb();
     cryptoConfig['unencrypted'] = unencryptedCryptor;
@@ -303,7 +303,7 @@ export class TestUtils {
     return new Promise<Ipld>((resolve) => {
       // crypto provider
       const cryptoConfig = {};
-      const cryptoInfo = cryptor.getCryptoInfo(web3.utils.soliditySha3(accounts[0]));
+      const cryptoInfo = cryptor.getCryptoInfo(localWeb3.utils.soliditySha3(accounts[0]));
       const cryptoProvider = this.getCryptoProvider();
       // key provider
       const keyProvider = _keyProvider ||  (new KeyProvider({ keys: sampleKeys, }));
@@ -369,7 +369,7 @@ export class TestUtils {
     return nameResolver;
   }
 
-  static async getPayments(web3, accountId) : Promise<Payments> {
+  static async getPayments(web3, accountId): Promise<Payments> {
     const executor = await TestUtils.getExecutor(web3);
     const eventHub = await TestUtils.getEventHub(web3);
     executor.eventHub = eventHub;
@@ -400,7 +400,7 @@ export class TestUtils {
   }
 
   static getRandomAddress(): string {
-    return web3.utils.toChecksumAddress(`0x${crypto.randomBytes(20).toString('hex')}`);
+    return localWeb3.utils.toChecksumAddress(`0x${crypto.randomBytes(20).toString('hex')}`);
   }
 
   static getRandomBytes32(): string {
@@ -472,7 +472,7 @@ export class TestUtils {
 
   static getWeb3(provider = web3Provider) {
     // connect to web3
-    return web3;
+    return localWeb3;
   }
 
   static async nextBlock(executor: Executor, accoutId: string): Promise<void> {

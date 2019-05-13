@@ -147,7 +147,9 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   // executor
   const accountStore = options.accountStore || new AccountStore({ accounts: runtimeConfig.accountMap, log, });
   const signer = options.signer || new SignerInternal({ accountStore, contractLoader, config: {}, log, web3, });
-  const executor = options.executor || new Executor(Object.assign({ config, log, signer, web3, }, runtimeConfig.options ? runtimeConfig.options.Executor : {}));
+  const executor = options.executor || new Executor(
+    Object.assign({ config, log, signer, web3, },
+      runtimeConfig.options ? runtimeConfig.options.Executor : {}));
   await executor.init({});
   const nameResolver = options.nameResolver || new NameResolver({
     config: runtimeConfig.nameResolver || config.nameResolver,

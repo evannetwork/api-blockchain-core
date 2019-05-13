@@ -196,7 +196,8 @@ describe.skip('Executor handler', function() {
       executor.token = token;
 
       // fails, as value has been given
-      const txPromise = executor.executeContractTransaction(localContract, 'transferOwnership', { gas: 2000000, value: 1000, }, randomAccount);
+      const txPromise = executor.executeContractTransaction(
+        localContract, 'transferOwnership', { gas: 2000000, value: 1000, }, randomAccount);
       await expect(txPromise).to.be.rejected;
     });
   });

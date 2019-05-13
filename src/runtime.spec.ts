@@ -85,5 +85,4 @@ describe('Runtime', function() {
     expect(runtime).to.be.ok;
     expect(Object.keys(runtime.keyProvider.keys).length).to.eq(5);
   });
-
-})
+});

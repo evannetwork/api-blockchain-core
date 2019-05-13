@@ -290,12 +290,13 @@ export class ExecutorWallet extends Executor {
         // const estimationArguments = functionArguments.slice();
         let gasEstimated;
         let executeCallback;
-        const estimationCallback = async (error, gasAmount) => {
+        const estimationCallback = async (estimationError, gasAmount) => {
           gasEstimated = gasAmount;
-          if (error) {
+          if (estimationError) {
             await stopWatching(true);
-            logGas({ status: 'error', message: `could not estimate; ${error}` });
-            reject(`could not estimate gas usage for ${functionName}: ${error}; ${error.stack}`);
+            logGas({ status: 'error', message: `could not estimate; ${estimationError}` });
+            reject(`could not estimate gas usage for ${functionName}: ${estimationError}; ` +
+              estimationError.stack);
           } else if (inputOptions.estimate) {
             await stopWatching();
             resolve(gasAmount);
@@ -309,9 +310,10 @@ export class ExecutorWallet extends Executor {
             // recover original from, as estimate converts from to lower case
             // overwrite given gas with estimation plus autoGas factor
             if (autoGas) {
-              this.web3.eth.getBlock('latest', (error, result) => {
-                if (error) {
-                  reject(`could not get latest block for ${functionName}: ${error}; ${error.stack}`);
+              this.web3.eth.getBlock('latest', (blockError, result) => {
+                if (blockError) {
+                  reject(`could not get latest block for ${functionName}: ${blockError}; ` +
+                    blockError.stack);
                 } else {
                   const currentLimit = result.gasLimit;
                   const gas = Math.floor(

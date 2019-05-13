@@ -42,15 +42,15 @@ export interface AesEcbOptions extends LoggerOptions {
 }
 
 export class AesEcb extends Logger implements Cryptor {
+  static defaultOptions = {
+    keyLength: 256,
+    algorithm: 'aes-256-ecb',
+  };
 
   private readonly encodingUnencrypted = 'utf-8';
   private readonly encodingEncrypted = 'hex';
 
   options: any;
-  static defaultOptions = {
-    keyLength: 256,
-    algorithm: 'aes-256-ecb',
-  };
 
   constructor(options?: AesEcbOptions) {
     super(options);

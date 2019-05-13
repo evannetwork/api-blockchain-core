@@ -242,28 +242,37 @@ describe('Business Center', function() {
   });
 
   it('allows to to cancel membership', async () => {
-    let isMember = await executor.executeContractCall(businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
+    let isMember = await executor.executeContractCall(
+      businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
     if (!isMember) {
-      await executor.executeContractTransaction(businessCenter, 'join', { from: accounts[2], autoGas: 1.1, });
+      await executor.executeContractTransaction(
+        businessCenter, 'join', { from: accounts[2], autoGas: 1.1, });
     }
-    await executor.executeContractTransaction(businessCenter, 'cancel', { from: accounts[2], autoGas: 1.1, });
-    isMember = await executor.executeContractCall(businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
+    await executor.executeContractTransaction(
+      businessCenter, 'cancel', { from: accounts[2], autoGas: 1.1, });
+    isMember = await executor.executeContractCall(
+      businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
     expect(isMember).to.be.false;
   });
 
   it('does not allow to cancel a membership if not joined', async () => {
-    let isMember = await executor.executeContractCall(businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
+    let isMember = await executor.executeContractCall(
+      businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
     if (isMember) {
-      await executor.executeContractTransaction(businessCenter, 'cancel', { from: accounts[2], autoGas: 1.1, });
+      await executor.executeContractTransaction(
+        businessCenter, 'cancel', { from: accounts[2], autoGas: 1.1, });
     }
-    const promise = executor.executeContractTransaction(businessCenter, 'cancel', { from: accounts[2], autoGas: 1.1, });
+    const promise = executor.executeContractTransaction(
+      businessCenter, 'cancel', { from: accounts[2], autoGas: 1.1, });
     await expect(promise).to.be.rejected;
   });
 
   it('does not allow sending fake contract events', async () => {
-    let isMember = await executor.executeContractCall(businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
+    let isMember = await executor.executeContractCall(
+      businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
     if (isMember) {
-      await executor.executeContractTransaction(businessCenter, 'cancel', { from: accounts[2], autoGas: 1.1, });
+      await executor.executeContractTransaction(
+        businessCenter, 'cancel', { from: accounts[2], autoGas: 1.1, });
     }
     const promise = executor.executeContractTransaction(
       businessCenter,
@@ -278,58 +287,76 @@ describe('Business Center', function() {
 
   it('allows members to set their own profile', async () => {
     const sampleProfile = '0x1234000000000000000000000000000000000000000000000000000000000000';
-    let isMember = await executor.executeContractCall(businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
+    let isMember = await executor.executeContractCall(
+      businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
     if (!isMember) {
-      await executor.executeContractTransaction(businessCenter, 'join', { from: accounts[2], autoGas: 1.1, });
+      await executor.executeContractTransaction(
+        businessCenter, 'join', { from: accounts[2], autoGas: 1.1, });
     }
     let profile = await executor.executeContractCall(businessCenter, 'getProfile', accounts[2]);
     if (profile !== empty) {
-      await executor.executeContractTransaction(businessCenter, 'setMyProfile', { from: accounts[2], autoGas: 1.1, }, empty);
+      await executor.executeContractTransaction(
+        businessCenter, 'setMyProfile', { from: accounts[2], autoGas: 1.1, }, empty);
     }
-    await executor.executeContractTransaction(businessCenter, 'setMyProfile', { from: accounts[2], autoGas: 1.1, }, sampleProfile);
+    await executor.executeContractTransaction(
+      businessCenter, 'setMyProfile', { from: accounts[2], autoGas: 1.1, }, sampleProfile);
     profile = await executor.executeContractCall(businessCenter, 'getProfile', accounts[2]);
     expect(profile).to.eq(sampleProfile);
   });
 
   it('removes a user profile when this user leaves', async () => {
     const sampleProfile = '0x1234000000000000000000000000000000000000000000000000000000000000';
-    let isMember = await executor.executeContractCall(businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
+    let isMember = await executor.executeContractCall(
+      businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
     if (!isMember) {
-      await executor.executeContractTransaction(businessCenter, 'join', { from: accounts[2], autoGas: 1.1, });
+      await executor.executeContractTransaction(
+        businessCenter, 'join', { from: accounts[2], autoGas: 1.1, });
     }
-    await executor.executeContractTransaction(businessCenter, 'setMyProfile', { from: accounts[2], autoGas: 1.1, }, sampleProfile);
-    let profile = await executor.executeContractCall(businessCenter, 'getProfile', accounts[2]);
+    await executor.executeContractTransaction(
+      businessCenter, 'setMyProfile', { from: accounts[2], autoGas: 1.1, }, sampleProfile);
+    let profile = await executor.executeContractCall(
+      businessCenter, 'getProfile', accounts[2]);
     expect(profile).to.eq(sampleProfile);
-    await executor.executeContractTransaction(businessCenter, 'cancel', { from: accounts[2], autoGas: 1.1, });
+    await executor.executeContractTransaction(
+      businessCenter, 'cancel', { from: accounts[2], autoGas: 1.1, });
     profile = await executor.executeContractCall(businessCenter, 'getProfile', accounts[2]);
     expect(profile).to.eq(empty);
   });
 
   it('does not allow setting a profile when executing user is not a member  ', async () => {
     const sampleProfile = '0x1234000000000000000000000000000000000000000000000000000000000000';
-    let isMember = await executor.executeContractCall(businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
+    let isMember = await executor.executeContractCall(
+      businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
     if (isMember) {
-      await executor.executeContractTransaction(businessCenter, 'cancel', { from: accounts[2], autoGas: 1.1, });
+      await executor.executeContractTransaction(
+        businessCenter, 'cancel', { from: accounts[2], autoGas: 1.1, });
     }
-    const promise = executor.executeContractTransaction(businessCenter, 'setMyProfile', { from: accounts[2], autoGas: 1.1, }, sampleProfile);
+    const promise = executor.executeContractTransaction(
+      businessCenter, 'setMyProfile', { from: accounts[2], autoGas: 1.1, }, sampleProfile);
     await expect(promise).to.be.rejected;
   });
 
   it('allows members to update own profile', async () => {
     const sampleProfile1 = '0x1234000000000000000000000000000000000000000000000000000000000000';
     const sampleProfile2 = '0x1234500000000000000000000000000000000000000000000000000000000000';
-    let isMember = await executor.executeContractCall(businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
+    let isMember = await executor.executeContractCall(
+      businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
     if (!isMember) {
-      await executor.executeContractTransaction(businessCenter, 'join', { from: accounts[2], autoGas: 1.1, });
+      await executor.executeContractTransaction(
+        businessCenter, 'join', { from: accounts[2], autoGas: 1.1, });
     }
     let profile = await executor.executeContractCall(businessCenter, 'getProfile', accounts[2]);
     if (profile !== empty) {
-      await executor.executeContractTransaction(businessCenter, 'setMyProfile', { from: accounts[2], autoGas: 1.1, }, empty);
+      await executor.executeContractTransaction(
+        businessCenter, 'setMyProfile', { from: accounts[2], autoGas: 1.1, }, empty);
     }
-    await executor.executeContractTransaction(businessCenter, 'setMyProfile', { from: accounts[2], autoGas: 1.1, }, sampleProfile1);
-    profile = await executor.executeContractCall(businessCenter, 'getProfile', accounts[2]);
+    await executor.executeContractTransaction(
+      businessCenter, 'setMyProfile', { from: accounts[2], autoGas: 1.1, }, sampleProfile1);
+    profile = await executor.executeContractCall(
+      businessCenter, 'getProfile', accounts[2]);
     expect(profile).to.eq(sampleProfile1);
-    await executor.executeContractTransaction(businessCenter, 'setMyProfile', { from: accounts[2], autoGas: 1.1, }, sampleProfile2);
+    await executor.executeContractTransaction(
+      businessCenter, 'setMyProfile', { from: accounts[2], autoGas: 1.1, }, sampleProfile2);
     profile = await executor.executeContractCall(businessCenter, 'getProfile', accounts[2]);
     expect(profile).to.eq(sampleProfile2);
   });

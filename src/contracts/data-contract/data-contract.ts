@@ -201,7 +201,8 @@ export class DataContract extends BaseContract {
       ]);
       await Promise.all((listNames).map(name => this.validate(description, name, hashes)));
       // get all keys and check if they differ
-      const keys = await Promise.all(listNames.map(name => this.options.sharing.getKey(dataContract.options.address, encryptionContext, name, blockNr)));
+      const keys = await Promise.all(listNames.map(name =>
+        this.options.sharing.getKey(dataContract.options.address, encryptionContext, name, blockNr)));
       const groupedKeys = {};
       keys.forEach((key, index) => {
         if (groupedKeys[key]) {
