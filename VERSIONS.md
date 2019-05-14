@@ -2,6 +2,8 @@
 
 ## Next Version
 ### Features
+- add `gasPrice` option to runtime config
+
 ### Fixes
 ### Deprecations
 
