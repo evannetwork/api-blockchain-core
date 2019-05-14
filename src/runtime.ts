@@ -130,7 +130,8 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
 
       const smartContract = require('@evan.network/smart-contracts-core');
       const solc = new smartContract.Solc({ config: solcCfg, log, });
-      await solc.ensureCompiled(runtimeConfig.additionalContractsPaths || [], solcCfg['destinationPath']);
+      await solc.ensureCompiled(
+        runtimeConfig.additionalContractsPaths || [], solcCfg['destinationPath']);
 
       contracts = solc.getContracts();
     } else {
@@ -149,11 +150,21 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   }
 
   // web3 contract interfaces
-  const contractLoader = options.contractLoader || new ContractLoader({ contracts, log, web3, });
+  const contractLoader = options.contractLoader ||
+    new ContractLoader({ contracts, log, web3, });
 
   // executor
-  const accountStore = options.accountStore || new AccountStore({ accounts: runtimeConfig.accountMap, log, });
-  const signer = options.signer || new SignerInternal({ accountStore, contractLoader, config: {}, log, web3, });
+  const accountStore = options.accountStore ||
+    new AccountStore({ accounts: runtimeConfig.accountMap, log, });
+  // decide on gas price depending on environment
+  const signerConfig = <any>{};
+  if (runtimeConfig.hasOwnProperty('gasPrice')) {
+    signerConfig.gasPrice = runtimeConfig.gasPrice;
+  } else {
+    signerConfig.gasPrice = environment === 'core' ? `${200e9}` : `${20e9}`;
+  }
+  const signer = options.signer ||
+    new SignerInternal({ accountStore, contractLoader, config: signerConfig, log, web3, });
   const executor = options.executor || new Executor(
     Object.assign({ config, log, signer, web3, },
       runtimeConfig.options ? runtimeConfig.options.Executor : {}));
