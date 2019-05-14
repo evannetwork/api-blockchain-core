@@ -171,7 +171,7 @@ describe('Container', function() {
       expect(containerDescription.dataSchema.testField).to.deep.eq(expectedSchema);
     });
 
-    it.only('can handle files', async () => {
+    it('can handle files', async () => {
       const container = await Container.create(runtimes[owner], defaultConfig);
       await container.ensureProperty('sampleFiles', Container.defaultSchemas.filesEntry);
 
@@ -196,7 +196,7 @@ describe('Container', function() {
       expect(await container.getEntry('sampleFiles')).to.deep.eq(sampleFilesBackup);
     });
 
-    it.only('can handle files in complex objects', async () => {
+    it('can handle files in complex objects', async () => {
       const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
       template.properties.complexItem = {
         dataSchema: {
@@ -284,7 +284,7 @@ describe('Container', function() {
       expect(await consumerContainer.getListEntries('testList')).to.deep.eq(randomStrings);
     });
 
-    it.only('can handle files', async () => {
+    it('can handle files', async () => {
       const container = await Container.create(runtimes[owner], defaultConfig);
       await container.ensureProperty('testList', Container.defaultSchemas.filesList);
 
@@ -329,7 +329,7 @@ describe('Container', function() {
       expect(await container.getListEntries('testList')).to.deep.eq(sampleFilesBackup);
     });
 
-    it.only('can handle files in complex objects', async () => {
+    it('can handle files in complex objects', async () => {
       const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
       template.properties.complexItemList = {
         dataSchema: {
