@@ -15,8 +15,7 @@ Sharing
    * - Examples
      - `sharing.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/sharing.spec.ts>`_
 
-For getting a better understanding about how Sharings and Multikeys work, have a look at `Security
-<https://evannetwork.github.io/docs/developers/concepts/sharings.html>`_ in the evan.network wiki.
+For getting a better understanding about how Sharings and Multikeys work, have a look at `Security <https://evannetwork.github.io/docs/developers/concepts/sharings.html>`_ in the evan.network wiki.
 
 Following is a sample for a sharing info with these properties:
 
@@ -114,33 +113,17 @@ Following is a sample for a sharing info with these properties:
     }
   }
 
-More information about sharings can be found at the `evan.network wiki
-<https://evannetwork.github.io/docs/developers/concepts/sharings.html>`_.
+More information about sharings can be found at the `evan.network wiki <https://evannetwork.github.io/docs/developers/concepts/sharings.html>`_.
 
 There are two functions to share keys with another user:
 
-- :ref:`addSharing <sharing_addSharing>` is used for easily sharing keys to another user. There is
-no need to explicitly share hash keys to this other user as this is automatically covered here. This
-approach make up to two transaction (1 for hash key and 1 for the content key), which may sum up to
-a whole bunch of transactions when sharing multiple keys to multiple users.
+- :ref:`addSharing <sharing_addSharing>` is used for easily sharing keys to another user. There is no need to explicitly share hash keys to this other user as this is automatically covered here. This approach make up to two transaction (1 for hash key and 1 for the content key), which may sum up to a whole bunch of transactions when sharing multiple keys to multiple users.
 
-- :ref:`extendSharing <sharing_extendSharing>` is used to edit a sharings configuration that has been pulled or "checked
-out" with :ref:`getSharingsFromContract <sharing_getSharingsFromContract>`. Hash keys have to be
-shared manually, if required. :ref:`extendSharing <sharing_extendSharing>` make no transaction, so
-the contract isn't updated - this has to be done with :ref:`saveSharingsToContract
-<sharing_saveSharingsToContract>`. See function documentation :ref:`below <sharing_extendSharing>`
-for an example with hash key and storing updates.
+- :ref:`extendSharing <sharing_extendSharing>` is used to edit a sharings configuration that has been pulled or "checked out" with :ref:`getSharingsFromContract <sharing_getSharingsFromContract>`. Hash keys have to be shared manually, if required. :ref:`extendSharing <sharing_extendSharing>` make no transaction, so the contract isn't updated - this has to be done with :ref:`saveSharingsToContract <sharing_saveSharingsToContract>`. See function documentation :ref:`below <sharing_extendSharing>` for an example with hash key and storing updates.
 
-Be careful when performing multiple updates to sharings synchronously. As sharings are retrieved as
-a single file from a smart contract, updated and then saved back to it, doing two or more updates in
-parallel may overwrite each other and lead to unexpected and most probably undesired results.
+Be careful when performing multiple updates to sharings synchronously. As sharings are retrieved as a single file from a smart contract, updated and then saved back to it, doing two or more updates in parallel may overwrite each other and lead to unexpected and most probably undesired results. 
 
-Perform sharing updates for the same contracts **one after another**, this goes for :ref:`addSharing
-<sharing_addSharing>` **and** for :ref:`extendSharing <sharing_extendSharing>`. When wishing to
-speed things up, :ref:`extendSharing <sharing_extendSharing>` can be used, but its updates need to
-be performed synchronously as well. Keep in mind, that single updates will be made off-chain and
-therefore be performed much faster than multiple updates with :ref:`addSharing
-<sharing_addSharing>`.
+Perform sharing updates for the same contracts **one after another**, this goes for :ref:`addSharing <sharing_addSharing>` **and** for :ref:`extendSharing <sharing_extendSharing>`. When wishing to speed things up, :ref:`extendSharing <sharing_extendSharing>` can be used, but its updates need to be performed synchronously as well. Keep in mind, that single updates will be made off-chain and therefore be performed much faster than multiple updates with :ref:`addSharing <sharing_addSharing>`.
 
 
 
