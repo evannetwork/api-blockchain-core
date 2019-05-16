@@ -136,10 +136,11 @@ a single file from a smart contract, updated and then saved back to it, doing tw
 parallel may overwrite each other and lead to unexpected and most probably undesired results.
 
 Perform sharing updates for the same contracts **one after another**, this goes for :ref:`addSharing
-<sharing_addSharing>` **and** for :ref:`extendSharing <sharing_extendSharing>`. When wishing to speed
-things up, the last one can be used, but its updates to be performed synchronously as well. Keep in
-mind, that single updates will be made off-chain and therefore be performed much faster than multiple
-updates with :ref:`addSharing <sharing_addSharing>`.
+<sharing_addSharing>` **and** for :ref:`extendSharing <sharing_extendSharing>`. When wishing to
+speed things up, :ref:`extendSharing <sharing_extendSharing>` can be used, but its updates need to
+be performed synchronously as well. Keep in mind, that single updates will be made off-chain and
+therefore be performed much faster than multiple updates with :ref:`addSharing
+<sharing_addSharing>`.
 
 
 
