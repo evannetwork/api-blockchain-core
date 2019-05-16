@@ -15,7 +15,7 @@ Sharing
    * - Examples
      - `sharing.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/sharing.spec.ts>`_
 
-For getting a better understanding about how Sharings and Multikeys work, have a look at `Security <https://evannetwork.github.io/dev/security#sharings>`_ in the evan.network wiki.
+For getting a better understanding about how Sharings and Multikeys work, have a look at `Security <https://evannetwork.github.io/docs/developers/concepts/sharings.html>`_ in the evan.network wiki.
 
 Following is a sample for a sharing info with these properties:
 
@@ -225,6 +225,49 @@ Example
 
 --------------------------------------------------------------------------------
 
+.. _sharing_extendSharing:
+
+extendSharing
+================================================================================
+
+.. code-block:: typescript
+
+  sharing.extendSharing(address, originator, partner, section, block, sharingKey[, context, isHashKey]);
+
+Extend an existing sharing info with given key; this is done on a sharings object and does not perform a transaction on its own.
+
+----------
+Parameters
+----------
+
+#. ``sharings`` - ``any``: object with sharings info
+#. ``originator`` - ``string``: Ethereum account id of the sharing user
+#. ``partner`` - ``string``: Ethereum account id for which key shall be added
+#. ``section`` - ``string``: data section the key is intended for or '*'
+#. ``block`` - ``number|string``: starting with this block, the key is valid
+#. ``sharingKey`` - ``string``: key to share
+#. ``context`` - ``string`` (optional): context to share key in
+
+-------
+Returns
+-------
+
+``Promise`` returns ``any``: updated sharings info
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const sharings =  {};
+  await this.options.sharing.extendSharings(sharings, accountId, accountId, '*', blockNr, contentKey);
+  await this.options.sharing.extendSharings(sharings, accountId, accountId, '*', 'hashKey', hashKey);
+
+
+
+--------------------------------------------------------------------------------
+
 .. _sharing_bumpSharings:
 
 bumpSharings
@@ -269,49 +312,6 @@ Example
   // assume we have a contract with sharings for those accounts
   const contractId = '0x00000000000000000000000000000000c027rac7';
   await sharing.bumpSharings(contractId, user1, [ user2, user3 ], '*', 0, 'i am a bump key');
-
-
-
---------------------------------------------------------------------------------
-
-.. _sharing_extendSharing:
-
-extendSharing
-================================================================================
-
-.. code-block:: typescript
-
-  sharing.extendSharing(address, originator, partner, section, block, sharingKey[, context, isHashKey]);
-
-Extend an existing sharing info with given key; this is done on a sharings object and does not perform a transaction on its own.
-
-----------
-Parameters
-----------
-
-#. ``sharings`` - ``any``: object with sharings info
-#. ``originator`` - ``string``: Ethereum account id of the sharing user
-#. ``partner`` - ``string``: Ethereum account id for which key shall be added
-#. ``section`` - ``string``: data section the key is intended for or '*'
-#. ``block`` - ``number|string``: starting with this block, the key is valid
-#. ``sharingKey`` - ``string``: key to share
-#. ``context`` - ``string`` (optional): context to share key in
-
--------
-Returns
--------
-
-``Promise`` returns ``any``: updated sharings info
-
--------
-Example
--------
-
-.. code-block:: typescript
-
-  const sharings =  {};
-  await this.options.sharing.extendSharings(sharings, accountId, accountId, '*', blockNr, contentKey);
-  await this.options.sharing.extendSharings(sharings, accountId, accountId, '*', 'hashKey', hashKey);
 
 
 
