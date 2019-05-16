@@ -15,7 +15,8 @@ Sharing
    * - Examples
      - `sharing.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/sharing.spec.ts>`_
 
-For getting a better understanding about how Sharings and Multikeys work, have a look at `Security <https://evannetwork.github.io/docs/developers/concepts/sharings.html>`_ in the evan.network wiki.
+For getting a better understanding about how Sharings and Multikeys work, have a look at `Security
+<https://evannetwork.github.io/docs/developers/concepts/sharings.html>`_ in the evan.network wiki.
 
 Following is a sample for a sharing info with these properties:
 
@@ -113,7 +114,33 @@ Following is a sample for a sharing info with these properties:
     }
   }
 
-More information about sharings can be fout at the `evan.network wiki <https://evannetwork.github.io/docs/developers/concepts/sharings.html>`_.
+More information about sharings can be found at the `evan.network wiki
+<https://evannetwork.github.io/docs/developers/concepts/sharings.html>`_.
+
+There are two functions to share keys with another user:
+
+- :ref:`addSharing <sharing_addSharing>` is used for easily sharing keys to another user. There is
+no need to explicitly share hash keys to this other user as this is automatically covered here. This
+approach make up to two transaction (1 for hash key and 1 for the content key), which may sum up to
+a whole bunch of transactions when sharing multiple keys to multiple users.
+
+- :ref:`extendSharing <sharing_extendSharing>` is used to edit a sharings configuration that has been pulled or "checked
+out" with :ref:`getSharingsFromContract <sharing_getSharingsFromContract>`. Hash keys have to be
+shared manually, if required. :ref:`extendSharing <sharing_extendSharing>` make no transaction, so
+the contract isn't updated - this has to be done with :ref:`saveSharingsToContract
+<sharing_saveSharingsToContract>`. See function documentation :ref:`below <sharing_extendSharing>`
+for an example with hash key and storing updates.
+
+Be careful when performing multiple updates to sharings synchronously. As sharings are retrieved as
+a single file from a smart contract, updated and then saved back to it, doing two or more updates in
+parallel may overwrite each other and lead to unexpected and most probably undesired results.
+
+Perform sharing updates for the same contracts **one after another**, this goes for :ref:`addSharing
+<sharing_addSharing>` **and** for :ref:`extendSharing <sharing_extendSharing>`. When wishing to speed
+things up, the last one can be used, but its updates to be performed synchronously as well. Keep in
+mind, that single updates will be made off-chain and therefore be performed much faster than multiple
+updates with :ref:`addSharing <sharing_addSharing>`.
+
 
 
 --------------------------------------------------------------------------------
@@ -185,6 +212,9 @@ addSharing
 
 Add a sharing to a contract or an ENS address.
 
+This function is primarily used for sharing single keys with one other users, when sharing multiple keys and/or sharing with multiple users, have a look at :ref:`extendSharing
+<sharing_extendSharing>`.
+
 ----------
 Parameters
 ----------
@@ -234,7 +264,17 @@ extendSharing
 
   sharing.extendSharing(address, originator, partner, section, block, sharingKey[, context, isHashKey]);
 
-Extend an existing sharing info with given key; this is done on a sharings object and does not perform a transaction on its own.
+Extend an existing sharing info with given key.
+
+This is done on a sharings object and does not
+perform a transaction on its own. This function extends a sharing object retrieved from
+:ref:`getSharingsFromContract <sharing_getSharingsFromContract>` and does not update sharings at the
+smart contract. For updating smart contracts sharing use :ref:`saveSharingsToContract
+<sharing_saveSharingsToContract>`.
+
+This function is primarily used to prepare updates for multiple keys and/or multiple users and
+submitting the result in one single transaction. For simpler sharing scenarios have a look at
+:ref:`addSharing <sharing_addSharing>`.
 
 ----------
 Parameters
@@ -260,9 +300,28 @@ Example
 
 .. code-block:: typescript
 
-  const sharings =  {};
-  await this.options.sharing.extendSharings(sharings, accountId, accountId, '*', blockNr, contentKey);
-  await this.options.sharing.extendSharings(sharings, accountId, accountId, '*', 'hashKey', hashKey);
+  // two sample users, user1 wants to share a key with user2
+  const user1 = '0x0000000000000000000000000000000000000001';
+  const user2 = '0x0000000000000000000000000000000000000002';
+
+  // get current sharings
+  const sharings = await sharing.getSharingsFromContract(contract);
+
+  // if receiver of sharing hasn't been added to the contract yet, share hash key as well
+  const hashKeyToShare = await sharing.getHashKey(contract.options.address, user1);
+  await sharing.extendSharings(sharings, user1, user2, '*', 'hashKey', hashKeyToShare, null);
+
+  // get current block number, keys will be available starting from this block
+  const blockNr = await web3.eth.getBlockNumber();
+
+  // get current key for field or in this case fallback '*'
+  const contentKey = sharing.getKey(contract.options.address, user1, '*', blockNr);
+
+  // share this key
+  await sharing.extendSharings(sharings, user1, user2, '*', blockNr, contentKey);
+
+  // finally store to contract
+  await sharing.saveSharingsToContract(contract.options.address, sharings, user1);
 
 
 
