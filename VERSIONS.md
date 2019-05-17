@@ -6,6 +6,7 @@
 
 ### Fixes
 ### Deprecations
+- rename `container` `template` handling to `plugin`
 
 
 ## Version 2.3.1

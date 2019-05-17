@@ -57,7 +57,7 @@ import { Verifications } from '../../verifications/verifications';
  * @param      {ContainerConfig}   config    config for new container
  * @param      {any}               contract  `DataContract` instance
  */
-async function applyTemplate(
+async function applyPlugin(
   options: ContainerOptions,
   config: ContainerConfig,
   container: Container,
@@ -66,10 +66,10 @@ async function applyTemplate(
 
   // use default template if omitted, get template properties
   let template;
-  if (typeof config.template === 'undefined' || typeof config.template === 'string') {
-    template = Container.templates[config.template as string || Container.defaultTemplate];
+  if (typeof config.plugin === 'undefined' || typeof config.plugin === 'string') {
+    template = Container.plugins[config.plugin as string || Container.defaultPlugin];
   } else {
-    template = config.template;
+    template = config.plugin;
   }
 
   // add type property
@@ -190,8 +190,8 @@ export interface ContainerConfig {
   description?: any;
   /** factory address can be passed to ``.create`` for custom container factory */
   factoryAddress?: string;
-  /** template to be used in ``.create``, can be string with name or a ``ContainerTemplate`` */
-  template?: string | ContainerTemplate;
+  /** plugin to be used in ``.create``, can be string with name or a ``ContainerTemplate`` */
+  plugin?: string | ContainerPlugin;
 }
 
 /**
@@ -232,6 +232,16 @@ export interface ContainerShareConfig {
   read?: string[];
   /** list of properties, that are shared readable and writable */
   readWrite?: string[];
+}
+
+/**
+ * base definition of a container instance, covers properties setup and permissions
+ */
+export interface ContainerPlugin {
+  /** container dbcp description (name, description, ...) **/
+  description?: any;
+  /** template for container instances, covers properties setup and permissions **/
+  template: ContainerTemplate;
 }
 
 /**
@@ -323,12 +333,18 @@ export class Container extends Logger {
     stringEntry: { type: 'string' },
     stringList: { type: 'array', items: { type: 'string' } },
   };
-  public static defaultTemplate = 'metadata';
-  public static profileTemplatesKey = 'templates.datacontainer.digitaltwin.evan';
-  public static templates: { [id: string]: ContainerTemplate; } = {
+  public static defaultPlugin = 'metadata';
+  public static profilePluginsKey = 'templates.datacontainer.digitaltwin.evan';
+  public static plugins: { [id: string]: ContainerPlugin; } = {
     metadata: {
-      type: 'metadata',
-      properties: {},
+      description: {
+        name: '',
+        description: '',
+      },
+      template: {
+        type: 'metadata',
+        properties: {},
+      },
     },
   };
   private config: ContainerConfig;
@@ -351,8 +367,8 @@ export class Container extends Logger {
       source: Container,
       copyValues = false,
   ): Promise<Container> {
-    const template = await source.toTemplate(copyValues);
-    return Container.create(options, { ...config, template });
+    const plugin = await source.toPlugin(copyValues);
+    return Container.create(options, { ...config, plugin });
   }
 
   /**
@@ -369,8 +385,9 @@ export class Container extends Logger {
     const instanceConfig = cloneDeep(config);
 
     // convert template properties to jsonSchema
-    if (instanceConfig.template.properties) {
-      instanceConfig.description.dataSchema = toJsonSchema(instanceConfig.template.properties)
+    if (instanceConfig.plugin && instanceConfig.plugin.template.properties) {
+      instanceConfig.description.dataSchema = toJsonSchema(
+        instanceConfig.plugin.template.properties)
     }
 
     // check description values and upload it
@@ -411,83 +428,82 @@ export class Container extends Logger {
     await container.ensureContract();
 
     // write values from template to new contract
-    await applyTemplate(options, instanceConfig, container);
+    await applyPlugin(options, instanceConfig, container);
 
     return container;
   }
 
   /**
-   * Remove a container template from a users profile.
+   * Remove a container plugin from a users profile.
    *
    * @param      {Profile}  profile  profile instance
-   * @param      {string}   name     template name
+   * @param      {string}   name     plugin name
    */
   public static async deleteContainerTemplate(
     profile: Profile,
     name: string
   ): Promise<void> {
     await profile.loadForAccount(profile.treeLabels.contracts);
-    await profile.removeBcContract(Container.profileTemplatesKey, name);
+    await profile.removeBcContract(Container.profilePluginsKey, name);
     await profile.storeForAccount(profile.treeLabels.contracts);
   }
 
   /**
-   * Get one container template for a users profile by name.
+   * Get one container plugin for a users profile by name.
    *
    * @param      {Profile}  profile  profile instance
-   * @param      {string}   name     template name
+   * @param      {string}   name     plugin name
    */
-  public static async getContainerTemplate(
+  public static async getContainerPlugin(
     profile: Profile,
     name: string
-  ): Promise<{ description: any, template: ContainerTemplate }> {
-    const template = await profile.getBcContract(Container.profileTemplatesKey, name);
-    Ipld.purgeCryptoInfo(template);
-    return template;
+  ): Promise<ContainerPlugin> {
+    const plugin = await profile.getBcContract(Container.profilePluginsKey, name);
+    Ipld.purgeCryptoInfo(plugin);
+    return plugin;
   }
 
   /**
-   * Get all container templates for a users profile.
+   * Get all container plugins for a users profile.
    *
    * @param      {Profile}            profile      profile instance
    */
-  public static async getContainerTemplates(
+  public static async getContainerPlugins(
     profile: Profile,
     loadContracts = true
-  ): Promise<{[id: string]: { description: any, template: ContainerTemplate }}> {
-    const bcContracts = (await profile.getBcContracts(Container.profileTemplatesKey)) || { };
+  ): Promise<{[id: string]: ContainerPlugin}> {
+    const bcContracts = (await profile.getBcContracts(Container.profilePluginsKey)) || { };
     Ipld.purgeCryptoInfo(bcContracts);
 
     if (loadContracts) {
-      const templates: any = { };
+      const plugins: any = { };
 
-      // request all templates
-      await Promise.all(Object.keys(bcContracts).map(async (templateName: string) => {
-        templates[templateName] = await Container.getContainerTemplate(profile, templateName)
+      // request all plugins
+      await Promise.all(Object.keys(bcContracts).map(async (pluginName: string) => {
+        plugins[pluginName] = await Container.getContainerPlugin(profile, pluginName)
       }));
 
-      return templates;
+      return plugins;
     } else {
       return bcContracts;
     }
   }
 
   /**
-   * Persists a template including an dbcp description to the users profile.
+   * Persists a plugin including an dbcp description to the users profile.
    *
    * @param      {Profile}            profile      profile instance
-   * @param      {string}             name         template name
-   * @param      {any}                description  predefined template dbcp description
-   * @param      {ContainerTemplate}  template     container template object
+   * @param      {string}             name         plugin name
+   * @param      {any}                description  predefined plugin dbcp description
+   * @param      {ContainerTemplate}  plugin     container plugin object
    */
-  public static async saveContainerTemplate(
+  public static async saveContainerPlugin(
     profile: Profile,
     name: string,
-    description: any,
-    template: ContainerTemplate
+    plugin: ContainerPlugin
   ): Promise<void> {
     await profile.loadForAccount(profile.treeLabels.contracts);
-    await profile.addBcContract(Container.profileTemplatesKey, name, { description, template });
+    await profile.addBcContract(Container.profilePluginsKey, name, plugin);
     await profile.storeForAccount(profile.treeLabels.contracts);
   }
 
@@ -834,7 +850,7 @@ export class Container extends Logger {
     }
 
     // check fields
-    const { properties: schemaProperties } = await this.toTemplate(false);
+    const schemaProperties = (await this.toPlugin(false)).template.properties;
     const sharedProperties = Array.from(
       new Set([].concat(...shareConfigs.map(shareConfig => [].concat(
         shareConfig.read, shareConfig.readWrite)))))
@@ -952,15 +968,17 @@ export class Container extends Logger {
   }
 
   /**
-   * Export current container state as template.
+   * Export current container state as plugin.
    *
    * @param      {boolean}  getValues  export entry values or not (list entries are always excluded)
    */
-  public async toTemplate(getValues = false): Promise<ContainerTemplate> {
+  public async toPlugin(getValues = false): Promise<ContainerPlugin> {
     await this.ensureContract();
-    // create empty template
-    const template: Partial<ContainerTemplate> = {
-      properties: {},
+    // create empty plugin
+    const template: Partial<ContainerTemplate> = { };
+    const plugin: ContainerPlugin = {
+      description: { },
+      template: template as ContainerTemplate
     };
 
     // fetch description, add fields from data schema
@@ -1005,7 +1023,7 @@ export class Container extends Logger {
             try {
               value = await this.getEntry(property);
             } catch (ex) {
-              this.log(`Could not load value for entry ${ property } in toTemplate:
+              this.log(`Could not load value for entry ${ property } in toPlugin:
                 ${ ex.message }`, 'error');
             }
 
@@ -1022,7 +1040,7 @@ export class Container extends Logger {
     // write type value to template property
     template.type = await this.getEntry('type');
 
-    return template as ContainerTemplate;
+    return plugin;
   }
 
   /**
