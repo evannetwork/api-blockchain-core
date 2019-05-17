@@ -138,6 +138,7 @@ export class IpfsLib {
         `--${boundary}`,
         `Content-Disposition: form-data; name="${file.path}"`,
         'Content-Type: application/octet-stream',
+        '',
         ''
       ].join('\r\n');
 
