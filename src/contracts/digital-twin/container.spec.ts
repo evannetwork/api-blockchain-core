@@ -473,12 +473,12 @@ describe('Container', function() {
 
       // load single template
       const loadedPlugin = await Container.getContainerPlugin(profile, pluginName);
-      expect(loadedPlugin.template).to.deep.equal(plugin);
+      expect(loadedPlugin).to.deep.equal(plugin);
 
       // load multiple plugins
       let plugins = await Container.getContainerPlugins(profile);
       expect(plugins).to.have.property(pluginName);
-      expect(plugins[pluginName].template).to.deep.equal(plugin);
+      expect(plugins[pluginName]).to.deep.equal(plugin);
 
       // remove template
       await Container.deleteContainerTemplate(profile, pluginName);

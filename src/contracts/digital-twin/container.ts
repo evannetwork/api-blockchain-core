@@ -65,15 +65,15 @@ async function applyPlugin(
   let tasks = [];
 
   // use default template if omitted, get template properties
-  let template;
+  let plugin;
   if (typeof config.plugin === 'undefined' || typeof config.plugin === 'string') {
-    template = Container.plugins[config.plugin as string || Container.defaultPlugin];
+    plugin = Container.plugins[config.plugin as string || Container.defaultPlugin];
   } else {
-    template = config.plugin;
+    plugin = config.plugin;
   }
 
   // add type property
-  const properties = cloneDeep(template.properties);
+  const properties = cloneDeep(plugin.template.properties);
   if (!properties.type) {
     properties.type = {
       dataSchema: { $id: 'type_schema', type: 'string' },
@@ -81,7 +81,7 @@ async function applyPlugin(
       permissions: {
         0: ['set']
       },
-      value: template.type,
+      value: plugin.template.type,
     };
   }
   for (let propertyName of Object.keys(properties)) {
@@ -385,8 +385,10 @@ export class Container extends Logger {
     const instanceConfig = cloneDeep(config);
 
     // convert template properties to jsonSchema
-    if (instanceConfig.plugin && instanceConfig.plugin.template.properties) {
-      instanceConfig.description.dataSchema = toJsonSchema(
+    if (instanceConfig.plugin &&
+      instanceConfig.plugin.template &&
+      instanceConfig.plugin.template.properties) {
+        instanceConfig.description.dataSchema = toJsonSchema(
         instanceConfig.plugin.template.properties)
     }
 
@@ -974,15 +976,18 @@ export class Container extends Logger {
    */
   public async toPlugin(getValues = false): Promise<ContainerPlugin> {
     await this.ensureContract();
-    // create empty plugin
-    const template: Partial<ContainerTemplate> = { };
-    const plugin: ContainerPlugin = {
-      description: { },
-      template: template as ContainerTemplate
-    };
 
     // fetch description, add fields from data schema
     const description = await this.getDescription();
+
+    // create empty plugin
+    const template: Partial<ContainerTemplate> = {
+      properties: { }
+    };
+    const plugin: ContainerPlugin = {
+      description,
+      template: template as ContainerTemplate
+    };
 
     // if values should be loaded, load permissions first, so we won't load unreadable data
     let readableEntries;
