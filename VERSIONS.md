@@ -5,6 +5,8 @@
 - add `gasPrice` option to runtime config
 
 ### Fixes
+- change `aes-ecb` `crypto.createCipheriv` null to empty string
+
 ### Deprecations
 - rename `container` `template` handling to `plugin`
 
