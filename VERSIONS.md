@@ -23,11 +23,11 @@
   - profilePluginsKey => profilePluginsKey
   - templates => plugins
   - toTemplate => toPlugin
-  - deleteContainerPlugin => deleteContainerPlugin
-  - getContainerPlugin => getContainerPlugin
-  - getContainerPlugins => getContainerPlugins
-  - saveContainerPlugin => saveContainerPlugin
-  - applyPlugin => applyPlugin
+  - deleteContainerTemplate => deleteContainerPlugin
+  - getContainerTemplate => getContainerPlugin
+  - getContainerTemplates => getContainerPlugins
+  - saveContainerTemplate => saveContainerPlugin
+  - applyTemplate => applyPlugin
 
 
 ## Version 2.3.1
