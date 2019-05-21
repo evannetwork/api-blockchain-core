@@ -138,7 +138,9 @@ Creates a new identity for account or contract and registers them on the storage
 Parameters
 ----------
 
-#. ``accountId`` - ``string``: the account identifier
+#. ``accountId`` - ``string``: ccount that runs transaction, receiver of identity when omitting the other arguments
+#. ``contractId`` - ``string``: (optional) contract address to create the identity for, creates account identity for ``accountId`` if omitted
+#. ``updateDescription`` - ``boolean`` (optional): update description of contract, defaults to ``true``
 
 -------
 Returns
@@ -591,6 +593,7 @@ Parameters
 #. ``accountid`` - ``string``: account, that performs the action
 #. ``subject`` - ``string``: the subject of the verification
 #. ``verificationId`` - ``string``: id of a verification to delete
+#. ``isIdentity`` - ``bool`` (optional): ``true`` if given ``subject`` is an identity, defaults to ``false``
 
 -------
 Returns
@@ -630,6 +633,7 @@ Parameters
 #. ``subject`` - ``string``: the subject of the verification
 #. ``verificationId`` - ``string``: id of a verification to delete
 #. ``rejectReason`` - ``object`` (optional): JSON Object of the rejection reason
+#. ``isIdentity`` - ``bool`` (optional): ``true`` if given ``subject`` is an identity, defaults to ``false``
 
 -------
 Returns
@@ -671,6 +675,7 @@ Parameters
 #. ``accountId`` - ``string``: account, that performs the action
 #. ``subject`` - ``string``: verification subject
 #. ``verificationId`` - ``string``: id of a verification to confirm
+#. ``isIdentity`` - ``bool`` (optional): ``true`` if given ``subject`` is an identity, defaults to ``false``
 
 -------
 Returns
