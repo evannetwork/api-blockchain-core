@@ -3,6 +3,15 @@
 ## Next Version
 ### Features
 - add `gasPrice` option to runtime config
+- add support for contracts without description
+  + add `updateDescription` flag to `createIdentity` to skip automatic description updates
+  + add `isIdentity` flag to
+    * `executeOnIdentity`
+    * `confirmVerification`
+    * `deleteVerification`
+    * `getVerifications`
+    * `rejectVerification`
+    * `executeOnIdentity` (private)
 
 ### Fixes
 - change `aes-ecb` `crypto.createCipheriv` null to empty string
