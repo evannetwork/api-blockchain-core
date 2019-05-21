@@ -18,6 +18,16 @@
 
 ### Deprecations
 - rename `container` `template` handling to `plugin`
+  - ContainerTemplate to ContainerPlugin
+  - defaultTemplate => defaultPlugin
+  - profilePluginsKey => profilePluginsKey
+  - templates => plugins
+  - toTemplate => toPlugin
+  - deleteContainerPlugin => deleteContainerPlugin
+  - getContainerPlugin => getContainerPlugin
+  - getContainerPlugins => getContainerPlugins
+  - saveContainerPlugin => saveContainerPlugin
+  - applyPlugin => applyPlugin
 
 
 ## Version 2.3.1

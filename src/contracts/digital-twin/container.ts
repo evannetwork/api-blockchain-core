@@ -441,7 +441,7 @@ export class Container extends Logger {
    * @param      {Profile}  profile  profile instance
    * @param      {string}   name     plugin name
    */
-  public static async deleteContainerTemplate(
+  public static async deleteContainerPlugin(
     profile: Profile,
     name: string
   ): Promise<void> {

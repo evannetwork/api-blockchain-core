@@ -481,7 +481,7 @@ describe('Container', function() {
       expect(plugins[pluginName]).to.deep.equal(plugin);
 
       // remove template
-      await Container.deleteContainerTemplate(profile, pluginName);
+      await Container.deleteContainerPlugin(profile, pluginName);
       plugins = await Container.getContainerPlugins(profile);
       expect(plugins).to.not.have.property(pluginName);
     });
