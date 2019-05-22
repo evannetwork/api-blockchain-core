@@ -130,7 +130,7 @@ createIdentity
 
 .. code-block:: typescript
 
-  verifications.createIdentity(accountId[, contractId]);
+  verifications.createIdentity(accountId[, contractId, updateDescription]);
 
 Creates a new identity for account or contract and registers them on the storage. Returned identity is either a 40B contract address (for account identities) or a 32B idenity hash contract identities.
 
@@ -582,7 +582,7 @@ deleteVerification
 
 .. code-block:: typescript
 
-  verifications.deleteVerification(accountId, subject, verificationId);
+  verifications.deleteVerification(accountId, subject, verificationId[, isIdentity]);
 
 Delete a verification. This requires the **accountId** to have permissions for the parent verification (if verification name seen as a path, the parent 'folder'). Subjects of a verification may only delete it, if they are the issuer as well. If not, they can only react to it by confirming or rejecting the verification.
 
@@ -621,7 +621,7 @@ rejectVerification
 
 .. code-block:: typescript
 
-  verifications.rejectVerification(accountId, subject, verificationId, rejectReason?);
+  verifications.rejectVerification(accountId, subject, verificationId[, rejectReason, isIdentity]);
 
 Reject a Verification. This verification will be marked as rejected but not deleted. This is important for tracking reasons. You can also optionally add a reject reason as JSON object to track additional informations about the rejection. Issuer and Subject can reject a special verification. 
 
@@ -664,7 +664,7 @@ confirmVerification
 
 .. code-block:: typescript
 
-  verifications.confirmVerification(accountId, subject, verificationId);
+  verifications.confirmVerification(accountId, subject, verificationId[, isIdentity]);
 
 Confirms a verification; this can be done, if a verification has been issued for a subject and the subject wants to confirms it.
 
