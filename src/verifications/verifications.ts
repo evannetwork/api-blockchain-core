@@ -710,7 +710,7 @@ export class Verifications extends Logger {
 
                 // if it's a root verification, remove parent, selfIssued and issued warnings
                 verification.warnings = verification.warnings.filter(warning =>
-                  whitelistWarnings.indexOf('warning') !== -1
+                  whitelistWarnings.indexOf(warning) !== -1
                 );
               }
             }
