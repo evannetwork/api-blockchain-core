@@ -50,135 +50,6 @@ import { Verifications } from '../../verifications/verifications';
 
 
 /**
- * Apply template to data contract; this should be used with caution and is intended to only be
- * used on new contract (e.g. in `create` and `clone`).
- *
- * @param      {ContainerOptions}  options   runtime for new `Container`
- * @param      {ContainerConfig}   config    config for new container
- * @param      {any}               contract  `DataContract` instance
- */
-async function applyPlugin(
-  options: ContainerOptions,
-  config: ContainerConfig,
-  container: Container,
-): Promise<void> {
-  let tasks = [];
-
-  // use default template if omitted, get template properties
-  let plugin;
-  if (typeof config.plugin === 'undefined' || typeof config.plugin === 'string') {
-    plugin = Container.plugins[config.plugin as string || Container.defaultPlugin];
-  } else {
-    plugin = config.plugin;
-  }
-
-  // add type property
-  const properties = cloneDeep(plugin.template.properties);
-  if (!properties.type) {
-    properties.type = {
-      dataSchema: { $id: 'type_schema', type: 'string' },
-      type: 'entry',
-      permissions: {
-        0: ['set']
-      },
-      value: plugin.template.type,
-    };
-  }
-  for (let propertyName of Object.keys(properties)) {
-    const property: ContainerTemplateProperty = properties[propertyName];
-    const permissionTasks = [];
-    for (let role of Object.keys(property.permissions)) {
-      for (let modification of property.permissions[role]) {
-        // allow setting this field; if value is specified, add value AFTER this
-        permissionTasks.push(async () => {
-          await options.rightsAndRoles.setOperationPermission(
-            await container.getContractAddress(),
-            config.accountId,
-            parseInt(role, 10),
-            propertyName,
-            getPropertyType(property.type),
-            getModificationType(modification),
-            true,
-          );
-        });
-      }
-    }
-    if (property.hasOwnProperty('value')) {
-      // if value has been defined, wait for permissions to be completed, then set value
-      tasks.push(async () => {
-        await Throttle.all(permissionTasks);
-        await container.setEntry(propertyName, property.value);
-      });
-    } else {
-      // if no value has been specified, flatten permission tasks and add to task list
-      tasks = tasks.concat(async () => Throttle.all(permissionTasks));
-    }
-  }
-  await Throttle.all(tasks);
-}
-
-/**
- * Check, that given subset of properties is present at config, collections missing properties and
- * throws a single error.
- *
- * @param      {ContainerConfig}  config      config for container instance
- * @param      {string}           properties  list of property names, that should be present
- */
-function checkConfigProperties(config: ContainerConfig, properties: string[]): void {
-  let missing = properties.filter(property => !config.hasOwnProperty(property));
-  if (missing.length === 1) {
-    throw new Error(`missing property in config: "${missing[0]}"`);
-  } else if (missing.length > 1) {
-    throw new Error(`missing properties in config: "${missing.join(', ')}"`);
-  }
-}
-
-/**
- * Converts 'remove'/'set' to rights and roles enum type, throws if invalid.
- *
- * @param      {string}            typeName  remove/set
- * @return     {ModificationType}  enum value from `RightsAndRoles`
- */
-function getModificationType(typeName: string): ModificationType {
-  switch (typeName) {
-    case 'remove': return ModificationType.Remove;
-    case 'set': return ModificationType.Set;
-    default: throw new Error(`unsupported modification type "${typeName}"`);
-  }
-}
-
-/**
- * Converts 'entry'/'list' to rights and roles enum type, throws if invalid.
- *
- * @param      {string}        typeName  entry/list
- * @return     {PropertyType}  enum value from `RightsAndRoles`
- */
-function getPropertyType(typeName: string): PropertyType {
-  switch (typeName) {
-    case 'entry': return PropertyType.Entry;
-    case 'list': return PropertyType.ListEntry;
-    default: throw new Error(`unsupported property type type "${typeName}"`);
-  }
-}
-
-/**
- * Converts a properties object to a jsonSchema object.
- *
- * @param      {any}  properties  properties object from template
- */
-function toJsonSchema(properties: any): any {
-  const jsonSchema = {};
-
-  for (let field of Object.keys(properties)) {
-    const fieldId = field.replace(/[^a-zA-Z0-9]/g, '');
-    jsonSchema[field] = { $id: `${fieldId}_schema`, ...properties[field].dataSchema };
-  }
-
-  return jsonSchema;
-}
-
-
-/**
  * config properties, specific to `Container` instances
  */
 export interface ContainerConfig {
@@ -282,8 +153,7 @@ export interface ContainerVerificationEntry {
   expirationDate?: number;
   /** reference to additional validation details */
   verificationValue?: string;
-};
-
+}
 
 /**
  * helper class for managing data contracts; all values are stored encrypted, hashes are encrypted
@@ -1398,4 +1268,132 @@ export class Container extends Logger {
       throw new Error(`could not ${task}; ${ex.message || ex}`);
     }
   }
+}
+
+/**
+ * Apply template to data contract; this should be used with caution and is intended to only be
+ * used on new contract (e.g. in `create` and `clone`).
+ *
+ * @param      {ContainerOptions}  options   runtime for new `Container`
+ * @param      {ContainerConfig}   config    config for new container
+ * @param      {any}               contract  `DataContract` instance
+ */
+async function applyPlugin(
+  options: ContainerOptions,
+  config: ContainerConfig,
+  container: Container,
+): Promise<void> {
+  let tasks = [];
+
+  // use default template if omitted, get template properties
+  let plugin;
+  if (typeof config.plugin === 'undefined' || typeof config.plugin === 'string') {
+    plugin = Container.plugins[config.plugin as string || Container.defaultPlugin];
+  } else {
+    plugin = config.plugin;
+  }
+
+  // add type property
+  const properties = cloneDeep(plugin.template.properties);
+  if (!properties.type) {
+    properties.type = {
+      dataSchema: { $id: 'type_schema', type: 'string' },
+      type: 'entry',
+      permissions: {
+        0: ['set']
+      },
+      value: plugin.template.type,
+    };
+  }
+  for (let propertyName of Object.keys(properties)) {
+    const property: ContainerTemplateProperty = properties[propertyName];
+    const permissionTasks = [];
+    for (let role of Object.keys(property.permissions)) {
+      for (let modification of property.permissions[role]) {
+        // allow setting this field; if value is specified, add value AFTER this
+        permissionTasks.push(async () => {
+          await options.rightsAndRoles.setOperationPermission(
+            await container.getContractAddress(),
+            config.accountId,
+            parseInt(role, 10),
+            propertyName,
+            getPropertyType(property.type),
+            getModificationType(modification),
+            true,
+          );
+        });
+      }
+    }
+    if (property.hasOwnProperty('value')) {
+      // if value has been defined, wait for permissions to be completed, then set value
+      tasks.push(async () => {
+        await Throttle.all(permissionTasks);
+        await container.setEntry(propertyName, property.value);
+      });
+    } else {
+      // if no value has been specified, flatten permission tasks and add to task list
+      tasks = tasks.concat(async () => Throttle.all(permissionTasks));
+    }
+  }
+  await Throttle.all(tasks);
+}
+
+/**
+ * Check, that given subset of properties is present at config, collections missing properties and
+ * throws a single error.
+ *
+ * @param      {ContainerConfig}  config      config for container instance
+ * @param      {string}           properties  list of property names, that should be present
+ */
+function checkConfigProperties(config: ContainerConfig, properties: string[]): void {
+  let missing = properties.filter(property => !config.hasOwnProperty(property));
+  if (missing.length === 1) {
+    throw new Error(`missing property in config: "${missing[0]}"`);
+  } else if (missing.length > 1) {
+    throw new Error(`missing properties in config: "${missing.join(', ')}"`);
+  }
+}
+
+/**
+ * Converts 'remove'/'set' to rights and roles enum type, throws if invalid.
+ *
+ * @param      {string}            typeName  remove/set
+ * @return     {ModificationType}  enum value from `RightsAndRoles`
+ */
+function getModificationType(typeName: string): ModificationType {
+  switch (typeName) {
+    case 'remove': return ModificationType.Remove;
+    case 'set': return ModificationType.Set;
+    default: throw new Error(`unsupported modification type "${typeName}"`);
+  }
+}
+
+/**
+ * Converts 'entry'/'list' to rights and roles enum type, throws if invalid.
+ *
+ * @param      {string}        typeName  entry/list
+ * @return     {PropertyType}  enum value from `RightsAndRoles`
+ */
+function getPropertyType(typeName: string): PropertyType {
+  switch (typeName) {
+    case 'entry': return PropertyType.Entry;
+    case 'list': return PropertyType.ListEntry;
+    default: throw new Error(`unsupported property type type "${typeName}"`);
+  }
+}
+
+/**
+ * Converts a properties object to a jsonSchema object.
+ *
+ * @param      {any}  properties  properties object from template
+ */
+function toJsonSchema(properties: any): any {
+  const jsonSchema = {};
+
+  for (let field of Object.keys(properties)) {
+    const fieldId = field.replace(/[^a-zA-Z0-9]/g, '');
+    jsonSchema[field] = { $id: `${fieldId}_schema`, ...properties[field].dataSchema };
+  }
+
+  return jsonSchema;
 }

@@ -58,7 +58,7 @@
   "homepage": "https://evannetwork.github.io/",
   "husky": {
     "hooks": {
-      "pre-commit": "tslint --config tslint.json \"./src/**/*.ts\""
+      "pre-commit": "tslint --config tslint.json \"./src/**/*.ts\" --project \"./tsconfig.json\""
     }
   },
   "keywords": [
