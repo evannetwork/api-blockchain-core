@@ -153,6 +153,23 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   const contractLoader = options.contractLoader ||
     new ContractLoader({ contracts, log, web3, });
 
+  // check if mnemonic and password are given
+  if (runtimeConfig.mnemonic && runtimeConfig.password) {
+    const tempConfig: any = await Onboarding.generateRuntimeConfig(
+      runtimeConfig.mnemonic,
+      runtimeConfig.password,
+      web3
+    );
+    if (!runtimeConfig.accountMap) {
+      runtimeConfig.accountMap = {};
+    }
+    if (!runtimeConfig.keyConfig) {
+      runtimeConfig.keyConfig = {};
+    }
+    Object.assign(runtimeConfig.accountMap, tempConfig.accountMap);
+    Object.assign(runtimeConfig.keyConfig, tempConfig.keyConfig);
+  }
+
   // executor
   const accountStore = options.accountStore ||
     new AccountStore({ accounts: runtimeConfig.accountMap, log, });
@@ -192,22 +209,6 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   cryptoConfig['aesEcb'] = new AesEcb({ log });
   const cryptoProvider = new CryptoProvider(cryptoConfig);
 
-  // check if mnemonic and password are given
-  if (runtimeConfig.mnemonic && runtimeConfig.password) {
-    const tempConfig: any = await Onboarding.generateRuntimeConfig(
-      runtimeConfig.mnemonic,
-      runtimeConfig.password,
-      web3
-    );
-    if (!runtimeConfig.accountMap) {
-      runtimeConfig.accountMap = {};
-    }
-    if (!runtimeConfig.keyConfig) {
-      runtimeConfig.keyConfig = {};
-    }
-    Object.assign(runtimeConfig.accountMap, tempConfig.accountMap);
-    Object.assign(runtimeConfig.keyConfig, tempConfig.keyConfig);
-  }
   // check and modify if any accountid with password is provided
   if (runtimeConfig.keyConfig) {
     for (let accountId in runtimeConfig.keyConfig) {

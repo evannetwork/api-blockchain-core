@@ -14,6 +14,8 @@
     * `executeOnIdentity` (private)
 
 ### Fixes
+- fix empty accountStore by initializing runtime with mnemonic and password
+
 ### Deprecations
 
 
