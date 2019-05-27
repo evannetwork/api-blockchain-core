@@ -25,6 +25,9 @@ First you need to get blockchain core and its dependencies into your project. Th
 
 After that you need to create a blockchain core runtime with a predefined configuration.
 
+
+.. _configuring-and-initializing-blockchain-core:
+
 Configuring and initializing blockchain core
 ============================================
 

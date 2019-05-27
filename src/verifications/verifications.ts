@@ -490,8 +490,8 @@ export class Verifications extends Logger {
           description = await this.options.description.getDescription(subject, null);
         } catch (_) {
           throw new Error(
-            `could not get identity for contract "${subject}" use either a contract with a ` +
-              'description or work with the 32Bytes identity instead of contractId',
+            `could not get identity for "${subject}" use either an account with an identity, ` +
+            'a contract with a description or work with the 32Bytes identity instead of contractId',
           );
         }
 
@@ -517,7 +517,7 @@ export class Verifications extends Logger {
           }
         }
 
-        // if no description could be loaded for a contract, throw it
+        // if no description could be loaded, throw
         if (!(description && description.public && description.public.identity)) {
           const msg = `could not find identity for "${subject}"`;
           this.log(msg, 'error');
@@ -569,17 +569,31 @@ export class Verifications extends Logger {
    *     subjectOwner: 'account' || 'contract',
    *     // warnings
    *     [
-   *       'issued', // verification.status === 0
-   *       'missing', // no verification exists
-   *       'expired', // is the verification expired?
-   *       'rejected', // rejected
-   *       'selfIssued' // issuer === subject
-   *       'invalid', // signature is manipulated
-   *       'parentMissing',  // parent path does not exists
-   *       'parentUntrusted',  // root path (/) is not issued by evan
-   *       'notEnsRootOwner', // invalid ens root owner when check topic is
-   *       'noIdentity', // checked subject has no identity
-   *       'disableSubVerifications' // when sub verifications are disable on the parent
+   *       // parent verification does not allow subverifications
+   *       'disableSubVerifications',
+   *       // verification has expired
+   *       'expired',
+   *       // signature does not match requirements, this could be because it hasn't been signed by
+   *       // correct account or underlying checksum does not match
+   *       // ``subject``, ``topic`` and ``data``
+   *       'invalid',
+   *       // verification has been issued, but not accepted or rejected by subject
+   *       'issued',
+   *       // verification has not been issued
+   *       'missing',
+   *       // given subject has no identity
+   *       'noIdentity',
+   *       // verification path has a trusted root verification topic, but this verification is not
+   *       // signed by a trusted instance
+   *       'notEnsRootOwner',
+   *       // parent verification is missing in path
+   *       'parentMissing',
+   *       // verification path cannot be traced back to a trusted root verification
+   *       'parentUntrusted',
+   *       // verification has been issued and then rejected by subject
+   *       'rejected',
+   *       // verification issuer is the same account as the subject
+   *       'selfIssued',
    *     ],
    *     parents: [ ... ],
    *     parentComputed: [ ... ]

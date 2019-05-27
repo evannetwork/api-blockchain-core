@@ -15,6 +15,7 @@
 
 ### Fixes
 - fix empty accountStore by initializing runtime with mnemonic and password
+- update docu for verifications
 
 ### Deprecations
 
