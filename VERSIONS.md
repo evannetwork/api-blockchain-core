@@ -14,6 +14,8 @@
     * `executeOnIdentity` (private)
 
 ### Fixes
+- update docu for verifications
+
 ### Deprecations
 
 

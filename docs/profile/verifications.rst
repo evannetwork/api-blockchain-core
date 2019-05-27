@@ -54,6 +54,8 @@ Under this "path" a set of values can be found. These value describe the verific
 - ``valid``
   check if the verification has a valid signature
 
+For a explanation on how to use verification API, possible flows and meaning of the results have a look at the :doc:`verifications usage example <verification-usage-examples>`.
+
 
 
 --------------------------------------------------------------------------------
@@ -155,6 +157,9 @@ Example
 .. code-block:: typescript
 
   const identity = await verifications.createIdentity(accounts[0]);
+  console.log(identity);
+  // Output:
+  // 0x1fE5F7235f1989621135466Ff8882287C63A5bae
 
 
 
@@ -257,7 +262,7 @@ Parameters
 #. ``subject`` - ``string``: subject of the verification and the owner of the verification node
 #. ``topic`` - ``string``: name of the verification (full path)
 #. ``expirationDate`` - ``number`` (optional): expiration date, for the verification, defaults to ``0`` (does not expire)
-#. ``verificationValue`` - ``string`` (optional): bytes32 hash of the verifications value, will not be set if omitted
+#. ``verificationValue`` - ``any`` (optional): json object which will be stored in the verification
 #. ``descriptionDomain`` - ``string`` (optional): domain of the verification, this is a subdomain under 'verifications.evan', so passing 'example' will link verifications description to 'example.verifications.evan', unset if omitted
 #. ``disableSubVerifications`` - ``boolean`` (optional): invalidate all verifications that gets issued as children of this verification (warning will include the disableSubVerifications warning)
 
@@ -308,7 +313,27 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``any[]``: verification info array, contains: issuer, name, status, subject, data, uri, signature, creationDate
+``Promise`` returns ``any[]``: verification info array, 
+
+Verifications have the following properties:
+
+#. ``creationBlock`` - ``string``: block number at which verification was issued
+#. ``creationDate`` - ``string``: UNIX timestamp (in seconds), at which verification was issued
+#. ``data`` - ``string``: 32Bytes hash of data stored in DFS
+#. ``description`` - ``any``: DBCP description
+#. ``disableSubVerifications`` - ``boolean``: ``true`` if this verification does not allow verifications at subtopics
+#. ``expirationDate`` - ``string``: ``string``: UNIX timestamp (in seconds), null if verification does not expire
+#. ``expired`` - ``boolean``: ticket expiration state
+#. ``id`` - ``string``: 32Bytes id of verification
+#. ``issuer`` - ``string``: account address of issuers identity contract
+#. ``name`` - ``string``: topic of verification
+#. ``rejectReason`` - ``any``: object with information from subject about rejection
+#. ``signature`` - ``string``: arbitrary length hex string with signature of verification data, signed by issuer
+#. ``status`` - ``number``: 0 (Issued) || 1 (Confirmed) || 2 (Rejected)
+#. ``subject`` - ``string``: accountId of subject
+#. ``topic`` - ``string``: keccak256 hash of the topic name, converted to uint256
+#. ``uri`` - ``string``: link to ipfs file of data
+#. ``valid`` - ``boolean``: ``true`` if issuer has been correctly confirmed as the signer of ``signature`` and if ``signature`` is related to ``subject``, ``topic`` and ``data``
 
 -------
 Example
@@ -316,35 +341,34 @@ Example
 
 .. code-block:: typescript
 
-  await verifications.setVerification(accounts[0], accounts[1], '/company');
-  console.dir(await verifications.getVerifications(accounts[1], '/company'));
+  const verificationId = await verifications.setVerification(
+    accounts[0], accounts[1], '/example1');
+  console.log(verificationId);
   // Output:
-  // [{
-  //   creationDate: 1234567890,
+  // 0xb4843ed5177433312dd2c7c4f8065ce84f37bf96c04db2775c16c9455ad96270
+
+  const issued = await verifications.getVerifications(accounts[1], '/example1');
+  console.dir(issued);
+  // Output:
+  // [ {
+  //   creationBlock: '186865',
+  //   creationDate: '1558599441',
   //   data: '0x0000000000000000000000000000000000000000000000000000000000000000',
-  //   description: {
-  //     name: 'sample verification',
-  //     description: 'I\'m a sample verification',
-  //     author: 'evan.network',
-  //     version: '1.0.0',
-  //     dbcpVersion: 1,
-  //   },
-  //   expirationDate: 1234567890,
-  //   id: '0x0000000000000000000000000000000000000000000000000000000000000000',
-  //   issuer: '0x0000000000000000000000000000000000000001',
-  //   name: '/company',
-  //   rejectReason: {
-  //     "rejected": "rejection message"
-  //   },
-  //   signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
-  //   status: 0 (Issued) || 1 (Confirmed) || 2 (Rejected), 
-  //   subject: '0x0000000000000000000000000000000000000002',
+  //   description: null,
+  //   disableSubVerifications: false,
+  //   expirationDate: null,
+  //   expired: false,
+  //   id: '0xb4843ed5177433312dd2c7c4f8065ce84f37bf96c04db2775c16c9455ad96270',
+  //   issuer: '0xe560eF0954A2d61D6006E8547EC769fAc322bbCE',
+  //   name: '/example1',
+  //   rejectReason: undefined,
+  //   signature: '0x6a2b41714c1faac09a5ec06024c8931ad6e3aa902c502e3d1bc5d5c4577288c04e9be136c149b569e0456dfec9d50a2250bf405443ae9bccd460c49a2c4287df1b',
+  //   status: 0,
+  //   subject: '0x0030C5e7394585400B1FB193DdbCb45a37Ab916E',
+  //   topic: '34884897835812838038558016063403566909277437558805531399344559176587016933548',
   //   uri: '',
-  //   signature: '0x0000000000000000000000000000000000000000000000000000000000000000',
   //   valid: true
-  // }]
-
-
+  // } ]
 
 
 
@@ -412,17 +436,31 @@ Example
       owner: 'account' || 'contract',: 'account' || 'contract',
       // warnings
       [
-        'issued', // verification.status === 0
-        'missing', // no verification exists
-        'expired', // is the verification expired?
-        'rejected', // rejected
-        'selfIssued' // issuer === subject
-        'invalid', // signature is manipulated
-        'parentMissing',  // parent path does not exists
-        'parentUntrusted',  // root path (/) is not issued by evan
-        'notEnsRootOwner', // invalid ens root owner when check topic is
-        'noIdentity', // checked subject has no identity
-        'disableSubVerifications' // when sub verifications are disable on the parent
+        // parent verification does not allow subverifications
+        'disableSubVerifications',
+        // verification has expired
+        'expired',
+        // signature does not match requirements, this could be because it hasn't been signed by
+        // correct account or underlying checksum does not match
+        // ``subject``, ``topic`` and ``data``
+        'invalid',
+        // verification has been issued, but not accepted or rejected by subject
+        'issued',
+        // verification has not been issued
+        'missing',
+        // given subject has no identity
+        'noIdentity',
+        // verification path has a trusted root verification topic, but this verification is not
+        // signed by a trusted instance
+        'notEnsRootOwner',
+        // parent verification is missing in path
+        'parentMissing',
+        // verification path cannot be traced back to a trusted root verification
+        'parentUntrusted',
+        // verification has been issued and then rejected by subject
+        'rejected',
+        // verification issuer is the same account as the subject
+        'selfIssued',
       ],
       parents: [ ... ],
       parentComputed: [ ... ]
