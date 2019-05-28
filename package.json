@@ -1,8 +1,8 @@
 {
   "author": "evan GmbH",
   "dependencies": {
-    "@evan.network/dbcp": "^1.5.3",
-    "@evan.network/smart-contracts-core": "^2.1.0",
+    "@evan.network/dbcp": "^1.6.0",
+    "@evan.network/smart-contracts-core": "^2.2.0",
     "@types/node": "11.11.4",
     "ajv": "^5.5.1",
     "async-mutex": "^0.1.3",
@@ -85,5 +85,5 @@
     "testunitcoverage": "env-cmd ./.env.local npm run build && nyc -r lcov -e .ts -x \"$TESTSPECS\" mocha --exit -r ts-node/register $TESTSPECS && nyc report --reporter=text-lcov | coveralls"
   },
   "types": "./dist/index.d.ts",
-  "version": "2.3.1"
+  "version": "2.4.0"
 }

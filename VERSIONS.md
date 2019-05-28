@@ -2,6 +2,14 @@
 
 ## Next Version
 ### Features
+
+### Fixes
+
+### Deprecations
+
+
+## Version 2.4.0
+### Features
 - add `gasPrice` option to runtime config
 - add support for contracts without description
   + add `updateDescription` flag to `createIdentity` to skip automatic description updates
@@ -36,6 +44,7 @@
 ## Version 2.3.1
 ### Fixes
 - fix hashing of passwords for generated profiles
+
 
 ## Version 2.3.0
 ### Features
