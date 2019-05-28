@@ -16,8 +16,20 @@
 ### Fixes
 - fix empty accountStore by initializing runtime with mnemonic and password
 - update docu for verifications
+- change `aes-ecb` `crypto.createCipheriv` null to empty string
 
 ### Deprecations
+- rename `container` `template` handling to `plugin`
+  - ContainerTemplate to ContainerPlugin
+  - defaultTemplate => defaultPlugin
+  - profilePluginsKey => profilePluginsKey
+  - templates => plugins
+  - toTemplate => toPlugin
+  - deleteContainerTemplate => deleteContainerPlugin
+  - getContainerTemplate => getContainerPlugin
+  - getContainerTemplates => getContainerPlugins
+  - saveContainerTemplate => saveContainerPlugin
+  - applyTemplate => applyPlugin
 
 
 ## Version 2.3.1

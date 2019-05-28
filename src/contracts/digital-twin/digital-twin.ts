@@ -306,8 +306,6 @@ export class DigitalTwin extends Logger {
    */
   async addAsFavorite() {
     await this.getMutex('profile').runExclusive(async () => {
-      const description = await this.getDescription();
-
       await this.options.profile.loadForAccount(this.options.profile.treeLabels.contracts);
       await this.options.profile.addBcContract('twins.evan', this.config.address, {});
       await this.options.profile.storeForAccount(this.options.profile.treeLabels.contracts);

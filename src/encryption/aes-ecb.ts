@@ -113,7 +113,7 @@ export class AesEcb extends Logger implements Cryptor {
       const cipher = crypto.createCipheriv(
         this.options.algorithm,
         Buffer.from(computedKey, 'hex'),
-        null
+        ''
       );
       cipher.setAutoPadding(false);
       const encrypted = Buffer.concat([cipher.update(message), cipher.final()]);
