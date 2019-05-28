@@ -67,7 +67,7 @@ export { Sharing } from './contracts/sharing';
 export { Verifications, VerificationsStatus } from './verifications/verifications';
 export { Votings, MemberOptions, ProposalInfo, ProposalInfos, ProposalOptions, VotingsContractOptions } from './votings/votings';
 export { Wallet } from './contracts/wallet';
-export { Container, ContainerConfig, ContainerFile, ContainerTemplate, ContainerTemplateProperty,
+export { Container, ContainerConfig, ContainerFile, ContainerTemplate, ContainerPlugin, ContainerTemplateProperty,
   ContainerShareConfig, ContainerOptions, } from './contracts/digital-twin/container';
 export { DigitalTwin, DigitalTwinEntryType, DigitalTwinConfig, DigitalTwinIndexEntry,
   DigitalTwinVerificationEntry, } from './contracts/digital-twin/digital-twin';

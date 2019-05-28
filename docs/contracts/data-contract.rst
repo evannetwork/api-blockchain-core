@@ -2,7 +2,7 @@
 Data Contract
 ================================================================================
 
-.. list-table:: 
+.. list-table::
    :widths: auto
    :stub-columns: 1
 
@@ -48,7 +48,7 @@ Parameters
 
 #. ``options`` - ``DataContractOptions``: options for DataContract constructor.
     * ``cryptoProvider`` - |source cryptoProvider|_: |source cryptoProvider|_ instance
-    * ``defaultCryptoAlgo`` - ``string`` (optional): crypto algorith name from |source cryptoProvider|, defaults to ``aes`` 
+    * ``defaultCryptoAlgo`` - ``string`` (optional): crypto algorith name from |source cryptoProvider|, defaults to ``aes``
     * ``dfs`` - |source dfsInterface|_: |source dfsInterface|_ instance
     * ``executor`` - |source executor|_: |source executor|_ instance
     * ``loader`` - |source contractLoader|_: |source contractLoader|_ instance
@@ -70,7 +70,7 @@ Example
 -------
 
 .. code-block:: typescript
-  
+
   const dataContract = new DataContract({
     cryptoProvider,
     description,
@@ -131,7 +131,7 @@ Now create a contract with:
 
 .. code-block:: typescript
 
-  const contract = await dc.create(factoryName, accounts[0], businessCenterDomain);
+  const contract = await dataContract.create(factoryName, accounts[0], businessCenterDomain);
 
 Okay, that does not provide a description for the contract. Let's add a description to the process. The definition is a `DBCP <https://github.com/evannetwork/dbcp/wiki)>`_ contract definition and is stored in an ``Envelope`` (see :doc:`Encryption <../encryption/index>`):
 
@@ -161,7 +161,7 @@ Okay, that does not provide a description for the contract. Let's add a descript
     }
   };
   definition.cryptoInfo = cryptoProvider.getCryptorByCryptoAlgo('aes').getCryptoInfo(accounts[0]);
-  const contract = await dc.create('testdatacontract', accounts[0], businessCenterDomain, definition);
+  const contract = await dataContract.create('testdatacontract', accounts[0], businessCenterDomain, definition);
 
 
 Now we have a DataContract with a description. This contract is now able to be understood by other components, that understand the dbcp. And on top of that, we provided data schemas for the two properties ``list_settable_by_member`` and ``entry_settable_by_member`` (written for `ajv <https://github.com/epoberezkin/ajv>`_). This means, that when someone adds or sets entries to or in those properties, the incoming data is validated before actually encrypting and storing it.
@@ -170,7 +170,7 @@ To allow other users to work on the contract, they have to be invited with:
 
 .. code-block:: typescript
 
-  await dc.inviteToContract(businessCenterDomain, contract.options.address, accounts[0], accounts[1]);
+  await dataContract.inviteToContract(businessCenterDomain, contract.options.address, accounts[0], accounts[1]);
 
 Now the user ``accounts[1]`` can use functions from the contract, but to actually store data, the user needs access to the data key for the DataContract. This can be done via updating the contracts sharing:
 
@@ -263,7 +263,7 @@ Example
 .. code-block:: typescript
 
   const sampleValue = 123;
-  await dc.setEntry(contract, 'entry_settable_by_owner', sampleValue, accounts[0]);
+  await DataContract.setEntry(contract, 'entry_settable_by_owner', sampleValue, accounts[0]);
 
 
 Entries are automatically encrypted before setting it in the contract. If you want to use values as is, without encrypting them, you can add them in raw mode, which sets them as ``bytes32`` values:
@@ -271,7 +271,7 @@ Entries are automatically encrypted before setting it in the contract. If you wa
 .. code-block:: typescript
 
   const sampleValue = '0x000000000000000000000000000000000000007b';
-  await dc.setEntry(contract, 'entry_settable_by_owner', sampleValue, accounts[0], true);
+  await dataContract.setEntry(contract, 'entry_settable_by_owner', sampleValue, accounts[0], true);
 
 
 ------------------------------------------------------------------------------
@@ -312,14 +312,14 @@ Entries can be retrieved with:
 
 .. code-block:: typescript
 
-  const retrieved = await dc.getEntry(contract, 'entry_settable_by_owner', accounts[0]);
+  const retrieved = await dataContract.getEntry(contract, 'entry_settable_by_owner', accounts[0]);
 
 
 Raw values can be retrieved in the same way:
 
 .. code-block:: typescript
 
-  const retrieved = await dc.getEntry(contract, 'entry_settable_by_owner', accounts[0], true);
+  const retrieved = await dataContract.getEntry(contract, 'entry_settable_by_owner', accounts[0], true);
 
 
 
@@ -375,7 +375,7 @@ Example
     foo: 'sample',
     bar: 123,
   };
-  await dc.addListEntries(contract, 'list_settable_by_member', [sampleValue], accounts[0]);
+  await dataContract.addListEntries(contract, 'list_settable_by_member', [sampleValue], accounts[0]);
 
 When using lists similar to tagging list entries with metadata, entries can be added in multiple lists at once by passing an array of list names:
 
@@ -385,7 +385,7 @@ When using lists similar to tagging list entries with metadata, entries can be a
     foo: 'sample',
     bar: 123,
   };
-  await dc.addListEntries(contract, ['list_1', 'list_2'], [sampleValue], accounts[0]);
+  await dataContract.addListEntries(contract, ['list_1', 'list_2'], [sampleValue], accounts[0]);
 
 
 
@@ -423,7 +423,7 @@ Example
 
 .. code-block:: typescript
 
-  await dc.getListEntryCount(contract, 'list_settable_by_member');
+  await dataContract.getListEntryCount(contract, 'list_settable_by_member');
 
 
 
@@ -467,7 +467,7 @@ Example
 
 .. code-block:: typescript
 
-  await dc.getListEntries(contract, 'list_settable_by_member', accounts[0]));
+  await dataContract.getListEntries(contract, 'list_settable_by_member', accounts[0]));
 
 
 
@@ -509,7 +509,7 @@ Example
 .. code-block:: typescript
 
   const itemIndex = 0;
-  await dc.getListEntry(contract, 'list_settable_by_member', itemIndex, accounts[0]));
+  await dataContract.getListEntry(contract, 'list_settable_by_member', itemIndex, accounts[0]));
 
 
 ------------------------------------------------------------------------------
@@ -551,7 +551,7 @@ Example
 
   const listName = 'list_removable_by_owner'
   const itemIndexInList = 1;
-  await dc.removeListEntry(contract, listNameF, itemIndexInList, accounts[0]);
+  await dataContract.removeListEntry(contract, listNameF, itemIndexInList, accounts[0]);
 
 
 ------------------------------------------------------------------------------
@@ -595,7 +595,7 @@ Example
   const listNameFrom = 'list_removable_by_owner';
   const listNameTo = 'list_settable_by_member';
   const itemIndexInFromList = 1;
-  await dc.moveListEntry(contract, listNameFrom, itemIndexInFromList, [listNameTo], accounts[0]);
+  await dataContract.moveListEntry(contract, listNameFrom, itemIndexInFromList, [listNameTo], accounts[0]);
 
 
 ------------------------------------------------------------------------------

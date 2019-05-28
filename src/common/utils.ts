@@ -26,6 +26,28 @@
 */
 
 /**
+ * retrieves chain name from web3's connected networks id, testcore is 508674158, core is 49262, if
+ * not matching any of both, chain is threaded as testcore
+ *
+ * @param      {any}  web3    connected web3 instance
+ * @return     {Promise<string>}  name of current chain
+ */
+export async function getEnvironment(web3: any): Promise<string> {
+  const chainId = await web3.eth.net.getId();
+  return chainId === 49262 ? 'core' : 'testcore';
+}
+
+/**
+ * obfuscates strings by replacing each character but the last two with 'x'
+ *
+ * @param      {string}  text    text to obfuscate
+ * @return     {string}  obfuscated text
+ */
+export function obfuscate(text: string): string {
+  return text ? `${[...Array(text.length - 2)].map(() => 'x').join('')}${text.substr(text.length - 2)}` : text;
+}
+
+/**
 * run given function from this, use function(error, result) {...} callback for promise resolve/reject
 * can be used like:
 * api.helpers
@@ -56,14 +78,4 @@ export async function promisify(funThis, functionName, ...args): Promise<any> {
      reject(ex.message);
    }
  });
-};
-
-/**
- * obfuscates strings by replacing each character but the last two with 'x'
- *
- * @param      {string}  text    text to obfuscate
- * @return     {string}  obfuscated text
- */
-export function obfuscate(text: string): string {
-  return text ? `${[...Array(text.length - 2)].map(() => 'x').join('')}${text.substr(text.length - 2)}` : text;
 }

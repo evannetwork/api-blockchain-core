@@ -39,7 +39,7 @@ import {
 import { accountMap } from '../test/accounts';
 import { accounts } from '../test/accounts';
 import { Aes } from '../encryption/aes';
-import { config } from '../config';
+import { configTestcore as config } from '../config-testcore';
 import { CryptoProvider } from '../encryption/crypto-provider';
 import { DataContract } from '../contracts/data-contract/data-contract';
 import { Ipld } from '../dfs/ipld';
@@ -244,7 +244,6 @@ describe('Profile helper', function() {
   });
 
   it('should be able to set and load a value for a given users profile contract from the blockchain', async () => {
-    const nameResolver = await TestUtils.getNameResolver(web3);
     const address = await nameResolver.getAddress(ensName);
     const contract = nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
     const label = await nameResolver.sha3('profiles');
@@ -406,7 +405,7 @@ describe('Profile helper', function() {
       rightsAndRoles,
     });
 
-    const mailbox = new Mailbox({
+    const customMailbopx = new Mailbox({
       mailboxOwner: accounts[0],
       nameResolver: await TestUtils.getNameResolver(web3),
       ipfs: ipld.ipfs,
@@ -416,18 +415,18 @@ describe('Profile helper', function() {
       defaultCryptoAlgo: 'aes',
     });
     const keyExchangeOptions = {
-      mailbox: mailbox,
+      mailbox: customMailbopx,
       cryptoProvider:  TestUtils.getCryptoProvider(),
       defaultCryptoAlgo: 'aes',
       account: accounts[0],
       keyProvider: TestUtils.getKeyProvider(),
     };
-    const keyExchange = new KeyExchange(keyExchangeOptions);
+    const customKeyExchange = new KeyExchange(keyExchangeOptions);
 
     // store
     const from = Object.keys(accountMap)[0];
 
-    await profile.createProfile(keyExchange.getDiffieHellmanKeys());
+    await profile.createProfile(customKeyExchange.getDiffieHellmanKeys());
 
     // simulate a different account with a different keyStore
     const originalKeyStore = ipld.keyProvider;

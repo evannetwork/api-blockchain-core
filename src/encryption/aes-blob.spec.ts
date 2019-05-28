@@ -50,12 +50,12 @@ describe('Blob Encryption', function() {
       name: 'testfile.spec.jpg',
       fileType: 'image/jpeg',
       file: sampleFile
-    };   
+    };
     fileValidation = {
       name: 'testfile.spec.jpg',
       fileType: 'image/jpeg',
       file: sampleFile
-    };   
+    };
     ipfs = await TestUtils.getIpfs();
   });
 

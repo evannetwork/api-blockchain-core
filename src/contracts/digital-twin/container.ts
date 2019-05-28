@@ -50,135 +50,6 @@ import { Verifications } from '../../verifications/verifications';
 
 
 /**
- * Apply template to data contract; this should be used with caution and is intended to only be
- * used on new contract (e.g. in `create` and `clone`).
- *
- * @param      {ContainerOptions}  options   runtime for new `Container`
- * @param      {ContainerConfig}   config    config for new container
- * @param      {any}               contract  `DataContract` instance
- */
-async function applyTemplate(
-  options: ContainerOptions,
-  config: ContainerConfig,
-  container: Container,
-): Promise<void> {
-  let tasks = [];
-
-  // use default template if omitted, get template properties
-  let template;
-  if (typeof config.template === 'undefined' || typeof config.template === 'string') {
-    template = Container.templates[config.template as string || Container.defaultTemplate];
-  } else {
-    template = config.template;
-  }
-
-  // add type property
-  const properties = cloneDeep(template.properties);
-  if (!properties.type) {
-    properties.type = {
-      dataSchema: { $id: 'type_schema', type: 'string' },
-      type: 'entry',
-      permissions: {
-        0: ['set']
-      },
-      value: template.type,
-    };
-  }
-  for (let propertyName of Object.keys(properties)) {
-    const property: ContainerTemplateProperty = properties[propertyName];
-    const permissionTasks = [];
-    for (let role of Object.keys(property.permissions)) {
-      for (let modification of property.permissions[role]) {
-        // allow setting this field; if value is specified, add value AFTER this
-        permissionTasks.push(async () => {
-          await options.rightsAndRoles.setOperationPermission(
-            await container.getContractAddress(),
-            config.accountId,
-            parseInt(role, 10),
-            propertyName,
-            getPropertyType(property.type),
-            getModificationType(modification),
-            true,
-          );
-        });
-      }
-    }
-    if (property.hasOwnProperty('value')) {
-      // if value has been defined, wait for permissions to be completed, then set value
-      tasks.push(async () => {
-        await Throttle.all(permissionTasks);
-        await container.setEntry(propertyName, property.value);
-      });
-    } else {
-      // if no value has been specified, flatten permission tasks and add to task list
-      tasks = tasks.concat(async () => Throttle.all(permissionTasks));
-    }
-  }
-  await Throttle.all(tasks);
-}
-
-/**
- * Check, that given subset of properties is present at config, collections missing properties and
- * throws a single error.
- *
- * @param      {ContainerConfig}  config      config for container instance
- * @param      {string}           properties  list of property names, that should be present
- */
-function checkConfigProperties(config: ContainerConfig, properties: string[]): void {
-  let missing = properties.filter(property => !config.hasOwnProperty(property));
-  if (missing.length === 1) {
-    throw new Error(`missing property in config: "${missing[0]}"`);
-  } else if (missing.length > 1) {
-    throw new Error(`missing properties in config: "${missing.join(', ')}"`);
-  }
-}
-
-/**
- * Converts 'remove'/'set' to rights and roles enum type, throws if invalid.
- *
- * @param      {string}            typeName  remove/set
- * @return     {ModificationType}  enum value from `RightsAndRoles`
- */
-function getModificationType(typeName: string): ModificationType {
-  switch (typeName) {
-    case 'remove': return ModificationType.Remove;
-    case 'set': return ModificationType.Set;
-    default: throw new Error(`unsupported modification type "${typeName}"`);
-  }
-}
-
-/**
- * Converts 'entry'/'list' to rights and roles enum type, throws if invalid.
- *
- * @param      {string}        typeName  entry/list
- * @return     {PropertyType}  enum value from `RightsAndRoles`
- */
-function getPropertyType(typeName: string): PropertyType {
-  switch (typeName) {
-    case 'entry': return PropertyType.Entry;
-    case 'list': return PropertyType.ListEntry;
-    default: throw new Error(`unsupported property type type "${typeName}"`);
-  }
-}
-
-/**
- * Converts a properties object to a jsonSchema object.
- *
- * @param      {any}  properties  properties object from template
- */
-function toJsonSchema(properties: any): any {
-  const jsonSchema = {};
-
-  for (let field of Object.keys(properties)) {
-    const fieldId = field.replace(/[^a-zA-Z0-9]/g, '');
-    jsonSchema[field] = { $id: `${fieldId}_schema`, ...properties[field].dataSchema };
-  }
-
-  return jsonSchema;
-}
-
-
-/**
  * config properties, specific to `Container` instances
  */
 export interface ContainerConfig {
@@ -190,8 +61,8 @@ export interface ContainerConfig {
   description?: any;
   /** factory address can be passed to ``.create`` for custom container factory */
   factoryAddress?: string;
-  /** template to be used in ``.create``, can be string with name or a ``ContainerTemplate`` */
-  template?: string | ContainerTemplate;
+  /** plugin to be used in ``.create``, can be string with name or a ``ContainerTemplate`` */
+  plugin?: string | ContainerPlugin;
 }
 
 /**
@@ -235,6 +106,16 @@ export interface ContainerShareConfig {
 }
 
 /**
+ * base definition of a container instance, covers properties setup and permissions
+ */
+export interface ContainerPlugin {
+  /** container dbcp description (name, description, ...) **/
+  description?: any;
+  /** template for container instances, covers properties setup and permissions **/
+  template: ContainerTemplate;
+}
+
+/**
  * template for container instances, covers properties setup and permissions
  */
 export interface ContainerTemplate {
@@ -272,8 +153,7 @@ export interface ContainerVerificationEntry {
   expirationDate?: number;
   /** reference to additional validation details */
   verificationValue?: string;
-};
-
+}
 
 /**
  * helper class for managing data contracts; all values are stored encrypted, hashes are encrypted
@@ -323,12 +203,18 @@ export class Container extends Logger {
     stringEntry: { type: 'string' },
     stringList: { type: 'array', items: { type: 'string' } },
   };
-  public static defaultTemplate = 'metadata';
-  public static profileTemplatesKey = 'templates.datacontainer.digitaltwin.evan';
-  public static templates: { [id: string]: ContainerTemplate; } = {
+  public static defaultPlugin = 'metadata';
+  public static profilePluginsKey = 'templates.datacontainer.digitaltwin.evan';
+  public static plugins: { [id: string]: ContainerPlugin; } = {
     metadata: {
-      type: 'metadata',
-      properties: {},
+      description: {
+        name: '',
+        description: '',
+      },
+      template: {
+        type: 'metadata',
+        properties: {},
+      },
     },
   };
   private config: ContainerConfig;
@@ -351,8 +237,8 @@ export class Container extends Logger {
       source: Container,
       copyValues = false,
   ): Promise<Container> {
-    const template = await source.toTemplate(copyValues);
-    return Container.create(options, { ...config, template });
+    const plugin = await source.toPlugin(copyValues);
+    return Container.create(options, { ...config, plugin });
   }
 
   /**
@@ -369,8 +255,11 @@ export class Container extends Logger {
     const instanceConfig = cloneDeep(config);
 
     // convert template properties to jsonSchema
-    if (instanceConfig.template.properties) {
-      instanceConfig.description.dataSchema = toJsonSchema(instanceConfig.template.properties)
+    if (instanceConfig.plugin &&
+      instanceConfig.plugin.template &&
+      instanceConfig.plugin.template.properties) {
+        instanceConfig.description.dataSchema = toJsonSchema(
+        instanceConfig.plugin.template.properties)
     }
 
     // check description values and upload it
@@ -411,83 +300,82 @@ export class Container extends Logger {
     await container.ensureContract();
 
     // write values from template to new contract
-    await applyTemplate(options, instanceConfig, container);
+    await applyPlugin(options, instanceConfig, container);
 
     return container;
   }
 
   /**
-   * Remove a container template from a users profile.
+   * Remove a container plugin from a users profile.
    *
    * @param      {Profile}  profile  profile instance
-   * @param      {string}   name     template name
+   * @param      {string}   name     plugin name
    */
-  public static async deleteContainerTemplate(
+  public static async deleteContainerPlugin(
     profile: Profile,
     name: string
   ): Promise<void> {
     await profile.loadForAccount(profile.treeLabels.contracts);
-    await profile.removeBcContract(Container.profileTemplatesKey, name);
+    await profile.removeBcContract(Container.profilePluginsKey, name);
     await profile.storeForAccount(profile.treeLabels.contracts);
   }
 
   /**
-   * Get one container template for a users profile by name.
+   * Get one container plugin for a users profile by name.
    *
    * @param      {Profile}  profile  profile instance
-   * @param      {string}   name     template name
+   * @param      {string}   name     plugin name
    */
-  public static async getContainerTemplate(
+  public static async getContainerPlugin(
     profile: Profile,
     name: string
-  ): Promise<{ description: any, template: ContainerTemplate }> {
-    const template = await profile.getBcContract(Container.profileTemplatesKey, name);
-    Ipld.purgeCryptoInfo(template);
-    return template;
+  ): Promise<ContainerPlugin> {
+    const plugin = await profile.getBcContract(Container.profilePluginsKey, name);
+    Ipld.purgeCryptoInfo(plugin);
+    return plugin;
   }
 
   /**
-   * Get all container templates for a users profile.
+   * Get all container plugins for a users profile.
    *
    * @param      {Profile}            profile      profile instance
    */
-  public static async getContainerTemplates(
+  public static async getContainerPlugins(
     profile: Profile,
     loadContracts = true
-  ): Promise<{[id: string]: { description: any, template: ContainerTemplate }}> {
-    const bcContracts = (await profile.getBcContracts(Container.profileTemplatesKey)) || { };
+  ): Promise<{[id: string]: ContainerPlugin}> {
+    const bcContracts = (await profile.getBcContracts(Container.profilePluginsKey)) || { };
     Ipld.purgeCryptoInfo(bcContracts);
 
     if (loadContracts) {
-      const templates: any = { };
+      const plugins: any = { };
 
-      // request all templates
-      await Promise.all(Object.keys(bcContracts).map(async (templateName: string) => {
-        templates[templateName] = await Container.getContainerTemplate(profile, templateName)
+      // request all plugins
+      await Promise.all(Object.keys(bcContracts).map(async (pluginName: string) => {
+        plugins[pluginName] = await Container.getContainerPlugin(profile, pluginName)
       }));
 
-      return templates;
+      return plugins;
     } else {
       return bcContracts;
     }
   }
 
   /**
-   * Persists a template including an dbcp description to the users profile.
+   * Persists a plugin including an dbcp description to the users profile.
    *
    * @param      {Profile}            profile      profile instance
-   * @param      {string}             name         template name
-   * @param      {any}                description  predefined template dbcp description
-   * @param      {ContainerTemplate}  template     container template object
+   * @param      {string}             name         plugin name
+   * @param      {any}                description  predefined plugin dbcp description
+   * @param      {ContainerTemplate}  plugin     container plugin object
    */
-  public static async saveContainerTemplate(
+  public static async saveContainerPlugin(
     profile: Profile,
     name: string,
-    description: any,
-    template: ContainerTemplate
+    plugin: ContainerPlugin
   ): Promise<void> {
     await profile.loadForAccount(profile.treeLabels.contracts);
-    await profile.addBcContract(Container.profileTemplatesKey, name, { description, template });
+    await profile.addBcContract(Container.profilePluginsKey, name, plugin);
     await profile.storeForAccount(profile.treeLabels.contracts);
   }
 
@@ -834,7 +722,7 @@ export class Container extends Logger {
     }
 
     // check fields
-    const { properties: schemaProperties } = await this.toTemplate(false);
+    const schemaProperties = (await this.toPlugin(false)).template.properties;
     const sharedProperties = Array.from(
       new Set([].concat(...shareConfigs.map(shareConfig => [].concat(
         shareConfig.read, shareConfig.readWrite)))))
@@ -952,19 +840,24 @@ export class Container extends Logger {
   }
 
   /**
-   * Export current container state as template.
+   * Export current container state as plugin.
    *
    * @param      {boolean}  getValues  export entry values or not (list entries are always excluded)
    */
-  public async toTemplate(getValues = false): Promise<ContainerTemplate> {
+  public async toPlugin(getValues = false): Promise<ContainerPlugin> {
     await this.ensureContract();
-    // create empty template
-    const template: Partial<ContainerTemplate> = {
-      properties: {},
-    };
 
     // fetch description, add fields from data schema
     const description = await this.getDescription();
+
+    // create empty plugin
+    const template: Partial<ContainerTemplate> = {
+      properties: { }
+    };
+    const plugin: ContainerPlugin = {
+      description,
+      template: template as ContainerTemplate
+    };
 
     // if values should be loaded, load permissions first, so we won't load unreadable data
     let readableEntries;
@@ -1004,8 +897,8 @@ export class Container extends Logger {
             let value;
             try {
               value = await this.getEntry(property);
-            } catch(ex) {
-              this.log(`Could not load value for entry ${ property } in toTemplate:
+            } catch (ex) {
+              this.log(`Could not load value for entry ${ property } in toPlugin:
                 ${ ex.message }`, 'error');
             }
 
@@ -1022,7 +915,7 @@ export class Container extends Logger {
     // write type value to template property
     template.type = await this.getEntry('type');
 
-    return template as ContainerTemplate;
+    return plugin;
   }
 
   /**
@@ -1043,12 +936,21 @@ export class Container extends Logger {
     } else {
       // check if nested
       if (subSchema.type === 'array') {
-        return Promise.all(toInspect.map(entry => this.applyIfEncrypted(subSchema.items, entry, toApply)));
+        return Promise.all(toInspect.map(entry => this.applyIfEncrypted(
+          subSchema.items, entry, toApply)));
       } else if (subSchema.type === 'object') {
         // check objects subproperties
         const transformed = {};
         for (let key of Object.keys(toInspect)) {
-          transformed[key] = await this.applyIfEncrypted(subSchema.properties[key], toInspect[key], toApply);
+          // traverse further, if suproperties are defined
+          if (subSchema.properties) {
+            // if included in schema, drill down
+            transformed[key] = await this.applyIfEncrypted(
+              subSchema.properties[key], toInspect[key], toApply);
+          } else {
+            // if not in schema, just copy
+            transformed[key] = toInspect[key];
+          }
         }
         return transformed;
       }
@@ -1372,7 +1274,135 @@ export class Container extends Logger {
     try {
       return await promise;
     } catch (ex) {
-      throw new Error(`could not ${task}; ${ex.message || ex}`);
+      throw new Error(`could not ${task}; ${ex.message || ex}; ${ex.stack}`);
     }
   }
+}
+
+/**
+ * Apply template to data contract; this should be used with caution and is intended to only be
+ * used on new contract (e.g. in `create` and `clone`).
+ *
+ * @param      {ContainerOptions}  options   runtime for new `Container`
+ * @param      {ContainerConfig}   config    config for new container
+ * @param      {any}               contract  `DataContract` instance
+ */
+async function applyPlugin(
+  options: ContainerOptions,
+  config: ContainerConfig,
+  container: Container,
+): Promise<void> {
+  let tasks = [];
+
+  // use default template if omitted, get template properties
+  let plugin;
+  if (typeof config.plugin === 'undefined' || typeof config.plugin === 'string') {
+    plugin = Container.plugins[config.plugin as string || Container.defaultPlugin];
+  } else {
+    plugin = config.plugin;
+  }
+
+  // add type property
+  const properties = cloneDeep(plugin.template.properties);
+  if (!properties.type) {
+    properties.type = {
+      dataSchema: { $id: 'type_schema', type: 'string' },
+      type: 'entry',
+      permissions: {
+        0: ['set']
+      },
+      value: plugin.template.type,
+    };
+  }
+  for (let propertyName of Object.keys(properties)) {
+    const property: ContainerTemplateProperty = properties[propertyName];
+    const permissionTasks = [];
+    for (let role of Object.keys(property.permissions)) {
+      for (let modification of property.permissions[role]) {
+        // allow setting this field; if value is specified, add value AFTER this
+        permissionTasks.push(async () => {
+          await options.rightsAndRoles.setOperationPermission(
+            await container.getContractAddress(),
+            config.accountId,
+            parseInt(role, 10),
+            propertyName,
+            getPropertyType(property.type),
+            getModificationType(modification),
+            true,
+          );
+        });
+      }
+    }
+    if (property.hasOwnProperty('value')) {
+      // if value has been defined, wait for permissions to be completed, then set value
+      tasks.push(async () => {
+        await Throttle.all(permissionTasks);
+        await container.setEntry(propertyName, property.value);
+      });
+    } else {
+      // if no value has been specified, flatten permission tasks and add to task list
+      tasks = tasks.concat(async () => Throttle.all(permissionTasks));
+    }
+  }
+  await Throttle.all(tasks);
+}
+
+/**
+ * Check, that given subset of properties is present at config, collections missing properties and
+ * throws a single error.
+ *
+ * @param      {ContainerConfig}  config      config for container instance
+ * @param      {string}           properties  list of property names, that should be present
+ */
+function checkConfigProperties(config: ContainerConfig, properties: string[]): void {
+  let missing = properties.filter(property => !config.hasOwnProperty(property));
+  if (missing.length === 1) {
+    throw new Error(`missing property in config: "${missing[0]}"`);
+  } else if (missing.length > 1) {
+    throw new Error(`missing properties in config: "${missing.join(', ')}"`);
+  }
+}
+
+/**
+ * Converts 'remove'/'set' to rights and roles enum type, throws if invalid.
+ *
+ * @param      {string}            typeName  remove/set
+ * @return     {ModificationType}  enum value from `RightsAndRoles`
+ */
+function getModificationType(typeName: string): ModificationType {
+  switch (typeName) {
+    case 'remove': return ModificationType.Remove;
+    case 'set': return ModificationType.Set;
+    default: throw new Error(`unsupported modification type "${typeName}"`);
+  }
+}
+
+/**
+ * Converts 'entry'/'list' to rights and roles enum type, throws if invalid.
+ *
+ * @param      {string}        typeName  entry/list
+ * @return     {PropertyType}  enum value from `RightsAndRoles`
+ */
+function getPropertyType(typeName: string): PropertyType {
+  switch (typeName) {
+    case 'entry': return PropertyType.Entry;
+    case 'list': return PropertyType.ListEntry;
+    default: throw new Error(`unsupported property type type "${typeName}"`);
+  }
+}
+
+/**
+ * Converts a properties object to a jsonSchema object.
+ *
+ * @param      {any}  properties  properties object from template
+ */
+function toJsonSchema(properties: any): any {
+  const jsonSchema = {};
+
+  for (let field of Object.keys(properties)) {
+    const fieldId = field.replace(/[^a-zA-Z0-9]/g, '');
+    jsonSchema[field] = { $id: `${fieldId}_schema`, ...properties[field].dataSchema };
+  }
+
+  return jsonSchema;
 }

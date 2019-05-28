@@ -54,7 +54,6 @@ describe('KeyExchange class', function() {
   let keyExchange1: KeyExchange;
   let keyExchange2: KeyExchange;
   let keyExchangeKeys: any;
-  let commKey: Buffer;
   let web3;
   let ipld: Ipld;
   let profile: Profile;
@@ -162,7 +161,8 @@ describe('KeyExchange class', function() {
   });
 
   it('should compute 2 different keys for the both accounts', async () => {
-    expect(keyExchange1.getDiffieHellmanKeys().publicKey).to.not.eq(keyExchange2.getDiffieHellmanKeys().publicKey);
+    expect(keyExchange1.getDiffieHellmanKeys().publicKey)
+      .to.not.eq(keyExchange2.getDiffieHellmanKeys().publicKey);
   });
 
   it('should be able to retrieve the invite mail from the second account', async () => {
@@ -171,11 +171,12 @@ describe('KeyExchange class', function() {
     expect(keys.length).to.eq(1);
   });
 
-  it('should be able retrieve the encrypted communication key with the public key of account 2', async () => {
+  it('should be able retrieve the encrypted communication key with the public key of account 2',
+  async () => {
     const result = await mailbox2.getMails(1, 0);
     const keys = Object.keys(result.mails);
     expect(result.mails[keys[0]].content.attachments[0].type).to.equal('commKey');
-    let profile = new Profile({
+    let profileFromMail = new Profile({
       accountId: result.mails[keys[0]].content.from,
       contractLoader: await TestUtils.getContractLoader(web3),
       dataContract: await TestUtils.getDataContract(web3, ipfs),
@@ -186,16 +187,18 @@ describe('KeyExchange class', function() {
       rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
     });
 
-    const publicKeyProfile = await profile.getPublicKey();
+    const publicKeyProfile = await profileFromMail.getPublicKey();
     const commSecret = keyExchange2.computeSecretKey(publicKeyProfile);
-    commKey = await keyExchange2.decryptCommKey(result.mails[keys[0]].content.attachments[0].key, commSecret.toString('hex'));
+    const commKey = await keyExchange2.decryptCommKey(
+      result.mails[keys[0]].content.attachments[0].key, commSecret.toString('hex'));
   });
 
-  it('should not be able to decrypt the communication key when a third person gets the message', async () => {
+  it('should not be able to decrypt the communication key when a third person gets the message',
+  async () => {
     const result = await mailbox2.getMails(1, 0);
     const keys = Object.keys(result.mails);
     expect(result.mails[keys[0]].content.attachments[0].type).to.equal('commKey');
-    let profile = new Profile({
+    let profileFromMail = new Profile({
       accountId: result.mails[keys[0]].content.from,
       contractLoader: await TestUtils.getContractLoader(web3),
       dataContract: await TestUtils.getDataContract(web3, ipfs),
@@ -214,9 +217,12 @@ describe('KeyExchange class', function() {
     };
 
     const blackHat = new KeyExchange(keyExchangeOptions);
-    const publicKeyProfile = await profile.getPublicKey();
+    const publicKeyProfile = await profileFromMail.getPublicKey();
     const commSecret = blackHat.computeSecretKey(publicKeyProfile);
-    await expect(blackHat.decryptCommKey(result.mails[keys[0]].content.attachments[0].key, commSecret.toString('hex'))).to.be.rejected;
+    await expect(
+      blackHat.decryptCommKey(
+        result.mails[keys[0]].content.attachments[0].key, commSecret.toString('hex')))
+      .to.be.rejected;
   });
 
   it('should be able to send an invitation to a remote account', async () => {

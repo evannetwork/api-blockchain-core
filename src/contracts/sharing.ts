@@ -425,7 +425,8 @@ export class Sharing extends Logger {
         const blocks = Object.keys(sectionBlocks).map(blockNr => parseInt(blockNr, 10));
         const lteBlocks = blocks.filter(blockNr => blockNr <= block);
         if (!lteBlocks.length) {
-          this.log(`could not find key for contract "${address}" and partner "${partner}" for section "${section}", that is new enough`, 'debug');
+          this.log(`could not find key for contract "${address}" and partner "${partner}" ` +
+            `for section "${section}", that is new enough`, 'debug');
         } else {
           // oldest key block, that is younger than the context block
           const matchingBlock = lteBlocks[lteBlocks.length - 1];

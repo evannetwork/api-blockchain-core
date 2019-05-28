@@ -168,7 +168,7 @@ export class Ipld extends Logger {
               const decryptedObject = await cryptor.decrypt(
                 Buffer.from(envelope.private, this.encodingEncrypted), { key, });
               rebuffer(decryptedObject);
-              if(typeof decryptedObject === 'object') {
+              if (typeof decryptedObject === 'object') {
                 // keep crypto info for later re-encryption
                 decryptedObject.cryptoInfo = envelope.cryptoInfo;
               }

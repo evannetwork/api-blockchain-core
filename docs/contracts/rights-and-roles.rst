@@ -17,8 +17,8 @@ Rights and Roles
 
 The `RightsAndRoles <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/rights-and-roles.ts>`_ module follows the approach described in the evan.network wik at:
 
-- `Function Permissions <https://evannetwork.github.io/dev/security#function-permissions>`_
-- `Operation Permissions <https://evannetwork.github.io/dev/security#operations-permissions>`_
+- `Function Permissions <https://evannetwork.github.io/docs/developers/concepts/smart-contract-permissioning.html#function-permissions>`_
+- `Operation Permissions <https://evannetwork.github.io/docs/developers/concepts/smart-contract-permissioning.html#operation-permissions>`_
 
 It allows to manage permissions for contracts, that use the authority `DSRolesPerContract.sol <https://github.com/evannetwork/smart-contracts/blob/master/contracts/DSRolesPerContract.sol>`_ for as its permission approach.
 
@@ -31,7 +31,7 @@ Contracts, that use `DSRolesPerContract <https://github.com/evannetwork/smart-co
 - `Described <https://github.com/evannetwork/smart-contracts/blob/master/contracts/Described.sol>`_
 - `BusinessCenter <https://github.com/evannetwork/smart-contracts/blob/master/contracts/BusinessCenter.sol>`_
 
-Also have a look at the  `Smart Contract Permissioning <https://evannetwork.github.io/docs/developers/concepts/contract_permissioning.html>`_ section in the evan.network wiki.
+Also have a look at the  `Smart Contract Permissioning <https://evannetwork.github.io/docs/developers/concepts/smart-contract-permissioning.html>`_ section in the evan.network wiki.
 
 ------------------------------------------------------------------------------
 

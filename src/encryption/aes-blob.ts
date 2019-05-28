@@ -58,6 +58,10 @@ export interface AesBlobOptions extends LoggerOptions {
  * @class      AesBlob (name)
  */
 export class AesBlob extends Logger implements Cryptor {
+  static defaultOptions = {
+    keyLength: 256,
+    algorithm: 'aes-blob',
+  };
 
   private readonly encodingUnencrypted = 'utf-8';
   private readonly encodingEncrypted = 'hex';
@@ -65,11 +69,6 @@ export class AesBlob extends Logger implements Cryptor {
   options: any;
   algorithm: string;
   webCryptoAlgo: string;
-
-  static defaultOptions = {
-    keyLength: 256,
-    algorithm: 'aes-blob',
-  };
 
   constructor(options?: AesBlobOptions) {
     super(options);
@@ -83,12 +82,12 @@ export class AesBlob extends Logger implements Cryptor {
    * convert string to array buffer
    *
    * @param      {string}  str     string to convert
-   * @return     {Buffer}  converted input
+   * @return     {any}  converted input
    */
-  stringToArrayBuffer(str){
-    var len = str.length;
-    var bytes = new Uint8Array( len );
-    for (var i = 0; i < len; i++) {
+  stringToArrayBuffer(str): any {
+    const len = str.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
       bytes[i] = str.charCodeAt(i);
     }
     return bytes.buffer;
@@ -208,7 +207,6 @@ export class AesBlob extends Logger implements Cryptor {
               initialVector
             );
           } else {
-            const cipher = crypto.createCipheriv(this.algorithm, Buffer.from(options.key, 'hex'), initialVector);
             encrypted = Buffer.concat([cipher.update(Buffer.from(blob.file)), cipher.final()]);
           }
           const encryptedWithIv = Buffer.concat([initialVector, encrypted]);

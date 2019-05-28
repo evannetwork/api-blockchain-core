@@ -42,10 +42,12 @@ import { Aes } from './encryption/aes';
 import { AesBlob } from './encryption/aes-blob';
 import { AesEcb } from './encryption/aes-ecb';
 import { BaseContract } from './contracts/base-contract/base-contract';
-import { config } from './config';
+import { configCore } from './config-core';
+import { configTestcore } from './config-testcore';
 import { CryptoProvider } from './encryption/crypto-provider';
 import { DataContract } from './contracts/data-contract/data-contract';
 import { Description } from './shared-description';
+import { getEnvironment } from './common/utils';
 import { Ipfs } from './dfs/ipfs';
 import { Ipld } from './dfs/ipld';
 import { KeyExchange } from './keyExchange';
@@ -75,6 +77,7 @@ export interface Runtime {
   dataContract?: DataContract,
   description?: Description,
   dfs?: DfsInterface,
+  environment?: string,
   eventHub?: EventHub,
   executor?: Executor,
   ipld?: Ipld,
@@ -104,6 +107,10 @@ export interface Runtime {
  * @return     {Promise<Runtime>}  runtime instance
  */
 export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtimeConfig: any, options: Runtime = { }): Promise<Runtime> {
+  // determine chain this runtime is created for
+  const environment = await getEnvironment(web3);
+  const config = environment === 'core' ? configCore : configTestcore;
+
   // get default logger
   const logger = options.logger || (new Logger());
   const log = logger.logFunction;
@@ -123,7 +130,8 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
 
       const smartContract = require('@evan.network/smart-contracts-core');
       const solc = new smartContract.Solc({ config: solcCfg, log, });
-      await solc.ensureCompiled(runtimeConfig.additionalContractsPaths || [], solcCfg['destinationPath']);
+      await solc.ensureCompiled(
+        runtimeConfig.additionalContractsPaths || [], solcCfg['destinationPath']);
 
       contracts = solc.getContracts();
     } else {
@@ -142,12 +150,41 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   }
 
   // web3 contract interfaces
-  const contractLoader = options.contractLoader || new ContractLoader({ contracts, log, web3, });
+  const contractLoader = options.contractLoader ||
+    new ContractLoader({ contracts, log, web3, });
+
+  // check if mnemonic and password are given
+  if (runtimeConfig.mnemonic && runtimeConfig.password) {
+    const tempConfig: any = await Onboarding.generateRuntimeConfig(
+      runtimeConfig.mnemonic,
+      runtimeConfig.password,
+      web3
+    );
+    if (!runtimeConfig.accountMap) {
+      runtimeConfig.accountMap = {};
+    }
+    if (!runtimeConfig.keyConfig) {
+      runtimeConfig.keyConfig = {};
+    }
+    Object.assign(runtimeConfig.accountMap, tempConfig.accountMap);
+    Object.assign(runtimeConfig.keyConfig, tempConfig.keyConfig);
+  }
 
   // executor
-  const accountStore = options.accountStore || new AccountStore({ accounts: runtimeConfig.accountMap, log, });
-  const signer = options.signer || new SignerInternal({ accountStore, contractLoader, config: {}, log, web3, });
-  const executor = options.executor || new Executor(Object.assign({ config, log, signer, web3, }, runtimeConfig.options ? runtimeConfig.options.Executor : {}));
+  const accountStore = options.accountStore ||
+    new AccountStore({ accounts: runtimeConfig.accountMap, log, });
+  // decide on gas price depending on environment
+  const signerConfig = <any>{};
+  if (runtimeConfig.hasOwnProperty('gasPrice')) {
+    signerConfig.gasPrice = runtimeConfig.gasPrice;
+  } else {
+    signerConfig.gasPrice = environment === 'core' ? `${200e9}` : `${20e9}`;
+  }
+  const signer = options.signer ||
+    new SignerInternal({ accountStore, contractLoader, config: signerConfig, log, web3, });
+  const executor = options.executor || new Executor(
+    Object.assign({ config, log, signer, web3, },
+      runtimeConfig.options ? runtimeConfig.options.Executor : {}));
   await executor.init({});
   const nameResolver = options.nameResolver || new NameResolver({
     config: runtimeConfig.nameResolver || config.nameResolver,
@@ -172,22 +209,6 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   cryptoConfig['aesEcb'] = new AesEcb({ log });
   const cryptoProvider = new CryptoProvider(cryptoConfig);
 
-  // check if mnemonic and password are given
-  if (runtimeConfig.mnemonic && runtimeConfig.password) {
-    const tempConfig: any = await Onboarding.generateRuntimeConfig(
-      runtimeConfig.mnemonic,
-      runtimeConfig.password,
-      web3
-    );
-    if (!runtimeConfig.accountMap) {
-      runtimeConfig.accountMap = {};
-    }
-    if (!runtimeConfig.keyConfig) {
-      runtimeConfig.keyConfig = {};
-    }
-    Object.assign(runtimeConfig.accountMap, tempConfig.accountMap);
-    Object.assign(runtimeConfig.keyConfig, tempConfig.keyConfig);
-  }
   // check and modify if any accountid with password is provided
   if (runtimeConfig.keyConfig) {
     for (let accountId in runtimeConfig.keyConfig) {
@@ -416,6 +437,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     dataContract,
     description,
     dfs,
+    environment,
     eventHub,
     executor,
     ipld,

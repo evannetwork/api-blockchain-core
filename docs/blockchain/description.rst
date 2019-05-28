@@ -20,9 +20,46 @@ The Description module is the main entry point for interacting with contract des
 - get and set descriptions
 - work with contracts and ENS descriptions
 - create web3.js contract instances directly from an Ethereum address and its description
-- The main use cases for interacting with a contracts descriptin in your application will most probably be reading a contracts description and loading contracts via their description.
+- The main use cases for interacting with a contracts description in your application will most probably be reading a contracts description and loading contracts via their description.
 
 The examples folder folder contains some samples for getting started. With consuming or setting contract descriptions.
+
+When setting descriptions to contracts, these contracts have to support the |source executor|_ interface.
+
+A simple flow for working with description may look like following:
+
+We already have smart contract, that supports the zz interface and set a description to it.
+
+.. code-block:: typescript
+
+    const address = '0x...'; // or 'test.evan' as ens name
+    const accountId = '0x...';
+    const description = {
+      "public": {
+        "name": "DBCP sample contract",
+        "description": "DBCP sample contract description",
+        "author": "dbcp test",
+        "tags": [
+          "example",
+          "greeter"
+        ],
+        "version": "0.1.0",
+        "dbcpVersion": 2
+      }
+    };
+    await runtime.description.setDescription(address, description, accountId);
+
+Now we have made some updates to our contract and we want to update its version to ``0.2.0``.
+
+    // get description
+    const retrieved = await runtime.description.getDescription(address, accountId);
+
+    // update version
+    const accountId = '0x000000000000000000000000000000000000beef';
+    retrieved.public.version = '0.2.0';
+    await runtime.description.setDescription(address, retrieved, accountId);
+
+------------------------------------------------------------------------------
 
 
 
@@ -121,6 +158,7 @@ Example
     //      author: 'dbcp test',
     //      tags: [ 'example', 'greeter' ],
     //      version: '0.1.0',
+    //      dbcpVersion: 2,
     //      abis: { own: [Array] } } }
 
 ------------------------------------------------------------------------------
@@ -167,6 +205,7 @@ Example
           "example",
           "greeter"
         ],
+        "dbcpVersion": 2,
         "version": "0.1.0"
       }
     };
@@ -297,6 +336,7 @@ Example
     //      author: 'dbcp test',
     //      tags: [ 'example', 'greeter' ],
     //      version: '0.1.0',
+    //      dbcpVersion: 2,
     //      abis: { own: [Array] } } }
 
 ------------------------------------------------------------------------------
@@ -343,7 +383,8 @@ Example
           "example",
           "greeter"
         ],
-        "version": "0.1.0"
+        "version": "0.1.0",
+        "dbcpVersion": 2
       }
     };
     await runtime.description.setDescriptionToContract(address, description, accountId);
@@ -398,6 +439,7 @@ Example
     //      author: 'dbcp test',
     //      tags: [ 'example', 'greeter' ],
     //      version: '0.1.0',
+    //      dbcpVersion": 2,
     //      abis: { own: [Array] } } }
 
 ------------------------------------------------------------------------------
@@ -444,12 +486,18 @@ Example
           "example",
           "greeter"
         ],
-        "version": "0.1.0"
+        "version": "0.1.0",
+        "dbcpVersion": 2
       }
     };
     await runtime.description.setDescriptionToEns(address, description, accountId);
 
+
+
 .. required for building markup
+
+.. |source abstractDescribed| replace:: ``AbstractDescribed``
+.. _source abstractDescribed: https://github.com/evannetwork/dbcp/blob/master/contracts/AbstractDescribed.sol
 
 .. |source executor| replace:: ``Executor``
 .. _source executor: ../blockchain/executor.html

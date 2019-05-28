@@ -31,7 +31,7 @@ import { expect, use } from 'chai';
 import chaiAsPromised = require('chai-as-promised');
 
 import { accounts } from './test/accounts';
-import { config } from './config';
+import { configTestcore as config } from './config-testcore';
 import { NameResolver } from './name-resolver';
 import { TestUtils } from './test/test-utils';
 
@@ -717,7 +717,9 @@ describe('NameResolver class', function() {
           await expect(claimAddressP).to.be.rejected;
         });
 
-        it('cannot extend valid duration via registrar after expiration (and before everyone can buy it) from another account', async () => {
+        it('cannot extend valid duration via registrar after expiration ' +
+          '(and before everyone can buy it) from another account',
+        async () => {
           const domain = `sample_${Math.random().toString(36).substr(2)}.payable`;
           const domainHash = nameResolverTimed.namehash(domain);
           const randomAddress = TestUtils.getRandomAddress();

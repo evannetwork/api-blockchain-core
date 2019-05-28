@@ -97,7 +97,7 @@ export class IpfsLib {
         });
         res.on('end', () => {
           const binary = Buffer.concat(data);
-          if(res.statusCode >= 200 && res.statusCode < 400) {
+          if (res.statusCode >= 200 && res.statusCode < 400) {
             try {
               resolve((opts.jsonParse ? JSON.parse(binary.toString()) : binary));
             } catch (jsonError) {
@@ -134,7 +134,14 @@ export class IpfsLib {
     const response = [];
     for (let file of files) {
       const boundary = this.createBoundary();
-      const header = `--${boundary}\r\nContent-Disposition: form-data; name="${file.path}"\r\nContent-Type: application/octet-stream\r\n\r\n`;
+      const header = [
+        `--${boundary}`,
+        `Content-Disposition: form-data; name="${file.path}"`,
+        'Content-Type: application/octet-stream',
+        '',
+        ''
+      ].join('\r\n');
+
       const data = file.content;
       const footer = `\r\n--${boundary}--`;
 

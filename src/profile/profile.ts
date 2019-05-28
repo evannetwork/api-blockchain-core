@@ -275,7 +275,7 @@ export class Profile extends Logger {
       const profileContractAddress = await this.executor.executeContractCall(
         indexContract, 'getProfile', this.activeAccount, { from: this.activeAccount, });
       return profileContractAddress !== '0x0000000000000000000000000000000000000000';
-    } catch(ex) {
+    } catch (ex) {
       this.log(`error occurred while checking if profile exists; ${ex.message || ex}`, 'debug');
       return false;
     }

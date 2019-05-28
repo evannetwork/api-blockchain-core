@@ -686,7 +686,8 @@ export class Payments extends Logger {
     const recovered = this.options.web3.utils.toChecksumAddress(recoverTypedSignatureLegacy({ data: params, sig }));
     this.log(`signTypedData = ${sig}, ${recovered}`, 'debug');
     if (recovered !== this.channel.account) {
-      throw new Error(`Invalid recovered signature: ${recovered} != ${this.channel.account}. Does your provider support eth_signTypedData?`);
+      throw new Error(`Invalid recovered signature: ${recovered} != ${this.channel.account}. ` +
+        'Does your provider support eth_signTypedData?');
     }
 
     proof.sig = sig;

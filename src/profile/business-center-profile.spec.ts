@@ -38,7 +38,7 @@ import { accounts } from '../test/accounts';
 import { accountMap } from '../test/accounts';
 import { Aes } from '../encryption/aes';
 import { BusinessCenterProfile } from './business-center-profile';
-import { config } from '../config';
+import { configTestcore as config } from '../config-testcore';
 import { CryptoProvider } from '../encryption/crypto-provider';
 import { Ipld } from '../dfs/ipld';
 import { TestUtils } from '../test/test-utils';
@@ -52,7 +52,6 @@ describe('BusinessCenterProfile helper', function() {
   let businessCenterDomain;
   let web3;
   let cryptoProvider = TestUtils.getCryptoProvider();
-  let bcAddress;
   const sampleProfile = {
     alias: 'fnord',
     contact: 'fnord@contoso.com',
@@ -80,14 +79,15 @@ describe('BusinessCenterProfile helper', function() {
 
   it('should be able to set and load a profile for a given user in a business center', async () => {
     // use own key for test
-    (<KeyProvider>ipld.keyProvider).keys[nameResolver.soliditySha3(businessCenterDomain)] = (<KeyProvider>ipld.keyProvider).keys[nameResolver.soliditySha3(accounts[0])];
+    (<KeyProvider>ipld.keyProvider).keys[nameResolver.soliditySha3(businessCenterDomain)] =
+      (<KeyProvider>ipld.keyProvider).keys[nameResolver.soliditySha3(accounts[0])];
     // create profile
     const profile = new BusinessCenterProfile({
       ipld,
       nameResolver,
       defaultCryptoAlgo: 'aes',
       bcAddress: businessCenterDomain,
-      cryptoProvider:TestUtils.getCryptoProvider()
+      cryptoProvider: TestUtils.getCryptoProvider()
     });
     await profile.setContactCard(JSON.parse(JSON.stringify(sampleProfile)));
 
@@ -101,7 +101,7 @@ describe('BusinessCenterProfile helper', function() {
       nameResolver,
       defaultCryptoAlgo: 'aes',
       bcAddress: businessCenterDomain,
-      cryptoProvider:TestUtils.getCryptoProvider()
+      cryptoProvider: TestUtils.getCryptoProvider()
     });
     await newProfile.loadForBusinessCenter(businessCenterDomain, from);
 

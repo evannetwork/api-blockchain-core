@@ -37,7 +37,7 @@ import {
 
 import { accounts } from '../test/accounts';
 import { Aes } from '../encryption/aes';
-import { config } from '../config';
+import { configTestcore as config } from '../config-testcore';
 import { CryptoProvider } from '../encryption/crypto-provider';
 import { Ipld } from './ipld'
 import { TestUtils } from '../test/test-utils'
@@ -370,11 +370,12 @@ describe('IPLD handler', function() {
       expect(loadedUpdated.dapps['/'].contracts.length).to.eq(subModified.contracts.length);
     });
 
-    it('should be able to update different ipld graphs with different keys at the same time', async () => {
+    it('should be able to update different ipld graphs with different keys at the same time',
+    async () => {
       let lastKey;
       async function updateGraph() {
         // shadow ipld with a new one with another key
-        const defaultCryptoAlgo = 'aes'; 
+        const defaultCryptoAlgo = 'aes';
         const localIpld = await TestUtils.getIpld(ipfs);
         const sampleObject = {
           personalInfo: {

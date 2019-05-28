@@ -2,15 +2,49 @@
 
 ## Next Version
 ### Features
+
 ### Fixes
-- replace null with empty string for `aes-ecb` createCipheriv 
 
 ### Deprecations
+
+
+## Version 2.4.0
+### Features
+- add `gasPrice` option to runtime config
+- add support for contracts without description
+  + add `updateDescription` flag to `createIdentity` to skip automatic description updates
+  + add `isIdentity` flag to
+    * `executeOnIdentity`
+    * `confirmVerification`
+    * `deleteVerification`
+    * `getVerifications`
+    * `rejectVerification`
+    * `executeOnIdentity` (private)
+
+### Fixes
+- fix empty accountStore by initializing runtime with mnemonic and password
+- update docu for verifications
+- fix handling of properties with schemas without properties
+- replace null with empty string for `aes-ecb` createCipheriv
+
+### Deprecations
+- rename `container` `template` handling to `plugin`
+  - ContainerTemplate to ContainerPlugin
+  - defaultTemplate => defaultPlugin
+  - profilePluginsKey => profilePluginsKey
+  - templates => plugins
+  - toTemplate => toPlugin
+  - deleteContainerTemplate => deleteContainerPlugin
+  - getContainerTemplate => getContainerPlugin
+  - getContainerTemplates => getContainerPlugins
+  - saveContainerTemplate => saveContainerPlugin
+  - applyTemplate => applyPlugin
 
 
 ## Version 2.3.1
 ### Fixes
 - fix hashing of passwords for generated profiles
+
 
 ## Version 2.3.0
 ### Features

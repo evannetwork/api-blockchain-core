@@ -25,7 +25,7 @@
   https://evan.network/license/
 */
 
-const config = {
+const configTestcore = {
   nameResolver: {
     ensAddress: process.env.ENS_ADDRESS || '0x937bbC1d3874961CA38726E9cD07317ba81eD2e1',
     ensResolver: process.env.ENS_RESOLVER || '0xDC18774FA2E472D26aB91deCC4CDd20D9E82047e',
@@ -64,4 +64,4 @@ const config = {
   ensRootOwner: '0x4a6723fC5a926FA150bAeAf04bfD673B056Ba83D',
 }
 
-export { config }
+export { configTestcore }
