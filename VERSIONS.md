@@ -16,6 +16,7 @@
 ### Fixes
 - fix empty accountStore by initializing runtime with mnemonic and password
 - update docu for verifications
+- fix handling of properties with schemas without properties
 - change `aes-ecb` `crypto.createCipheriv` null to empty string
 
 ### Deprecations

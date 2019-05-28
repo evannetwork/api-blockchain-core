@@ -936,12 +936,21 @@ export class Container extends Logger {
     } else {
       // check if nested
       if (subSchema.type === 'array') {
-        return Promise.all(toInspect.map(entry => this.applyIfEncrypted(subSchema.items, entry, toApply)));
+        return Promise.all(toInspect.map(entry => this.applyIfEncrypted(
+          subSchema.items, entry, toApply)));
       } else if (subSchema.type === 'object') {
         // check objects subproperties
         const transformed = {};
         for (let key of Object.keys(toInspect)) {
-          transformed[key] = await this.applyIfEncrypted(subSchema.properties[key], toInspect[key], toApply);
+          // traverse further, if suproperties are defined
+          if (subSchema.properties) {
+            // if included in schema, drill down
+            transformed[key] = await this.applyIfEncrypted(
+              subSchema.properties[key], toInspect[key], toApply);
+          } else {
+            // if not in schema, just copy
+            transformed[key] = toInspect[key];
+          }
         }
         return transformed;
       }
@@ -1265,7 +1274,7 @@ export class Container extends Logger {
     try {
       return await promise;
     } catch (ex) {
-      throw new Error(`could not ${task}; ${ex.message || ex}`);
+      throw new Error(`could not ${task}; ${ex.message || ex}; ${ex.stack}`);
     }
   }
 }
