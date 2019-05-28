@@ -626,7 +626,14 @@ export class DigitalTwin extends Logger {
           break;
         case DigitalTwinEntryType.Container:
           address = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
-          entry.value = new Container(this.options, { ...this.config.containerConfig, address });
+          entry.value = new Container(
+            this.options,
+            {
+              accountId: this.config.accountId,
+              ...this.config.containerConfig,
+              address,
+            },
+          );
           break;
         case DigitalTwinEntryType.DigitalTwin:
           address = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
