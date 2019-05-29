@@ -82,9 +82,9 @@ This returns the 40Bytes contract address of the accounts identity contract.
 The given account now has an identity attached to it, which is a requirement for interacting with the rest of the :doc:`verifications API <verifications>` and only has to be done once per externally owned account.
 
 
--------------------
-Contract Identities
--------------------
+------------------------------------------
+Contract Identities / Pseudonym Identities
+------------------------------------------
 
 Contract identities are created "on behalf of" a contract. An externally owned account, often the owner of the contract, usually does the following:
 
@@ -117,6 +117,19 @@ When using contracts without descriptions or when handling the relation between 
   console.log(idencontractIdentitytity);
   // Output:
   // 0x4732281e708aadbae13f0bf4dd616de86df3d3edb3ead21604a354101de45316
+
+Pseudonyms can be handled the same way. Just set the flag to link given identity to false:
+
+.. _contract-identity-undescribed:
+
+.. code-block:: typescript
+
+  const contractIdentity = await verifications.createIdentity(accounts[0], null, false, false);
+  console.log(idencontractIdentitytity);
+  // Output:
+  // 0x4732281e708aadbae13f0bf4dd616de86df3d3edb3ead21604a354101de45316
+
+This returns an identity, that is owned by ``accountId`` and can be used to issue verifications for.
 
 
 
@@ -165,7 +178,7 @@ Issue verifications for an account
   //   valid: true
   // } ]
 
-Have a look at :ref:`getVerifications <verifications_getVerifications>` or the section on :ref:`this page <get-verifications>` for the meaning of the returned values, for how to find out, if the returned verification trustworthy, have a look at :ref:`Validating Verifications <validating-verifications>`.
+Have a look at :ref:`getVerifications <verifications_getVerifications>` or the section on :ref:`this page <get-verifications>` for the meaning of the returned values, for how to find out, if the returned verification is trustworthy, have a look at :ref:`Validating Verifications <validating-verifications>`.
 
 
 -----------------------------------------------------

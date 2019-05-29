@@ -250,16 +250,19 @@ export class Verifications extends Logger {
    *                                          omitted
    * @param      {bool}    updateDescription  (optional) update description of contract, defaults to
    *                                          ``true``
+   * @param      {bool}    linkContract       link contract address to its idenity
    * @return     {Promise<string>}  new identity (40Bytes for accounts, 32Bytes for other)
    */
   public async createIdentity(
     accountId: string,
     contractId?: string,
     updateDescription = true,
+    linkContract = true,
   ): Promise<string> {
     await this.ensureStorage();
     let identity;
-    if (!contractId) {
+    // create account ids, if no contract id given and if this identity should not be linked
+    if (!contractId && linkContract) {
       // create Identity contract
       const identityContract = await this.options.executor.createContract(
         'VerificationHolder', [ accountId ], { from: accountId, gas: 3000000, });
@@ -285,8 +288,8 @@ export class Verifications extends Logger {
         (_, args) => args.identity,
       );
 
+      // write identity to description
       if (updateDescription) {
-        // write identity to description
         const description = await this.options.description.getDescription(contractId, accountId);
         description.public.identity = identity;
         // update to dbcpVersion 2 if 1 is selected, to support the new identity property
@@ -296,8 +299,13 @@ export class Verifications extends Logger {
         await this.options.description.setDescriptionToContract(contractId, description, accountId);
       }
 
-      await this.executeAndHandleEventResult(
-        accountId, this.contracts.registry.methods.linkIdentity(identity, contractId).encodeABI());
+      // link contract address to its identity in global registry?
+      if (linkContract) {
+        await this.executeAndHandleEventResult(
+          accountId,
+          this.contracts.registry.methods.linkIdentity(identity, contractId).encodeABI(),
+        );
+      }
     }
 
     // clear cache for this account

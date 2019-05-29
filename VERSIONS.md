@@ -8,6 +8,11 @@
 ### Deprecations
 
 
+## Version 2.4.1
+### Fixes
+- fix `linkIdentity` handling in `verifications` module during identity creation
+
+
 ## Version 2.4.0
 ### Features
 - add `gasPrice` option to runtime config
