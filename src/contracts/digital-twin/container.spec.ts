@@ -43,6 +43,7 @@ import {
   Container,
   ContainerConfig,
   ContainerOptions,
+  ContainerPlugin,
   ContainerTemplate,
   ContainerTemplateProperty,
   ContainerVerificationEntry,
@@ -92,7 +93,7 @@ describe('Container', function() {
     defaultConfig = {
       accountId: accounts[0],
       description,
-      template: 'metadata',
+      plugin: 'metadata',
     };
     // create factory for test
     const factory = await executor.createContract(
@@ -113,19 +114,21 @@ describe('Container', function() {
       expect(await container.getOwner()).to.be.eq(owner);
     });
 
-    it('writes template type to automatic field "type"', async () => {
-      const template: ContainerTemplate = {
-        type: Math.floor(Math.random() * 1e12).toString(36),
-        properties: {
-          testField: {
-            dataSchema: { type: 'string' },
-            permissions: { 0: ['set'] },
-            type: 'entry',
+    it('writes plguin type to automatic field "type"', async () => {
+      const plugin: ContainerPlugin = {
+        template: {
+          type: Math.floor(Math.random() * 1e12).toString(36),
+          properties: {
+            testField: {
+              dataSchema: { type: 'string' },
+              permissions: { 0: ['set'] },
+              type: 'entry',
+            },
           },
-        },
+        }
       };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
-      expect(await container.getEntry('type')).to.eq(template.type);
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+      expect(await container.getEntry('type')).to.eq(plugin.template.type);
     });
 
     it('can add new entry properties', async() => {
@@ -144,20 +147,20 @@ describe('Container', function() {
       expect(await consumerContainer.getEntry('testField')).to.eq(randomString);
     });
 
-    it('can set and get entries for properties defined in (custom) template', async () => {
-      const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
-      template.properties.testField = {
+    it('can set and get entries for properties defined in (custom) plugin', async () => {
+      const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+      plugin.template.properties.testField = {
         dataSchema: { type: 'string' },
         permissions: { 0: ['set'] },
         type: 'entry',
       };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       await container.setEntry('testField', randomString);
       expect(await container.getEntry('testField')).to.eq(randomString);
     });
 
-    it('can set entries if not defined in template (auto adds properties)', async () => {
+    it('can set entries if not defined in plugin template (auto adds properties)', async () => {
       const container = await Container.create(runtimes[owner], defaultConfig);
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       await container.setEntry('testField', randomString);
@@ -197,8 +200,8 @@ describe('Container', function() {
     });
 
     it('can handle files in complex objects', async () => {
-      const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
-      template.properties.complexItem = {
+      const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+      plugin.template.properties.complexItem = {
         dataSchema: {
           type: 'object',
           properties: {
@@ -209,7 +212,7 @@ describe('Container', function() {
         permissions: { 0: ['set'] },
         type: 'entry',
       };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
 
       const file = await promisify(readFile)(
         `${__dirname}/testfiles/animal-animal-photography-cat-96938.jpg`);
@@ -241,13 +244,13 @@ describe('Container', function() {
 
   describe('when setting list entries', async () => {
     it('can set and get entries for properties defined in (custom) template', async () => {
-      const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
-      template.properties.testList = {
+      const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+      plugin.template.properties.testList = {
         dataSchema: { type: 'array', items: { type: 'number' } },
         permissions: { 0: ['set'] },
         type: 'list',
       };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
       const randomNumbers = [...Array(8)].map(() => Math.floor(Math.random() * 1e12));
       await container.addListEntries('testList', randomNumbers);
       expect(await container.getListEntries('testList')).to.deep.eq(randomNumbers);
@@ -330,8 +333,8 @@ describe('Container', function() {
     });
 
     it('can handle files in complex objects', async () => {
-      const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
-      template.properties.complexItemList = {
+      const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+      plugin.template.properties.complexItemList = {
         dataSchema: {
           type: 'array',
           items: {
@@ -345,7 +348,7 @@ describe('Container', function() {
         permissions: { 0: ['set'] },
         type: 'entry',
       };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
 
       const file1 = await promisify(readFile)(
         `${__dirname}/testfiles/animal-animal-photography-cat-96938.jpg`);
@@ -401,50 +404,50 @@ describe('Container', function() {
     });
   });
 
-  describe('when working with templates', async () => {
-    it('can store current contract as template', async () => {
-      const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
-      template.properties.testEntry = {
+  describe('when working with plugins', async () => {
+    it('can store current contract as plugin', async () => {
+      const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+      plugin.template.properties.testEntry = {
         dataSchema: { $id: 'testEntry_schema', type: 'string' },
         permissions: { 0: ['set'] },
         type: 'entry',
       };
-      template.properties.testList = {
+      plugin.template.properties.testList = {
         dataSchema: { $id: 'testList_schema', type: 'array', items: { type: 'number' } },
         permissions: { 0: ['set'] },
         type: 'list',
       };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
-      const exported = await container.toTemplate();
-      expect(exported).to.deep.eq(template);
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+      const exported = await container.toPlugin();
+      expect(exported.template).to.deep.eq(plugin.template);
     });
 
-    it('can store current contract as template with values', async () => {
-      const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
-      template.properties.testEntry = {
+    it('can store current contract as plugin with values', async () => {
+      const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+      plugin.template.properties.testEntry = {
         dataSchema: { $id: 'testEntry_schema', type: 'string' },
         permissions: { 0: ['set'] },
         type: 'entry',
       };
-      template.properties.testList = {
+      plugin.template.properties.testList = {
         dataSchema: { $id: 'testList_schema', type: 'array', items: { type: 'number' } },
         permissions: { 0: ['set'] },
         type: 'list',
       };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
-      const exported = await container.toTemplate(true);
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+      const exported = await container.toPlugin(true);
       // we do not export values, so remove them
-      expect(exported).to.deep.eq(template);
+      expect(exported.template).to.deep.eq(plugin.template);
     });
 
     it('can clone contracts', async () => {
-      const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
-      template.properties.testField = {
+      const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+      plugin.template.properties.testField = {
         dataSchema: { type: 'string' },
         permissions: { 0: ['set'] },
         type: 'entry',
       };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       await container.setEntry('testField', randomString);
       expect(await container.getEntry('testField')).to.eq(randomString);
@@ -453,47 +456,47 @@ describe('Container', function() {
       expect(await clonedContainer.getEntry('testField')).to.eq(randomString);
     });
 
-    it('can save templates to users profile', async () => {
+    it('can save plugins to users profile', async () => {
       const profile = await TestUtils.getProfile(runtimes[owner].web3, dfs, null, owner);
 
       // setup template
-      const templateName = 'awesometemplate';
-      const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
-      template.properties.testField = {
+      const pluginName = 'awesometemplate';
+      const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+      plugin.template.properties.testField = {
         dataSchema: { type: 'string' },
         permissions: { 0: ['set'] },
         type: 'entry',
       };
 
       // save it to the profile
-      await Container.saveContainerTemplate(profile, templateName, description, template);
+      await Container.saveContainerPlugin(profile, pluginName, plugin);
 
       // load single template
-      const loadedTemplate = await Container.getContainerTemplate(profile, templateName);
-      expect(loadedTemplate.template).to.deep.equal(template);
+      const loadedPlugin = await Container.getContainerPlugin(profile, pluginName);
+      expect(loadedPlugin).to.deep.equal(plugin);
 
-      // load multiple templates
-      let templates = await Container.getContainerTemplates(profile);
-      expect(templates).to.have.property(templateName);
-      expect(templates[templateName].template).to.deep.equal(template);
+      // load multiple plugins
+      let plugins = await Container.getContainerPlugins(profile);
+      expect(plugins).to.have.property(pluginName);
+      expect(plugins[pluginName]).to.deep.equal(plugin);
 
       // remove template
-      await Container.deleteContainerTemplate(profile, templateName);
-      templates = await Container.getContainerTemplates(profile);
-      expect(templates).to.not.have.property(templateName);
+      await Container.deleteContainerPlugin(profile, pluginName);
+      plugins = await Container.getContainerPlugins(profile);
+      expect(plugins).to.not.have.property(pluginName);
     });
   });
 
   describe('when sharing properties', async () => {
     describe('when sharing entries', async () => {
       it('can share read access a property from owner to another user', async() => {
-        const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
-        template.properties.testField = {
+        const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+        plugin.template.properties.testField = {
           dataSchema: { type: 'string' },
           permissions: { 0: ['set'] },
           type: 'entry',
         };
-        const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+        const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
         await container.setEntry('testField', randomString);
         expect(await container.getEntry('testField')).to.eq(randomString);
@@ -511,13 +514,13 @@ describe('Container', function() {
       });
 
       it('can share write access a property from owner to another user', async() => {
-        const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
-        template.properties.testField = {
+        const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+        plugin.template.properties.testField = {
           dataSchema: { type: 'string' },
           permissions: { 0: ['set'] },
           type: 'entry',
         };
-        const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+        const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
         await container.setEntry('testField', randomString);
         expect(await container.getEntry('testField')).to.eq(randomString);
@@ -543,13 +546,13 @@ describe('Container', function() {
 
     describe('when sharing lists', async () => {
       it('can share read access a property from owner to another user', async() => {
-        const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
-        template.properties.testList = {
+        const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+        plugin.template.properties.testList = {
           dataSchema: { type: 'array', items: { type: 'string' } },
           permissions: { 0: ['set'] },
           type: 'list',
         };
-        const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+        const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
         await container.addListEntries('testList', [randomString]);
         expect(await container.getListEntries('testList')).to.deep.eq([randomString]);
@@ -563,13 +566,13 @@ describe('Container', function() {
       });
 
       it('can share write access a property from owner to another user', async() => {
-        const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
-        template.properties.testList = {
+        const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+        plugin.template.properties.testList = {
           dataSchema: { type: 'array', items: { type: 'string' } },
           permissions: { 0: ['set'] },
           type: 'list',
         };
-        const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+        const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
         await container.addListEntries('testList', [randomString]);
         expect(await container.getListEntries('testList')).to.deep.eq([randomString]);
@@ -593,13 +596,13 @@ describe('Container', function() {
 
     describe('when working on shared containers', async () => {
       it('cannot have other user access properties before sharing them', async() => {
-        const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
-        template.properties.testField = {
+        const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+        plugin.template.properties.testField = {
           dataSchema: { type: 'string' },
           permissions: { 0: ['set'] },
           type: 'entry',
         };
-        const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+        const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
         await container.setEntry('testField', randomString);
         expect(await container.getEntry('testField')).to.eq(randomString);
@@ -614,13 +617,13 @@ describe('Container', function() {
       });
 
       it('cannot share access, when member, but not owner of the container', async () => {
-        const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
-        template.properties.testField = {
+        const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+        plugin.template.properties.testField = {
           dataSchema: { type: 'string' },
           permissions: { 0: ['set'] },
           type: 'entry',
         };
-        const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+        const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
         await container.setEntry('testField', randomString);
         expect(await container.getEntry('testField')).to.eq(randomString);
@@ -640,13 +643,13 @@ describe('Container', function() {
       });
 
       it('cannot share access from a non-member account to another user', async() => {
-        const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
-        template.properties.testField = {
+        const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+        plugin.template.properties.testField = {
           dataSchema: { type: 'string' },
           permissions: { 0: ['set'] },
           type: 'entry',
         };
-        const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+        const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
         await container.setEntry('testField', randomString);
         expect(await container.getEntry('testField')).to.eq(randomString);
@@ -665,13 +668,13 @@ describe('Container', function() {
       });
 
       it('can clone a partially shared container from the receiver of a sharing', async() => {
-        const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
-        template.properties.testField = {
+        const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+        plugin.template.properties.testField = {
           dataSchema: { type: 'string' },
           permissions: { 0: ['set'] },
           type: 'entry',
         };
-        const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+        const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
         await container.setEntry('testField', randomString);
         expect(await container.getEntry('testField')).to.eq(randomString);
@@ -710,13 +713,13 @@ describe('Container', function() {
 
   describe('when fetching permissions from container', async() => {
     it('can fetch permissions for a single account', async() => {
-      const template: ContainerTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
-      template.properties.testField = {
+      const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+      plugin.template.properties.testField = {
         dataSchema: { type: 'string' },
         permissions: { 0: ['set'] },
         type: 'entry',
       };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, template });
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       await container.setEntry('testField', randomString);
       expect(await container.getEntry('testField')).to.eq(randomString);

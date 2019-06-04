@@ -133,7 +133,7 @@ Parameters
     * ``address`` - ``string``: ENS address used for container
     * ``description`` - ``string``: description has to be passed to ``.create`` to apply it to to contract
     * ``factoryAddress`` - ``string`` (optional): factory address can be passed to ``.create`` for customer container factory
-    * ``template`` - ``string|ContainerTemplate`` (optional): template to be used in ``.create``, can be string with name or a ``ContainerTemplate``
+    * ``plugin`` - ``string|ContainerPlugin`` (optional): plugin to be used in ``.create``, can be string with name or a ``ContainerPlugin``
 
 -------
 Returns
@@ -165,7 +165,7 @@ clone
 
   Container.clone(options, config, source[, copyValues]);
 
-Clone ``Container`` instance into template and creates new ``Container`` with it.
+Clone ``Container`` instance into plugin and creates new ``Container`` with it.
 
 Cloning containers:
 
@@ -212,7 +212,7 @@ Parameters
     * ``address`` - ``string``: ENS address used for container
     * ``description`` - ``string``: description has to be passed to ``.create`` to apply it to to contract
     * ``factoryAddress`` - ``string`` (optional): factory address can be passed to ``.create`` for customer container factory
-    * ``template`` - ``string|ContainerTemplate`` (optional): template to be used in ``.create``, can be string with name or a ``ContainerTemplate``
+    * ``plugin`` - ``string|ContainerPlugin`` (optional): plugin to be used in ``.create``, can be string with name or a ``ContainerPlugin``
 #. ``source`` - ``Container``: container to clone
 #. ``copyValues`` - ``boolean``: copy entry values from source contract to new contract
 
@@ -241,23 +241,23 @@ Example
 
 --------------------------------------------------------------------------------
 
-.. _container_deleteContainerTemplate:
+.. _container_deleteContainerPlugin:
 
-deleteContainerTemplate
+deleteContainerPlugin
 ================================================================================
 
 .. code-block:: typescript
 
-  container.deleteContainerTemplate(profile);
+  container.deleteContainerPlugin(profile);
 
-Remove a container template from a users profile.
+Remove a container plugin from a users profile.
 
 ----------
 Parameters
 ----------
 
 #. ``Profile`` - |source profile|_: profile instance
-#. ``name`` - ``string``: template name
+#. ``name`` - ``string``: plugin name
 
 -------
 Returns
@@ -271,36 +271,36 @@ Example
 
 .. code-block:: typescript
 
-  await Container.deleteContainerTemplate(profile, 'awesometemplate');
+  await Container.deleteContainerPlugin(profile, 'awesomeplugin');
 
 
 --------------------------------------------------------------------------------
 
 
 
-.. _container_getContainerTemplate:
+.. _container_getContainerPlugin:
 
-getContainerTemplate
+getContainerPlugin
 ================================================================================
 
 .. code-block:: typescript
 
-  container.getContainerTemplate(profile, name);
+  container.getContainerPlugin(profile, name);
 
-Get one container template for a users profile by name.
+Get one container plugin for a users profile by name.
 
 ----------
 Parameters
 ----------
 
 #. ``Profile`` - |source profile|_: profile instance
-#. ``name`` - ``string``: template name
+#. ``name`` - ``string``: plugin name
 
 -------
 Returns
 -------
 
-``Promise`` returns ``ContainerTemplate``
+``Promise`` returns ``ContainerPlugin``
 
 -------
 Example
@@ -309,14 +309,14 @@ Example
 .. code-block:: typescript
 
   const accountId1 = '0x0000000000000000000000000000000000000001';
-  const template = await Container.getContainerTemplate(profile, 'awesometemplate');
+  const plugin = await Container.getContainerPlugin(profile, 'awesomeplugin');
 
   // create container with accountId1
   const container = await Container.create(options, {
     ...config,
     accountId: accountId1,
-    description: template.description,
-    template: template.template,
+    description: plugin.description,
+    plugin: plugin,
   });
 
 
@@ -324,16 +324,16 @@ Example
 --------------------------------------------------------------------------------
 
 
-.. _container_getContainerTemplates:
+.. _container_getContainerPlugins:
 
-getContainerTemplates
+getContainerPlugins
 ================================================================================
 
 .. code-block:: typescript
 
-  container.getContainerTemplates(profile);
+  container.getContainerPlugins(profile);
 
-Get all container templates for a users profile.
+Get all container plugins for a users profile
 
 ----------
 Parameters
@@ -346,7 +346,7 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``Array<ContainerTemplate>``
+``Promise`` returns ``Array<ContainerPlugin>``
 
 -------
 Example
@@ -355,39 +355,38 @@ Example
 .. code-block:: typescript
 
   const accountId1 = '0x0000000000000000000000000000000000000001';
-  const templates = await Container.getContainerTemplates(profile);
+  const plugins = await Container.getContainerPlugins(profile);
 
   // create container with accountId1
   const container = await Container.create(options, {
     ...config,
     accountId: accountId1,
-    description: templates['awesometemplate'].description,
-    template: templates['awesometemplate'].template,
+    description: plugins['awesomeplugin'].description,
+    plugin: plugins['awesomeplugin'],
   });
 
 
 --------------------------------------------------------------------------------
 
 
-.. _container_saveContainerTemplate:
+.. _container_saveContainerPlugin:
 
-saveContainerTemplate
+saveContainerPlugin
 ================================================================================
 
 .. code-block:: typescript
 
-  container.saveContainerTemplate(profile);
+  container.saveContainerPlugin(profile, name, plugin);
 
-Persists a template including an dbcp description to the users profile.
+Persists a plugin including an dbcp description to the users profile.
 
 ----------
 Parameters
 ----------
 
 #. ``Profile`` - |source profile|_: profile instance
-#. ``name`` - ``string``: template name
-#. ``description`` - ``any``: predefined template dbcp description
-#. ``template`` - ``ContainerTemplate``: container template object
+#. ``name`` - ``string``: plugin name
+#. ``plugin`` - ``ContainerPlugin``: container plugin object
 
 -------
 Returns
@@ -401,9 +400,9 @@ Example
 
 .. code-block:: typescript
 
-  const templates = await Container.saveContainerTemplate(
+  const plugins = await Container.saveContainerPlugin(
     profile,
-    'awesometemplate',
+    'awesomeplugin',
     { ... }
   );
 
@@ -413,19 +412,19 @@ Example
 --------------------------------------------------------------------------------
 
 
-.. _container_toTemplate:
+.. _container_toPlugin:
 
-toTemplate
+toPlugin
 ================================================================================
 
 .. code-block:: typescript
 
-  container.toTemplate([getValues]);
+  container.toPlugin([getValues]);
 
-Export current container state as template. If ``getValues`` is ``true``, exports entry values as
+Export current container state as plugin. If ``getValues`` is ``true``, exports entry values as
 well.
 
-This template can be passed to :ref:`create <container_create>` and used to create new containers.
+This plugin can be passed to :ref:`create <container_create>` and used to create new containers.
 
 ----------
 Parameters
@@ -437,7 +436,7 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``ContainerTemplate``: template build from current container
+``Promise`` returns ``ContainerPlugin``: plugin build from current container
 
 -------
 Example
@@ -448,7 +447,7 @@ Example
   const sampleValue = 123;
   await container.setEntry('numberField', sampleValue);
 
-  console.dir(await container.toTemplate(true));
+  console.dir(await container.toPlugin(true));
 
 
 
@@ -1252,7 +1251,7 @@ config properties, specific to `Container` instances
 #. ``address`` - ``string`` (optional): address of a ``DataContract`` instance, can be ENS or contract address
 #. ``description`` - ``string`` (optional): description has to be passed to ``.create`` to apply it to to contract
 #. ``factoryAddress`` - ``string`` (optional): factory address can be passed to ``.create`` for customer container factory
-#. ``template`` - ``string|ContainerTemplate`` (optional): template to be used in ``.create``, can be string with name or a ``ContainerTemplate``
+#. ``plugin`` - ``string|ContainerPlugin`` (optional): plugin to be used in ``.create``, can be string with name or a ``ContainerPlugin``
 
 
 
@@ -1282,6 +1281,17 @@ config for sharing multiple fields to one account (read and/or readWrite access)
 #. ``read`` - ``string[]`` (optional): list of properties, that are shared read-only
 #. ``readWrite`` - ``string[]`` (optional): list of properties, that are shared readable and writable
 
+
+.. _container_ContainerPlugin:
+
+---------------
+ContainerPlugin
+---------------
+
+base definition of a container instance, covers properties setup and permissions
+
+#. ``description`` - ``any``: type of the template (equals name of the template)
+#. ``template`` - ``ContainerTemplate``: template for container instances, covers properties setup and permissions
 
 
 .. _container_ContainerTemplate:

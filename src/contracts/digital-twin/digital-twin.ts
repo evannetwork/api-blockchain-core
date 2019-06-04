@@ -306,8 +306,6 @@ export class DigitalTwin extends Logger {
    */
   async addAsFavorite() {
     await this.getMutex('profile').runExclusive(async () => {
-      const description = await this.getDescription();
-
       await this.options.profile.loadForAccount(this.options.profile.treeLabels.contracts);
       await this.options.profile.addBcContract('twins.evan', this.config.address, {});
       await this.options.profile.storeForAccount(this.options.profile.treeLabels.contracts);
@@ -628,7 +626,14 @@ export class DigitalTwin extends Logger {
           break;
         case DigitalTwinEntryType.Container:
           address = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
-          entry.value = new Container(this.options, { ...this.config.containerConfig, address });
+          entry.value = new Container(
+            this.options,
+            {
+              accountId: this.config.accountId,
+              ...this.config.containerConfig,
+              address,
+            },
+          );
           break;
         case DigitalTwinEntryType.DigitalTwin:
           address = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
