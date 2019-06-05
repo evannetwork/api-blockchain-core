@@ -89,6 +89,7 @@ export class Profile extends Logger {
     addressBook: 'addressBook',
     bookmarkedDapps: 'bookmarkedDapps',
     contracts: 'contracts',
+    encryptionKeys: 'encryptionKeys',
     publicKey: 'publicKey',
     templates: 'templates',
   };
@@ -426,6 +427,22 @@ export class Profile extends Logger {
   }
 
   /**
+   * get encryption key from profile
+   *
+   * @param      {string}  context  key context
+   */
+  async getEncryptionKey(context: string): Promise<any> {
+    if (!this.trees[this.treeLabels.encryptionKeys]) {
+      await this.loadForAccount(this.treeLabels.encryptionKeys);
+    }
+
+    return this.ipld.getLinkedGraph(
+      this.trees[this.treeLabels.encryptionKeys],
+      `${this.treeLabels.encryptionKeys}/${context}`,
+    );
+  }
+
+  /**
    * get a key from an address in the address book
    *
    * @param      {string}        address  address to look up
@@ -638,6 +655,23 @@ export class Profile extends Logger {
       this.activeAccount,
       false,
       false,
+    );
+  }
+
+  /**
+   * save encryption key to profile
+   *
+   * @param      {string}  context  key context
+   * @param      {string}  key      key value
+   */
+  async setEncryptionKey(context: string, key: string): Promise<void> {
+    this.ensureTree(this.treeLabels.encryptionKeys);
+
+    await this.ipld.set(
+      this.trees[this.treeLabels.encryptionKeys],
+      `${this.treeLabels.encryptionKeys}/${context}`,
+      key,
+      true,
     );
   }
 

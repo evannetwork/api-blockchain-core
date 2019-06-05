@@ -30,13 +30,21 @@ import {
   Envelope,
   Logger,
   LoggerOptions,
+  NameResolver,
 } from '@evan.network/dbcp';
 
 import { CryptoProvider } from './crypto-provider';
+import { Profile } from '../profile/profile';
 
 
 export enum EncryptionWrapperKeyType {
-  Profile,
+  Profile = 'profile',
+}
+
+export enum EncryptionWrapperCryptorType {
+  Content = 'aes-256-cbc',
+  File = 'aes-blob',
+  Unencrypted = 'unencrypted',
 }
 
 /**
@@ -44,6 +52,9 @@ export enum EncryptionWrapperKeyType {
  */
 export interface EncryptionWrapperOptions extends LoggerOptions {
   cryptoProvider: CryptoProvider;
+  nameResolver: NameResolver;
+  profile: Profile;
+  web3: any;
 }
 
 
@@ -61,34 +72,146 @@ export class EncryptionWrapper extends Logger {
   private readonly encodingUnencrypted = 'utf-8';
   private readonly encodingEncrypted = 'hex';
 
-  options: any;
+  options: EncryptionWrapperOptions;
 
-  constructor(options?: LoggerOptions) {
+  constructor(options?: EncryptionWrapperOptions) {
     super(options);
     this.options = { ...options };
   }
 
+  /**
+   * decrypt given envelope
+   *
+   * @param      {Envelope}  toDecrypt  encrypted envelop
+   */
   public async decrypt(toDecrypt: Envelope): Promise<any> {
-    throw new Error('not implemented');
+    const [ cryptor, key ] = await Promise.all([
+      this.options.cryptoProvider.getCryptorByCryptoInfo(toDecrypt.cryptoInfo),
+      this.getKey(toDecrypt.cryptoInfo),
+    ]);
+
+    const decrypted = await cryptor.decrypt(
+      Buffer.from(toDecrypt.private, this.encodingEncrypted), { key });
+    return decrypted;
   }
 
-  public async encrypt(toEncrypt: any, cryptoInfo: CryptoInfo): Promise<Envelope> {
-    throw new Error('not implemented');
+  /**
+   * encrypt given object, depending on given cryptoInfo, additional information may be required,
+   * which can be given via ``artifacts``
+   *
+   * @param      {any}         toEncrypt   object to encrypt
+   * @param      {CryptoInfo}  cryptoInfo  details for encryption, can be created with
+   *                                       `getCryptoInfos`
+   * @param      {any}         artifacts   additional information for decrypting
+   */
+  public async encrypt(toEncrypt: any, cryptoInfo: CryptoInfo, artifacts?: any): Promise<Envelope> {
+    const [ cryptor, key ] = await Promise.all([
+      this.options.cryptoProvider.getCryptorByCryptoInfo(cryptoInfo),
+      this.getKey(cryptoInfo),
+    ]);
+
+    if (!cryptor) {
+      throw new Error(`no cryptor found for cryptoInfo "${cryptoInfo}"`);
+    }
+    if (!key) {
+      throw new Error(`no key found for cryptoInfo "${cryptoInfo}"`);
+    }
+
+    const encryptedBuffer = await cryptor.encrypt(toEncrypt, { key });
+    const encrypted = encryptedBuffer.toString(this.encodingEncrypted);
+    const envelope: Envelope = {
+      private: encrypted,
+      cryptoInfo: { ...cryptoInfo },
+    };
+    return envelope;
   }
 
+  /**
+   * generate new encryption key, uses ``cryptoInfo`` to decide which ``cryptor`` to use for this
+   *
+   * @param      {CryptoInfo}  cryptoInfo  details for encryption, can be created with
+   *                                       `getCryptoInfos`
+   */
+  public async generateKey(cryptoInfo: CryptoInfo): Promise<any> {
+    const cryptor = this.options.cryptoProvider.getCryptorByCryptoInfo(cryptoInfo);
+    return cryptor.generateKey();
+  }
+
+  /**
+   * create new ``CryptoInfo`` instance
+   *
+   * @param      {any}                           keyContext   used to identify key
+   * @param      {EncryptionWrapperKeyType}      keyType      defines where keys are stored
+   * @param      {EncryptionWrapperCryptorType}  cryptorType  cryptor to use
+   */
   public async getCryptoInfo(
-    keyType: EncryptionWrapperKeyType,
     keyContext: any,
+    keyType: EncryptionWrapperKeyType,
+    cryptorType: EncryptionWrapperCryptorType = EncryptionWrapperCryptorType.Content,
   ): Promise<CryptoInfo> {
     switch (keyType) {
       case EncryptionWrapperKeyType.Profile: {
         return {
-          algorithm: 'aes',
-          originator: `profile:keys:${keyContext}`,
+          algorithm: cryptorType,
+          block: await this.options.web3.eth.getBlockNumber(),
+          originator: `profile:${keyContext}`,
         };
       }
       default:
         throw new Error(`unknown key type "${keyType}"`);
+    }
+  }
+
+  /**
+   * get key for given ``cryptoInfo``
+   *
+   * @param      {CryptoInfo}  cryptoInfo  details for encryption, can be created with
+   *                                       `getCryptoInfos`
+   */
+  public async getKey(cryptoInfo: CryptoInfo) {
+    let result;
+    const split = cryptoInfo.originator.split(':');
+    if (split.length < 2) {
+      throw new Error(`unsupported originator "${cryptoInfo.originator}" at crypto info`);
+    }
+    switch (split[0]) {
+      case 'profile':
+        const [ context, profileProperty = 'encryptionKeys' ] = split.slice(1).reverse();
+        result = await this.options.profile.getEncryptionKey(context);
+        break;
+      default:
+        throw new Error(`unknown key type "${split[0]}"`);
+    }
+
+    if (!result) {
+      throw new Error(`missing key for cryptoInfo "${JSON.stringify(cryptoInfo)}"`);
+    }
+
+    return result;
+  }
+
+  /**
+   * store key in respective storage location, depending on given cryptoInfo, additional information
+   * may be required, which can be given via ``artifacts``
+   *
+   * @param      {CryptoInfo}  cryptoInfo  details for encryption, can be created with
+   *                                       `getCryptoInfos`
+   * @param      {any}         key         key to store
+   */
+  public async storeKey(cryptoInfo: CryptoInfo, key: any) {
+    const split = cryptoInfo.originator.split(':');
+    if (split.length < 2) {
+      throw new Error(`unsupported originator "${cryptoInfo.originator}" at crypto info`);
+    }
+    switch (split[0]) {
+      case 'profile':
+        const [ context, profileProperty = 'encryptionKeys' ] = split.slice(1).reverse();
+        await this.options.profile.loadForAccount(this.options.profile.treeLabels.encryptionKeys);
+        await this.options.profile.setEncryptionKey(context, key);
+        await this.options.profile.storeForAccount(this.options.profile.treeLabels.encryptionKeys);
+        break;
+      default:
+        throw new Error(`unknown key type "${split[0]}"`);
     }
   }
 }
