@@ -65,61 +65,67 @@ describe('Encryption Wrapper', function() {
     expect(testInstance).not.to.be.undefined;
   });
 
-  it('should be able to encrypt and decrypt files with a new key from profile', async () => {
-    const file = await promisify(readFile)(
-      `${__dirname}/testfile.spec.jpg`);
-    const sampleFile = [{
-      name: 'testfile.spec.jpg',
-      fileType: 'image/jpeg',
-      file,
-    }];
-    const sampleFileBackup = [{
-      name: 'testfile.spec.jpg',
-      fileType: 'image/jpeg',
-      file,
-    }];
+  describe('when using keys stored in profile', () => {
+    it('should be able to encrypt and decrypt files with a new key from profile', async () => {
+      const file = await promisify(readFile)(
+        `${__dirname}/testfile.spec.jpg`);
+      const sampleFile = [{
+        name: 'testfile.spec.jpg',
+        fileType: 'image/jpeg',
+        file,
+      }];
+      const sampleFileBackup = [{
+        name: 'testfile.spec.jpg',
+        fileType: 'image/jpeg',
+        file,
+      }];
 
-    // use 32B for test, can be any string
-    const keyContext = TestUtils.getRandomBytes32();
-    const cryptoInfo = await encryptionWrapper.getCryptoInfo(
-      keyContext, EncryptionWrapperKeyType.Profile, EncryptionWrapperCryptorType.File);
+      // use 32B for test, can be any string
+      const keyContext = TestUtils.getRandomBytes32();
+      const cryptoInfo = await encryptionWrapper.getCryptoInfo(
+        keyContext, EncryptionWrapperKeyType.Profile, EncryptionWrapperCryptorType.File);
 
-    // generate and store new key for crypto info
-    const key = await encryptionWrapper.generateKey(cryptoInfo);
-    await encryptionWrapper.storeKey(cryptoInfo, key);
+      // generate and store new key for crypto info
+      const key = await encryptionWrapper.generateKey(cryptoInfo);
+      await encryptionWrapper.storeKey(cryptoInfo, key);
 
-    // encrypt files (key is pulled from profile)
-    const encrypted = await encryptionWrapper.encrypt(sampleFile, cryptoInfo);
+      // encrypt files (key is pulled from profile)
+      const encrypted = await encryptionWrapper.encrypt(sampleFile, cryptoInfo);
 
-    expect(encrypted).to.haveOwnProperty('cryptoInfo');
-    expect(encrypted).to.haveOwnProperty('private');
+      expect(encrypted).to.haveOwnProperty('cryptoInfo');
+      expect(encrypted).to.haveOwnProperty('private');
 
-    expect(await encryptionWrapper.decrypt(encrypted)).to.deep.eq(sampleFileBackup);
+      expect(await encryptionWrapper.decrypt(encrypted)).to.deep.eq(sampleFileBackup);
+    });
+
+    it('should be able to encrypt and decrypt data with new key from profile', async () => {
+      const file = await promisify(readFile)(
+        `${__dirname}/testfile.spec.jpg`);
+      const sampleData = {
+        foo: TestUtils.getRandomBytes32(),
+        bar: Math.random(),
+      };
+
+      // use 32B for test, can be any string
+      const keyContext = TestUtils.getRandomBytes32();
+      const cryptoInfo = await encryptionWrapper.getCryptoInfo(
+        keyContext, EncryptionWrapperKeyType.Profile, EncryptionWrapperCryptorType.Content);
+
+      // generate and store new key for crypto info
+      const key = await encryptionWrapper.generateKey(cryptoInfo);
+      await encryptionWrapper.storeKey(cryptoInfo, key);
+
+      // encrypt files (key is pulled from profile)
+      const encrypted = await encryptionWrapper.encrypt(sampleData, cryptoInfo);
+
+      expect(encrypted).to.haveOwnProperty('cryptoInfo');
+      expect(encrypted).to.haveOwnProperty('private');
+
+      expect(await encryptionWrapper.decrypt(encrypted)).to.deep.eq(sampleData);
+    });
   });
 
-  it('should be able to encrypt and decrypt data with new key from profile', async () => {
-    const file = await promisify(readFile)(
-      `${__dirname}/testfile.spec.jpg`);
-    const sampleData = {
-      foo: TestUtils.getRandomBytes32(),
-      bar: Math.random(),
-    };
-
-    // use 32B for test, can be any string
-    const keyContext = TestUtils.getRandomBytes32();
-    const cryptoInfo = await encryptionWrapper.getCryptoInfo(
-      keyContext, EncryptionWrapperKeyType.Profile, EncryptionWrapperCryptorType.Content);
-
-    // generate and store new key for crypto info
-    const key = await encryptionWrapper.generateKey(cryptoInfo);
-    await encryptionWrapper.storeKey(cryptoInfo, key);
-
-    // encrypt files (key is pulled from profile)
-    const encrypted = await encryptionWrapper.encrypt(sampleData, cryptoInfo);
-
-    expect(encrypted).to.haveOwnProperty('cryptoInfo');
-    expect(encrypted).to.haveOwnProperty('private');
-
-    expect(await encryptionWrapper.decrypt(encrypted)).to.deep.eq(sampleData);
+  describe('when using keys stored in Multisharings', () => {
+    // TODO
   });
 });
