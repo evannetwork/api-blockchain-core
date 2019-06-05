@@ -330,6 +330,7 @@ export class Container extends Logger {
     profile: Profile,
     name: string
   ): Promise<ContainerPlugin> {
+    await profile.loadForAccount(profile.treeLabels.contracts);
     const plugin = await profile.getBcContract(Container.profilePluginsKey, name);
     Ipld.purgeCryptoInfo(plugin);
     return plugin;
@@ -344,6 +345,7 @@ export class Container extends Logger {
     profile: Profile,
     loadContracts = true
   ): Promise<{[id: string]: ContainerPlugin}> {
+    await profile.loadForAccount(profile.treeLabels.contracts);
     const bcContracts = (await profile.getBcContracts(Container.profilePluginsKey)) || { };
     Ipld.purgeCryptoInfo(bcContracts);
 
