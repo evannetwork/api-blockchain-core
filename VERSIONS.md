@@ -4,7 +4,8 @@
 ### Features
 
 ### Fixes
-- add loadForAccount to `DataContainer.getContainerPlugin` `DataContainer.getContainerPlugins`
+- add correct loadForAccount logic to `DataContainer` plugins
+
 
 ### Deprecations
 

@@ -315,7 +315,9 @@ export class Container extends Logger {
     profile: Profile,
     name: string
   ): Promise<void> {
-    await profile.loadForAccount(profile.treeLabels.contracts);
+    if (!profile.trees[profile.treeLabels.contracts]) {
+      await profile.loadForAccount(profile.treeLabels.contracts);
+    }
     await profile.removeBcContract(Container.profilePluginsKey, name);
     await profile.storeForAccount(profile.treeLabels.contracts);
   }
@@ -330,7 +332,9 @@ export class Container extends Logger {
     profile: Profile,
     name: string
   ): Promise<ContainerPlugin> {
-    await profile.loadForAccount(profile.treeLabels.contracts);
+    if (!profile.trees[profile.treeLabels.contracts]) {
+      await profile.loadForAccount(profile.treeLabels.contracts);
+    }
     const plugin = await profile.getBcContract(Container.profilePluginsKey, name);
     Ipld.purgeCryptoInfo(plugin);
     return plugin;
@@ -345,7 +349,9 @@ export class Container extends Logger {
     profile: Profile,
     loadContracts = true
   ): Promise<{[id: string]: ContainerPlugin}> {
-    await profile.loadForAccount(profile.treeLabels.contracts);
+    if (!profile.trees[profile.treeLabels.contracts]) {
+      await profile.loadForAccount(profile.treeLabels.contracts);
+    }
     const bcContracts = (await profile.getBcContracts(Container.profilePluginsKey)) || { };
     Ipld.purgeCryptoInfo(bcContracts);
 
@@ -376,7 +382,9 @@ export class Container extends Logger {
     name: string,
     plugin: ContainerPlugin
   ): Promise<void> {
-    await profile.loadForAccount(profile.treeLabels.contracts);
+    if (!profile.trees[profile.treeLabels.contracts]) {
+      await profile.loadForAccount(profile.treeLabels.contracts);
+    }
     await profile.addBcContract(Container.profilePluginsKey, name, plugin);
     await profile.storeForAccount(profile.treeLabels.contracts);
   }
