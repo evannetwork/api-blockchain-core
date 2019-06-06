@@ -45,8 +45,9 @@ export enum EncryptionWrapperCryptorType {
 }
 
 export enum EncryptionWrapperKeyType {
-  Sharing = 'sharing',
+  Custom = 'custom',
   Profile = 'profile',
+  Sharing = 'sharing',
 }
 
 /**
@@ -91,7 +92,9 @@ export class EncryptionWrapper extends Logger {
     toDecrypt: Envelope,
     artifacts?:
       // for type === Sharing
-      { accountId: string, propertyName: string }
+      { accountId: string, propertyName: string } |
+      // for type === Custom
+      { key: string }
   ): Promise<any> {
     const [ cryptor, key ] = await Promise.all([
       this.options.cryptoProvider.getCryptorByCryptoInfo(toDecrypt.cryptoInfo),
@@ -117,7 +120,9 @@ export class EncryptionWrapper extends Logger {
     cryptoInfo: CryptoInfo,
     artifacts?:
       // for type === Sharing
-      { accountId: string, block?: number, propertyName: string }
+      { accountId: string, block?: number, propertyName: string } |
+      // for type === Custom
+      { key: string }
   ): Promise<Envelope> {
     const [ cryptor, key ] = await Promise.all([
       this.options.cryptoProvider.getCryptorByCryptoInfo(cryptoInfo),
@@ -167,6 +172,7 @@ export class EncryptionWrapper extends Logger {
       { sharingContractId: string, sharingId?: string }
   ): Promise<CryptoInfo> {
     switch (keyType) {
+      case EncryptionWrapperKeyType.Custom:
       case EncryptionWrapperKeyType.Profile:
         return {
           algorithm: cryptorType,
@@ -198,7 +204,9 @@ export class EncryptionWrapper extends Logger {
     cryptoInfo: CryptoInfo,
     artifacts?:
       // for type === Sharing
-      { accountId: string, block?: number, propertyName: string }
+      { accountId: string, block?: number, propertyName: string } |
+      // for type === Custom
+      { key: string }
   ) {
     let result;
     const split = cryptoInfo.originator.split(':');
@@ -212,13 +220,18 @@ export class EncryptionWrapper extends Logger {
         break;
       case 'sharing':
         const [ contractid, sharingId = null ] = split.slice(1);
+        const { accountId, propertyName, block } = artifacts as any;
         result = await this.options.sharing.getKey(
           contractid,
-          artifacts.accountId,
-          artifacts.propertyName || '*',
-          artifacts.block || 0,
+          accountId,
+          propertyName || '*',
+          block || 0,
           sharingId,
         );
+        break;
+      case 'custom':
+        const { key } = artifacts as any;
+        result = key;
         break;
       default:
         throw new Error(`unknown key type "${split[0]}"`);

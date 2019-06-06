@@ -35,6 +35,7 @@ import {
 } from '@evan.network/dbcp';
 
 import { accounts } from '../test/accounts';
+import { CryptoProvider } from '../encryption/crypto-provider';
 import { Sharing } from '../contracts/sharing';
 import { TestUtils } from '../test/test-utils';
 import {
@@ -46,6 +47,7 @@ import {
 
 describe('Encryption Wrapper', function() {
   this.timeout(300000);
+  let cryptoProvider: CryptoProvider;
   let encryptionWrapper: EncryptionWrapper;
   let executor: Executor;
   let sharing0: Sharing;
@@ -59,11 +61,12 @@ describe('Encryption Wrapper', function() {
       [sha3(ownAccount), ...[ownAccount, partnerAccount].map(partner => sha9(ownAccount, partner))];
     const web3 = TestUtils.getWeb3();
     const dfs = await TestUtils.getIpfs();
+    cryptoProvider = TestUtils.getCryptoProvider(dfs);
     executor = await TestUtils.getExecutor(web3);
     sharing0 = await TestUtils.getSharing(web3, dfs, getKeys(accounts[0], accounts[1]));
     sharing1 = await TestUtils.getSharing(web3, dfs, getKeys(accounts[1], accounts[0]));
     encryptionWrapper = new EncryptionWrapper({
-      cryptoProvider: TestUtils.getCryptoProvider(dfs),
+      cryptoProvider,
       nameResolver: await TestUtils.getNameResolver(web3),
       profile: await TestUtils.getProfile(web3, dfs),
       sharing: sharing0,
@@ -309,6 +312,68 @@ describe('Encryption Wrapper', function() {
       expect(encrypted).to.haveOwnProperty('private');
       expect(await encryptionWrapper.decrypt(encrypted, encryptionArtifacts))
         .to.deep.eq(sampleData);
+    });
+  });
+
+  describe('when using keys stored separately', () => {
+    it('should be able to encrypt and decrypt files with a new key from profile', async () => {
+      const file = await promisify(readFile)(
+        `${__dirname}/testfile.spec.jpg`);
+      const sampleFile = [{
+        name: 'testfile.spec.jpg',
+        fileType: 'image/jpeg',
+        file,
+      }];
+      const sampleFileBackup = [{
+        name: 'testfile.spec.jpg',
+        fileType: 'image/jpeg',
+        file,
+      }];
+
+      // use 32B for test, can be any string
+      const keyContext = TestUtils.getRandomBytes32();
+      const cryptoInfo = await encryptionWrapper.getCryptoInfo(
+        keyContext,
+        EncryptionWrapperKeyType.Custom,
+        EncryptionWrapperCryptorType.File,
+      );
+
+      // generate with custom logic, e.g. with the aes cryptor
+      const cryptor = cryptoProvider.getCryptorByCryptoAlgo('aes');
+      const key = await cryptor.generateKey();
+
+      // encrypt files (key is pulled from profile)
+      const encrypted = await encryptionWrapper.encrypt(sampleFile, cryptoInfo, { key });
+
+      expect(encrypted).to.haveOwnProperty('cryptoInfo');
+      expect(encrypted).to.haveOwnProperty('private');
+      expect(await encryptionWrapper.decrypt(encrypted, { key })).to.deep.eq(sampleFileBackup);
+    });
+
+    it('should be able to encrypt and decrypt data with new key from profile', async () => {
+      const sampleData = {
+        foo: TestUtils.getRandomBytes32(),
+        bar: Math.random(),
+      };
+
+      // use 32B for test, can be any string
+      const keyContext = TestUtils.getRandomBytes32();
+      const cryptoInfo = await encryptionWrapper.getCryptoInfo(
+        keyContext,
+        EncryptionWrapperKeyType.Custom,
+        EncryptionWrapperCryptorType.Content,
+      );
+
+      // generate with custom logic, e.g. with the aes cryptor
+      const cryptor = cryptoProvider.getCryptorByCryptoAlgo('aes');
+      const key = await cryptor.generateKey();
+
+      // encrypt files (key is pulled from profile)
+      const encrypted = await encryptionWrapper.encrypt(sampleData, cryptoInfo, { key });
+
+      expect(encrypted).to.haveOwnProperty('cryptoInfo');
+      expect(encrypted).to.haveOwnProperty('private');
+      expect(await encryptionWrapper.decrypt(encrypted, { key })).to.deep.eq(sampleData);
     });
   });
 });
