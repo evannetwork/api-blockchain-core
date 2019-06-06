@@ -35,16 +35,18 @@ import {
 
 import { CryptoProvider } from './crypto-provider';
 import { Profile } from '../profile/profile';
+import { Sharing } from '../contracts/sharing';
 
-
-export enum EncryptionWrapperKeyType {
-  Profile = 'profile',
-}
 
 export enum EncryptionWrapperCryptorType {
   Content = 'aes-256-cbc',
   File = 'aes-blob',
   Unencrypted = 'unencrypted',
+}
+
+export enum EncryptionWrapperKeyType {
+  Sharing = 'sharing',
+  Profile = 'profile',
 }
 
 /**
@@ -54,6 +56,7 @@ export interface EncryptionWrapperOptions extends LoggerOptions {
   cryptoProvider: CryptoProvider;
   nameResolver: NameResolver;
   profile: Profile;
+  sharing: Sharing;
   web3: any;
 }
 
@@ -84,10 +87,15 @@ export class EncryptionWrapper extends Logger {
    *
    * @param      {Envelope}  toDecrypt  encrypted envelop
    */
-  public async decrypt(toDecrypt: Envelope): Promise<any> {
+  public async decrypt(
+    toDecrypt: Envelope,
+    artifacts?:
+      // for type === Sharing
+      { accountId: string, propertyName: string }
+  ): Promise<any> {
     const [ cryptor, key ] = await Promise.all([
       this.options.cryptoProvider.getCryptorByCryptoInfo(toDecrypt.cryptoInfo),
-      this.getKey(toDecrypt.cryptoInfo),
+      this.getKey(toDecrypt.cryptoInfo, artifacts),
     ]);
 
     const decrypted = await cryptor.decrypt(
@@ -104,10 +112,16 @@ export class EncryptionWrapper extends Logger {
    *                                       `getCryptoInfos`
    * @param      {any}         artifacts   additional information for decrypting
    */
-  public async encrypt(toEncrypt: any, cryptoInfo: CryptoInfo, artifacts?: any): Promise<Envelope> {
+  public async encrypt(
+    toEncrypt: any,
+    cryptoInfo: CryptoInfo,
+    artifacts?:
+      // for type === Sharing
+      { accountId: string, block?: number, propertyName: string }
+  ): Promise<Envelope> {
     const [ cryptor, key ] = await Promise.all([
       this.options.cryptoProvider.getCryptorByCryptoInfo(cryptoInfo),
-      this.getKey(cryptoInfo),
+      this.getKey(cryptoInfo, artifacts),
     ]);
 
     if (!cryptor) {
@@ -148,15 +162,27 @@ export class EncryptionWrapper extends Logger {
     keyContext: any,
     keyType: EncryptionWrapperKeyType,
     cryptorType: EncryptionWrapperCryptorType = EncryptionWrapperCryptorType.Content,
+    artifacts?:
+      // for type === Sharing
+      { sharingContractId: string, sharingId?: string }
   ): Promise<CryptoInfo> {
     switch (keyType) {
-      case EncryptionWrapperKeyType.Profile: {
+      case EncryptionWrapperKeyType.Profile:
         return {
           algorithm: cryptorType,
           block: await this.options.web3.eth.getBlockNumber(),
-          originator: `profile:${keyContext}`,
+          originator: `${keyType}:${keyContext}`,
         };
-      }
+      case EncryptionWrapperKeyType.Sharing:
+        const { sharingContractId, sharingId } = artifacts;
+        const originator = typeof sharingId !== 'undefined' ?
+          `${keyType}:${sharingContractId}:${sharingId}` :
+          `${keyType}:${sharingContractId}`;
+        return {
+          algorithm: cryptorType,
+          block: await this.options.web3.eth.getBlockNumber(),
+          originator,
+        };
       default:
         throw new Error(`unknown key type "${keyType}"`);
     }
@@ -168,7 +194,12 @@ export class EncryptionWrapper extends Logger {
    * @param      {CryptoInfo}  cryptoInfo  details for encryption, can be created with
    *                                       `getCryptoInfos`
    */
-  public async getKey(cryptoInfo: CryptoInfo) {
+  public async getKey(
+    cryptoInfo: CryptoInfo,
+    artifacts?:
+      // for type === Sharing
+      { accountId: string, block?: number, propertyName: string }
+  ) {
     let result;
     const split = cryptoInfo.originator.split(':');
     if (split.length < 2) {
@@ -178,6 +209,16 @@ export class EncryptionWrapper extends Logger {
       case 'profile':
         const [ context, profileProperty = 'encryptionKeys' ] = split.slice(1).reverse();
         result = await this.options.profile.getEncryptionKey(context);
+        break;
+      case 'sharing':
+        const [ contractid, sharingId = null ] = split.slice(1);
+        result = await this.options.sharing.getKey(
+          contractid,
+          artifacts.accountId,
+          artifacts.propertyName || '*',
+          artifacts.block || 0,
+          sharingId,
+        );
         break;
       default:
         throw new Error(`unknown key type "${split[0]}"`);
@@ -198,18 +239,40 @@ export class EncryptionWrapper extends Logger {
    *                                       `getCryptoInfos`
    * @param      {any}         key         key to store
    */
-  public async storeKey(cryptoInfo: CryptoInfo, key: any) {
+  public async storeKey(
+    cryptoInfo: CryptoInfo,
+    key: any,
+    artifacts?:
+      // for type === Sharing
+      { accountId: string, receiver?: string }
+  ): Promise <void> {
     const split = cryptoInfo.originator.split(':');
     if (split.length < 2) {
       throw new Error(`unsupported originator "${cryptoInfo.originator}" at crypto info`);
     }
     switch (split[0]) {
-      case 'profile':
+      case 'profile': {
         const [ context, profileProperty = 'encryptionKeys' ] = split.slice(1).reverse();
         await this.options.profile.loadForAccount(this.options.profile.treeLabels.encryptionKeys);
         await this.options.profile.setEncryptionKey(context, key);
         await this.options.profile.storeForAccount(this.options.profile.treeLabels.encryptionKeys);
         break;
+      }
+      case 'sharing': {
+        const [ contractid, sharingId = null ] = split.slice(1);
+        await this.options.sharing.addSharing(
+          contractid,
+          artifacts.accountId,
+          artifacts.receiver || artifacts.accountId,
+          '*',
+          0,
+          key,
+          null,
+          false,
+          sharingId,
+        );
+        break;
+      }
       default:
         throw new Error(`unknown key type "${split[0]}"`);
     }
