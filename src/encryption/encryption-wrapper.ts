@@ -38,15 +38,27 @@ import { Profile } from '../profile/profile';
 import { Sharing } from '../contracts/sharing';
 
 
+/**
+ * specifies which type of encryption is done
+ */
 export enum EncryptionWrapperCryptorType {
+  /** content encryption is used for generic data (strings, in memory objects) */
   Content = 'aes-256-cbc',
+  /** file encryption is used for binary file data */
   File = 'aes-blob',
+  /** unencrypted data encryption can be used to embed unencrypted data in encryption containers */
   Unencrypted = 'unencrypted',
 }
 
+/**
+ * storage location for encryption keys
+ */
 export enum EncryptionWrapperKeyType {
+  /** custom key handling means that the key is handled elsewhere and has to be given to profile */
   Custom = 'custom',
+  /** key is stored in profile, usually in property "encryptionKeys" */
   Profile = 'profile',
+  /** key is stored in Shared or MultiShared contract */
   Sharing = 'sharing',
 }
 
@@ -63,7 +75,8 @@ export interface EncryptionWrapperOptions extends LoggerOptions {
 
 
 /**
- * wrapper for aes-blob, transforms unencrypted files to Envelopes
+ * wrapper for encryption realizes a uniform way to en- and decrypt different types of data with
+ * different key storages
  *
  * @class      EncryptionWrapper (name)
  */
