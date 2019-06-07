@@ -175,13 +175,13 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   // executor
   const accountStore = options.accountStore ||
     new AccountStore({ accounts: runtimeConfig.accountMap, log, });
-  // decide on gas price depending on environment
   const signerConfig = <any>{};
   if (runtimeConfig.hasOwnProperty('gasPrice')) {
     signerConfig.gasPrice = runtimeConfig.gasPrice;
   } else {
-    signerConfig.gasPrice = environment === 'core' ? `${200e9}` : `${20e9}`;
+    signerConfig.gasPrice = `${200e9}`;
   }
+  
   const signer = options.signer ||
     new SignerInternal({ accountStore, contractLoader, config: signerConfig, log, web3, });
   const executor = options.executor || new Executor(
