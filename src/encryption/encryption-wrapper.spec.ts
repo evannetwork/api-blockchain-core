@@ -97,7 +97,7 @@ describe('Encryption Wrapper', function() {
         file,
       }];
 
-      // use 32B for test, can be any string
+      // use 32B for test, can be any string (but must not have colons)
       const keyContext = TestUtils.getRandomBytes32();
       const cryptoInfo = await encryptionWrapper.getCryptoInfo(
         keyContext,

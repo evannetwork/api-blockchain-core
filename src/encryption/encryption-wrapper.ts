@@ -97,9 +97,10 @@ export class EncryptionWrapper extends Logger {
   }
 
   /**
-   * decrypt given envelope
+   * decrypt given ``Envelope``
    *
    * @param      {Envelope}  toDecrypt  encrypted envelop
+   * @param      {any}       artifacts  additional information for decrypting
    */
   public async decrypt(
     toDecrypt: Envelope,
@@ -120,12 +121,12 @@ export class EncryptionWrapper extends Logger {
   }
 
   /**
-   * encrypt given object, depending on given cryptoInfo, additional information may be required,
-   * which can be given via ``artifacts``
+   * encrypt given object, depending on given ``cryptoInfo``, additional information may be
+   * required, which can be given via ``artifacts``
    *
    * @param      {any}         toEncrypt   object to encrypt
    * @param      {CryptoInfo}  cryptoInfo  details for encryption, can be created with
-   *                                       `getCryptoInfos`
+   *                                       ``getCryptoInfos``
    * @param      {any}         artifacts   additional information for decrypting
    */
   public async encrypt(
@@ -172,12 +173,16 @@ export class EncryptionWrapper extends Logger {
   /**
    * create new ``CryptoInfo`` instance
    *
-   * @param      {any}                           keyContext   used to identify key
+   * @param      {string}                        keyContext   used to identify key, can be any
+   *                                                          string (but must not have colons)
    * @param      {EncryptionWrapperKeyType}      keyType      defines where keys are stored
    * @param      {EncryptionWrapperCryptorType}  cryptorType  cryptor to use
+   * @param      {any}                           artifacts    (optional) additional information for
+   *                                                          encryption may be required, depends
+   *                                                          on ``keyType``
    */
   public async getCryptoInfo(
-    keyContext: any,
+    keyContext: string,
     keyType: EncryptionWrapperKeyType,
     cryptorType: EncryptionWrapperCryptorType = EncryptionWrapperCryptorType.Content,
     artifacts?:
@@ -232,13 +237,13 @@ export class EncryptionWrapper extends Logger {
         result = await this.options.profile.getEncryptionKey(split[1]);
         break;
       case 'sharing':
-        this.checkProperties(artifacts, ['accountId', 'propertyName']);
+        this.checkProperties(artifacts, ['accountId']);
         const [ contractid, sharingId = null ] = split.slice(1);
-        const { accountId, propertyName } = artifacts as any;
+        const { accountId, propertyName = '*' } = artifacts as any;
         result = await this.options.sharing.getKey(
           contractid,
           accountId,
-          propertyName || '*',
+          propertyName,
           cryptoInfo.block || 0,
           sharingId,
         );
@@ -266,6 +271,8 @@ export class EncryptionWrapper extends Logger {
    * @param      {CryptoInfo}  cryptoInfo  details for encryption, can be created with
    *                                       `getCryptoInfos`
    * @param      {any}         key         key to store
+   * @param      {any}         artifacts   (optional) additional information for encryption may be
+   *                                       required
    */
   public async storeKey(
     cryptoInfo: CryptoInfo,
@@ -280,7 +287,7 @@ export class EncryptionWrapper extends Logger {
     }
     switch (split[0]) {
       case 'profile': {
-        const [ context, profileProperty = 'encryptionKeys' ] = split.slice(1).reverse();
+        const context = split[1];
         await this.options.profile.loadForAccount(this.options.profile.treeLabels.encryptionKeys);
         await this.options.profile.setEncryptionKey(context, key);
         await this.options.profile.storeForAccount(this.options.profile.treeLabels.encryptionKeys);
