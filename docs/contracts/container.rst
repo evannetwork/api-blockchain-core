@@ -387,6 +387,7 @@ Parameters
 #. ``Profile`` - |source profile|_: profile instance
 #. ``name`` - ``string``: plugin name
 #. ``plugin`` - ``ContainerPlugin``: container plugin object
+#. ``beforeName`` - ``strinf``: remove previous plugin instance when it was renamed
 
 -------
 Returns

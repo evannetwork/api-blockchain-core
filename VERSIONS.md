@@ -5,7 +5,7 @@
 
 ### Fixes
 - add correct loadForAccount logic to `DataContainer` plugins
-
+- move `DataContainer` plugin saving to seperated profile space
 
 ### Deprecations
 

@@ -315,11 +315,11 @@ export class Container extends Logger {
     profile: Profile,
     name: string
   ): Promise<void> {
-    if (!profile.trees[profile.treeLabels.contracts]) {
-      await profile.loadForAccount(profile.treeLabels.contracts);
-    }
-    await profile.removeBcContract(Container.profilePluginsKey, name);
-    await profile.storeForAccount(profile.treeLabels.contracts);
+    const plugins = await this.getContainerPlugins(profile);
+    delete plugins[name];
+    await profile.setPlugins(plugins);
+    await profile.storeForAccount(profile.treeLabels.dtContainerPlugins);
+    await profile.loadForAccount(profile.treeLabels.dtContainerPlugins);
   }
 
   /**
@@ -332,12 +332,7 @@ export class Container extends Logger {
     profile: Profile,
     name: string
   ): Promise<ContainerPlugin> {
-    if (!profile.trees[profile.treeLabels.contracts]) {
-      await profile.loadForAccount(profile.treeLabels.contracts);
-    }
-    const plugin = await profile.getBcContract(Container.profilePluginsKey, name);
-    Ipld.purgeCryptoInfo(plugin);
-    return plugin;
+    return (await this.getContainerPlugins(profile))[name];
   }
 
   /**
@@ -346,47 +341,40 @@ export class Container extends Logger {
    * @param      {Profile}            profile      profile instance
    */
   public static async getContainerPlugins(
-    profile: Profile,
-    loadContracts = true
+    profile: Profile
   ): Promise<{[id: string]: ContainerPlugin}> {
-    if (!profile.trees[profile.treeLabels.contracts]) {
-      await profile.loadForAccount(profile.treeLabels.contracts);
-    }
-    const bcContracts = (await profile.getBcContracts(Container.profilePluginsKey)) || { };
-    Ipld.purgeCryptoInfo(bcContracts);
-
-    if (loadContracts) {
-      const plugins: any = { };
-
-      // request all plugins
-      await Promise.all(Object.keys(bcContracts).map(async (pluginName: string) => {
-        plugins[pluginName] = await Container.getContainerPlugin(profile, pluginName)
-      }));
-
-      return plugins;
-    } else {
-      return bcContracts;
-    }
+    return (await profile.getPlugins() || { });
   }
 
   /**
    * Persists a plugin including an dbcp description to the users profile.
    *
-   * @param      {Profile}            profile      profile instance
-   * @param      {string}             name         plugin name
-   * @param      {any}                description  predefined plugin dbcp description
-   * @param      {ContainerTemplate}  plugin     container plugin object
+   * @param      {Profile}            profile     profile instance
+   * @param      {string}             name        plugin name
+   * @param      {ContainerTemplate}  plugin      container plugin object
+   * @param      {string}             beforeName  remove previous plugin instance when it was
+   *                                              renamed
+   * @param      {any}  description  predefined plugin dbcp description
    */
   public static async saveContainerPlugin(
     profile: Profile,
     name: string,
-    plugin: ContainerPlugin
+    plugin: ContainerPlugin,
+    beforeName?: string,
   ): Promise<void> {
-    if (!profile.trees[profile.treeLabels.contracts]) {
-      await profile.loadForAccount(profile.treeLabels.contracts);
+    const plugins = await this.getContainerPlugins(profile);
+
+    // if plugin was renamed, remove the plugin
+    if (beforeName && beforeName !== name) {
+      delete plugins[beforeName];
     }
-    await profile.addBcContract(Container.profilePluginsKey, name, plugin);
-    await profile.storeForAccount(profile.treeLabels.contracts);
+
+    // set the new plugin definition and save it
+    plugins[name] = plugin;
+
+    await profile.setPlugins(plugins);
+    await profile.storeForAccount(profile.treeLabels.dtContainerPlugins);
+    await profile.loadForAccount(profile.treeLabels.dtContainerPlugins);
   }
 
   /**
