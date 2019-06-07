@@ -36,6 +36,7 @@ import { BaseContract } from '../contracts/base-contract/base-contract';
 import { Verifications, VerificationsStatus, } from './verifications';
 import { configTestcore as config } from '../config-testcore';
 import { Description } from '../shared-description';
+import { EncryptionWrapper, EncryptionWrapperCryptorType, EncryptionWrapperKeyType } from '../encryption/encryption-wrapper';
 import { TestUtils } from '../test/test-utils';
 
 const linker = require('solc/linker');
@@ -59,6 +60,7 @@ describe('Verifications handler', function() {
   let contractLoader: ContractLoader;
   let description: Description;
   let dfs: any;
+  let encryptionWrapper: EncryptionWrapper;
   let executor: Executor;
   let nameResolver;
   let web3: any;
@@ -72,6 +74,7 @@ describe('Verifications handler', function() {
     nameResolver = await TestUtils.getNameResolver(web3);
     baseContract = await TestUtils.getBaseContract(web3);
     description = await TestUtils.getDescription(web3, dfs);
+    encryptionWrapper = await TestUtils.getEncryptionWrapper(web3, dfs);
   });
 
   it('can deploy a new structure', async () => {
@@ -137,7 +140,7 @@ describe('Verifications handler', function() {
         .to.have.property('status', VerificationsStatus.Issued);
     });
 
-    it('can add a verification with specific data', async () => {
+    it('can add a verification with data', async () => {
       const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
       await verifications.setVerification(accounts[0], accounts[1], '/company', null, {foo: 'bar'});
       const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company');
@@ -146,6 +149,19 @@ describe('Verifications handler', function() {
         'uri',
         'https://ipfs.test.evan.network/ipfs/Qmbjig3cZbUUufWqCEFzyCppqdnmQj3RoDjJWomnqYGy1f',
       );
+    });
+
+    it('can add a verification with encrypted data', async () => {
+      const unencrypted = {foo: 'bar'};
+      const cryptoInfo = await encryptionWrapper.getCryptoInfo('test', EncryptionWrapperKeyType.Custom);
+      const key = await encryptionWrapper.generateKey(cryptoInfo);
+      const encrypted = await encryptionWrapper.encrypt(unencrypted, cryptoInfo, { key });
+      const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
+      await verifications.setVerification(accounts[0], accounts[1], '/company', null, encrypted);
+      const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company');
+      const retrieved = JSON.parse(await dfs.get(verificationsForAccount[oldLength].data));
+      const decrypted = await encryptionWrapper.decrypt(retrieved, { key });
+      expect(decrypted).to.deep.eq(unencrypted);
     });
 
     it('can add a verification with specific expirationDate', async () => {
@@ -505,7 +521,7 @@ describe('Verifications handler', function() {
           .to.have.property('status', VerificationsStatus.Issued);
       });
 
-      it('can add a verification with specific data', async () => {
+      it('can add a verification with data', async () => {
         const oldLength = (await verifications.getVerifications(
           subject, '/company', isIdentity)).length;
         await verifications.setVerification(
@@ -518,6 +534,19 @@ describe('Verifications handler', function() {
           'uri',
           'https://ipfs.test.evan.network/ipfs/Qmbjig3cZbUUufWqCEFzyCppqdnmQj3RoDjJWomnqYGy1f',
         );
+      });
+
+      it('can add a verification with encrypted data', async () => {
+        const unencrypted = {foo: 'bar'};
+        const cryptoInfo = await encryptionWrapper.getCryptoInfo('test', EncryptionWrapperKeyType.Custom);
+        const key = await encryptionWrapper.generateKey(cryptoInfo);
+        const encrypted = await encryptionWrapper.encrypt(unencrypted, cryptoInfo, { key });
+        const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
+        await verifications.setVerification(accounts[0], accounts[1], '/company', null, encrypted);
+        const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company');
+        const retrieved = JSON.parse(await dfs.get(verificationsForAccount[oldLength].data));
+        const decrypted = await encryptionWrapper.decrypt(retrieved, { key });
+        expect(decrypted).to.deep.eq(unencrypted);
       });
 
       it('can add a verification with specific expirationDate', async () => {
