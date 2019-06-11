@@ -89,9 +89,9 @@ export class Profile extends Logger {
     addressBook: 'addressBook',
     bookmarkedDapps: 'bookmarkedDapps',
     contracts: 'contracts',
+    dtContainerPlugins: 'dtContainerPlugins',
     encryptionKeys: 'encryptionKeys',
     publicKey: 'publicKey',
-    templates: 'templates',
   };
 
   constructor(options: ProfileOptions) {
@@ -469,16 +469,16 @@ export class Profile extends Logger {
   }
 
   /**
-   * get templates from profile
+   * get plugin from profile
    */
-  async getTemplates(): Promise<any> {
-    if (!this.trees[this.treeLabels.templates]) {
-      await this.loadForAccount(this.treeLabels.templates);
+  async getPlugins(): Promise<any> {
+    if (!this.trees[this.treeLabels.dtContainerPlugins]) {
+      await this.loadForAccount(this.treeLabels.dtContainerPlugins);
     }
 
     return this.ipld.getLinkedGraph(
-      this.trees[this.treeLabels.templates],
-      this.treeLabels.templates,
+      this.trees[this.treeLabels.dtContainerPlugins],
+      this.treeLabels.dtContainerPlugins,
     );
   }
 
@@ -678,15 +678,15 @@ export class Profile extends Logger {
   /**
    * save set of templates to profile
    *
-   * @param      {any}     templates  entire collections of templates to store in profile
+   * @param      {any}     plugin  entire collections of plugin to store in profile
    */
-  async setTemplates(templates: any): Promise<void> {
-    this.ensureTree(this.treeLabels.templates);
+  async setPlugins(plugins: any): Promise<void> {
+    this.ensureTree(this.treeLabels.dtContainerPlugins);
 
     await this.ipld.set(
-      this.trees[this.treeLabels.templates],
-      this.treeLabels.templates,
-      templates,
+      this.trees[this.treeLabels.dtContainerPlugins],
+      this.treeLabels.dtContainerPlugins,
+      plugins,
       true,
     );
   }
