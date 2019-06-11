@@ -2,12 +2,18 @@
 
 ## Next Version
 ### Features
+
+### Fixes
+
+### Deprecations
+
+
+## Version 2.6.0
+### Features
 - add left padding for contract link setting and checking in ``Verifications`` as contract identity links are now stored as 32B
 
 ### Fixes
-- reload `DataContainer` plugin definition before saving / deleting tree 
-
-### Deprecations
+- reload `DataContainer` plugin definition before saving / deleting tree
 
 
 ## Version 2.5.0
