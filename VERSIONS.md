@@ -8,6 +8,23 @@
 ### Deprecations
 
 
+## Version 2.6.0
+### Features
+- add left padding for contract link setting and checking in ``Verifications`` as contract identity links are now stored as 32B
+
+### Fixes
+- reload `DataContainer` plugin definition before saving / deleting tree
+
+
+## Version 2.5.0
+### Features
+- add `encryption-wrapper` as a wrapper for encryption, that realizes a uniform way to en- and decrypt different types of data with different key storages
+
+### Fixes
+- add correct loadForAccount logic to `DataContainer` plugins
+- move `DataContainer` plugin saving to seperated profile space
+
+
 ## Version 2.4.1
 ### Fixes
 - fix `linkIdentity` handling in `verifications` module during identity creation

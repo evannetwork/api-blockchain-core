@@ -470,6 +470,124 @@ Warnings in Verifications
 
 --------------------------------------------------------------------------------
 
+.. _data-in-verifications:
+
+Data in Verifications
+=============================
+
+-----------------------------------------------------
+Unencrypted Data in Verifications
+-----------------------------------------------------
+
+Additional data can be given when creating a verification. For this pass an object, that can be serialized to JSON as the ``verificationValue`` argument to ``setVerification``. As this argument is placed after the ``expirationDate`` argument, we set this argument as well.
+
+.. code-block:: typescript
+
+  const verificationId = await verifications.setVerification(
+    accounts[0], accounts[1], '/example1', 0, { foo: 'bar' });
+  console.log(verificationId);
+  // Output:
+  // 0x5ea689a7ed1d56d948dc8223dcd60866746bc7bea47617c19b63df75d63c9194
+
+  const issued = await verifications.getVerifications(accounts[1], '/example1');
+  console.dir(issued);
+  // Output:
+  // [ { creationBlock: '198673',
+  //     creationDate: '1559913567',
+  //     data:
+  //      '0xc710c57357d3862f351c00ff77a5ef90bb4491851f11c3e8ea010c16745c468e',
+  //     description: null,
+  //     disableSubVerifications: false,
+  //     expirationDate: null,
+  //     expired: false,
+  //     id:
+  //      '0x5ea689a7ed1d56d948dc8223dcd60866746bc7bea47617c19b63df75d63c9194',
+  //     issuer: '0x6d2b20d6bf2B848D64dFE0B386636CDbFC521d4f',
+  //     name: '/example1',
+  //     rejectReason: undefined,
+  //     signature:
+  //      '0xf7ce3cc2f50ef62783ef293f8f45814b3ae868e614042cc05154853d00a694c176f8bdd94700736a137f92ff9a87639aade3f31724bb1eb7fe7f143df4c62c571c',
+  //     status: 0,
+  //     subject: '0x0030C5e7394585400B1FB193DdbCb45a37Ab916E',
+  //     topic:
+  //      '34884897835812838038558016063403566909277437558805531399344559176587016933548',
+  //     uri:
+  //      'https://ipfs.test.evan.network/ipfs/Qmbjig3cZbUUufWqCEFzyCppqdnmQj3RoDjJWomnqYGy1f',
+  //     valid: true } ]
+
+  const data = JSON.parse(await dfs.get(issued[0].data));
+  console.dir(data);
+  // Output:
+  // { foo: 'bar' }
+
+
+
+-----------------------------------------------------
+Encrypted Data in Verifications
+-----------------------------------------------------
+
+Data added to the verification can be encrypted as well. Encryption is done outside of the verification service and has to be done before settin a verification and after getting the verification.
+
+As key handling, storage and encryption itself is handled outside of the verification service, there are different ways for doing this. The suggested way to do this though, is using the :doc:`EncryptionWrapper <encryption-wrapper>`. See the example below and its documentation for how it can be used.
+
+.. code-block:: typescript
+
+  const unencrypted = {foo: 'bar'};
+  const cryptoInfo = await encryptionWrapper.getCryptoInfo('test', EncryptionWrapperKeyType.Custom);
+  const key = await encryptionWrapper.generateKey(cryptoInfo);
+  const encrypted = await encryptionWrapper.encrypt(unencrypted, cryptoInfo, { key });
+
+  const verificationId = await verifications.setVerification(
+    accounts[0], accounts[1], '/example1', 0, encrypted);
+  console.log(verificationId);
+  // Output:
+  // 0xdaa700acd52af1690c394445cc7908d01bef9a6c0c209dd4590cf869aa801586
+
+  const issued = await verifications.getVerifications(accounts[1], '/example1');
+  console.dir(issued);
+  // Output:
+  // [ { creationBlock: '198706',
+  //     creationDate: '1559915070',
+  //     data:
+  //      '0xb2eca508b635094d642950d3715783d744eac6771ff665303196040c6778cbc3',
+  //     description: null,
+  //     disableSubVerifications: false,
+  //     expirationDate: null,
+  //     expired: false,
+  //     id:
+  //      '0xdaa700acd52af1690c394445cc7908d01bef9a6c0c209dd4590cf869aa801586',
+  //     issuer: '0x6d2b20d6bf2B848D64dFE0B386636CDbFC521d4f',
+  //     name: '/example1',
+  //     rejectReason: undefined,
+  //     signature:
+  //      '0x8ce1f239b254f2a4453e704cf5bd50f1aef215c5843408dc94ba3d128bba75d346a0b7945dd49f78b16cfd312ba51f68d10cee0e6fa17de66efb1b0d583925911b',
+  //     status: 0,
+  //     subject: '0x0030C5e7394585400B1FB193DdbCb45a37Ab916E',
+  //     topic:
+  //      '34884897835812838038558016063403566909277437558805531399344559176587016933548',
+  //     uri:
+  //      'https://ipfs.test.evan.network/ipfs/QmaP6Zyz2Mw4uBX1veuxQJSnvZnG3MLFxLGrPxbc2Y4pnn',
+  //     valid: true } ]
+
+  const retrieved = JSON.parse(await dfs.get(issued[0].data));
+  console.dir(retrieved);
+  // Output:
+  // { private:
+  //    '017b0c07256180a69457f5c9a4e52431424532f698deaf401b754414bb070649',
+  //   cryptoInfo:
+  //    { algorithm: 'aes-256-cbc',
+  //      block: 198705,
+  //      originator: 'custom:test' } }
+
+  const decrypted = await encryptionWrapper.decrypt(retrieved, { key });
+  console.dir(decrypt);
+  // Output:
+  // { foo: 'bar' }
+
+
+
+--------------------------------------------------------------------------------
+
 .. required for building markup
 
 

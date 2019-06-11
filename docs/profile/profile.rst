@@ -1263,27 +1263,27 @@ Example
 
 
 --------------------------------------------------------------------------------
-= templates =
+= plugins =
 ================================================================================
 
 
 
-.. _profile_setTemplates:
+.. _profile_setPlugins:
 
-setTemplates
+setPlugins
 ================================================================================
 
 .. code-block:: typescript
 
-  profile.setTemplates(templates);
+  profile.setPlugins(plugins);
 
-Save set of templates to profile.
+Save set of plugins to profile.
 
 ----------
 Parameters
 ----------
 
-#. ``templates`` - ``any``: entire collections of templates to store in profile 
+#. ``plugins`` - ``any``: entire collections of plugins to store in profile 
 
 -------
 Returns
@@ -1297,28 +1297,28 @@ Example
 
 .. code-block:: typescript
 
-  await profile.setTemplates({ customMetadata: {} });
+  await profile.setPlugins({ customMetadata: {} });
 
 
 
 --------------------------------------------------------------------------------
 
-.. _profile_getTemplates:
+.. _profile_getPlugins:
 
-getTemplates
+getPlugins
 ================================================================================
 
 .. code-block:: typescript
 
-  profile.getTemplates();
+  profile.getPlugins();
 
-Get entire set of templates from profile.
+Get entire set of plugins from profile.
 
 -------
 Returns
 -------
 
-``Promise`` returns ``any``: all templates from profile
+``Promise`` returns ``any``: all plugins from profile
 
 -------
 Example
@@ -1326,7 +1326,7 @@ Example
 
 .. code-block:: typescript
 
-  const templates = await profile.getTemplates();
+  const plugins = await profile.getPlugins();
 
 
 

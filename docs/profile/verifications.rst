@@ -134,7 +134,7 @@ createIdentity
 
   verifications.createIdentity(accountId[, contractId, updateDescription]);
 
-Creates a new identity for account or contract and registers them on the storage. Returned identity is either a 40B contract address (for account identities) or a 32B idenity hash contract identities.
+Creates a new identity for account or contract and registers them on the storage. Returned identity is either a 20B contract address (for account identities) or a 32B idenity hash contract identities.
 
 ----------
 Parameters
@@ -652,6 +652,48 @@ Example
 
 --------------------------------------------------------------------------------
 
+= Subjects =
+==========================
+
+.. _verifications_confirmVerification:
+
+confirmVerification
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.confirmVerification(accountId, subject, verificationId[, isIdentity]);
+
+Confirms a verification; this can be done, if a verification has been issued for a subject and the subject wants to confirm it.
+
+----------
+Parameters
+----------
+
+#. ``accountId`` - ``string``: account, that performs the action
+#. ``subject`` - ``string``: verification subject
+#. ``verificationId`` - ``string``: id of a verification to confirm
+#. ``isIdentity`` - ``bool`` (optional): ``true`` if given ``subject`` is an identity, defaults to ``false``
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const newVerification = await verifications.setVerification(accounts[0], accounts[1], '/company');
+  await verifications.confirmVerification(accounts[0], accounts[1], newVerification);
+
+
+
+--------------------------------------------------------------------------------
+
 .. _verifications_rejectVerification:
 
 rejectVerification
@@ -687,48 +729,6 @@ Example
 
   const verificationId = await verifications.setVerification(accounts[0], accounts[1], '/company');
   await verifications.rejectVerification(accounts[0], accounts[1], verificationId, { rejected: "because not valid anymore"});
-
-
-
---------------------------------------------------------------------------------
-
-= Subjects =
-==========================
-
-.. _verifications_confirmVerification:
-
-confirmVerification
-================================================================================
-
-.. code-block:: typescript
-
-  verifications.confirmVerification(accountId, subject, verificationId[, isIdentity]);
-
-Confirms a verification; this can be done, if a verification has been issued for a subject and the subject wants to confirms it.
-
-----------
-Parameters
-----------
-
-#. ``accountId`` - ``string``: account, that performs the action
-#. ``subject`` - ``string``: verification subject
-#. ``verificationId`` - ``string``: id of a verification to confirm
-#. ``isIdentity`` - ``bool`` (optional): ``true`` if given ``subject`` is an identity, defaults to ``false``
-
--------
-Returns
--------
-
-``Promise`` returns ``void``: resolved when done
-
--------
-Example
--------
-
-.. code-block:: typescript
-
-  const newVerification = await verifications.setVerification(accounts[0], accounts[1], '/company');
-  await verifications.confirmVerification(accounts[0], accounts[1], newVerification);
 
 
 
