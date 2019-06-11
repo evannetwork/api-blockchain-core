@@ -315,8 +315,13 @@ export class Container extends Logger {
     profile: Profile,
     name: string
   ): Promise<void> {
+    // force reload to work on latest tree
+    await profile.loadForAccount(profile.treeLabels.dtContainerPlugins);
     const plugins = await this.getContainerPlugins(profile);
+
+    // remove plugin
     delete plugins[name];
+
     await profile.setPlugins(plugins);
     await profile.storeForAccount(profile.treeLabels.dtContainerPlugins);
     await profile.loadForAccount(profile.treeLabels.dtContainerPlugins);
@@ -362,6 +367,8 @@ export class Container extends Logger {
     plugin: ContainerPlugin,
     beforeName?: string,
   ): Promise<void> {
+    // force reload to work on latest tree
+    await profile.loadForAccount(profile.treeLabels.dtContainerPlugins);
     const plugins = await this.getContainerPlugins(profile);
 
     // if plugin was renamed, remove the plugin

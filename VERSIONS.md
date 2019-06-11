@@ -4,6 +4,7 @@
 ### Features
 
 ### Fixes
+- reload `DataContainer` plugin definition before saving / deleting tree 
 
 ### Deprecations
 
