@@ -85,5 +85,5 @@
     "testunitcoverage": "env-cmd ./.env.local npm run build && nyc -r lcov -e .ts -x \"$TESTSPECS\" mocha --exit -r ts-node/register $TESTSPECS && nyc report --reporter=text-lcov | coveralls"
   },
   "types": "./dist/index.d.ts",
-  "version": "2.4.1"
+  "version": "2.5.0"
 }
