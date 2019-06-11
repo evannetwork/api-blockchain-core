@@ -2,6 +2,7 @@
 
 ## Next Version
 ### Features
+- add `encryption-wrapper` as a wrapper for encryption, that realizes a uniform way to en- and decrypt different types of data with different key storages
 
 ### Fixes
 - add correct loadForAccount logic to `DataContainer` plugins

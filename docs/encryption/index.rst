@@ -6,6 +6,7 @@ Encryption
     :glob:
     :maxdepth: 1
 
+    encryption-wrapper
     key-provider
     crypto-provider
     cryptor-aes

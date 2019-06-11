@@ -51,6 +51,7 @@ import { Verifications } from '../verifications/verifications';
 import { configTestcore as config } from './../config-testcore';
 import { CryptoProvider } from '../encryption/crypto-provider';
 import { DataContract } from '../contracts/data-contract/data-contract';
+import { EncryptionWrapper } from '../encryption/encryption-wrapper';
 import { ExecutorWallet } from '../contracts/executor-wallet';
 import { Ipld } from '../dfs/ipld';
 import { Ipfs } from '../dfs/ipfs';
@@ -240,6 +241,17 @@ export class TestUtils {
       keyProvider: this.getKeyProvider(requestedKeys),
       nameResolver,
       sharing: null,
+      web3,
+    });
+  }
+
+  static async getEncryptionWrapper(web3: any, dfs: DfsInterface, requestedKeys?: string[]
+  ): Promise<EncryptionWrapper> {
+    return new EncryptionWrapper({
+      cryptoProvider: this.getCryptoProvider(),
+      nameResolver: await this.getNameResolver(web3),
+      profile: await this.getProfile(web3, dfs),
+      sharing: await this.getSharing(web3, dfs, requestedKeys),
       web3,
     });
   }
