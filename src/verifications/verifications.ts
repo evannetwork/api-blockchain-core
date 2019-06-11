@@ -301,9 +301,10 @@ export class Verifications extends Logger {
 
       // link contract address to its identity in global registry?
       if (linkContract) {
+        const link = `0x${contractId.substr(2).toLowerCase().padStart(64, '0')}`;
         await this.executeAndHandleEventResult(
           accountId,
-          this.contracts.registry.methods.linkIdentity(identity, contractId).encodeABI(),
+          this.contracts.registry.methods.linkIdentity(identity, link).encodeABI(),
         );
       }
     }
@@ -513,7 +514,7 @@ export class Verifications extends Logger {
             // linked address
             const linked = await this.options.executor.executeContractCall(
               this.contracts.registry, 'getLink', description.public.identity);
-            if (linked !== subject) {
+            if (!(new RegExp(`${subject.substr(2)}$`, 'i')).test(linked)) {
               const msg = `subject description of "${subject}" points to identity ` +
                 `"${description.public.identity}", but this identity is linked to address ` +
                 `"${linked}"`;
