@@ -270,7 +270,7 @@ export class AesBlob extends Logger implements Cryptor {
    * @param      {any}     options  decryption options
    * @return     {any}     decrypted message
    */
-  async decrypt(message: Buffer, options: any): Promise<Buffer> {
+  async decrypt(message: Buffer, options: any): Promise<any> {
     try {
       if (!options.key) {
         throw new Error('no key given');

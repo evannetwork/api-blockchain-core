@@ -47,6 +47,7 @@ import { configTestcore } from './config-testcore';
 import { CryptoProvider } from './encryption/crypto-provider';
 import { DataContract } from './contracts/data-contract/data-contract';
 import { Description } from './shared-description';
+import { EncryptionWrapper } from './encryption/encryption-wrapper';
 import { getEnvironment } from './common/utils';
 import { Ipfs } from './dfs/ipfs';
 import { Ipld } from './dfs/ipld';
@@ -77,6 +78,7 @@ export interface Runtime {
   dataContract?: DataContract,
   description?: Description,
   dfs?: DfsInterface,
+  encryptionWrapper?: EncryptionWrapper,
   environment?: string,
   eventHub?: EventHub,
   executor?: Executor,
@@ -173,13 +175,13 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   // executor
   const accountStore = options.accountStore ||
     new AccountStore({ accounts: runtimeConfig.accountMap, log, });
-  // decide on gas price depending on environment
   const signerConfig = <any>{};
   if (runtimeConfig.hasOwnProperty('gasPrice')) {
     signerConfig.gasPrice = runtimeConfig.gasPrice;
   } else {
-    signerConfig.gasPrice = environment === 'core' ? `${200e9}` : `${20e9}`;
+    signerConfig.gasPrice = `${200e9}`;
   }
+  
   const signer = options.signer ||
     new SignerInternal({ accountStore, contractLoader, config: signerConfig, log, web3, });
   const executor = options.executor || new Executor(
@@ -426,6 +428,14 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     web3
   });
 
+  const encryptionWrapper = options.encryptionWrapper || new EncryptionWrapper({
+    cryptoProvider,
+    nameResolver,
+    profile,
+    sharing,
+    web3,
+  });
+
   // return runtime object
   return {
     accountStore,
@@ -437,6 +447,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     dataContract,
     description,
     dfs,
+    encryptionWrapper,
     environment,
     eventHub,
     executor,
