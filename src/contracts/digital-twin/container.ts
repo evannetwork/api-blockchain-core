@@ -171,6 +171,8 @@ export class Container extends Logger {
     dbcpVersion: 2,
   };
   public static defaultSchemas = {
+    booleanEntry: { type: 'boolean' },
+    booleanList: { type: 'array', items: { type: 'boolean' } },
     filesEntry: {
       type: 'object',
       $comment: '{"isEncryptedFile": true}',
