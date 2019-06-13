@@ -320,16 +320,16 @@ describe('DigitalTwin', function() {
 
       it('creates new containers automatically', async() => {
         const twin = await DigitalTwin.create(runtime, defaultConfig);
-        const customTemplate = JSON.parse(JSON.stringify(Container.templates.metadata));
-        customTemplate.properties.type = {
+        const customPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+        customPlugin.template.properties.type = {
           dataSchema: { type: 'string' },
           permissions: { 0: ['set'] },
           type: 'entry',
           value: 'customTemplate',
         };
         const containers = await twin.createContainers({
-          entry1: { template: 'metadata' },
-          entry2: { template: customTemplate },
+          entry1: { plugin: 'metadata' },
+          entry2: { plugin: customPlugin },
         });
         // new container has type property (default)
         expect(await containers.entry1.getEntry('type')).to.eq('metadata');

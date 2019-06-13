@@ -356,7 +356,7 @@ A sample, on how these properties can be used to determine the trustworthiness o
 getNestedVerifications
 -----------------------------------------------------
 
-For this section we take the last example and issue two subverifications. We add ``/example1/exable1_child`` as the direct child of it and ``/example1/example1_child/example1_grandchild`` as a subverification below the first this child.
+For this section we take the last example and issue two subverifications. We add ``/example1/example1_child`` as the direct child of it and ``/example1/example1_child/example1_grandchild`` as a subverification below the first this child.
 
 .. code-block:: typescript
 
@@ -528,7 +528,7 @@ Encrypted Data in Verifications
 
 Data added to the verification can be encrypted as well. Encryption is done outside of the verification service and has to be done before settin a verification and after getting the verification.
 
-As key handling, storage and encryption itself is handled outside of the verification service, there are different ways for doing this. The suggested way to do this though, is using the :doc:`EncryptionWrapper <encryption-wrapper>`. See the example below and its documentation for how it can be used.
+As key handling, storage and encryption itself is handled outside of the verification service, there are different ways for doing this. The suggested way to do this though, is using the :doc:`EncryptionWrapper <../encryption/encryption-wrapper>`. See the example below and its documentation for how it can be used.
 
 .. code-block:: typescript
 
