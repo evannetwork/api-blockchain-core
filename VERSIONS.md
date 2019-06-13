@@ -2,11 +2,15 @@
 
 ## Next Version
 ### Features
-- add default `boolean` `defaultSchemas` to `DataContainer`
 
 ### Fixes
 
 ### Deprecations
+
+
+## Version 2.7.0
+### Features
+- add default `boolean` `defaultSchemas` to `DataContainer`
 
 
 ## Version 2.6.0
