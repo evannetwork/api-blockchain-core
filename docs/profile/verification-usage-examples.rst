@@ -356,7 +356,7 @@ A sample, on how these properties can be used to determine the trustworthiness o
 getNestedVerifications
 -----------------------------------------------------
 
-For this section we take the last example and issue two subverifications. We add ``/example1/exable1_child`` as the direct child of it and ``/example1/example1_child/example1_grandchild`` as a subverification below the first this child.
+For this section we take the last example and issue two subverifications. We add ``/example1/example1_child`` as the direct child of it and ``/example1/example1_child/example1_grandchild`` as a subverification below the first this child.
 
 .. code-block:: typescript
 
