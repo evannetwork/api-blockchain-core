@@ -253,7 +253,6 @@ export class Container extends Logger {
     options: ContainerOptions,
     config: ContainerConfig,
   ): Promise<Container> {
-    checkConfigProperties(config, ['description']);
     const instanceConfig = cloneDeep(config);
 
     // convert template properties to jsonSchema

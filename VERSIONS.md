@@ -4,6 +4,7 @@
 ### Features
 
 ### Fixes
+- allow empty description for `Container.create` so it will fallback to default description
 
 ### Deprecations
 
