@@ -1016,4 +1016,27 @@ describe('Verifications handler', function() {
       });
     });
   });
+
+  describe('when using "cold" verifications and submitting them with an unrelated account', () => {
+    it('allows to submit a "cold" transaction from another account', async () => {
+      const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
+      await timeout(5000);
+
+      const topic = '/company';
+
+      // on account[0]s side
+      const txInfo = await verifications.signSetVerificationTransaction(
+        accounts[0], accounts[1], topic);
+
+      // on account[2]s side
+      const verificationId = await verifications.executeVerification(accounts[2], txInfo)
+
+      await timeout(5000);
+      expect(verificationId).to.be.ok;
+      const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company');
+      expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
+      expect(verificationsForAccount[oldLength])
+        .to.have.property('status', VerificationsStatus.Issued);
+    });
+  })
 });
