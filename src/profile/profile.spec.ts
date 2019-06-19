@@ -158,7 +158,7 @@ describe('Profile helper', function() {
       .to.eq('sampleUpdateTest');
   });
 
-  it('should be able to store templates', async () => {
+  it('should be able to store data container plugins', async () => {
     let profile = new Profile({
       nameResolver,
       defaultCryptoAlgo: 'aes',
@@ -176,11 +176,11 @@ describe('Profile helper', function() {
       },
       depending: ['on', 'your', 'needs'],
     };
-    await profile.loadForAccount(profile.treeLabels.templates);
-    await profile.setTemplates(templates);
-    expect(await profile.getTemplates()).to.eq(templates);
+    await profile.loadForAccount(profile.treeLabels.dtContainerPlugins);
+    await profile.setPlugins(templates);
+    expect(await profile.getPlugins()).to.eq(templates);
 
-    await profile.storeForAccount(profile.treeLabels.templates);
+    await profile.storeForAccount(profile.treeLabels.dtContainerPlugins);
     profile = new Profile({
       nameResolver,
       defaultCryptoAlgo: 'aes',
@@ -191,8 +191,8 @@ describe('Profile helper', function() {
       accountId: accounts[0],
       rightsAndRoles,
     });
-    await profile.loadForAccount(profile.treeLabels.templates);
-    expect(await profile.getTemplates()).to.deep.eq(templates);
+    await profile.loadForAccount(profile.treeLabels.dtContainerPlugins);
+    expect(await profile.getPlugins()).to.deep.eq(templates);
   });
 
   it('should be able to save an encrypted profile to IPLD', async () => {
