@@ -529,6 +529,20 @@ export class Verifications extends Logger {
   }
 
   /**
+   * Gets current execution nonce for identity.
+   *
+   * @param      {string}           identity         identity to get execution nonce for
+   * @return     {Promise<string>}  execution nonce
+   */
+  public async getExecutionNonce(issuer: string, isIdentity = false): Promise<string> {
+    await this.ensureStorage();
+    const identity = isIdentity ? issuer : await this.getIdentityForAccount(issuer, true);
+    const identityContract = this.options.contractLoader.loadContract(
+      'VerificationHolder', identity);
+    return this.options.executor.executeContractCall(identityContract, 'getExecutionNonce');
+  }
+
+  /**
    * gets the identity contract for a given account id or contract
    *
    * @param      {string}        subject      the subject for the identity contract
@@ -1160,6 +1174,10 @@ export class Verifications extends Logger {
    * Signs a verification (offchain) and returns data, that can be used to submit it later on.
    * Return value can be passed to ``executeVerification``.
    *
+   * Note that, when creating multiple signed verification transactions, the ``nonce`` argument
+   * **has to be specified and incremented between calls**, as the nonce is included in transaction
+   * data and restricts the order of transactions, that can be made.
+   *
    * @param      {string}   issuer                   issuer of the verification
    * @param      {string}   subject                  subject of the verification and the owner of
    *                                                 the verification node
@@ -1174,6 +1192,12 @@ export class Verifications extends Logger {
    *                                                 to 'example.verifications.evan'
    * @param      {boolean}  disabelSubVerifications  if true, verifications created under this path
    *                                                 are invalid
+   * @param      {boolean}  isIdentity               (optional) true if given subject is an identity, defaults to ``false``
+   *                                                 are invalid
+   * @param      {number} nonce                      issuer identities execution nonce, will be
+   *                                                 automatically retrieved if if omitted or set to
+   *                                                 -1, if set to -1 will automatically retrieve
+   *                                                 latest nonce from chain
    * @return     {Promise<VerificationsDelegationInfo>}  information for executing transaction with
    *                                                     another account
    */
@@ -1186,6 +1210,7 @@ export class Verifications extends Logger {
     descriptionDomain?: string,
     disabelSubVerifications = false,
     isIdentity = false,
+    executionNonce = -1,
   ): Promise<VerificationsDelegationInfo> {
     await this.ensureStorage();
     // get input arguments
@@ -1234,9 +1259,8 @@ export class Verifications extends Logger {
     ).encodeABI();
 
     // fetch nonce as late as possible
-    const nonce = await this.options.executor.executeContractCall(
-      issuerIdentity, 'getExecutionNonce');
-    // address(this), _keyHolderData.executionNonce, _to, _value, _data
+    const nonce = executionNonce !== -1 ?
+      executionNonce : await this.getExecutionNonce(sourceIdentity, true);
     // note that issuer is given for signing, as this ACCOUNT is used to sign the message
     const signedTransactionInfo = await this.signPackedHash(
       issuer, [sourceIdentity, nonce, targetIdentity, 0, input]);

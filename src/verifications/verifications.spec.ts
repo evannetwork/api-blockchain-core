@@ -1018,7 +1018,8 @@ describe('Verifications handler', function() {
   });
 
   describe('when using "cold" verifications and submitting them with an unrelated account', () => {
-    it('allows to submit a "cold" transaction from another account', async () => {
+    it('allows to submit a "cold" transaction from another account to an account identity',
+    async () => {
       const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
       await timeout(5000);
 
@@ -1029,7 +1030,7 @@ describe('Verifications handler', function() {
         accounts[0], accounts[1], topic);
 
       // on account[2]s side
-      const verificationId = await verifications.executeVerification(accounts[2], txInfo)
+      const verificationId = await verifications.executeVerification(accounts[2], txInfo);
 
       await timeout(5000);
       expect(verificationId).to.be.ok;
@@ -1038,5 +1039,69 @@ describe('Verifications handler', function() {
       expect(verificationsForAccount[oldLength])
         .to.have.property('status', VerificationsStatus.Issued);
     });
-  })
+
+    it('allows to submit a "cold" transaction from another account to an account identity',
+    async () => {
+      const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
+      await timeout(5000);
+
+      const topic = '/company';
+
+      // on account[0]s side
+      const txInfo = await verifications.signSetVerificationTransaction(
+        accounts[0], accounts[1], topic);
+
+      // on account[2]s side
+      const verificationId = await verifications.executeVerification(accounts[2], txInfo);
+
+      await timeout(5000);
+      expect(verificationId).to.be.ok;
+      const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company');
+      expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
+      expect(verificationsForAccount[oldLength])
+        .to.have.property('status', VerificationsStatus.Issued);
+    });
+
+    it('allows to get execution nonce for a given identity', async () => {
+      const nonce1 = await verifications.getExecutionNonce(accounts[0]);
+      expect(nonce1).to.be.ok;
+      expect(JSON.parse(nonce1)).to.be.gte(0);
+
+      await verifications.setVerification(accounts[0], accounts[1], '/company');
+
+      const nonce2 = await verifications.getExecutionNonce(accounts[0]);
+      expect(nonce2).to.be.ok;
+      expect(JSON.parse(nonce2)).to.be.gte(0);
+
+      expect(JSON.parse(nonce2)).to.be.eq(JSON.parse(nonce1) + 1);
+    });
+
+    it('allows to submit multiple "cold" transactions from another account', async () => {
+      const paths = ['/verfication1', '/verfication2', '/verfication3'];
+      const oldLengths =
+        (await Promise.all(paths.map(path => verifications.getVerifications(accounts[1], path))))
+          .map(veris => veris.length);
+      await timeout(5000);
+
+      // on account[0]s side
+      let nonce = JSON.parse(await verifications.getExecutionNonce(accounts[0]));
+      let txInfos = [];
+      for (let path of paths) {
+        txInfos.push(await verifications.signSetVerificationTransaction(
+          accounts[0], accounts[1], path, 0, null, null, false, false, nonce++));
+      }
+
+      // on account[2]s side
+      for (let i of txInfos.keys()) {
+        const verificationId = await verifications.executeVerification(accounts[2], txInfos[i]);
+        await timeout(5000);
+        expect(verificationId).to.be.ok;
+        const verificationsForAccount = await verifications.getVerifications(
+          accounts[1], `/verfication${i + 1}`);
+        expect(verificationsForAccount).to.have.lengthOf(oldLengths[i] + 1);
+        expect(verificationsForAccount[oldLengths[i]])
+          .to.have.property('status', VerificationsStatus.Issued);
+      }
+    });
+  });
 });
