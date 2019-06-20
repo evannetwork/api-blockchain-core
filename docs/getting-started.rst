@@ -91,10 +91,10 @@ or you can initialize the api-blockchain-core runtime with your mnemonic and you
     async function init() {
       // initialize dependencies
       const provider = new Web3.providers.WebsocketProvider(
-        runtimeConfig.web3Provider,
+        web3Provider,
         { clientConfig: { keepalive: true, keepaliveInterval: 5000 } });
       const web3 = new Web3(provider, { transactionConfirmationBlocks: 1 });
-      const dfs = new Ipfs({ remoteNode: new IpfsApi(runtimeConfig.ipfs), });
+      const dfs = new Ipfs({ remoteNode: new IpfsApi(ipfsConfig), });
 
       // create runtime
       const runtime = await createDefaultRuntime(

@@ -8,6 +8,16 @@
 ### Deprecations
 
 
+## Version 2.7.1
+### Features
+
+### Fixes
+- allow empty description for `Container.create` so it will fallback to default description
+- add empty check for recursive `Container` `applyIfEncrypted` calls
+
+### Deprecations
+
+
 ## Version 2.7.0
 ### Features
 - add default `boolean` `defaultSchemas` to `DataContainer`

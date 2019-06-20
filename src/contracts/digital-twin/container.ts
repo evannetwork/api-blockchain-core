@@ -253,7 +253,6 @@ export class Container extends Logger {
     options: ContainerOptions,
     config: ContainerConfig,
   ): Promise<Container> {
-    checkConfigProperties(config, ['description']);
     const instanceConfig = cloneDeep(config);
 
     // convert template properties to jsonSchema
@@ -950,7 +949,7 @@ export class Container extends Logger {
         const transformed = {};
         for (let key of Object.keys(toInspect)) {
           // traverse further, if suproperties are defined
-          if (subSchema.properties) {
+          if (subSchema.properties && subSchema.properties[key]) {
             // if included in schema, drill down
             transformed[key] = await this.applyIfEncrypted(
               subSchema.properties[key], toInspect[key], toApply);
