@@ -77,6 +77,8 @@ export interface VerificationsDelegationInfo {
   input: string,
   /** signed data from transaction */
   signedTransactionInfo: string,
+  /** source identity contract execution nonce for this transaction */
+  nonce: string,
 }
 
 /**
@@ -534,9 +536,11 @@ export class Verifications extends Logger {
   }
 
   /**
-   * Gets current execution nonce for identity.
+   * Gets current execution nonce for an identity or an accounts identity.
    *
-   * @param      {string}           identity         identity to get execution nonce for
+   * @param      {string}   issuer      account or identity to get execution nonce for
+   * @param      {boolean}  isIdentity  optional, true if given issuer is an identity, defaults to
+   *                                    ``false``
    * @return     {Promise<string>}  execution nonce
    */
   public async getExecutionNonce(issuer: string, isIdentity = false): Promise<string> {
@@ -1215,7 +1219,7 @@ export class Verifications extends Logger {
     descriptionDomain?: string,
     disabelSubVerifications = false,
     isIdentity = false,
-    executionNonce = -1,
+    executionNonce: string | number = -1,
   ): Promise<VerificationsDelegationInfo> {
     await this.ensureStorage();
     // get input arguments
@@ -1239,7 +1243,6 @@ export class Verifications extends Logger {
       isIdentity,
     );
 
-    // --> decide with subjectType which contract to use
     // sign arguments for on-chain check
     const issuerIdentity = await this.getIdentityForAccount(issuer);
     const input = issuerIdentity.methods.addVerificationWithMetadata(
@@ -1265,7 +1268,7 @@ export class Verifications extends Logger {
 
     // fetch nonce as late as possible
     const nonce = executionNonce !== -1 ?
-      executionNonce : await this.getExecutionNonce(sourceIdentity, true);
+      `${executionNonce}` : await this.getExecutionNonce(sourceIdentity, true);
     // note that issuer is given for signing, as this ACCOUNT is used to sign the message
     const signedTransactionInfo = await this.signPackedHash(
       issuer, [sourceIdentity, nonce, targetIdentity, 0, input]);
@@ -1277,6 +1280,7 @@ export class Verifications extends Logger {
       value: 0,
       input,
       signedTransactionInfo: signedTransactionInfo.signature,
+      nonce,
     };
   }
 
