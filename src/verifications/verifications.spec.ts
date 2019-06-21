@@ -1026,10 +1026,12 @@ describe('Verifications handler', function() {
       const topic = '/company';
 
       // on account[0]s side
+      // accounts[0] wants to issue a verification for accounts[1] via delegation
       const txInfo = await verifications.signSetVerificationTransaction(
         accounts[0], accounts[1], topic);
 
       // on account[2]s side
+      // accounts[2] submits transaction, that actually issues verification
       const verificationId = await verifications.executeVerification(accounts[2], txInfo);
 
       await timeout(5000);

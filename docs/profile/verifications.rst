@@ -734,6 +734,99 @@ Example
 
 --------------------------------------------------------------------------------
 
+= Delegated Verifications =
+===========================
+
+.. _verifications_signSetVerificationTransaction:
+
+signSetVerificationTransaction
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.signSetVerificationTransaction(issuer, subject, topic[, expirationDate, verificationValue, descriptionDomain, disableSubVerifications, isIdentity, executionNonce]);
+
+Signs a verification (offchain) and returns data, that can be used to submit it later on. Return value can be passed to ``executeVerification``.
+
+Note that, when creating multiple signed verification transactions, the ``nonce`` argument **has to be specified and incremented between calls**, as the nonce is included in transaction data and restricts the order of transactions, that can be made.
+
+----------
+Parameters
+----------
+
+#. ``issuer`` - ``string``: issuer of the verification
+#. ``subject`` - ``string``: subject of the verification and the owner of the verification node
+#. ``topic`` - ``string``: name of the verification (full path)
+#. ``expirationDate`` - ``number`` (optional): expiration date, for the verification, defaults to ``0`` (does not expire)
+#. ``verificationValue`` - ``any`` (optional): json object which will be stored in the verification
+#. ``descriptionDomain`` - ``string`` (optional): domain of the verification, this is a subdomain under 'verifications.evan', so passing 'example' will link verifications description to 'example.verifications.evan', unset if omitted
+#. ``disableSubVerifications`` - ``boolean`` (optional): invalidate all verifications that gets issued as children of this verification (warning will include the disableSubVerifications warning)
+#. ``isIdentity`` - ``boolean`` (optional): true if given subject is identity, defaults to ``false``
+#. ``executionNonce`` - ``number`` (optional): current execution nonce of issuer identity contract, defaults to ``-1`` (fetch dynamically)
+
+-------
+Returns
+-------
+
+``Promise`` returns ``VerificationsDelegationInfo``: data for submitting delegated verifications
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // accounts[0] wants to issue a verification for accounts[1] via delegation
+  const txInfo = await verifications.signSetVerificationTransaction(
+    accounts[0], accounts[1], '/company');
+
+
+
+--------------------------------------------------------------------------------
+
+.. _verifications_executeVerification:
+
+executeVerification
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.executeVerification(accountId, txInfo);
+
+Executes a pre-signed verification transaction with given account.
+This account will be the origin of the transaction and not of the verification.
+Second argument is generated with ``signSetVerificationTransaction``.
+
+----------
+Parameters
+----------
+
+#. ``accountId`` - ``string``: account, that submits the transaction
+#. ``txInfo`` - ``VerificationsDelegationInfo``: information with verification tx data
+
+-------
+Returns
+-------
+
+``Promise`` returns ``string``: id of new verification
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // accounts[0] wants to issue a verification for accounts[1] via delegation
+  const txInfo = await verifications.signSetVerificationTransaction(
+    accounts[0], accounts[1], '/company');
+
+  // accounts[2] submits transaction, that actually issues verification
+  const verificationId = await verifications.executeVerification(accounts[2], txInfo);
+
+
+
+--------------------------------------------------------------------------------
+
 = Descriptions =
 ==========================
 
@@ -912,6 +1005,25 @@ Example
   console.log(verificationsStructure.storage.options.address);
   // Output:
   // 0x000000000000000000000000000000000000000a
+
+
+
+Interfaces
+==========
+
+.. _verifications_VerificationsDelegationInfo:
+
+---------------------
+VerificationsDelegationInfo
+---------------------
+
+information for submitting a delegated transaction, created with ``signSetVerificationTransaction`` consumed by ``executeVerification``
+
+#. ``sourceIdentity`` - ``string``: address of identity contract, that issues verification
+#. ``targetIdentity`` - ``string``: address of identity contract, that receives verification
+#. ``value`` - ``number``: value to transfer, usually 0
+#. ``input`` - ``string``: abi encoded input for transaction
+#. ``signedTransactionInfo`` - ``string``: signed data from transaction
 
 
 

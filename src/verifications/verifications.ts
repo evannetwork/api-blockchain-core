@@ -67,10 +67,15 @@ export enum VerificationsStatus {
  * created with ``signSetVerificationTransaction`` consumed by ``executeVerification``
  */
 export interface VerificationsDelegationInfo {
+  /** address of identity contract, that issues verification */
   sourceIdentity: string,
+  /** address of identity contract, that receives verification */
   targetIdentity: string,
+  /** value to transfer, usually 0 */
   value: number,
+  /** abi encoded input for transaction */
   input: string,
+  /** signed data from transaction */
   signedTransactionInfo: string,
 }
 
@@ -473,8 +478,8 @@ export class Verifications extends Logger {
    * This account will be the origin of the transaction and not of the verification.
    * Second argument is generated with ``signSetVerificationTransaction``.
    *
-   * @param      {string}  accountId              account, that submits the transaction
-   * @param      {VerificationsDelegationInfo}    information with verification tx data
+   * @param      {string}                       accountId  account, that submits the transaction
+   * @param      {VerificationsDelegationInfo}  txInfo     information with verification tx data
    * @return     {Promise<string>}  id of new verification
    */
   public async executeVerification(
