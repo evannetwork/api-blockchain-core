@@ -827,6 +827,49 @@ Example
 
 --------------------------------------------------------------------------------
 
+.. _verifications_getExecutionNonce:
+
+getExecutionNonce
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.getExecutionNonce(issuer[, isIdentity]);
+
+Gets current execution nonce for an identity or an accounts identity.
+
+Nonce is returned as ``string``. When using nonces for preparing multiple transactions, small nonces can just be parsed to a number and then incremented as needed. Consider using BigNumber or similar modules to deal with large numbers if required.
+
+----------
+Parameters
+----------
+
+#. ``issuer`` - ``string``: account or identity to get execution nonce for
+#. ``isIdentity`` - ``boolean`` (optional): true if given issuer is an identity, defaults to ``false``
+
+-------
+Returns
+-------
+
+``Promise`` returns ``string``: execution nonce
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // nonce in this example is relatively small, so we can just parse it and use it as a number
+  // consider using BigNumber or similar to deal with larger numbers if required
+  let nonce = JSON.parse(await verifications.getExecutionNonce(accounts[0]));
+  const txInfos = await Promise.all(['/example1', '/example2', '/example3'].map(
+    topic => verifications.signSetVerificationTransaction(
+      accounts[0], accounts[1], topic, 0, null, null, false, false, nonce++)
+  ));
+
+
+--------------------------------------------------------------------------------
+
 = Descriptions =
 ==========================
 
@@ -1013,9 +1056,9 @@ Interfaces
 
 .. _verifications_VerificationsDelegationInfo:
 
----------------------
+---------------------------
 VerificationsDelegationInfo
----------------------
+---------------------------
 
 information for submitting a delegated transaction, created with ``signSetVerificationTransaction`` consumed by ``executeVerification``
 
