@@ -62,7 +62,28 @@ export enum VerificationsStatus {
   Rejected
 }
 
+/**
+ * information for submitting a delegated transaction,
+ * created with ``signSetVerificationTransaction`` consumed by ``executeVerification``
+ */
+export interface VerificationsDelegationInfo {
+  /** address of identity contract, that issues verification */
+  sourceIdentity: string,
+  /** address of identity contract, that receives verification */
+  targetIdentity: string,
+  /** value to transfer, usually 0 */
+  value: number,
+  /** abi encoded input for transaction */
+  input: string,
+  /** signed data from transaction */
+  signedTransactionInfo: string,
+  /** source identity contract execution nonce for this transaction */
+  nonce: string,
+}
 
+/**
+ * options for Verification constructor, basically a trimmed runtime
+ */
 export interface VerificationsOptions extends LoggerOptions {
   accountStore: AccountStore;
   config: any;
@@ -455,6 +476,49 @@ export class Verifications extends Logger {
   }
 
   /**
+   * Executes a pre-signed verification transaction with given account.
+   * This account will be the origin of the transaction and not of the verification.
+   * Second argument is generated with ``signSetVerificationTransaction``.
+   *
+   * @param      {string}                       accountId  account, that submits the transaction
+   * @param      {VerificationsDelegationInfo}  txInfo     information with verification tx data
+   * @return     {Promise<string>}  id of new verification
+   */
+  public async executeVerification(
+    accountId: string,
+    {
+      sourceIdentity,
+      targetIdentity,
+      value,
+      input,
+      signedTransactionInfo,
+    }: VerificationsDelegationInfo
+   ): Promise<string> {
+    const sourceIdentityContract = this.options.contractLoader.loadContract(
+      'VerificationHolder', sourceIdentity);
+    const targetIdentityContract = this.options.contractLoader.loadContract(
+      'VerificationHolder', targetIdentity);
+    // executeDelegated(address _to, uint256 _value, bytes _data, bytes _signedTransactionInfo)
+    return this.options.executor.executeContractTransaction(
+      sourceIdentityContract,
+      'executeDelegated',
+      {
+        from: accountId,
+        event: {
+          target: 'VerificationHolderLibrary',
+          targetAddress: targetIdentity,
+          eventName: 'VerificationAdded',
+        },
+        getEventResult: (_, args) => { return args.verificationId; },
+      },
+      targetIdentity,
+      value,
+      input,
+      signedTransactionInfo,
+    );
+  }
+
+  /**
    * Loads a list of verifications for a topic and a subject and combines to a single view for a
    * simple verification status check.
    *
@@ -469,6 +533,22 @@ export class Verifications extends Logger {
       topic,
       await this.getNestedVerifications(subject, topic, isIdentity)
     );
+  }
+
+  /**
+   * Gets current execution nonce for an identity or an accounts identity.
+   *
+   * @param      {string}   issuer      account or identity to get execution nonce for
+   * @param      {boolean}  isIdentity  optional, true if given issuer is an identity, defaults to
+   *                                    ``false``
+   * @return     {Promise<string>}  execution nonce
+   */
+  public async getExecutionNonce(issuer: string, isIdentity = false): Promise<string> {
+    await this.ensureStorage();
+    const identity = isIdentity ? issuer : await this.getIdentityForAccount(issuer, true);
+    const identityContract = this.options.contractLoader.loadContract(
+      'VerificationHolder', identity);
+    return this.options.executor.executeContractCall(identityContract, 'getExecutionNonce');
   }
 
   /**
@@ -1024,67 +1104,26 @@ export class Verifications extends Logger {
       isIdentity = false,
     ): Promise<string> {
     await this.ensureStorage();
-    const subjectType = await this.getSubjectType(subject, isIdentity);
-    let targetIdentity;
-    if (isIdentity) {
-      targetIdentity = subject;
-    } else {
-      if (subjectType === 'contract') {
-        targetIdentity = (await this.options.description.getDescription(
-          subject, issuer)).public.identity;
-      } else {
-        targetIdentity = await this.options.executor.executeContractCall(
-          this.contracts.storage,
-          'users',
-          subject
-        );
-      }
-    }
 
-    // get the issuer identity contract
-    const sourceIdentity = await this.options.executor.executeContractCall(
-      this.contracts.storage,
-      'users',
-      issuer
+    const {
+      targetIdentity,
+      subjectType,
+      uint256VerificationName,
+      sourceIdentity,
+      signature,
+      verificationData,
+      verificationDataUrl,
+      ensFullNodeHash,
+    } = await this.getSetVerificationData(
+      issuer,
+      subject,
+      topic,
+      expirationDate,
+      verificationValue,
+      descriptionDomain,
+      disabelSubVerifications,
+      isIdentity,
     );
-    // check if target and source identity are existing
-    if (!targetIdentity || targetIdentity === nullAddress) {
-      const msg = `trying to set verification ${topic} with account ${issuer}, ` +
-        `but target identity for account ${subject} does not exist`;
-      this.log(msg, 'error');
-      throw new Error(msg);
-    }
-
-    // convert the verification name to a uint256
-    const sha3VerificationName = this.options.nameResolver.soliditySha3(topic);
-    const uint256VerificationName = new BigNumber(sha3VerificationName).toString(10);
-
-    let verificationData = nullBytes32;
-    let verificationDataUrl = '';
-    if (verificationValue) {
-      try {
-        const stringified = JSON.stringify(verificationValue);
-        const stateMd5 = crypto.createHash('md5').update(stringified).digest('hex');
-        verificationData = await this.options.dfs.add(stateMd5, Buffer.from(stringified));
-      } catch (e) {
-        const msg = `error parsing verificationValue -> ${e.message}`;
-        this.log(msg, 'info');
-      }
-    }
-
-    // create the signature for the verification
-    const signedSignature = await this.options.executor.web3.eth.accounts.sign(
-      this.options.nameResolver.soliditySha3(
-        targetIdentity, uint256VerificationName, verificationData).replace('0x', ''),
-      '0x' + await this.options.accountStore.getPrivateKey(issuer)
-    );
-
-    // build description hash if required
-    let ensFullNodeHash;
-    if (descriptionDomain) {
-      ensFullNodeHash = this.options.nameResolver.namehash(
-        this.getFullDescriptionDomainWithHash(topic, descriptionDomain));
-    }
 
     // clear cache for this verification
     this.deleteFromVerificationCache(subject, topic);
@@ -1106,11 +1145,11 @@ export class Verifications extends Logger {
       uint256VerificationName,
       '1',
       sourceIdentity,
-      signedSignature.signature,
+      signature,
       verificationData,
       verificationDataUrl,
-      expirationDate || 0,
-      ensFullNodeHash || nullBytes32,
+      expirationDate,
+      ensFullNodeHash,
       disabelSubVerifications,
     );
   }
@@ -1138,6 +1177,111 @@ export class Verifications extends Logger {
 
     // clear cache for verifications using this description ens address
     this.deleteFromVerificationCache('*', topic);
+  }
+
+  /**
+   * Signs a verification (offchain) and returns data, that can be used to submit it later on.
+   * Return value can be passed to ``executeVerification``.
+   *
+   * Note that, when creating multiple signed verification transactions, the ``nonce`` argument
+   * **has to be specified and incremented between calls**, as the nonce is included in transaction
+   * data and restricts the order of transactions, that can be made.
+   *
+   * @param      {string}   issuer                   issuer of the verification
+   * @param      {string}   subject                  subject of the verification and the owner of
+   *                                                 the verification node
+   * @param      {string}   topic                    name of the verification (full path)
+   * @param      {number}   expirationDate           expiration date, for the verification, defaults
+   *                                                 to `0` (≈does not expire)
+   * @param      {any}      verificationValue        json object which will be stored in the
+   *                                                 verification
+   * @param      {string}   descriptionDomain        domain of the verification, this is a subdomain
+   *                                                 under 'verifications.evan', so passing
+   *                                                 'example' will link verifications description
+   *                                                 to 'example.verifications.evan'
+   * @param      {boolean}  disabelSubVerifications  if true, verifications created under this path
+   *                                                 are invalid
+   * @param      {boolean}  isIdentity               (optional) true if given subject is an identity, defaults to ``false``
+   *                                                 are invalid
+   * @param      {number} nonce                      issuer identities execution nonce, will be
+   *                                                 automatically retrieved if if omitted or set to
+   *                                                 -1, if set to -1 will automatically retrieve
+   *                                                 latest nonce from chain
+   * @return     {Promise<VerificationsDelegationInfo>}  information for executing transaction with
+   *                                                     another account
+   */
+  public async signSetVerificationTransaction(
+    issuer: string,
+    subject: string,
+    topic: string,
+    expirationDate = 0,
+    verificationValue?: any,
+    descriptionDomain?: string,
+    disabelSubVerifications = false,
+    isIdentity = false,
+    executionNonce: string | number = -1,
+  ): Promise<VerificationsDelegationInfo> {
+    await this.ensureStorage();
+    // get input arguments
+    const {
+      targetIdentity,
+      subjectType,
+      uint256VerificationName,
+      sourceIdentity,
+      signature,
+      verificationData,
+      verificationDataUrl,
+      ensFullNodeHash,
+    } = await this.getSetVerificationData(
+      issuer,
+      subject,
+      topic,
+      expirationDate,
+      verificationValue,
+      descriptionDomain,
+      disabelSubVerifications,
+      isIdentity,
+    );
+
+    // sign arguments for on-chain check
+    const issuerIdentity = await this.getIdentityForAccount(issuer);
+    const input = issuerIdentity.methods.addVerificationWithMetadata(
+      // uint256 _topic,
+      uint256VerificationName,
+      // uint256 _scheme,
+      '1',
+      // address _issuer,
+      sourceIdentity,
+      // bytes _signature,
+      signature,
+      // bytes _data,
+      verificationData,
+      // string _uri,
+      '',
+      // uint256 _expirationDate,
+      expirationDate,
+      // bytes32 _description,
+      ensFullNodeHash,
+      // bool _disableSubVerifications
+      disabelSubVerifications,
+    ).encodeABI();
+
+    // fetch nonce as late as possible
+    const nonce = executionNonce !== -1 ?
+      `${executionNonce}` : await this.getExecutionNonce(sourceIdentity, true);
+    // note that issuer is given for signing, as this ACCOUNT is used to sign the message
+    const signedTransactionInfo = await this.signPackedHash(
+      issuer, [sourceIdentity, nonce, targetIdentity, 0, input]);
+
+    // executeDelegated(address _to, uint256 _value, bytes _data, bytes _signedTransactionInfo)
+    return {
+      sourceIdentity,
+      targetIdentity,
+      value: 0,
+      input,
+      signedTransactionInfo: signedTransactionInfo.signature,
+      nonce,
+    };
   }
 
   /**
@@ -1421,6 +1565,120 @@ export class Verifications extends Logger {
   }
 
   /**
+   * Generates input for functions ``setVerification`` and ``signSetVerificationTransaction``.
+   *
+   * @param      {string}   issuer                   issuer of the verification
+   * @param      {string}   subject                  subject of the verification and the owner of
+   *                                                 the verification node
+   * @param      {string}   topic                    name of the verification (full path)
+   * @param      {number}   expirationDate           expiration date, for the verification, defaults
+   *                                                 to `0` (≈does not expire)
+   * @param      {any}      verificationValue        json object which will be stored in the
+   *                                                 verification
+   * @param      {string}   descriptionDomain        domain of the verification, this is a subdomain
+   *                                                 under 'verifications.evan', so passing
+   *                                                 'example' will link verifications description
+   *                                                 to 'example.verifications.evan'
+   * @param      {boolean}  disabelSubVerifications  if true, verifications created under this path
+   *                                                 are invalid
+   * @return     {any}      data for setting verifications
+   */
+  private async getSetVerificationData(
+    issuer: string,
+    subject: string,
+    topic: string,
+    expirationDate = 0,
+    verificationValue?: any,
+    descriptionDomain?: string,
+    disabelSubVerifications = false,
+    isIdentity = false,
+  ): Promise<{
+    targetIdentity: string,
+    subjectType: string,
+    uint256VerificationName: string,
+    sourceIdentity: string,
+    signature: string,
+    verificationData: string,
+    verificationDataUrl: string,
+    ensFullNodeHash: string,
+  }> {
+    await this.ensureStorage();
+    const subjectType = await this.getSubjectType(subject, isIdentity);
+    let targetIdentity;
+    if (isIdentity) {
+      targetIdentity = subject;
+    } else {
+      if (subjectType === 'contract') {
+        targetIdentity = (await this.options.description.getDescription(
+          subject, issuer)).public.identity;
+      } else {
+        targetIdentity = await this.options.executor.executeContractCall(
+          this.contracts.storage,
+          'users',
+          subject
+        );
+      }
+    }
+
+    // get the issuer identity contract
+    const sourceIdentity = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'users',
+      issuer
+    );
+    // check if target and source identity are existing
+    if (!targetIdentity || targetIdentity === nullAddress) {
+      const msg = `trying to set verification ${topic} with account ${issuer}, ` +
+        `but target identity for account ${subject} does not exist`;
+      this.log(msg, 'error');
+      throw new Error(msg);
+    }
+
+    // convert the verification name to a uint256
+    const sha3VerificationName = this.options.nameResolver.soliditySha3(topic);
+    const uint256VerificationName = new BigNumber(sha3VerificationName).toString(10);
+
+    let verificationData = nullBytes32;
+    let verificationDataUrl = '';
+    if (verificationValue) {
+      try {
+        const stringified = JSON.stringify(verificationValue);
+        const stateMd5 = crypto.createHash('md5').update(stringified).digest('hex');
+        verificationData = await this.options.dfs.add(stateMd5, Buffer.from(stringified));
+      } catch (e) {
+        const msg = `error parsing verificationValue -> ${e.message}`;
+        this.log(msg, 'info');
+      }
+    }
+
+    // create the signature for the verification
+    const signedSignature = await this.options.executor.web3.eth.accounts.sign(
+      this.options.nameResolver.soliditySha3(
+        targetIdentity, uint256VerificationName, verificationData).replace('0x', ''),
+      '0x' + await this.options.accountStore.getPrivateKey(issuer)
+    );
+
+    // build description hash if required
+    let ensFullNodeHash;
+    if (descriptionDomain) {
+      ensFullNodeHash = this.options.nameResolver.namehash(
+        this.getFullDescriptionDomainWithHash(topic, descriptionDomain));
+    }
+
+    // return arguments for setting verification
+    return {
+      targetIdentity,
+      subjectType,
+      uint256VerificationName,
+      sourceIdentity,
+      signature: signedSignature.signature,
+      verificationData,
+      verificationDataUrl,
+      ensFullNodeHash: ensFullNodeHash || nullBytes32,
+    }
+  }
+
+  /**
    * checks if given given subject belongs to an account to a contract
    *
    * @param      {string}           subject     verification subject
@@ -1437,5 +1695,21 @@ export class Verifications extends Logger {
       await this.getIdentityForAccount(subject);
     }
     return this.subjectTypes[subject];
+  }
+
+  /**
+   * Tightly pack given arguments (excluding first argument of course), hash result and sign this
+   * with private key of account.
+   * This function will remove leading '0x' from resulting hash before signing it.
+   *
+   * @param      {string}  accountId  account, that is used to sign data
+   * @param      {any[]}   toSign     arguments, that will be packed, hashed, signed
+   * @return     {any}     object with signed data
+   */
+  private async signPackedHash(accountId: string, toSign: any): Promise<any> {
+    return this.options.executor.web3.eth.accounts.sign(
+      this.options.nameResolver.soliditySha3(...toSign),
+      '0x' + await this.options.accountStore.getPrivateKey(accountId),
+    );
   }
 }

@@ -12,9 +12,13 @@ This sections aims to help getting started with the verifications service. Herei
 `Verifications <https://evannetwork.github.io/docs/how_it_works/services/verificationmanagement.html>`_ can be issued with the :doc:`Verification API <verifications>`. Their smart contract implementation follow the principles outlined in `ERC-725 <https://github.com/ethereum/EIPs/issues/725>`_ and `ERC-735 <https://github.com/ethereum/EIPs/issues/735>`_.
 
 
------------------------
+
+--------------------------------------------------------------------------------
+
+.. about-the-code-examples:
+
 About the Code Examples
------------------------
+=============================
 
 Many code examples are taken from the `verification tests <https://github.com/evannetwork/api-blockchain-core/blob/master/src/verifications/verifications.spec.ts>`_. You can a look at those for more examples or to have a look at in which context the test are run in.
 
@@ -25,6 +29,7 @@ Many code examples here use variable naming from the tests. So there are a few a
 - ``accounts`` is an array with addresses of externally owned accounts, of which private keys are known to the runtime/executor/signer instance to make transaction with them
 - ``accounts[0]`` usually takes the role of issuing verifications
 - ``accounts[1]`` is usually an account that responds to actions from ``accounts[0]``
+- ``accounts[2]`` is usually an account, that has no direct relation to the former two accounts
 - ``contractId`` refers to the address of a contract, that is owned by ``accounts[0]``, this contract usually has a `DBCP <https://github.com/evannetwork/dbcp>`_ `description <https://api-blockchain-core.readthedocs.io/en/latest/blockchain/description.html>`_
 
 
@@ -109,8 +114,6 @@ The aforementioned three steps are covered by the :ref:`createIdentity <verifica
 
 When using contracts without descriptions or when handling the relation between contracts and an identity elsewhere, the process of updating the description can be omitted. For this set the ``updateDescription`` argument to ``false``:
 
-.. _contract-identity-undescribed:
-
 .. code-block:: typescript
 
   const contractIdentity = await verifications.createIdentity(accounts[0], contractId, false);
@@ -119,8 +122,6 @@ When using contracts without descriptions or when handling the relation between 
   // 0x4732281e708aadbae13f0bf4dd616de86df3d3edb3ead21604a354101de45316
 
 Pseudonyms can be handled the same way. Just set the flag to link given identity to false:
-
-.. _contract-identity-undescribed:
 
 .. code-block:: typescript
 
@@ -256,11 +257,54 @@ Issue verifications for a contract without using a description
   //   valid: true
   // } ]
 
-In case you're wondering: ``contractIdentity`` is the same identity as returned in our :ref:`example <contract-identity-undescribed>`.
+In case you're wondering: ``contractIdentity`` is the same identity as returned in our Contract Identities / Pseudonym Identities example.
 
 Have a look at :ref:`getVerifications <verifications_getVerifications>` for the meaning of the returned values, for how to find out, if the returned verification trustworthy, have a look at :ref:`Validating Verifications <validating-verifications>`.
 
 Note that for contracts without descriptions ``contractIdentity`` is given and the last argument (``isIdentity``) is set to true. The functions ``setVerification`` and ``getVerifications`` support passing a contract identity to them as well and they also have the argument ``isIdentity``, which is set to true, when passing contract identities to them.
+
+
+
+------------------------------
+Delegated verification issuing
+------------------------------
+
+The transaction that issues a verification can be done by an account, that is neither ``issuer`` nor ``subject``. This means, that it is possible to let another account pay transaction costs but issuing the verification itself is done from the original identity.
+
+For example: Alice wants to issue a verification to Bob, but should not pay for the transaction costs. Alice can now prepare the transaction to be done from her identity contract towards Bobs identity contract and send the prepared transaction data to Clarice. Clarice then can submit this data to Alice's identity contract, which will issue the verification.
+
+.. code-block:: typescript
+
+  const [ alice, bob, clarice ] = accounts;
+
+  // on Alice's side
+  const txInfo = await verifications.signSetVerificationTransaction(alice, bob, '/example');
+
+  // on Clarice's side
+  const verificationId = await verifications.executeVerification(clarice, txInfo);
+
+Note that transactions prepared with ``signSetVerificationTransaction`` can only be executed once and only with the arguments of the original data. To prevent multiple repetitions of the transaction, a nonce at the issuers identity contract is used. This nonce is retrieved from the identity contract automatically when calling ``signSetVerificationTransaction``, but when preparing multiple transactions and not submitting them immediately, the nonce would stay the same. Therefore the nonce has to be increased by hand when preparing multiple transactions from the same identity contract.
+
+Nonces determine the order in which prepared transactions can be performed from issuers identity contract, so execute prepared transactions in order of their nonces.
+
+.. code-block:: typescript
+
+  const [ alice, bob, clarice ] = accounts;
+
+  // on Alice's side
+  // nonce in this example is relatively small, so we can just parse it and use it as a number
+  // consider using BigNumber or similar to deal with larger numbers if required
+  let nonce = JSON.parse(await verifications.getExecutionNonce(alice));
+  const txInfos = await Promise.all(['/example1', '/example2', '/example3'].map(
+    topic => verifications.signSetVerificationTransaction(
+      alice, bob, topic, 0, null, null, false, false, nonce++)
+  ));
+
+  // on Clarice's side
+  const verificationIds = [];
+  for (let txInfo of txInfos) {
+    verificationIds.push(await verifications.executeVerification(clarice, txInfo));
+  }
 
 
 

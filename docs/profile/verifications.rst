@@ -734,6 +734,142 @@ Example
 
 --------------------------------------------------------------------------------
 
+= Delegated Verifications =
+===========================
+
+.. _verifications_signSetVerificationTransaction:
+
+signSetVerificationTransaction
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.signSetVerificationTransaction(issuer, subject, topic[, expirationDate, verificationValue, descriptionDomain, disableSubVerifications, isIdentity, executionNonce]);
+
+Signs a verification (offchain) and returns data, that can be used to submit it later on. Return value can be passed to ``executeVerification``.
+
+Note that, when creating multiple signed verification transactions, the ``nonce`` argument **has to be specified and incremented between calls**, as the nonce is included in transaction data and restricts the order of transactions, that can be made.
+
+----------
+Parameters
+----------
+
+#. ``issuer`` - ``string``: issuer of the verification
+#. ``subject`` - ``string``: subject of the verification and the owner of the verification node
+#. ``topic`` - ``string``: name of the verification (full path)
+#. ``expirationDate`` - ``number`` (optional): expiration date, for the verification, defaults to ``0`` (does not expire)
+#. ``verificationValue`` - ``any`` (optional): json object which will be stored in the verification
+#. ``descriptionDomain`` - ``string`` (optional): domain of the verification, this is a subdomain under 'verifications.evan', so passing 'example' will link verifications description to 'example.verifications.evan', unset if omitted
+#. ``disableSubVerifications`` - ``boolean`` (optional): invalidate all verifications that gets issued as children of this verification (warning will include the disableSubVerifications warning)
+#. ``isIdentity`` - ``boolean`` (optional): true if given subject is identity, defaults to ``false``
+#. ``executionNonce`` - ``number`` (optional): current execution nonce of issuer identity contract, defaults to ``-1`` (fetch dynamically)
+
+-------
+Returns
+-------
+
+``Promise`` returns ``VerificationsDelegationInfo``: data for submitting delegated verifications
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // accounts[0] wants to issue a verification for accounts[1] via delegation
+  const txInfo = await verifications.signSetVerificationTransaction(
+    accounts[0], accounts[1], '/company');
+
+
+
+--------------------------------------------------------------------------------
+
+.. _verifications_executeVerification:
+
+executeVerification
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.executeVerification(accountId, txInfo);
+
+Executes a pre-signed verification transaction with given account.
+This account will be the origin of the transaction and not of the verification.
+Second argument is generated with ``signSetVerificationTransaction``.
+
+----------
+Parameters
+----------
+
+#. ``accountId`` - ``string``: account, that submits the transaction
+#. ``txInfo`` - ``VerificationsDelegationInfo``: information with verification tx data
+
+-------
+Returns
+-------
+
+``Promise`` returns ``string``: id of new verification
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // accounts[0] wants to issue a verification for accounts[1] via delegation
+  const txInfo = await verifications.signSetVerificationTransaction(
+    accounts[0], accounts[1], '/company');
+
+  // accounts[2] submits transaction, that actually issues verification
+  const verificationId = await verifications.executeVerification(accounts[2], txInfo);
+
+
+
+--------------------------------------------------------------------------------
+
+.. _verifications_getExecutionNonce:
+
+getExecutionNonce
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.getExecutionNonce(issuer[, isIdentity]);
+
+Gets current execution nonce for an identity or an accounts identity.
+
+Nonce is returned as ``string``. When using nonces for preparing multiple transactions, small nonces can just be parsed to a number and then incremented as needed. Consider using BigNumber or similar modules to deal with large numbers if required.
+
+----------
+Parameters
+----------
+
+#. ``issuer`` - ``string``: account or identity to get execution nonce for
+#. ``isIdentity`` - ``boolean`` (optional): true if given issuer is an identity, defaults to ``false``
+
+-------
+Returns
+-------
+
+``Promise`` returns ``string``: execution nonce
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // nonce in this example is relatively small, so we can just parse it and use it as a number
+  // consider using BigNumber or similar to deal with larger numbers if required
+  let nonce = JSON.parse(await verifications.getExecutionNonce(accounts[0]));
+  const txInfos = await Promise.all(['/example1', '/example2', '/example3'].map(
+    topic => verifications.signSetVerificationTransaction(
+      accounts[0], accounts[1], topic, 0, null, null, false, false, nonce++)
+  ));
+
+
+--------------------------------------------------------------------------------
+
 = Descriptions =
 ==========================
 
@@ -912,6 +1048,25 @@ Example
   console.log(verificationsStructure.storage.options.address);
   // Output:
   // 0x000000000000000000000000000000000000000a
+
+
+
+Interfaces
+==========
+
+.. _verifications_VerificationsDelegationInfo:
+
+---------------------------
+VerificationsDelegationInfo
+---------------------------
+
+information for submitting a delegated transaction, created with ``signSetVerificationTransaction`` consumed by ``executeVerification``
+
+#. ``sourceIdentity`` - ``string``: address of identity contract, that issues verification
+#. ``targetIdentity`` - ``string``: address of identity contract, that receives verification
+#. ``value`` - ``number``: value to transfer, usually 0
+#. ``input`` - ``string``: abi encoded input for transaction
+#. ``signedTransactionInfo`` - ``string``: signed data from transaction
 
 
 
