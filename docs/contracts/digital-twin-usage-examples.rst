@@ -192,7 +192,7 @@ This clone can be linked to a digital twin owner by ``customer``. So let's creat
   await customersBigCrane250.setEntry(
     'machine-data',
     dataClone,
-    DigitalTwinEntryType.ContainerContract,
+    DigitalTwinEntryType.Container,
   );
 
 Note that the container is not named ``data`` like in the original twin but called ``machine-data`` here. Names can be reassigned as desired.
