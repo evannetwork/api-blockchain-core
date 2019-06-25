@@ -678,7 +678,7 @@ describe('Verifications handler', function() {
           accounts[0],
           subject,
           sampleVerificationTopic,
-          null,
+          0,
           null,
           sampleVerificationsDomain,
           ...extraArgs.slice(3),
