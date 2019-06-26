@@ -1070,7 +1070,7 @@ describe('Verifications handler', function() {
           const localContractId = await baseContract.createUninitialized(
           'testdatacontract',
           accounts[0],
-          businessCenterDomain,
+          null,
           );
           await description.setDescriptionToContract(
             localContractId,
@@ -1116,7 +1116,7 @@ describe('Verifications handler', function() {
         const contractIdWithoutIdentity = await baseContract.createUninitialized(
           'testdatacontract',
           accounts[0],
-          businessCenterDomain,
+          null,
         );
 
          await description.setDescriptionToContract(
