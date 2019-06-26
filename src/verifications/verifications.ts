@@ -107,6 +107,22 @@ export class Verifications extends Logger {
   encodingEnvelope = 'binary';
   options: VerificationsOptions;
   subjectTypes: any = { };
+  public readonly defaultValidationOptions: VerificationsValidationOptions = {
+    disableSubVerifications: VerificationsStatusV2.Red,
+    expired:                 VerificationsStatusV2.Red,
+    invalid:                 VerificationsStatusV2.Red,
+    issued:                  VerificationsStatusV2.Red,
+    missing:                 VerificationsStatusV2.Red,
+    noIdentity:              VerificationsStatusV2.Red,
+    notEnsRootOwner:         VerificationsStatusV2.Red,
+    parentMissing:           VerificationsStatusV2.Red,
+    parentUntrusted:         VerificationsStatusV2.Red,
+    rejected:                VerificationsStatusV2.Red,
+    selfIssued:              VerificationsStatusV2.Red,
+  };
+  public readonly defaultQueryOptions: VerificationsQueryOptions = {
+    validationOptions: this.defaultValidationOptions,
+  };
 
   /**
    * check if currently the storage is ensuring, if yes, dont run it twice
@@ -1712,4 +1728,206 @@ export class Verifications extends Logger {
       '0x' + await this.options.accountStore.getPrivateKey(accountId),
     );
   }
+
+  // v2 components, will be moved into correct place after finished
+  public async getNestedVerificationsV2(
+    subject: string,
+    topic: string,
+    isIdentity?: boolean,
+    queryOptions?: VerificationsQueryOptions,
+ ): Promise<VerificationsResultV2> {
+    const nested = await this.getNestedVerifications(subject, topic, isIdentity);
+    return this.formatToV2(nested, queryOptions || this.defaultQueryOptions);
+  }
+
+  public async formatToV2(nestedVerificationsInput: any[], queryOptions: VerificationsQueryOptions): Promise<VerificationsResultV2> {
+    const nestedVerifications = nestedVerificationsInput.filter(verification => verification.status !== -1);
+    if (!nestedVerifications.length) {
+      return { status: VerificationsStatusV2.Red };
+    }
+    let verifications = [];
+    let levelComputed: any;
+
+    if (nestedVerifications.length) {
+      levelComputed = {
+        subject: nestedVerifications[0].subject,
+        subjectIdentity: nestedVerifications[0].subjectIdentity,
+        subjectType: nestedVerifications[0].subjectType,
+        topic: nestedVerifications[0].levelComputed.name,
+      };
+      if (nestedVerifications[0].levelComputed.warnings) {
+        levelComputed.statusFlags = nestedVerifications[0].levelComputed.warnings;
+      }
+      if (nestedVerifications[0].levelComputed.expirationDate) {
+        levelComputed.expirationDate = nestedVerifications[0].levelComputed.expirationDate;
+      }
+    }
+
+    // convert verification data
+    for (let nestedVerification of nestedVerifications) {
+      const verification: any = {
+        details: {
+          creationDate: nestedVerification.creationDate,
+          ensAddress: nestedVerification.ensAddress,
+          id: nestedVerification.id,
+          issuer: nestedVerification.issuerAccount,
+          issuerIdentity: nestedVerification.issuer,
+          subject: nestedVerification.subject,
+          subjectIdentity: nestedVerification.subjectIdentity,
+          subjectType: nestedVerification.subjectIdentity,
+          topic: nestedVerification.topic,
+        },
+        raw: {
+          creationBlock: nestedVerification.creationBlock,
+          creationDate: typeof nestedVerification.creationDate === 'number' ?
+            `${nestedVerification.creationDate}`.replace(/...$/, '') :
+            nestedVerification.creationDate,
+          data: nestedVerification.data,
+          disableSubVerifications: nestedVerification.disableSubVerifications,
+          signature: nestedVerification.signature,
+          status: nestedVerification.status,
+          topic: nestedVerification.topic,
+        },
+      };
+      if (nestedVerification.warnings) {
+        verification.statusFlags = nestedVerification.warnings;
+      }
+      // optional
+      if (nestedVerification.description && nestedVerification.description.author !== nullAddress) {
+        verification.description = nestedVerification.description;
+      }
+      if (nestedVerification.data && nestedVerification.data !== nullBytes32) {
+        verification.data = await this.options.dfs.get(Ipfs.bytes32ToIpfsHash(nestedVerification.data));
+      }
+      ['expirationDate', 'rejectReason'].map((property) => {
+        if (nestedVerification[property]) {
+          verification[property] = nestedVerification[property];
+        }
+      });
+      verifications.push(verification);
+    }
+
+    const result: any = { verifications };
+    if (levelComputed) {
+      result.levelComputed = levelComputed;
+    }
+
+    if (nestedVerifications.length &&
+        nestedVerifications[0].parents &&
+        nestedVerifications[0].parents.length) {
+      result.levelComputed.parents = await this.formatToV2(nestedVerifications[0].parents, queryOptions);
+    }
+
+    result.status = await this.computeStatus(result, queryOptions);
+
+    return result;
+  }
+
+  private async computeStatus(
+    partialResult: Partial<VerificationsResultV2>,
+    queryOptions: VerificationsQueryOptions,
+  ): Promise<VerificationsStatusV2> {
+    const { verifications, levelComputed: { statusFlags } } = partialResult;
+    let status: VerificationsStatusV2;
+
+    // 'collect colors'
+    status = VerificationsStatusV2.Green;
+    if (partialResult.levelComputed.statusFlags && partialResult.levelComputed.statusFlags.length) {
+      for (let statusFlag of partialResult.levelComputed.statusFlags) {
+        let tempStatus = VerificationsStatusV2.Green;
+        if (typeof queryOptions.validationOptions[statusFlag] === 'function') {
+          tempStatus = await (queryOptions.validationOptions[statusFlag] as Function)(partialResult);
+        } else if (typeof queryOptions.validationOptions[statusFlag] === 'string') {
+          tempStatus = queryOptions.validationOptions[statusFlag] as VerificationsStatusV2;
+        }
+        if (tempStatus === VerificationsStatusV2.Red) {
+          status = VerificationsStatusV2.Red;
+          break;
+        } else if (tempStatus === VerificationsStatusV2.Yellow &&
+            status === VerificationsStatusV2.Green) {
+          status = VerificationsStatusV2.Yellow;
+        }
+      }
+    }
+
+    return status;
+  }
+}
+
+export interface VerificationsResultV2 {
+  status: VerificationsStatusV2, // green, yellow or red
+  verifications?: [{
+    details: {
+      creationDate: number,       // js timestamp
+      data?: any,
+      description?: any,          // return only if actually set
+      expirationDate?: number,    // js timestamp
+      id: string,
+      issuer: string,             // account id
+      issuerIdentity: string,     // issuers identiy
+      rejectReason?: string,
+      subject: string,
+      subjectIdentity: string,
+      subjectType: string,
+      topic: string,
+    },
+    raw?: {
+      creationBlock: string,
+      creationDate: string,       // unix timestamp (s)
+      data: string,
+      disableSubVerifications: boolean,
+      signature: string,
+      status: number,
+      topic: string,              // uint string
+    }
+    statusFlags?: VerificationsStatusFlagsV2[]    // all found flags, those may not have impact on traffic light (depends on config)
+  }],
+  levelComputed?: {
+    expirationDate?: number,    // js timestamp
+    parents: VerificationsResultV2,
+    statusFlags?: VerificationsStatusFlagsV2[]  // only flags that occurr in all verifications
+    subject: string,
+    subjectIdentity: string,
+    subjectType: string,
+    topic: string,
+  },
+}
+
+export enum VerificationsStatusV2 {
+  Green = 'green',
+  Yellow = 'yellow',
+  Red = 'red',
+}
+
+export enum VerificationsStatusFlagsV2 {
+  // parent verification does not allow subverifications
+  disableSubVerifications = 'disableSubVerifications',
+  // verification has expired
+  expired = 'expired',
+  // signature does not match requirements, this could be because it hasn’t been signed by correct account or underlying checksum does not match subject, topic and data
+  invalid = 'invalid',
+  // verification has been issued, but not accepted or rejected by subject
+  issued = 'issued',
+  // verification has not been issued
+  missing = 'missing',
+  // given subject has no identity
+  noIdentity = 'noIdentity',
+  // verification path has a trusted root verification topic, but this verification is not signed by a trusted instance
+  notEnsRootOwner = 'notEnsRootOwner',
+  // parent verification is missing in path
+  parentMissing = 'parentMissing',
+  // verification path cannot be traced back to a trusted root verification
+  parentUntrusted = 'parentUntrusted',
+  // verification has been issued and then rejected by subject
+  rejected = 'rejected',
+  // verification issuer is the same account as the subject
+  selfIssued = 'selfIssued',
+}
+
+export interface VerificationsQueryOptions {
+  validationOptions: VerificationsValidationOptions,
+}
+
+export interface VerificationsValidationOptions {
+  [id: string]: VerificationsStatusV2 | Function;
 }

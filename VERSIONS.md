@@ -3,6 +3,7 @@
 ## Next Version
 ### Features
 - add support for delegated issuing of verifications
+- add ``getNestedVerificationsV2`` with updated interfaces and return values for clearer identity status
 
 ### Fixes
 
