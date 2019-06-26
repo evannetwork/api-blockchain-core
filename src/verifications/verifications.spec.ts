@@ -174,7 +174,7 @@ describe('Verifications handler', function() {
 
     it('can add a verification with data', async () => {
       const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
-      await verifications.setVerification(accounts[0], accounts[1], '/company', null, {foo: 'bar'});
+      await verifications.setVerification(accounts[0], accounts[1], '/company', 0, {foo: 'bar'});
       const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company');
       expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
     });
@@ -185,7 +185,7 @@ describe('Verifications handler', function() {
       const key = await encryptionWrapper.generateKey(cryptoInfo);
       const encrypted = await encryptionWrapper.encrypt(unencrypted, cryptoInfo, { key });
       const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
-      await verifications.setVerification(accounts[0], accounts[1], '/company', null, encrypted);
+      await verifications.setVerification(accounts[0], accounts[1], '/company', 0, encrypted);
       const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company');
       const retrieved = JSON.parse(await dfs.get(verificationsForAccount[oldLength].data));
       const decrypted = await encryptionWrapper.decrypt(retrieved, { key });
@@ -311,7 +311,7 @@ describe('Verifications handler', function() {
       await verifications.setVerificationDescription(
         accounts[0], sampleVerificationTopic, sampleVerificationsDomain, sampleDescription);
       await verifications.setVerification(
-        accounts[0], accounts[1], sampleVerificationTopic, null, null, sampleVerificationsDomain);
+        accounts[0], accounts[1], sampleVerificationTopic, 0, null, sampleVerificationsDomain);
       const verificationsForAccount = await verifications.getVerifications(
         accounts[1], sampleVerificationTopic);
       const last = verificationsForAccount.length - 1;
@@ -647,7 +647,7 @@ describe('Verifications handler', function() {
         const oldLength = (await verifications.getVerifications(
           subject, '/company', isIdentity)).length;
         await verifications.setVerification(
-          accounts[0], subject, '/company', null, {foo: 'bar'}, ...extraArgs.slice(2));
+          accounts[0], subject, '/company', 0, {foo: 'bar'}, ...extraArgs.slice(2));
         await timeout(5000);
         const verificationsForAccount = await verifications.getVerifications(
           subject, '/company', isIdentity);
@@ -660,7 +660,7 @@ describe('Verifications handler', function() {
         const key = await encryptionWrapper.generateKey(cryptoInfo);
         const encrypted = await encryptionWrapper.encrypt(unencrypted, cryptoInfo, { key });
         const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
-        await verifications.setVerification(accounts[0], accounts[1], '/company', null, encrypted);
+        await verifications.setVerification(accounts[0], accounts[1], '/company', 0, encrypted);
         const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company');
         const retrieved = JSON.parse(await dfs.get(verificationsForAccount[oldLength].data));
         const decrypted = await encryptionWrapper.decrypt(retrieved, { key });
@@ -804,7 +804,7 @@ describe('Verifications handler', function() {
           accounts[0],
           subject,
           sampleVerificationTopic,
-          null,
+          0,
           null,
           sampleVerificationsDomain,
           ...extraArgs.slice(3),
@@ -829,7 +829,7 @@ describe('Verifications handler', function() {
         const verificationId = await verifications.setVerification(
           accounts[0], subject, '/company/b-s-s/employee/swo4', ...extraArgs);
         await verifications.rejectVerification(
-          accounts[0], subject, verificationId, null, isIdentity);
+          accounts[0], subject, verificationId, 0, isIdentity);
         const verificationsForAccount = await verifications.getVerifications(
           subject, '/company/b-s-s/employee/swo4', isIdentity);
         expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
@@ -872,7 +872,7 @@ describe('Verifications handler', function() {
         const verificationId = await verifications.setVerification(
           accounts[0], subject, '/company/b-s-s/employee/swo4', ...extraArgs);
         await verifications.rejectVerification(
-          accounts[0], subject, verificationId, null, isIdentity);
+          accounts[0], subject, verificationId, 0, isIdentity);
         const reacceptedP = verifications.confirmVerification(accounts[0], subject, verificationId);
         await expect(reacceptedP).to.be.rejected;
       });
@@ -1008,7 +1008,7 @@ describe('Verifications handler', function() {
 
           // check issued case
           await verifications.setVerification(
-            accounts[0], accounts[0], parentTopic, null, null, null, true);
+            accounts[0], accounts[0], parentTopic, 0, null, null, true);
           await verifications.setVerification(accounts[0], subject, topic, ...extraArgs);
 
           // load parent verifications and computed from child
