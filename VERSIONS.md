@@ -3,6 +3,7 @@
 ## Next Version
 ### Features
 - add support for delegated issuing of verifications
+- add evan light docs design
 
 ### Fixes
 
