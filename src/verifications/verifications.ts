@@ -46,20 +46,61 @@ import { Ipfs } from '../dfs/ipfs';
 const nullAddress = '0x0000000000000000000000000000000000000000';
 const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
-
+/**
+ * verification status from blockchain
+ */
 export enum VerificationsStatus {
-  /**
-   * issued by a non-issuer parent verification holder, self issued state is 0
-   */
+  /** issued by a non-issuer parent verification holder, self issued state is 0 */
   Issued,
-  /**
-   * issued by a non-issuer parent verification holder, self issued state is 0
-   */
+  /** issued by a non-issuer parent verification holder, self issued state is 0 */
   Confirmed,
-  /**
-   * verification rejected status
-   */
-  Rejected
+  /** verification rejected status */
+  Rejected,
+}
+
+/**
+ * status annotations about verification, depending on defined ``VerificationsQueryOptions``,
+ * this may lead to the verification to be invalid or less trustworthy
+ */
+export enum VerificationsStatusFlagsV2 {
+  /** parent verification does not allow subverifications */
+  disableSubVerifications = 'disableSubVerifications',
+  /** verification has expired */
+  expired = 'expired',
+  /** signature does not match requirements, this could be because it hasn’t been signed
+    * by correct account or underlying checksum does not match subject, topic and data */
+  invalid = 'invalid',
+  /** verification has been issued, but not accepted or rejected by subject */
+  issued = 'issued',
+  /** verification has not been issued */
+  missing = 'missing',
+  /** given subject has no identity */
+  noIdentity = 'noIdentity',
+  /** verification path has a trusted root verification topic, but this verification is not signed
+    * by a trusted instance */
+  notEnsRootOwner = 'notEnsRootOwner',
+  /** parent verification is missing in path */
+  parentMissing = 'parentMissing',
+  /** verification path cannot be traced back to a trusted root verification */
+  parentUntrusted = 'parentUntrusted',
+  /** verification has been issued and then rejected by subject */
+  rejected = 'rejected',
+  /** verification issuer is the same account as the subject */
+  selfIssued = 'selfIssued',
+}
+
+/**
+ * represents the status of a requested verification topic
+ * after applying rules in ``VerificationsQueryOptions``
+ */
+export enum VerificationsStatusV2 {
+  /** verification is valid according to ``VerificationsQueryOptions`` */
+  Green = 'green',
+  /** verification may be valid but more checks may be required more for trusting it,
+   *  see status flags for details  */
+  Yellow = 'yellow',
+  /** verification is invalid, see status flags for details */
+  Red = 'red',
 }
 
 /**
@@ -82,6 +123,142 @@ export interface VerificationsDelegationInfo {
 }
 
 /**
+ * options for ``getNestedVerificationsV2``, define how to calculate status of verification
+ */
+export interface VerificationsQueryOptions {
+  /** specification of how to handle status flags of each single verification */
+  validationOptions?: VerificationsValidationOptions,
+  /** function for setting verification with custom logic */
+  statusComputer?: VerificationsStatusComputer,
+}
+
+/**
+ * result of a verification query
+ */
+export interface VerificationsResultV2 {
+  /** overall status of verification */
+  status: VerificationsStatusV2,
+  /** list of verifications on same topic and subject */
+  verifications?: VerificationsVerificationEntry[],
+  /** consolidated information about verification  */
+  levelComputed?: {
+    /** identity contract address or hash of subject */
+    subjectIdentity: string,
+    /** type of subject (account/contract) */
+    subjectType: string,
+    /** topic (name) of verification */
+    topic: string,
+    /** js timestamp */
+    expirationDate?: number,
+    /** verifications of parent path, issued for all issuers of verifications on this level */
+    parents?: VerificationsResultV2,
+    /** subject accountId/contractId (if query was issued with ``isIdentity`` set to ``false``) */
+    subject?: string,
+  },
+}
+
+/**
+ * a single verification; usually used in ``VerificationsResultV2``
+ */
+export interface VerificationsVerificationEntry {
+  /** details about verification */
+  details: {
+    /** js timestamp of verification creation */
+    creationDate: number,
+    /** ens address of description for this verification */
+    ensAddress: string,
+    /** id in verification holder / verifications registry */
+    id: string,
+    /** account id of verification issuer */
+    issuer: string,
+    /** issuers identity contract id */
+    issuerIdentity: string,
+    /** identity (contract or identity hash) of subject */
+    subjectIdentity: string,
+    /** type of subject (account/contract) */
+    subjectType: string,
+    /** topic of identity (name) */
+    topic: string,
+    /** 32B data hash string of identity */
+    data?: any,
+    /** only if actually set */
+    description?: any,
+    /** expiration date of verification (js timestamp) */
+    expirationDate?: number,
+    /** if applicable, reason for verification rejection */
+    rejectReason?: string,
+    /** status of verification, is optional during result computation and required when done */
+    status?: VerificationsStatusV2,
+    /** subject accountId/contractId (if query was issued with ``isIdentity`` set to ``false``) */
+    subject?: string,
+  },
+  /** raw data about verification from contract */
+  raw?: {
+    /** block in which verification was issued */
+    creationBlock: string,
+    /** unix timestamp is s when verification was issued */
+    creationDate: string,
+    /** 32B data hash string of identity, bytes32 zero if unset */
+    data: string,
+    /** true if subverification are not allowed */
+    disableSubVerifications: boolean,
+    /** signature over verification data */
+    signature: string,
+    /** status of verification, (issued, accepted, rejected, etc.) */
+    status: number,
+    /** uint string of verification name (topic), is uint representation of sha3 of name */
+    topic: string,
+  },
+  /** all found flags, those may not have impact on status,
+   *  depends on ``VerificationsStatusFlagsV2`` */
+  statusFlags?: string[],
+}
+
+/**
+ * Computes status for a single verification. verification, partialResult
+ *
+ * @param      {Partial<VerificationsVerificationEntry>} verification   current verification result
+ *                                                                      (without status)
+ * @param      {Partial<VerificationsResultV2>}          partialResult  options for verifications query
+ * @return     {VerificationsStatusV2}                   status for this verification
+ */
+export interface VerificationsVerificationEntryStatusComputer {
+  (
+    verification: Partial<VerificationsVerificationEntry>,
+    partialResult: Partial<VerificationsResultV2>,
+  ): Promise<VerificationsStatusV2>
+}
+
+/**
+ * Computes status from overall verifications result.
+ * This function is applied after each verification has received an own computed status.
+ *
+ * @param      {Partial<VerificationsResultV2>} partialResult  current verification result (without status)
+ * @param      {VerificationsQueryOptions}      queryOptions   options for verifications query
+ * @param      {VerificationsStatusV2}          currentStatus  current status of verification
+ * @return     {VerificationsStatusV2}          updated status, will be used at verification status
+ */
+export interface VerificationsStatusComputer {
+  (
+    partialResult: Partial<VerificationsResultV2>,
+    queryOptions: VerificationsQueryOptions,
+    currentStatus: VerificationsStatusV2,
+  ): Promise<VerificationsStatusV2>
+}
+
+/**
+ * Options for verification status computation. Keys are string representations of
+ * ``VerificationsStatusFlagsV2``, values can be ``VerificationsStatusV2`` or functions.
+ * If value is ``VerificationsStatusV2``, then finding given status flag sets verification value
+ * to given ``VerificationsStatusV2`` (if not already at a higher trust level).
+ * If value is function, pass verification to this function and set verification status to
+ * return value (if not already at a higher trust level).
+ */
+export interface VerificationsValidationOptions {
+  [id: string]: VerificationsStatusV2 | VerificationsVerificationEntryStatusComputer;
+}
+
+/**
  * options for Verification constructor, basically a trimmed runtime
  */
 export interface VerificationsOptions extends LoggerOptions {
@@ -94,7 +271,6 @@ export interface VerificationsOptions extends LoggerOptions {
   nameResolver: NameResolver;
   storage?: string;
 }
-
 
 /**
  * Verifications helper
@@ -199,7 +375,7 @@ export class Verifications extends Logger {
     // iterate through all verifications and check for warnings and the latest creation date of an
     // verification
     for (let verification of verifications) {
-      // concadinate all warnings
+      // concatenate all warnings
       computed.warnings = computed.warnings.concat(verification.warnings);
 
       // use the highest status (-1 missing, 0 issued, 1 valid, 2 rejected)
@@ -370,7 +546,7 @@ export class Verifications extends Logger {
       // if the key is equal to the topic that should be checked, delete only the cache for the
       // given subject
       if (key === topic) {
-        // delete all related subjectes for the given topic, or remove all, when subject is a
+        // delete all related subjects for the given topic, or remove all, when subject is a
         // wildcard
         if (this.verificationCache[topic] &&
             (this.verificationCache[topic][subject] || subject === '*')) {
@@ -668,7 +844,7 @@ export class Verifications extends Logger {
    *     icon: 'icon to display',
    *     // if the verification was rejected, a reject reason could be applied
    *     rejectReason: '' || { },
-   *     // subjec type
+   *     // subject type
    *     subjectType: 'account' || 'contract',
    *     // if it's a contract, it can be an contract
    *     subjectOwner: 'account' || 'contract',
@@ -1729,43 +1905,74 @@ export class Verifications extends Logger {
     );
   }
 
-  // v2 components, will be moved into correct place after finished
+  /**
+   * Get verifications and their parent paths for a specific subject, then format it to update
+   * result format.
+   *
+   * @param      {string}                     subject       subject (account/contract or identity)
+   * @param      {string}                     topic         topic (verification name) to check
+   * @param      {boolean}                    isIdentity    true if subject is identity
+   * @param      {VerificationsQueryOptions}  queryOptions  options for query and status computation
+   * @return     {Promise<VerificationsResultV2>}  verification result object with status,
+   *                                               verification data and tree
+   */
   public async getNestedVerificationsV2(
     subject: string,
     topic: string,
     isIdentity?: boolean,
     queryOptions?: VerificationsQueryOptions,
- ): Promise<VerificationsResultV2> {
+  ): Promise<VerificationsResultV2> {
     const nested = await this.getNestedVerifications(subject, topic, isIdentity);
     return this.formatToV2(nested, queryOptions || this.defaultQueryOptions);
   }
 
-  public async formatToV2(nestedVerificationsInput: any[], queryOptions: VerificationsQueryOptions): Promise<VerificationsResultV2> {
-    const nestedVerifications = nestedVerificationsInput.filter(verification => verification.status !== -1);
+  /**
+   * Format given result to V2 data format.
+   *
+   * @param      {any}                        nestedVerificationsInput  verifications array
+   * @param      {VerificationsQueryOptions}  queryOptions              options for result
+   *                                                                    status computation
+   */
+  public async formatToV2(
+    nestedVerificationsInput: any[],
+    queryOptions: VerificationsQueryOptions,
+  ): Promise<VerificationsResultV2> {
+    const nestedVerifications = nestedVerificationsInput.filter(
+      verification => verification.status !== -1);
     if (!nestedVerifications.length) {
-      return { status: VerificationsStatusV2.Red };
+      return {
+        status: VerificationsStatusV2.Red,
+        verifications: [],
+      };
     }
     let verifications = [];
     let levelComputed: any;
 
     if (nestedVerifications.length) {
+      let parents;
+      if (nestedVerifications[0].parents &&
+          nestedVerifications[0].parents.length) {
+        parents = await this.formatToV2(nestedVerifications[0].parents, queryOptions);
+      }
       levelComputed = {
-        subject: nestedVerifications[0].subject,
         subjectIdentity: nestedVerifications[0].subjectIdentity,
         subjectType: nestedVerifications[0].subjectType,
         topic: nestedVerifications[0].levelComputed.name,
       };
-      if (nestedVerifications[0].levelComputed.warnings) {
-        levelComputed.statusFlags = nestedVerifications[0].levelComputed.warnings;
+      if (nestedVerifications[0].subjectIdentity !== nestedVerifications[0].subject) {
+        levelComputed.subject = nestedVerifications[0].subject;
       }
       if (nestedVerifications[0].levelComputed.expirationDate) {
         levelComputed.expirationDate = nestedVerifications[0].levelComputed.expirationDate;
+      }
+      if (parents) {
+        levelComputed.parents = parents;
       }
     }
 
     // convert verification data
     for (let nestedVerification of nestedVerifications) {
-      const verification: any = {
+      const verification: Partial<VerificationsVerificationEntry> = {
         details: {
           creationDate: nestedVerification.creationDate,
           ensAddress: nestedVerification.ensAddress,
@@ -1775,7 +1982,7 @@ export class Verifications extends Logger {
           subject: nestedVerification.subject,
           subjectIdentity: nestedVerification.subjectIdentity,
           subjectType: nestedVerification.subjectIdentity,
-          topic: nestedVerification.topic,
+          topic: nestedVerification.name,
         },
         raw: {
           creationBlock: nestedVerification.creationBlock,
@@ -1789,15 +1996,19 @@ export class Verifications extends Logger {
           topic: nestedVerification.topic,
         },
       };
+      if (nestedVerification.subjectIdentity !== nestedVerification.subject) {
+        // .subject may be .subject's identity, ignore value in this case
+        levelComputed.subject = nestedVerification.subject;
+      }
       if (nestedVerification.warnings) {
         verification.statusFlags = nestedVerification.warnings;
       }
-      // optional
       if (nestedVerification.description && nestedVerification.description.author !== nullAddress) {
-        verification.description = nestedVerification.description;
+        verification.details.description = nestedVerification.description;
       }
       if (nestedVerification.data && nestedVerification.data !== nullBytes32) {
-        verification.data = await this.options.dfs.get(Ipfs.bytes32ToIpfsHash(nestedVerification.data));
+        verification.details.data = await this.options.dfs.get(
+          Ipfs.bytes32ToIpfsHash(nestedVerification.data));
       }
       ['expirationDate', 'rejectReason'].map((property) => {
         if (nestedVerification[property]) {
@@ -1812,122 +2023,116 @@ export class Verifications extends Logger {
       result.levelComputed = levelComputed;
     }
 
-    if (nestedVerifications.length &&
-        nestedVerifications[0].parents &&
-        nestedVerifications[0].parents.length) {
-      result.levelComputed.parents = await this.formatToV2(nestedVerifications[0].parents, queryOptions);
-    }
-
     result.status = await this.computeStatus(result, queryOptions);
 
     return result;
   }
 
+  /**
+   * Compute status for given (partial) result.
+   *
+   * @param      {Partial<VerificationsResultV2>}  partialResult  current to be calculated result
+   * @param      {VerificationsQueryOptions}       queryOptions   options for query and
+   *                                                              status computation
+   */
   private async computeStatus(
     partialResult: Partial<VerificationsResultV2>,
     queryOptions: VerificationsQueryOptions,
   ): Promise<VerificationsStatusV2> {
-    const { verifications, levelComputed: { statusFlags } } = partialResult;
     let status: VerificationsStatusV2;
 
-    // 'collect colors'
-    status = VerificationsStatusV2.Green;
-    if (partialResult.levelComputed.statusFlags && partialResult.levelComputed.statusFlags.length) {
-      for (let statusFlag of partialResult.levelComputed.statusFlags) {
-        let tempStatus = VerificationsStatusV2.Green;
-        if (typeof queryOptions.validationOptions[statusFlag] === 'function') {
-          tempStatus = await (queryOptions.validationOptions[statusFlag] as Function)(partialResult);
-        } else if (typeof queryOptions.validationOptions[statusFlag] === 'string') {
-          tempStatus = queryOptions.validationOptions[statusFlag] as VerificationsStatusV2;
+    let bestReachableStatus = VerificationsStatusV2.Green;
+    // 'inherit' parent status only if parent actually has verifications
+    if (partialResult.levelComputed.parents &&
+        partialResult.levelComputed.parents.verifications.length) {
+      bestReachableStatus = partialResult.levelComputed.parents.status;
+    }
+
+    // 'collect colors' (if best reachable is yellow or green)
+    // iterate over all verifications, then over all flags and update status
+    // later on pick most trustworthy verification as trust level
+    // iterate even if best reachable is 'red', as status is set per verification
+    for (let verification of partialResult.verifications) {
+      // check this levels trustworthiness
+      let currentVerificationStatus;
+      if (verification.statusFlags &&
+          verification.statusFlags.length) {
+        // flags found, set to false and start to prove trustworthiness
+        currentVerificationStatus = VerificationsStatusV2.Red;
+        for (let statusFlag of verification.statusFlags) {
+          // current flag is untrusted by default, start checks
+          let tempStatus = VerificationsStatusV2.Red;
+          // use defined status or function for check
+          if (typeof queryOptions.validationOptions[statusFlag] === 'function') {
+            tempStatus = await (queryOptions.validationOptions[statusFlag] as Function)(
+              verification, partialResult);
+          } else if (typeof queryOptions.validationOptions[statusFlag] === 'string') {
+            tempStatus = queryOptions.validationOptions[statusFlag] as VerificationsStatusV2;
+          } else if (typeof this.defaultValidationOptions[statusFlag] === 'function') {
+            tempStatus = await (this.defaultValidationOptions[statusFlag] as Function)(
+              verification, partialResult);
+          } else if (typeof this.defaultValidationOptions[statusFlag] === 'string') {
+            tempStatus = this.defaultValidationOptions[statusFlag] as VerificationsStatusV2;
+          }
+          if (tempStatus === VerificationsStatusV2.Green ||
+              tempStatus === bestReachableStatus) {
+            // if current verification is trustworthy, break and set status to "green"
+            currentVerificationStatus = bestReachableStatus;
+            break;
+          } else if (tempStatus === VerificationsStatusV2.Yellow &&
+              currentVerificationStatus === VerificationsStatusV2.Red) {
+            // if current overall trust level is still "red" and current verification is "yellow",
+            // increase trust level to "yellow"
+            currentVerificationStatus = VerificationsStatusV2.Yellow;
+          }
         }
-        if (tempStatus === VerificationsStatusV2.Red) {
-          status = VerificationsStatusV2.Red;
-          break;
-        } else if (tempStatus === VerificationsStatusV2.Yellow &&
-            status === VerificationsStatusV2.Green) {
-          status = VerificationsStatusV2.Yellow;
-        }
+        verification.details.status = currentVerificationStatus;
+      } else {
+        verification.details.status = bestReachableStatus;
       }
+    }
+
+    // bestReachableStatus has already been taken into consideration in last block,
+    // so we can just take status flag here
+    if (partialResult.verifications
+        .filter(v => v.details.status === VerificationsStatusV2.Green).length) {
+      status = VerificationsStatusV2.Green;
+    } else if (partialResult.verifications
+        .filter(v => v.details.status === VerificationsStatusV2.Yellow).length) {
+      status = VerificationsStatusV2.Yellow;
+    } else {
+      status = VerificationsStatusV2.Red;
+    }
+
+    // if custom status computation has been defined, apply it after using default computation
+    if (queryOptions.statusComputer) {
+      status = await queryOptions.statusComputer(partialResult, queryOptions, status);
     }
 
     return status;
   }
-}
 
-export interface VerificationsResultV2 {
-  status: VerificationsStatusV2, // green, yellow or red
-  verifications?: [{
-    details: {
-      creationDate: number,       // js timestamp
-      data?: any,
-      description?: any,          // return only if actually set
-      expirationDate?: number,    // js timestamp
-      id: string,
-      issuer: string,             // account id
-      issuerIdentity: string,     // issuers identiy
-      rejectReason?: string,
-      subject: string,
-      subjectIdentity: string,
-      subjectType: string,
-      topic: string,
-    },
-    raw?: {
-      creationBlock: string,
-      creationDate: string,       // unix timestamp (s)
-      data: string,
-      disableSubVerifications: boolean,
-      signature: string,
-      status: number,
-      topic: string,              // uint string
+  /**
+   * Trim ``VerificationsResultV2`` result down to statusFlags and status values for analysis
+   * purposes and debugging.
+   *
+   * @param      {VerificationsResultV2}  inputResult  result to trim down
+   * @return     {any}                    trimmed down tree
+   */
+  public trimToStatusTree(inputResult: VerificationsResultV2): any {
+    const trimmed: any = {
+      status: inputResult.status,
+      verifications: inputResult.verifications.map(v => ({
+        details: {
+          status: v.details.status,
+          topic: inputResult.levelComputed.topic,
+        },
+        statusFlags: v.statusFlags,
+      })),
+    };
+    if (inputResult.levelComputed && inputResult.levelComputed.parents) {
+      trimmed.levelComputed = { parents: this.trimToStatusTree(inputResult.levelComputed.parents) };
     }
-    statusFlags?: VerificationsStatusFlagsV2[]    // all found flags, those may not have impact on traffic light (depends on config)
-  }],
-  levelComputed?: {
-    expirationDate?: number,    // js timestamp
-    parents: VerificationsResultV2,
-    statusFlags?: VerificationsStatusFlagsV2[]  // only flags that occurr in all verifications
-    subject: string,
-    subjectIdentity: string,
-    subjectType: string,
-    topic: string,
-  },
-}
-
-export enum VerificationsStatusV2 {
-  Green = 'green',
-  Yellow = 'yellow',
-  Red = 'red',
-}
-
-export enum VerificationsStatusFlagsV2 {
-  // parent verification does not allow subverifications
-  disableSubVerifications = 'disableSubVerifications',
-  // verification has expired
-  expired = 'expired',
-  // signature does not match requirements, this could be because it hasn’t been signed by correct account or underlying checksum does not match subject, topic and data
-  invalid = 'invalid',
-  // verification has been issued, but not accepted or rejected by subject
-  issued = 'issued',
-  // verification has not been issued
-  missing = 'missing',
-  // given subject has no identity
-  noIdentity = 'noIdentity',
-  // verification path has a trusted root verification topic, but this verification is not signed by a trusted instance
-  notEnsRootOwner = 'notEnsRootOwner',
-  // parent verification is missing in path
-  parentMissing = 'parentMissing',
-  // verification path cannot be traced back to a trusted root verification
-  parentUntrusted = 'parentUntrusted',
-  // verification has been issued and then rejected by subject
-  rejected = 'rejected',
-  // verification issuer is the same account as the subject
-  selfIssued = 'selfIssued',
-}
-
-export interface VerificationsQueryOptions {
-  validationOptions: VerificationsValidationOptions,
-}
-
-export interface VerificationsValidationOptions {
-  [id: string]: VerificationsStatusV2 | Function;
+    return trimmed;
+  }
 }
