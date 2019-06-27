@@ -711,6 +711,108 @@ export class Verifications extends Logger {
   }
 
   /**
+   * Format given result to V2 data format.
+   *
+   * @param      {any}                        nestedVerificationsInput  verifications array
+   * @param      {VerificationsQueryOptions}  queryOptions              options for result
+   *                                                                    status computation
+   */
+  public async formatToV2(
+    nestedVerificationsInput: any[],
+    queryOptions: VerificationsQueryOptions,
+  ): Promise<VerificationsResultV2> {
+    const nestedVerifications = nestedVerificationsInput.filter(
+      verification => verification.status !== -1);
+    if (!nestedVerifications.length) {
+      return {
+        status: VerificationsStatusV2.Red,
+        verifications: [],
+      };
+    }
+    let verifications = [];
+    let levelComputed: any;
+
+    if (nestedVerifications.length) {
+      let parents;
+      if (nestedVerifications[0].parents &&
+          nestedVerifications[0].parents.length) {
+        parents = await this.formatToV2(nestedVerifications[0].parents, queryOptions);
+      }
+      levelComputed = {
+        subjectIdentity: nestedVerifications[0].subjectIdentity,
+        subjectType: nestedVerifications[0].subjectType,
+        topic: nestedVerifications[0].levelComputed.name,
+      };
+      if (nestedVerifications[0].subjectIdentity !== nestedVerifications[0].subject) {
+        levelComputed.subject = nestedVerifications[0].subject;
+      }
+      if (nestedVerifications[0].levelComputed.expirationDate) {
+        levelComputed.expirationDate = nestedVerifications[0].levelComputed.expirationDate;
+      }
+      if (parents) {
+        levelComputed.parents = parents;
+      }
+    }
+
+    // convert verification data
+    for (let nestedVerification of nestedVerifications) {
+      const verification: Partial<VerificationsVerificationEntry> = {
+        details: {
+          creationDate: nestedVerification.creationDate,
+          ensAddress: nestedVerification.ensAddress,
+          id: nestedVerification.id,
+          issuer: nestedVerification.issuerAccount,
+          issuerIdentity: nestedVerification.issuer,
+          subject: nestedVerification.subject,
+          subjectIdentity: nestedVerification.subjectIdentity,
+          subjectType: nestedVerification.subjectIdentity,
+          topic: nestedVerification.name,
+        },
+        raw: {
+          creationBlock: nestedVerification.creationBlock,
+          creationDate: typeof nestedVerification.creationDate === 'number' ?
+            `${nestedVerification.creationDate}`.replace(/...$/, '') :
+            nestedVerification.creationDate,
+          data: nestedVerification.data,
+          disableSubVerifications: nestedVerification.disableSubVerifications,
+          signature: nestedVerification.signature,
+          status: nestedVerification.status,
+          topic: nestedVerification.topic,
+        },
+      };
+      if (nestedVerification.subjectIdentity !== nestedVerification.subject) {
+        // .subject may be .subject's identity, ignore value in this case
+        levelComputed.subject = nestedVerification.subject;
+      }
+      if (nestedVerification.warnings) {
+        verification.statusFlags = nestedVerification.warnings;
+      }
+      if (nestedVerification.description && nestedVerification.description.author !== nullAddress) {
+        verification.details.description = nestedVerification.description;
+      }
+      if (nestedVerification.data && nestedVerification.data !== nullBytes32) {
+        verification.details.data = await this.options.dfs.get(
+          Ipfs.bytes32ToIpfsHash(nestedVerification.data));
+      }
+      ['expirationDate', 'rejectReason'].map((property) => {
+        if (nestedVerification[property]) {
+          verification[property] = nestedVerification[property];
+        }
+      });
+      verifications.push(verification);
+    }
+
+    const result: any = { verifications };
+    if (levelComputed) {
+      result.levelComputed = levelComputed;
+    }
+
+    result.status = await this.computeStatus(result, queryOptions);
+
+    return result;
+  }
+
+  /**
    * Loads a list of verifications for a topic and a subject and combines to a single view for a
    * simple verification status check.
    *
@@ -1057,6 +1159,27 @@ export class Verifications extends Logger {
     }
 
     return await this.verificationCache[topic][subject];
+  }
+
+  /**
+   * Get verifications and their parent paths for a specific subject, then format it to update
+   * result format.
+   *
+   * @param      {string}                     subject       subject (account/contract or identity)
+   * @param      {string}                     topic         topic (verification name) to check
+   * @param      {boolean}                    isIdentity    true if subject is identity
+   * @param      {VerificationsQueryOptions}  queryOptions  options for query and status computation
+   * @return     {Promise<VerificationsResultV2>}  verification result object with status,
+   *                                               verification data and tree
+   */
+  public async getNestedVerificationsV2(
+    subject: string,
+    topic: string,
+    isIdentity?: boolean,
+    queryOptions?: VerificationsQueryOptions,
+  ): Promise<VerificationsResultV2> {
+    const nested = await this.getNestedVerifications(subject, topic, isIdentity);
+    return this.formatToV2(nested, queryOptions || this.defaultQueryOptions);
   }
 
   /**
@@ -1477,6 +1600,30 @@ export class Verifications extends Logger {
   }
 
   /**
+   * Trim ``VerificationsResultV2`` result down to statusFlags and status values for analysis
+   * purposes and debugging.
+   *
+   * @param      {VerificationsResultV2}  inputResult  result to trim down
+   * @return     {any}                    trimmed down tree
+   */
+  public trimToStatusTree(inputResult: VerificationsResultV2): any {
+    const trimmed: any = {
+      status: inputResult.status,
+      verifications: inputResult.verifications.map(v => ({
+        details: {
+          status: v.details.status,
+          topic: inputResult.levelComputed.topic,
+        },
+        statusFlags: v.statusFlags,
+      })),
+    };
+    if (inputResult.levelComputed && inputResult.levelComputed.parents) {
+      trimmed.levelComputed = { parents: this.trimToStatusTree(inputResult.levelComputed.parents) };
+    }
+    return trimmed;
+  }
+
+  /**
    * validates a given verificationId in case of integrity
    *
    * @param      {string}   subject         the subject of the verification
@@ -1548,6 +1695,90 @@ export class Verifications extends Logger {
         ...args,
       );
     }
+  }
+
+  /**
+   * Compute status for given (partial) result.
+   *
+   * @param      {Partial<VerificationsResultV2>}  partialResult  current to be calculated result
+   * @param      {VerificationsQueryOptions}       queryOptions   options for query and
+   *                                                              status computation
+   */
+  private async computeStatus(
+    partialResult: Partial<VerificationsResultV2>,
+    queryOptions: VerificationsQueryOptions,
+  ): Promise<VerificationsStatusV2> {
+    let status: VerificationsStatusV2;
+
+    let bestReachableStatus = VerificationsStatusV2.Green;
+    // 'inherit' parent status only if parent actually has verifications
+    if (partialResult.levelComputed.parents &&
+        partialResult.levelComputed.parents.verifications.length) {
+      bestReachableStatus = partialResult.levelComputed.parents.status;
+    }
+
+    // 'collect colors' (if best reachable is yellow or green)
+    // iterate over all verifications, then over all flags and update status
+    // later on pick most trustworthy verification as trust level
+    // iterate even if best reachable is 'red', as status is set per verification
+    for (let verification of partialResult.verifications) {
+      // check this levels trustworthiness
+      let currentVerificationStatus;
+      if (verification.statusFlags &&
+          verification.statusFlags.length) {
+        // flags found, set to false and start to prove trustworthiness
+        currentVerificationStatus = VerificationsStatusV2.Red;
+        for (let statusFlag of verification.statusFlags) {
+          // current flag is untrusted by default, start checks
+          let tempStatus = VerificationsStatusV2.Red;
+          // use defined status or function for check
+          if (typeof queryOptions.validationOptions[statusFlag] === 'function') {
+            tempStatus = await (queryOptions.validationOptions[statusFlag] as Function)(
+              verification, partialResult);
+          } else if (typeof queryOptions.validationOptions[statusFlag] === 'string') {
+            tempStatus = queryOptions.validationOptions[statusFlag] as VerificationsStatusV2;
+          } else if (typeof this.defaultValidationOptions[statusFlag] === 'function') {
+            tempStatus = await (this.defaultValidationOptions[statusFlag] as Function)(
+              verification, partialResult);
+          } else if (typeof this.defaultValidationOptions[statusFlag] === 'string') {
+            tempStatus = this.defaultValidationOptions[statusFlag] as VerificationsStatusV2;
+          }
+          if (tempStatus === VerificationsStatusV2.Green ||
+              tempStatus === bestReachableStatus) {
+            // if current verification is trustworthy, break and set status to "green"
+            currentVerificationStatus = bestReachableStatus;
+            break;
+          } else if (tempStatus === VerificationsStatusV2.Yellow &&
+              currentVerificationStatus === VerificationsStatusV2.Red) {
+            // if current overall trust level is still "red" and current verification is "yellow",
+            // increase trust level to "yellow"
+            currentVerificationStatus = VerificationsStatusV2.Yellow;
+          }
+        }
+        verification.details.status = currentVerificationStatus;
+      } else {
+        verification.details.status = bestReachableStatus;
+      }
+    }
+
+    // bestReachableStatus has already been taken into consideration in last block,
+    // so we can just take status flag here
+    if (partialResult.verifications
+        .filter(v => v.details.status === VerificationsStatusV2.Green).length) {
+      status = VerificationsStatusV2.Green;
+    } else if (partialResult.verifications
+        .filter(v => v.details.status === VerificationsStatusV2.Yellow).length) {
+      status = VerificationsStatusV2.Yellow;
+    } else {
+      status = VerificationsStatusV2.Red;
+    }
+
+    // if custom status computation has been defined, apply it after using default computation
+    if (queryOptions.statusComputer) {
+      status = await queryOptions.statusComputer(partialResult, queryOptions, status);
+    }
+
+    return status;
   }
 
   /**
@@ -1903,236 +2134,5 @@ export class Verifications extends Logger {
       this.options.nameResolver.soliditySha3(...toSign),
       '0x' + await this.options.accountStore.getPrivateKey(accountId),
     );
-  }
-
-  /**
-   * Get verifications and their parent paths for a specific subject, then format it to update
-   * result format.
-   *
-   * @param      {string}                     subject       subject (account/contract or identity)
-   * @param      {string}                     topic         topic (verification name) to check
-   * @param      {boolean}                    isIdentity    true if subject is identity
-   * @param      {VerificationsQueryOptions}  queryOptions  options for query and status computation
-   * @return     {Promise<VerificationsResultV2>}  verification result object with status,
-   *                                               verification data and tree
-   */
-  public async getNestedVerificationsV2(
-    subject: string,
-    topic: string,
-    isIdentity?: boolean,
-    queryOptions?: VerificationsQueryOptions,
-  ): Promise<VerificationsResultV2> {
-    const nested = await this.getNestedVerifications(subject, topic, isIdentity);
-    return this.formatToV2(nested, queryOptions || this.defaultQueryOptions);
-  }
-
-  /**
-   * Format given result to V2 data format.
-   *
-   * @param      {any}                        nestedVerificationsInput  verifications array
-   * @param      {VerificationsQueryOptions}  queryOptions              options for result
-   *                                                                    status computation
-   */
-  public async formatToV2(
-    nestedVerificationsInput: any[],
-    queryOptions: VerificationsQueryOptions,
-  ): Promise<VerificationsResultV2> {
-    const nestedVerifications = nestedVerificationsInput.filter(
-      verification => verification.status !== -1);
-    if (!nestedVerifications.length) {
-      return {
-        status: VerificationsStatusV2.Red,
-        verifications: [],
-      };
-    }
-    let verifications = [];
-    let levelComputed: any;
-
-    if (nestedVerifications.length) {
-      let parents;
-      if (nestedVerifications[0].parents &&
-          nestedVerifications[0].parents.length) {
-        parents = await this.formatToV2(nestedVerifications[0].parents, queryOptions);
-      }
-      levelComputed = {
-        subjectIdentity: nestedVerifications[0].subjectIdentity,
-        subjectType: nestedVerifications[0].subjectType,
-        topic: nestedVerifications[0].levelComputed.name,
-      };
-      if (nestedVerifications[0].subjectIdentity !== nestedVerifications[0].subject) {
-        levelComputed.subject = nestedVerifications[0].subject;
-      }
-      if (nestedVerifications[0].levelComputed.expirationDate) {
-        levelComputed.expirationDate = nestedVerifications[0].levelComputed.expirationDate;
-      }
-      if (parents) {
-        levelComputed.parents = parents;
-      }
-    }
-
-    // convert verification data
-    for (let nestedVerification of nestedVerifications) {
-      const verification: Partial<VerificationsVerificationEntry> = {
-        details: {
-          creationDate: nestedVerification.creationDate,
-          ensAddress: nestedVerification.ensAddress,
-          id: nestedVerification.id,
-          issuer: nestedVerification.issuerAccount,
-          issuerIdentity: nestedVerification.issuer,
-          subject: nestedVerification.subject,
-          subjectIdentity: nestedVerification.subjectIdentity,
-          subjectType: nestedVerification.subjectIdentity,
-          topic: nestedVerification.name,
-        },
-        raw: {
-          creationBlock: nestedVerification.creationBlock,
-          creationDate: typeof nestedVerification.creationDate === 'number' ?
-            `${nestedVerification.creationDate}`.replace(/...$/, '') :
-            nestedVerification.creationDate,
-          data: nestedVerification.data,
-          disableSubVerifications: nestedVerification.disableSubVerifications,
-          signature: nestedVerification.signature,
-          status: nestedVerification.status,
-          topic: nestedVerification.topic,
-        },
-      };
-      if (nestedVerification.subjectIdentity !== nestedVerification.subject) {
-        // .subject may be .subject's identity, ignore value in this case
-        levelComputed.subject = nestedVerification.subject;
-      }
-      if (nestedVerification.warnings) {
-        verification.statusFlags = nestedVerification.warnings;
-      }
-      if (nestedVerification.description && nestedVerification.description.author !== nullAddress) {
-        verification.details.description = nestedVerification.description;
-      }
-      if (nestedVerification.data && nestedVerification.data !== nullBytes32) {
-        verification.details.data = await this.options.dfs.get(
-          Ipfs.bytes32ToIpfsHash(nestedVerification.data));
-      }
-      ['expirationDate', 'rejectReason'].map((property) => {
-        if (nestedVerification[property]) {
-          verification[property] = nestedVerification[property];
-        }
-      });
-      verifications.push(verification);
-    }
-
-    const result: any = { verifications };
-    if (levelComputed) {
-      result.levelComputed = levelComputed;
-    }
-
-    result.status = await this.computeStatus(result, queryOptions);
-
-    return result;
-  }
-
-  /**
-   * Compute status for given (partial) result.
-   *
-   * @param      {Partial<VerificationsResultV2>}  partialResult  current to be calculated result
-   * @param      {VerificationsQueryOptions}       queryOptions   options for query and
-   *                                                              status computation
-   */
-  private async computeStatus(
-    partialResult: Partial<VerificationsResultV2>,
-    queryOptions: VerificationsQueryOptions,
-  ): Promise<VerificationsStatusV2> {
-    let status: VerificationsStatusV2;
-
-    let bestReachableStatus = VerificationsStatusV2.Green;
-    // 'inherit' parent status only if parent actually has verifications
-    if (partialResult.levelComputed.parents &&
-        partialResult.levelComputed.parents.verifications.length) {
-      bestReachableStatus = partialResult.levelComputed.parents.status;
-    }
-
-    // 'collect colors' (if best reachable is yellow or green)
-    // iterate over all verifications, then over all flags and update status
-    // later on pick most trustworthy verification as trust level
-    // iterate even if best reachable is 'red', as status is set per verification
-    for (let verification of partialResult.verifications) {
-      // check this levels trustworthiness
-      let currentVerificationStatus;
-      if (verification.statusFlags &&
-          verification.statusFlags.length) {
-        // flags found, set to false and start to prove trustworthiness
-        currentVerificationStatus = VerificationsStatusV2.Red;
-        for (let statusFlag of verification.statusFlags) {
-          // current flag is untrusted by default, start checks
-          let tempStatus = VerificationsStatusV2.Red;
-          // use defined status or function for check
-          if (typeof queryOptions.validationOptions[statusFlag] === 'function') {
-            tempStatus = await (queryOptions.validationOptions[statusFlag] as Function)(
-              verification, partialResult);
-          } else if (typeof queryOptions.validationOptions[statusFlag] === 'string') {
-            tempStatus = queryOptions.validationOptions[statusFlag] as VerificationsStatusV2;
-          } else if (typeof this.defaultValidationOptions[statusFlag] === 'function') {
-            tempStatus = await (this.defaultValidationOptions[statusFlag] as Function)(
-              verification, partialResult);
-          } else if (typeof this.defaultValidationOptions[statusFlag] === 'string') {
-            tempStatus = this.defaultValidationOptions[statusFlag] as VerificationsStatusV2;
-          }
-          if (tempStatus === VerificationsStatusV2.Green ||
-              tempStatus === bestReachableStatus) {
-            // if current verification is trustworthy, break and set status to "green"
-            currentVerificationStatus = bestReachableStatus;
-            break;
-          } else if (tempStatus === VerificationsStatusV2.Yellow &&
-              currentVerificationStatus === VerificationsStatusV2.Red) {
-            // if current overall trust level is still "red" and current verification is "yellow",
-            // increase trust level to "yellow"
-            currentVerificationStatus = VerificationsStatusV2.Yellow;
-          }
-        }
-        verification.details.status = currentVerificationStatus;
-      } else {
-        verification.details.status = bestReachableStatus;
-      }
-    }
-
-    // bestReachableStatus has already been taken into consideration in last block,
-    // so we can just take status flag here
-    if (partialResult.verifications
-        .filter(v => v.details.status === VerificationsStatusV2.Green).length) {
-      status = VerificationsStatusV2.Green;
-    } else if (partialResult.verifications
-        .filter(v => v.details.status === VerificationsStatusV2.Yellow).length) {
-      status = VerificationsStatusV2.Yellow;
-    } else {
-      status = VerificationsStatusV2.Red;
-    }
-
-    // if custom status computation has been defined, apply it after using default computation
-    if (queryOptions.statusComputer) {
-      status = await queryOptions.statusComputer(partialResult, queryOptions, status);
-    }
-
-    return status;
-  }
-
-  /**
-   * Trim ``VerificationsResultV2`` result down to statusFlags and status values for analysis
-   * purposes and debugging.
-   *
-   * @param      {VerificationsResultV2}  inputResult  result to trim down
-   * @return     {any}                    trimmed down tree
-   */
-  public trimToStatusTree(inputResult: VerificationsResultV2): any {
-    const trimmed: any = {
-      status: inputResult.status,
-      verifications: inputResult.verifications.map(v => ({
-        details: {
-          status: v.details.status,
-          topic: inputResult.levelComputed.topic,
-        },
-        statusFlags: v.statusFlags,
-      })),
-    };
-    if (inputResult.levelComputed && inputResult.levelComputed.parents) {
-      trimmed.levelComputed = { parents: this.trimToStatusTree(inputResult.levelComputed.parents) };
-    }
-    return trimmed;
   }
 }
