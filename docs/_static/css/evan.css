@@ -9,6 +9,12 @@
   background-color: #fff;
 }
 
+.wy-side-nav-search > div.version {
+  display: inline-block;
+
+  color: #e71096;
+}
+
 .wy-nav-side .wy-side-nav-search a {
   font-size: 18px;
   font-weight: 500;
