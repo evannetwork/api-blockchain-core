@@ -2,13 +2,17 @@
 
 ## Next Version
 ### Features
-- add support for delegated issuing of verifications
-- add ``getNestedVerificationsV2`` with updated interfaces and return values for clearer identity status
-- add evan light docs design
 
 ### Fixes
 
 ### Deprecations
+
+
+## Version 2.8.0
+### Features
+- add support for delegated issuing of verifications
+- add ``getNestedVerificationsV2`` with updated interfaces and return values for clearer identity status
+- add evan light docs design
 
 
 ## Version 2.7.1
