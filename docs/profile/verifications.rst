@@ -134,7 +134,7 @@ createIdentity
 
   verifications.createIdentity(accountId[, contractId, updateDescription]);
 
-Creates a new identity for account or contract and registers them on the storage. Returned identity is either a 20B contract address (for account identities) or a 32B idenity hash contract identities.
+Creates a new identity for account or contract and registers them on the storage. Returned identity is either a 20B contract address (for account identities) or a 32B identity hash contract identities.
 
 ----------
 Parameters

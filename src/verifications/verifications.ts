@@ -301,7 +301,7 @@ export class Verifications extends Logger {
   };
 
   /**
-   * check if currently the storage is ensuring, if yes, dont run it twice
+   * check if currently the storage is ensuring, if yes, don't run it twice
    */
   storageEnsuring: Promise<any>;
 
@@ -453,7 +453,7 @@ export class Verifications extends Logger {
 
   /**
    * Creates a new identity for account or contract and registers them on the storage. Returned
-   * identity is either a 40B contract address (for account identities) or a 32B idenity hash
+   * identity is either a 40B contract address (for account identities) or a 32B identity hash
    * contract identities
    *
    * @param      {string}  accountId          account that runs transaction, receiver of identity
@@ -463,7 +463,7 @@ export class Verifications extends Logger {
    *                                          omitted
    * @param      {bool}    updateDescription  (optional) update description of contract, defaults to
    *                                          ``true``
-   * @param      {bool}    linkContract       link contract address to its idenity
+   * @param      {bool}    linkContract       link contract address to its identity
    * @return     {Promise<string>}  new identity (40Bytes for accounts, 32Bytes for other)
    */
   public async createIdentity(
@@ -536,7 +536,7 @@ export class Verifications extends Logger {
    * @return     {void}
    */
   public deleteFromVerificationCache(subject: string, topic: string) {
-    // prepent starting slash if it does not exists
+    // prepend starting slash if it does not exists
     if (topic.indexOf('/') !== 0) {
       topic = '/' + topic;
     }
@@ -983,7 +983,7 @@ export class Verifications extends Logger {
    *   }
    */
   public async getNestedVerifications(subject: string, topic: string, isIdentity?: boolean) {
-    // prepent starting slash if it does not exists
+    // prepend starting slash if it does not exists
     if (topic.indexOf('/') !== 0) {
       topic = '/' + topic;
     }
@@ -1063,7 +1063,7 @@ export class Verifications extends Logger {
               verification.warnings.push('invalid');
             }
 
-            // if isser === subject and only if a parent is passed, so if the root one is empty
+            // if issuer === subject and only if a parent is passed, so if the root one is empty
             // and no slash is available
             if (verification.issuerAccount === verification.subject && verification.parent &&
                 verification.issuerAccount !== this.options.config.ensRootOwner) {
@@ -1192,7 +1192,7 @@ export class Verifications extends Logger {
     // remove starting evan, /evan and / to get the correct domain
     const clearedTopic = topic.replace(/^(?:(?:\/)?(?:evan)?)(?:\/)?/gm, '');
 
-    // if a reverse domain is available, add it and seperate using a dot
+    // if a reverse domain is available, add it and separate using a dot
     let domain = 'verifications.evan';
     if (clearedTopic.length > 0) {
       domain = `${ clearedTopic.split('/').reverse().join('.') }.${ domain }`;
@@ -1495,7 +1495,7 @@ export class Verifications extends Logger {
   }
 
   /**
-   * Signs a verification (offchain) and returns data, that can be used to submit it later on.
+   * Signs a verification (off-chain) and returns data, that can be used to submit it later on.
    * Return value can be passed to ``executeVerification``.
    *
    * Note that, when creating multiple signed verification transactions, the ``nonce`` argument
@@ -1661,12 +1661,12 @@ export class Verifications extends Logger {
 
   /**
    * execute contract call on identity, checks if account or contract identity is used and if given
-   * subject is alraedy an identity
+   * subject is already an identity
    *
    * @param      {string}        subject     account/contract with identity or an identity of it
    * @param      {boolean}       isIdentity  true if given subject is an identity
    * @param      {string}        fun         function to call
-   * @param      {any[]}         args        arguments for function (exluding the identity (for
+   * @param      {any[]}         args        arguments for function (excluding the identity (for
    *                                         VerificationsRegistry functions))
    * @return     {Promise<any>}  result of called function
    */
@@ -1874,12 +1874,12 @@ export class Verifications extends Logger {
 
   /**
    * execute contract transaction on identity, checks if account or contract identity is used and if
-   * given subject is alraedy an identity
+   * given subject is already an identity
    *
    * @param      {string}        subject  account/contract with identity or an identity of it
    * @param      {string}        fun      function to call
    * @param      {any}           options  options for transaction
-   * @param      {any[]}         args     arguments for function (exluding the identity (for
+   * @param      {any[]}         args     arguments for function (excluding the identity (for
    *                                      VerificationsRegistry functions))
    * @return     {Promise<any>}  result of called function
    */
@@ -1927,7 +1927,7 @@ export class Verifications extends Logger {
         args
       ).encodeABI();
 
-      // backup orignal event data and set event data for handling identity tx
+      // backup original event data and set event data for handling identity tx
       const originalEvent = options.event;
       const originalGetEventResult = options.getEventResult;
       options.event = {
@@ -1950,13 +1950,13 @@ export class Verifications extends Logger {
         keyHolderLibrary.getPastEvents(
           'ExecutionFailed', { fromBlock: blockNumber, toBlock: blockNumber }),
       ]);
-      // flatten and filter eventso n exection id from identity tx
+      // flatten and filter events on execution id from identity tx
       const filtered = [ ...executed, ...failed ].filter(
         event => event.returnValues && event.returnValues.executionId === executionId);
       if (filtered.length && filtered[0].event === 'Executed') {
-        // if execution was successfull
+        // if execution was successful
         if (originalEvent) {
-          // if original options had an event property for retrieving evnet results
+          // if original options had an event property for retrieving event results
           const targetIdentityEvents = await targetIdentity.getPastEvents(
             originalEvent.eventName, { fromBlock: blockNumber, toBlock: blockNumber });
           if (targetIdentityEvents.length) {
