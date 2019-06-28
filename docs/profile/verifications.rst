@@ -91,6 +91,7 @@ Parameters
     * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
     * ``logLogLevel`` - |source logLevel|_ (optional): messages with this level will be pushed to ``logLog``
+    * ``registry`` - ``string`` (optional): contract address of the identity storage registry
     * ``storage`` - ``string`` (optional): contract address of the identity storage registry
 
 -------
@@ -134,13 +135,13 @@ createIdentity
 
   verifications.createIdentity(accountId[, contractId, updateDescription]);
 
-Creates a new identity for account or contract and registers them on the storage. Returned identity is either a 20B contract address (for account identities) or a 32B idenity hash contract identities.
+Creates a new identity for account or contract and registers them on the storage. Returned identity is either a 20B contract address (for account identities) or a 32B identity hash contract identities.
 
 ----------
 Parameters
 ----------
 
-#. ``accountId`` - ``string``: ccount that runs transaction, receiver of identity when omitting the other arguments
+#. ``accountId`` - ``string``: account that runs transaction, receiver of identity when omitting the other arguments
 #. ``contractId`` - ``string``: (optional) contract address to create the identity for, creates account identity for ``accountId`` if omitted
 #. ``updateDescription`` - ``boolean`` (optional): update description of contract, defaults to ``true``
 
@@ -469,6 +470,95 @@ Example
 
 
 
+
+--------------------------------------------------------------------------------
+
+.. _verifications_getNestedVerificationsV2:
+
+getNestedVerificationsV2
+================================================================================
+
+.. code-block:: typescript
+
+  getNestedVerificationsV2(subject, topic[, isIdentity, queryOptions]);
+
+Get verifications and their parent paths for a specific subject, then format it to updated result format.
+
+----------
+Parameters
+----------
+
+#. ``subject`` - ``string``: subject (account/contract or identity)
+#. ``topic`` - ``string``: topic (verification name) to check
+#. ``isIdentity`` - ``boolean``: true if subject is identity
+#. ``queryOptions`` - ``VerificationsQueryOptions``: options for query and status computation
+
+-------
+Returns
+-------
+
+``Promise`` returns ``VerificationsResultV2``: verification result object with status, verification data and tree
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const validationOptions: VerificationsValidationOptions = {
+    disableSubVerifications: VerificationsStatusV2.Red,
+    expired:                 VerificationsStatusV2.Red,
+    invalid:                 VerificationsStatusV2.Red,
+    issued:                  VerificationsStatusV2.Yellow,
+    missing:                 VerificationsStatusV2.Red,
+    noIdentity:              VerificationsStatusV2.Red,
+    notEnsRootOwner:         VerificationsStatusV2.Yellow,
+    parentMissing:           VerificationsStatusV2.Yellow,
+    parentUntrusted:         VerificationsStatusV2.Yellow,
+    rejected:                VerificationsStatusV2.Red,
+    selfIssued:              VerificationsStatusV2.Yellow,
+  };
+  const queryOptions: VerificationsQueryOptions = {
+    validationOptions: validationOptions,
+  };
+  const nestedVerificationsV2 = await verifications.getNestedVerificationsV2(
+    accounts[1], '/example1', false, queryOptions);
+  console.dir(nestedVerificationsV2);
+  // Output:
+  // { verifications:
+  //    [ { details:
+  //         { creationDate: 1561722858000,
+  //           ensAddress:
+  //            '4d2027082fdec4ee253363756eccb1b5492f61fb6329f25d8a7976d7909c10ac.example1.verifications.evan',
+  //           id:
+  //            '0x855a3c10b9cd6d42da5fd5e9b61e0f98a5af79b1acbfee57a9e4f3c9721f9c5d',
+  //           issuer: '0x5035aEe29ea566F3296cdD97C29baB2b88C17c25',
+  //           issuerIdentity: '0xD2860FeC7A198A646f9fD1207B59aD42f00c3189',
+  //           subject: '0x9aE6533e7a2C732863C0aF792D5EA358518cd757',
+  //           subjectIdentity: '0x9F870954c615E4457660D22BE0F38FE0200b1Ed9',
+  //           subjectType: '0x9F870954c615E4457660D22BE0F38FE0200b1Ed9',
+  //           topic: '/example1',
+  //           status: 'green' },
+  //        raw:
+  //         { creationBlock: '224038',
+  //           creationDate: '1561722858',
+  //           data:
+  //            '0x0000000000000000000000000000000000000000000000000000000000000000',
+  //           disableSubVerifications: false,
+  //           signature:
+  //            '0x941f316d77f5c1dc8b38000ecbb60304554ee2fb36453487ef7822ce6d8c7ce5267bb62396cfb08191028099de2e28d0ffd4012608e8a622e9e7a6a9570a88231b',
+  //           status: 1,
+  //           topic:
+  //            '34884897835812838038558016063403566909277437558805531399344559176587016933548' },
+  //        statusFlags: [] } ],
+  //   levelComputed:
+  //    { subjectIdentity: '0x9F870954c615E4457660D22BE0F38FE0200b1Ed9',
+  //      subjectType: 'account',
+  //      topic: '/example1',
+  //      subject: '0x9aE6533e7a2C732863C0aF792D5EA358518cd757' },
+  //   status: 'green' }
+
+
 --------------------------------------------------------------------------------
 
 .. _verifications_computeVerifications:
@@ -734,6 +824,142 @@ Example
 
 --------------------------------------------------------------------------------
 
+= Delegated Verifications =
+===========================
+
+.. _verifications_signSetVerificationTransaction:
+
+signSetVerificationTransaction
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.signSetVerificationTransaction(issuer, subject, topic[, expirationDate, verificationValue, descriptionDomain, disableSubVerifications, isIdentity, executionNonce]);
+
+Signs a verification (offchain) and returns data, that can be used to submit it later on. Return value can be passed to ``executeVerification``.
+
+Note that, when creating multiple signed verification transactions, the ``nonce`` argument **has to be specified and incremented between calls**, as the nonce is included in transaction data and restricts the order of transactions, that can be made.
+
+----------
+Parameters
+----------
+
+#. ``issuer`` - ``string``: issuer of the verification
+#. ``subject`` - ``string``: subject of the verification and the owner of the verification node
+#. ``topic`` - ``string``: name of the verification (full path)
+#. ``expirationDate`` - ``number`` (optional): expiration date, for the verification, defaults to ``0`` (does not expire)
+#. ``verificationValue`` - ``any`` (optional): json object which will be stored in the verification
+#. ``descriptionDomain`` - ``string`` (optional): domain of the verification, this is a subdomain under 'verifications.evan', so passing 'example' will link verifications description to 'example.verifications.evan', unset if omitted
+#. ``disableSubVerifications`` - ``boolean`` (optional): invalidate all verifications that gets issued as children of this verification (warning will include the disableSubVerifications warning)
+#. ``isIdentity`` - ``boolean`` (optional): true if given subject is identity, defaults to ``false``
+#. ``executionNonce`` - ``number`` (optional): current execution nonce of issuer identity contract, defaults to ``-1`` (fetch dynamically)
+
+-------
+Returns
+-------
+
+``Promise`` returns ``VerificationsDelegationInfo``: data for submitting delegated verifications
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // accounts[0] wants to issue a verification for accounts[1] via delegation
+  const txInfo = await verifications.signSetVerificationTransaction(
+    accounts[0], accounts[1], '/company');
+
+
+
+--------------------------------------------------------------------------------
+
+.. _verifications_executeVerification:
+
+executeVerification
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.executeVerification(accountId, txInfo);
+
+Executes a pre-signed verification transaction with given account.
+This account will be the origin of the transaction and not of the verification.
+Second argument is generated with ``signSetVerificationTransaction``.
+
+----------
+Parameters
+----------
+
+#. ``accountId`` - ``string``: account, that submits the transaction
+#. ``txInfo`` - ``VerificationsDelegationInfo``: information with verification tx data
+
+-------
+Returns
+-------
+
+``Promise`` returns ``string``: id of new verification
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // accounts[0] wants to issue a verification for accounts[1] via delegation
+  const txInfo = await verifications.signSetVerificationTransaction(
+    accounts[0], accounts[1], '/company');
+
+  // accounts[2] submits transaction, that actually issues verification
+  const verificationId = await verifications.executeVerification(accounts[2], txInfo);
+
+
+
+--------------------------------------------------------------------------------
+
+.. _verifications_getExecutionNonce:
+
+getExecutionNonce
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.getExecutionNonce(issuer[, isIdentity]);
+
+Gets current execution nonce for an identity or an accounts identity.
+
+Nonce is returned as ``string``. When using nonces for preparing multiple transactions, small nonces can just be parsed to a number and then incremented as needed. Consider using BigNumber or similar modules to deal with large numbers if required.
+
+----------
+Parameters
+----------
+
+#. ``issuer`` - ``string``: account or identity to get execution nonce for
+#. ``isIdentity`` - ``boolean`` (optional): true if given issuer is an identity, defaults to ``false``
+
+-------
+Returns
+-------
+
+``Promise`` returns ``string``: execution nonce
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // nonce in this example is relatively small, so we can just parse it and use it as a number
+  // consider using BigNumber or similar to deal with larger numbers if required
+  let nonce = JSON.parse(await verifications.getExecutionNonce(accounts[0]));
+  const txInfos = await Promise.all(['/example1', '/example2', '/example3'].map(
+    topic => verifications.signSetVerificationTransaction(
+      accounts[0], accounts[1], topic, 0, null, null, false, false, nonce++)
+  ));
+
+
+--------------------------------------------------------------------------------
+
 = Descriptions =
 ==========================
 
@@ -873,7 +1099,7 @@ Example
 
 --------------------------------------------------------------------------------
 
-= Deployment =
+= Utilities =
 ==========================
 
 .. _verifications_createStructure:
@@ -912,6 +1138,331 @@ Example
   console.log(verificationsStructure.storage.options.address);
   // Output:
   // 0x000000000000000000000000000000000000000a
+
+
+
+.. _verifications_deleteFromVerificationCache:
+
+deleteFromVerificationCache
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.deleteFromVerificationCache(subject, topic);
+
+Delete a single entry from the verification cache object using subject and topic
+
+----------
+Parameters
+----------
+
+#. ``subject`` - ``string``: the subject that should be removed
+#. ``topic`` - ``string``: the topic that should be removed
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  verifications.deleteFromVerificationCache(accounts[1], '/some/verification');
+
+
+
+.. _verifications_trimToStatusTree:
+
+trimToStatusTree
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.trimToStatusTree(result);
+
+Trim ``VerificationsResultV2`` result down to statusFlags and status values for analysis purposes and debugging.
+
+----------
+Parameters
+----------
+
+#. ``inputResult`` - ``VerificationsResultV2``: result to trim down
+
+-------
+Returns
+-------
+
+``Promise`` returns ``any``: trimmed down tree
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const validationOptions: VerificationsValidationOptions = {
+    disableSubVerifications: VerificationsStatusV2.Red,
+    expired:                 VerificationsStatusV2.Red,
+    invalid:                 VerificationsStatusV2.Red,
+    issued:                  VerificationsStatusV2.Yellow,
+    missing:                 VerificationsStatusV2.Red,
+    noIdentity:              VerificationsStatusV2.Red,
+    notEnsRootOwner:         VerificationsStatusV2.Yellow,
+    parentMissing:           VerificationsStatusV2.Yellow,
+    parentUntrusted:         VerificationsStatusV2.Yellow,
+    rejected:                VerificationsStatusV2.Red,
+    selfIssued:              VerificationsStatusV2.Yellow,
+  };
+  const queryOptions: VerificationsQueryOptions = {
+    validationOptions: validationOptions,
+  };
+  const nestedVerificationsV2 = await verifications.getNestedVerificationsV2(
+    accounts[1], '/example1', false, queryOptions);
+  console.dir(nestedVerificationsV2);
+  // Output:
+  // { verifications:
+  //    [ { details:
+  //         { creationDate: 1561722858000,
+  //           ensAddress:
+  //            '4d2027082fdec4ee253363756eccb1b5492f61fb6329f25d8a7976d7909c10ac.example1.verifications.evan',
+  //           id:
+  //            '0x855a3c10b9cd6d42da5fd5e9b61e0f98a5af79b1acbfee57a9e4f3c9721f9c5d',
+  //           issuer: '0x5035aEe29ea566F3296cdD97C29baB2b88C17c25',
+  //           issuerIdentity: '0xD2860FeC7A198A646f9fD1207B59aD42f00c3189',
+  //           subject: '0x9aE6533e7a2C732863C0aF792D5EA358518cd757',
+  //           subjectIdentity: '0x9F870954c615E4457660D22BE0F38FE0200b1Ed9',
+  //           subjectType: '0x9F870954c615E4457660D22BE0F38FE0200b1Ed9',
+  //           topic: '/example1',
+  //           status: 'green' },
+  //        raw:
+  //         { creationBlock: '224038',
+  //           creationDate: '1561722858',
+  //           data:
+  //            '0x0000000000000000000000000000000000000000000000000000000000000000',
+  //           disableSubVerifications: false,
+  //           signature:
+  //            '0x941f316d77f5c1dc8b38000ecbb60304554ee2fb36453487ef7822ce6d8c7ce5267bb62396cfb08191028099de2e28d0ffd4012608e8a622e9e7a6a9570a88231b',
+  //           status: 1,
+  //           topic:
+  //            '34884897835812838038558016063403566909277437558805531399344559176587016933548' },
+  //        statusFlags: [] } ],
+  //   levelComputed:
+  //    { subjectIdentity: '0x9F870954c615E4457660D22BE0F38FE0200b1Ed9',
+  //      subjectType: 'account',
+  //      topic: '/example1',
+  //      subject: '0x9aE6533e7a2C732863C0aF792D5EA358518cd757' },
+  //   status: 'green' }
+
+  const trimmed = verifications.trimToStatusTree(nestedVerificationsV2);
+  console.dir(trimmed);
+  // Output:
+  // { status: 'green',
+  //   verifications:
+  //    [ { details: { status: 'green', topic: '/example1' },
+  //        statusFlags: [] } ] }
+
+
+
+--------------------------------------------------------------------------------
+
+Enums
+=====
+
+.. _verifications_VerificationsStatus:
+
+-------------------
+VerificationsStatus
+-------------------
+
+verification status from blockchain
+
+#. ``Issued``: issued by a non-issuer parent verification holder, self issued state is 0
+#. ``Confirmed``: issued by a non-issuer parent verification holder, self issued state is 0
+#. ``Rejected``: verification rejected status
+
+
+
+.. _verifications_VerificationsStatusFlagsV2:
+
+--------------------------
+VerificationsStatusFlagsV2
+--------------------------
+
+status annotations about verification, depending on defined ``VerificationsQueryOptions``, this may lead to the verification to be invalid or less trustworthy
+  
+#. ``disableSubVerifications``: parent verification does not allow subverifications
+#. ``expired``: verification has expired
+#. ``invalid``: signature does not match requirements, this could be because it hasn’t been signed by correct account or underlying checksum does not match subject, topic and data
+#. ``issued``: verification has been issued, but not accepted or rejected by subject
+#. ``missing``: verification has not been issued
+#. ``noIdentity``: given subject has no identity
+#. ``notEnsRootOwner``: verification path has a trusted root verification topic, but this verification is not signed by a trusted instance
+#. ``parentMissing``: parent verification is missing in path
+#. ``parentUntrusted``: verification path cannot be traced back to a trusted root verification
+#. ``rejected``: verification has been issued and then rejected by subject
+#. ``selfIssued``: verification issuer is the same account as the subject
+
+
+
+.. _verifications_VerificationsStatusV2:
+
+---------------------
+VerificationsStatusV2
+---------------------
+
+represents the status of a requested verification topic after applying rules in ``VerificationsQueryOptions``
+
+#. ``Green``: verification is valid according to ``VerificationsQueryOptions``
+#. ``Yellow``: verification may be valid but more checks may be required more for trusting it, see status flags for details
+#. ``Red``: verification is invalid, see status flags for details
+
+
+
+--------------------------------------------------------------------------------
+
+Interfaces
+==========
+
+.. _verifications_VerificationsDelegationInfo:
+
+---------------------------
+VerificationsDelegationInfo
+---------------------------
+
+information for submitting a delegated transaction, created with ``signSetVerificationTransaction`` consumed by ``executeVerification``
+
+#. ``sourceIdentity`` - ``string``: address of identity contract, that issues verification
+#. ``targetIdentity`` - ``string``: address of identity contract, that receives verification
+#. ``value`` - ``number``: value to transfer, usually 0
+#. ``input`` - ``string``: abi encoded input for transaction
+#. ``signedTransactionInfo`` - ``string``: signed data from transaction
+
+
+
+.. _verifications_VerificationsQueryOptions:
+
+-------------------------
+VerificationsQueryOptions
+-------------------------
+
+options for ``getNestedVerificationsV2``, define how to calculate status of verification
+
+#. ``statusComputer`` - ``VerificationsStatusComputer`` (optional): function for setting verification with custom logic
+#. ``validationOptions`` - ``VerificationsValidationOptions`` (optional): specification of how to handle status flags of each single verification
+
+
+
+.. _verifications_VerificationsResultV2:
+
+---------------------
+VerificationsResultV2
+---------------------
+
+result of a verification query
+
+#. ``status`` - ``VerificationsStatusV2``: overall status of verification
+#. ``verifications`` - ``VerificationsVerificationEntry[]``: (optional): list of verifications on same topic and subject
+#. ``levelComputed`` (optional): consolidated information about verification
+    * ``subjectIdentity`` - ``string``: identity contract address or hash of subject
+    * ``subjectType`` - ``string``: type of subject (account/contract)
+    * ``topic`` - ``string``: topic (name) of verification
+    * ``expirationDate`` - ``number`` (optional): timestamp, when verification will expire, js timestamp
+    * ``parents`` - ``VerificationsResultV2`` (optional): verifications of parent path, issued for all issuers of verifications on this level
+    * ``subject`` - ``number`` (optional): subject accountId/contractId (if query was issued with ``isIdentity`` set to ``false``)
+
+
+
+.. _verifications_VerificationsVerificationEntry:
+
+------------------------------
+VerificationsVerificationEntry
+------------------------------
+
+a single verification; usually used in ``VerificationsResultV2``
+
+#. ``details``: details about verification
+    * ``creationDate`` - ``number``: js timestamp of verification creation
+    * ``ensAddress`` - ``string``: ens address of description for this verification
+    * ``id`` - ``string``: id in verification holder / verifications registry
+    * ``issuer`` - ``string``: account id of verification issuer
+    * ``issuerIdentity`` - ``string``: issuers identity contract id
+    * ``subjectIdentity`` - ``string``: identity (contract or identity hash) of subject
+    * ``subjectType`` - ``string``: type of subject (account/contract)
+    * ``topic`` - ``string``: topic of identity (name)
+    * ``data`` - ``any`` (optional): 32B data hash string of identity 
+    * ``description`` - ``any`` (optional): only if actually set 
+    * ``expirationDate`` - ``number`` (optional): expiration date of verification (js timestamp) 
+    * ``rejectReason`` - ``string`` (optional): if applicable, reason for verification rejection 
+    * ``status`` - ``VerificationsStatusV2`` (optional): status of verification, is optional during result computation and required when done 
+    * ``subject`` - ``string`` (optional): subject accountId/contractId (if query was issued with ``isIdentity`` set to ``false``)
+#. ``raw`` (optional): raw data about verification from contract
+    * ``creationBlock`` - ``string``: block in which verification was issued
+    * ``creationDate`` - ``string``: unix timestamp is s when verification was issued
+    * ``data`` - ``string``: 32B data hash string of identity, bytes32 zero if unset
+    * ``disableSubVerifications`` - ``boolean``: true if subverification are not allowed
+    * ``signature`` - ``string``: signature over verification data
+    * ``status`` - ``number``: status of verification, (issued, accepted, rejected, etc.)
+    * ``topic`` - ``string``: uint string of verification name (topic), is uint representation of sha3 of name
+#. ``statusFlags`` - ``string[]`` (optional): all found flags, those may not have impact on status, depends on ``VerificationsStatusFlagsV2``
+
+
+
+.. _verifications_VerificationsVerificationEntryStatusComputer:
+
+--------------------------------------------
+VerificationsVerificationEntryStatusComputer
+--------------------------------------------
+
+Computes status for a single verification. verification, partialResult.
+
+Parameters
+----------
+
+#. ``verification`` - ``Partial<VerificationsVerificationEntry>``: current verification result (without status)
+#. ``partialResult`` - ``Partial<VerificationsResultV2>``: options for verifications query
+
+Returns
+-------
+
+``Promise`` returns ``VerificationsStatusV2``: status for this verification
+
+
+
+.. _verifications_VerificationsStatusComputer:
+
+---------------------------
+VerificationsStatusComputer
+---------------------------
+
+Computes status from overall verifications result.
+This function is applied after each verification has received an own computed status.
+
+Parameters
+----------
+
+#. ``partialResult`` - ``Partial<VerificationsResultV2>``: current verification result (without status)
+#. ``queryOptions`` - ``VerificationsQueryOptions``: options for verifications query
+#. ``currentStatus`` - ``VerificationsStatusV2``: current status of verification
+
+Returns
+-------
+
+``Promise`` returns ``Promise<VerificationsStatusV2>``: updated status, will be used at verification status
+
+
+
+.. _verifications_VerificationsValidationOptions:
+
+------------------------------
+VerificationsValidationOptions
+------------------------------
+
+Options for verification status computation. Keys are string representations of
+``VerificationsStatusFlagsV2``, values can be ``VerificationsStatusV2`` or functions.
+If value is ``VerificationsStatusV2``, then finding given status flag sets verification value
+to given ``VerificationsStatusV2`` (if not already at a higher trust level).
+If value is function, pass verification to this function and set verification status to
+return value (if not already at a higher trust level).
+
+#. ``[id: string]`` - ``VerificationsStatusV2 | VerificationsVerificationEntryStatusComputer``: each key is a status flag and usually an enum value from ``VerificationsStatusFlagsV2``, though it is possible to use custom status flags
 
 
 

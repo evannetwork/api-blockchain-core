@@ -23,6 +23,8 @@ The blockchain core is a helper library, that offers helpers for interacting wit
 ## DApp library
 This project is bundled using browserify and directly loadable from dapps within the evan.network. The dbcp.json can be found in this [wrapping project](https://github.com/evannetwork/ui-core/tree/master/dapps/bcc).
 
+It's also available as browserified project within the npm, published with the same original versions: `@evan.network/api-blockchain-core-browserified`.
+
 
 ## Tests
 The tests are written with mocha and chai and the files (`*.spec.js`) are located next to the files, they contain tests for.

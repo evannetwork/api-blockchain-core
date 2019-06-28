@@ -8,14 +8,17 @@
 ### Deprecations
 
 
-## Version 2.7.1
+## Version 2.8.0
 ### Features
+- add support for delegated issuing of verifications
+- add ``getNestedVerificationsV2`` with updated interfaces and return values for clearer identity status
+- add evan light docs design
 
+
+## Version 2.7.1
 ### Fixes
 - allow empty description for `Container.create` so it will fallback to default description
 - add empty check for recursive `Container` `applyIfEncrypted` calls
-
-### Deprecations
 
 
 ## Version 2.7.0

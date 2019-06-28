@@ -12,9 +12,13 @@ This sections aims to help getting started with the verifications service. Herei
 `Verifications <https://evannetwork.github.io/docs/how_it_works/services/verificationmanagement.html>`_ can be issued with the :doc:`Verification API <verifications>`. Their smart contract implementation follow the principles outlined in `ERC-725 <https://github.com/ethereum/EIPs/issues/725>`_ and `ERC-735 <https://github.com/ethereum/EIPs/issues/735>`_.
 
 
------------------------
+
+--------------------------------------------------------------------------------
+
+.. about-the-code-examples:
+
 About the Code Examples
------------------------
+=============================
 
 Many code examples are taken from the `verification tests <https://github.com/evannetwork/api-blockchain-core/blob/master/src/verifications/verifications.spec.ts>`_. You can a look at those for more examples or to have a look at in which context the test are run in.
 
@@ -25,6 +29,7 @@ Many code examples here use variable naming from the tests. So there are a few a
 - ``accounts`` is an array with addresses of externally owned accounts, of which private keys are known to the runtime/executor/signer instance to make transaction with them
 - ``accounts[0]`` usually takes the role of issuing verifications
 - ``accounts[1]`` is usually an account that responds to actions from ``accounts[0]``
+- ``accounts[2]`` is usually an account, that has no direct relation to the former two accounts
 - ``contractId`` refers to the address of a contract, that is owned by ``accounts[0]``, this contract usually has a `DBCP <https://github.com/evannetwork/dbcp>`_ `description <https://api-blockchain-core.readthedocs.io/en/latest/blockchain/description.html>`_
 
 
@@ -35,7 +40,7 @@ Many code examples here use variable naming from the tests. So there are a few a
 Different Types of Identities
 =============================
 
-Okay, this page is about berifications, so why does the first heading talk about some kind of identities? |br|
+Okay, this page is about verifications, so why does the first heading talk about some kind of identities? |br|
 The answer for this is pretty simple simple: Verifications are issued by identities.
 
 So what exactly is an identity? |br|
@@ -109,8 +114,6 @@ The aforementioned three steps are covered by the :ref:`createIdentity <verifica
 
 When using contracts without descriptions or when handling the relation between contracts and an identity elsewhere, the process of updating the description can be omitted. For this set the ``updateDescription`` argument to ``false``:
 
-.. _contract-identity-undescribed:
-
 .. code-block:: typescript
 
   const contractIdentity = await verifications.createIdentity(accounts[0], contractId, false);
@@ -119,8 +122,6 @@ When using contracts without descriptions or when handling the relation between 
   // 0x4732281e708aadbae13f0bf4dd616de86df3d3edb3ead21604a354101de45316
 
 Pseudonyms can be handled the same way. Just set the flag to link given identity to false:
-
-.. _contract-identity-undescribed:
 
 .. code-block:: typescript
 
@@ -256,11 +257,54 @@ Issue verifications for a contract without using a description
   //   valid: true
   // } ]
 
-In case you're wondering: ``contractIdentity`` is the same identity as returned in our :ref:`example <contract-identity-undescribed>`.
+In case you're wondering: ``contractIdentity`` is the same identity as returned in our Contract Identities / Pseudonym Identities example.
 
 Have a look at :ref:`getVerifications <verifications_getVerifications>` for the meaning of the returned values, for how to find out, if the returned verification trustworthy, have a look at :ref:`Validating Verifications <validating-verifications>`.
 
 Note that for contracts without descriptions ``contractIdentity`` is given and the last argument (``isIdentity``) is set to true. The functions ``setVerification`` and ``getVerifications`` support passing a contract identity to them as well and they also have the argument ``isIdentity``, which is set to true, when passing contract identities to them.
+
+
+
+------------------------------
+Delegated verification issuing
+------------------------------
+
+The transaction that issues a verification can be done by an account, that is neither ``issuer`` nor ``subject``. This means, that it is possible to let another account pay transaction costs but issuing the verification itself is done from the original identity.
+
+For example: Alice wants to issue a verification to Bob, but should not pay for the transaction costs. Alice can now prepare the transaction to be done from her identity contract towards Bobs identity contract and send the prepared transaction data to Clarice. Clarice then can submit this data to Alice's identity contract, which will issue the verification.
+
+.. code-block:: typescript
+
+  const [ alice, bob, clarice ] = accounts;
+
+  // on Alice's side
+  const txInfo = await verifications.signSetVerificationTransaction(alice, bob, '/example');
+
+  // on Clarice's side
+  const verificationId = await verifications.executeVerification(clarice, txInfo);
+
+Note that transactions prepared with ``signSetVerificationTransaction`` can only be executed once and only with the arguments of the original data. To prevent multiple repetitions of the transaction, a nonce at the issuers identity contract is used. This nonce is retrieved from the identity contract automatically when calling ``signSetVerificationTransaction``, but when preparing multiple transactions and not submitting them immediately, the nonce would stay the same. Therefore the nonce has to be increased by hand when preparing multiple transactions from the same identity contract.
+
+Nonces determine the order in which prepared transactions can be performed from issuers identity contract, so execute prepared transactions in order of their nonces.
+
+.. code-block:: typescript
+
+  const [ alice, bob, clarice ] = accounts;
+
+  // on Alice's side
+  // nonce in this example is relatively small, so we can just parse it and use it as a number
+  // consider using BigNumber or similar to deal with larger numbers if required
+  let nonce = JSON.parse(await verifications.getExecutionNonce(alice));
+  const txInfos = await Promise.all(['/example1', '/example2', '/example3'].map(
+    topic => verifications.signSetVerificationTransaction(
+      alice, bob, topic, 0, null, null, false, false, nonce++)
+  ));
+
+  // on Clarice's side
+  const verificationIds = [];
+  for (let txInfo of txInfos) {
+    verificationIds.push(await verifications.executeVerification(clarice, txInfo));
+  }
 
 
 
@@ -442,6 +486,80 @@ The call ``verifications.getNestedVerifications(accounts[0], '/example1/example1
 
             - own checks can be made, e.g. check if the issuer of the root verification is a well known and trusted account
             - use ``/evan`` derived verification paths, the root verification ``/evan`` is only trusted, if it is issued by a trusted root issuer, get in contact with us via info@evan.team for details on how to obtain a subverification like ``/evan/myOwnTrustedVerification``, that can be used for building widely accepted verification paths
+
+
+.. get-nested-verifications-v2:
+
+-----------------------------------------------------
+getNestedVerificationsV2
+-----------------------------------------------------
+
+The output from the last example has some aspects, where it could perform better:
+
+- the output is a bit lengthy and looks unstructured, some of the information here may not be useful in most situations and relies on predefined defaults (e.g. a default description, that isn't actually set is returned if no description is defined, which may lead to the opinion, that a description has been set)
+- it is quite hard to determine with a simple query and not further processing to determine if a valid verification is present or not
+- documentation about properties returned in verification is a bit sparse in some points
+
+An updated version of the ``getNestedVerifications`` has been added as ``getNestedVerificationsV2``. This version will replace the current one soon, but is available for now under the V2 name. This version is under development and may undergo further changes but the basic behavior will not change and it will replace the regular one at some point of time.
+
+A usage example:
+
+.. code-block:: typescript
+
+  const validationOptions: VerificationsValidationOptions = {
+    disableSubVerifications: VerificationsStatusV2.Red,
+    expired:                 VerificationsStatusV2.Red,
+    invalid:                 VerificationsStatusV2.Red,
+    issued:                  VerificationsStatusV2.Yellow,
+    missing:                 VerificationsStatusV2.Red,
+    noIdentity:              VerificationsStatusV2.Red,
+    notEnsRootOwner:         VerificationsStatusV2.Yellow,
+    parentMissing:           VerificationsStatusV2.Yellow,
+    parentUntrusted:         VerificationsStatusV2.Yellow,
+    rejected:                VerificationsStatusV2.Red,
+    selfIssued:              VerificationsStatusV2.Yellow,
+  };
+  const queryOptions: VerificationsQueryOptions = {
+    validationOptions: validationOptions,
+  };
+  const nestedVerificationsV2 = await verifications.getNestedVerificationsV2(
+    accounts[1], '/example1', false, queryOptions);
+  console.dir(nestedVerificationsV2);
+  // Output:
+  // { verifications:
+  //    [ { details:
+  //         { creationDate: 1561722858000,
+  //           ensAddress:
+  //            '4d2027082fdec4ee253363756eccb1b5492f61fb6329f25d8a7976d7909c10ac.example1.verifications.evan',
+  //           id:
+  //            '0x855a3c10b9cd6d42da5fd5e9b61e0f98a5af79b1acbfee57a9e4f3c9721f9c5d',
+  //           issuer: '0x5035aEe29ea566F3296cdD97C29baB2b88C17c25',
+  //           issuerIdentity: '0xD2860FeC7A198A646f9fD1207B59aD42f00c3189',
+  //           subject: '0x9aE6533e7a2C732863C0aF792D5EA358518cd757',
+  //           subjectIdentity: '0x9F870954c615E4457660D22BE0F38FE0200b1Ed9',
+  //           subjectType: '0x9F870954c615E4457660D22BE0F38FE0200b1Ed9',
+  //           topic: '/example1',
+  //           status: 'green' },
+  //        raw:
+  //         { creationBlock: '224038',
+  //           creationDate: '1561722858',
+  //           data:
+  //            '0x0000000000000000000000000000000000000000000000000000000000000000',
+  //           disableSubVerifications: false,
+  //           signature:
+  //            '0x941f316d77f5c1dc8b38000ecbb60304554ee2fb36453487ef7822ce6d8c7ce5267bb62396cfb08191028099de2e28d0ffd4012608e8a622e9e7a6a9570a88231b',
+  //           status: 1,
+  //           topic:
+  //            '34884897835812838038558016063403566909277437558805531399344559176587016933548' },
+  //        statusFlags: [] } ],
+  //   levelComputed:
+  //    { subjectIdentity: '0x9F870954c615E4457660D22BE0F38FE0200b1Ed9',
+  //      subjectType: 'account',
+  //      topic: '/example1',
+  //      subject: '0x9aE6533e7a2C732863C0aF792D5EA358518cd757' },
+  //   status: 'green' }
+
+The variable ``validationOptions`` from the example is a set of rules for about how to interpret the ``statusFlags`` from the ``verifications``. The last example no flags, but possible issues are tracked as status flags and are evaluated by given rules. The rules are explained in the respective interface and mostly match the warnings explained in the section below.
 
 
 
