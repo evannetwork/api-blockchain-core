@@ -46,7 +46,7 @@ export { Aes } from './encryption/aes';
 export { AesBlob } from './encryption/aes-blob';
 export { AesEcb } from './encryption/aes-ecb';
 export { BusinessCenterProfile } from './profile/business-center-profile';
-export { ContractState, BaseContract } from './contracts/base-contract/base-contract';
+export { BaseContract, ContractState } from './contracts/base-contract/base-contract';
 export { createDefaultRuntime, Runtime } from './runtime';
 export { CryptoProvider } from './encryption/crypto-provider';
 export { DataContract } from './contracts/data-contract/data-contract';
@@ -64,7 +64,19 @@ export { Profile } from './profile/profile';
 export { RightsAndRoles, ModificationType, PropertyType } from './contracts/rights-and-roles';
 export { ServiceContract, Answer, AnswerResult, Call, CallResult } from './contracts/service-contract/service-contract';
 export { Sharing } from './contracts/sharing';
-export { Verifications, VerificationsStatus } from './verifications/verifications';
+export {
+  Verifications,
+  VerificationsDelegationInfo,
+  VerificationsQueryOptions,
+  VerificationsResultV2,
+  VerificationsStatus,
+  VerificationsStatusComputer,
+  VerificationsStatusFlagsV2,
+  VerificationsStatusV2,
+  VerificationsValidationOptions,
+  VerificationsVerificationEntry,
+  VerificationsVerificationEntryStatusComputer,
+} from './verifications/verifications';
 export { Votings, MemberOptions, ProposalInfo, ProposalInfos, ProposalOptions, VotingsContractOptions } from './votings/votings';
 export { Wallet } from './contracts/wallet';
 export { Container, ContainerConfig, ContainerFile, ContainerTemplate, ContainerPlugin, ContainerTemplateProperty,
@@ -72,7 +84,7 @@ export { Container, ContainerConfig, ContainerFile, ContainerTemplate, Container
 export { DigitalTwin, DigitalTwinEntryType, DigitalTwinConfig, DigitalTwinIndexEntry,
   DigitalTwinVerificationEntry, } from './contracts/digital-twin/digital-twin';
 
-/******** export this libraries to be able to build the blockchain-core into an umd bundle ********/
+/******** export these libraries to be able to build the blockchain-core into an umd bundle ********/
 import Web3 = require('web3');
 import prottle = require('prottle');
 import crypto = require('crypto');

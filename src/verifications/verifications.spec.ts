@@ -33,11 +33,19 @@ import { ContractLoader, Executor } from '@evan.network/dbcp';
 
 import { accounts } from '../test/accounts';
 import { BaseContract } from '../contracts/base-contract/base-contract';
-import { Verifications, VerificationsStatus, } from './verifications';
 import { configTestcore as config } from '../config-testcore';
 import { Description } from '../shared-description';
 import { EncryptionWrapper, EncryptionWrapperCryptorType, EncryptionWrapperKeyType } from '../encryption/encryption-wrapper';
 import { TestUtils } from '../test/test-utils';
+import {
+  Verifications,
+  VerificationsQueryOptions,
+  VerificationsResultV2,
+  VerificationsStatus,
+  VerificationsStatusV2,
+  VerificationsStatusFlagsV2,
+  VerificationsValidationOptions,
+} from './verifications';
 
 const linker = require('solc/linker');
 
@@ -53,6 +61,30 @@ describe('Verifications handler', function() {
   function getRandomTopic(prefix: string) {
     return `${ prefix }/${ Date.now().toString() + Math.random().toString().slice(2, 20) }`;
   }
+
+  const singedByAccounts0 = async (verification, pr: Partial<VerificationsResultV2>) => {
+    if (verification.details.issuer === accounts[0]) {
+      return VerificationsStatusV2.Green;
+    }
+    return VerificationsStatusV2.Red;
+  };
+
+  const validationOptions: VerificationsValidationOptions = {
+    disableSubVerifications: VerificationsStatusV2.Red,
+    expired:                 VerificationsStatusV2.Red,
+    invalid:                 VerificationsStatusV2.Red,
+    issued:                  VerificationsStatusV2.Green,
+    missing:                 VerificationsStatusV2.Red,
+    noIdentity:              VerificationsStatusV2.Red,
+    notEnsRootOwner:         VerificationsStatusV2.Red,
+    parentMissing:           VerificationsStatusV2.Yellow,
+    parentUntrusted:         singedByAccounts0,
+    rejected:                VerificationsStatusV2.Red,
+    selfIssued:              VerificationsStatusV2.Red,
+  };
+  const queryOptions: VerificationsQueryOptions = {
+    validationOptions,
+  };
 
   let baseContract: BaseContract;
   let verifications: Verifications;
@@ -361,11 +393,17 @@ describe('Verifications handler', function() {
 
     describe('when validating nested verifications', () => {
       it('verifications for a subject that has no identity should throw', async () => {
+        const randomAccount = TestUtils.getRandomAddress();
         let topic = getRandomTopic('/evan'), computed;
 
         // check missing state
-        const promise = verifications.getComputedVerification(accounts[2], topic);
+        const promise = verifications.getComputedVerification(randomAccount, topic);
         await expect(promise).to.be.rejected;
+
+        // V2
+        //// check missing state
+        const promise2 = verifications.getNestedVerificationsV2(randomAccount, topic);
+        await expect(promise2).to.be.rejected;
       });
 
       it('non existing verifications include the warning "missing" and status should be -1',
@@ -377,11 +415,58 @@ describe('Verifications handler', function() {
         await expect(computed.status).to.be.eq(-1);
         await expect(computed.warnings).to.include('missing');
 
+        // V2
+        //// check missing state
+        const localQueryOptions = { validationOptions: { [VerificationsStatusFlagsV2.missing]: VerificationsStatusV2.Yellow }};
+        let v2 = await verifications.getNestedVerificationsV2(accounts[0], topic, false, localQueryOptions);
+        await expect(v2.status).to.be.eq(VerificationsStatusV2.Red);
+
         // check missing state is missing after set
         await verifications.setVerification(accounts[0], accounts[0], topic);
         computed = await verifications.getComputedVerification(accounts[0], topic);
         await expect(computed.status).to.be.eq(0);
         await expect(computed.warnings).to.not.include('missing');
+
+        // V2
+        //// check missing state is missing after set
+        v2 = await verifications.getNestedVerificationsV2(accounts[0], topic, false, localQueryOptions);
+        await expect(v2.status).not.to.be.eq(VerificationsStatusV2.Yellow);
+        await expect(v2.verifications[0].statusFlags).not.to.include(VerificationsStatusFlagsV2.missing);
+      });
+
+      it('should be able to fetch a netsted parent path', async () => {
+        let parentTopic = getRandomTopic('/evan');
+        let topic = getRandomTopic(parentTopic);
+
+        // check issued case
+        await verifications.setVerification(accounts[0], accounts[0], parentTopic);
+        await verifications.setVerification(accounts[0], accounts[1], topic);
+
+        await new Promise(s => setTimeout(s, 5000));
+        const validationOptions: VerificationsValidationOptions = {
+          disableSubVerifications: VerificationsStatusV2.Red,
+          expired:                 VerificationsStatusV2.Red,
+          invalid:                 VerificationsStatusV2.Red,
+          issued:                  VerificationsStatusV2.Yellow,
+          missing:                 VerificationsStatusV2.Red,
+          noIdentity:              VerificationsStatusV2.Red,
+          notEnsRootOwner:         VerificationsStatusV2.Yellow,
+          parentMissing:           VerificationsStatusV2.Yellow,
+          parentUntrusted:         VerificationsStatusV2.Yellow,
+          rejected:                VerificationsStatusV2.Red,
+          selfIssued:              VerificationsStatusV2.Yellow,
+        };
+        const queryOptions: VerificationsQueryOptions = {
+          validationOptions: validationOptions,
+        };
+
+        const nested = await verifications.getNestedVerificationsV2(accounts[1], topic, false, queryOptions);
+        expect(nested).to.haveOwnProperty('verifications');
+        expect(nested.verifications).to.have.length(1);
+        expect(nested).to.haveOwnProperty('levelComputed');
+        expect(nested.levelComputed).to.haveOwnProperty('parents');
+        expect(nested.levelComputed.parents).to.haveOwnProperty('verifications');
+        expect(nested.levelComputed.parents.verifications).to.have.length(1);
       });
 
       it('verifications with status 0 should have warning "issued"', async () => {
@@ -393,11 +478,29 @@ describe('Verifications handler', function() {
         await expect(computed.status).to.be.eq(0);
         await expect(computed.warnings).to.include('issued');
 
+        // V2
+        // check issued case
+        const localQueryOptions = { validationOptions: {
+          [VerificationsStatusFlagsV2.issued]: VerificationsStatusV2.Yellow,
+          [VerificationsStatusFlagsV2.notEnsRootOwner]: VerificationsStatusV2.Yellow,
+          [VerificationsStatusFlagsV2.parentUntrusted]: VerificationsStatusV2.Yellow,
+          [VerificationsStatusFlagsV2.parentMissing]: VerificationsStatusV2.Yellow,
+        }};
+        let v2 = await verifications.getNestedVerificationsV2(accounts[1], topic, false, localQueryOptions);
+        await expect(v2.status).to.eq(VerificationsStatusV2.Yellow);
+        await expect(v2.verifications[0].statusFlags).to.include(VerificationsStatusFlagsV2.issued);
+
         // test issued is missing after confirm
         await verifications.confirmVerification(accounts[1], accounts[1],
           computed.verifications[0].id);
         computed = await verifications.getComputedVerification(accounts[1], topic);
         await expect(computed.warnings).to.not.include('issued');
+
+        // V2
+        // test issued is missing after confirm
+        v2 = await verifications.getNestedVerificationsV2(accounts[1], topic, false, localQueryOptions);
+        await expect(v2.status).to.eq(VerificationsStatusV2.Yellow);
+        await expect(v2.verifications[0].statusFlags).to.not.include(VerificationsStatusFlagsV2.issued);
       });
 
       it('expired verifications should have warning "expired"', async () => {
@@ -407,6 +510,12 @@ describe('Verifications handler', function() {
         const computed = await verifications.getComputedVerification(accounts[1], topic);
         await expect(computed.status).to.be.eq(0);
         await expect(computed.warnings).to.include('expired');
+
+        // V2
+        const localQueryOptions = { validationOptions: { [VerificationsStatusFlagsV2.expired]: VerificationsStatusV2.Yellow }};
+        const v2 = await verifications.getNestedVerificationsV2(accounts[1], topic, false, localQueryOptions);
+        await expect(v2.status).to.eq(VerificationsStatusV2.Yellow);
+        await expect(v2.verifications[0].statusFlags).to.include(VerificationsStatusFlagsV2.expired);
       });
 
       it('verifications that are created by the same user should have warning "selfIssued"',
@@ -418,6 +527,12 @@ describe('Verifications handler', function() {
         computed = await verifications.getComputedVerification(accounts[0], topic);
         await expect(computed.status).to.be.eq(0);
         await expect(computed.warnings).to.include('selfIssued');
+
+        // V2
+        const localQueryOptions = { validationOptions: { [VerificationsStatusFlagsV2.selfIssued]: VerificationsStatusV2.Yellow }};
+        const v2 = await verifications.getNestedVerificationsV2(accounts[0], topic, false, localQueryOptions);
+        await expect(v2.status).to.eq(VerificationsStatusV2.Yellow);
+        await expect(v2.verifications[0].statusFlags).to.include(VerificationsStatusFlagsV2.selfIssued);
       });
 
       it('verifications with an missing parent should have the warning "parentMissing"',
@@ -431,9 +546,23 @@ describe('Verifications handler', function() {
         computed = await verifications.getComputedVerification(accounts[1], topic);
         await expect(computed.warnings).to.include('parentMissing');
 
+        // V2
+        const localQueryOptions = { validationOptions: {
+          [VerificationsStatusFlagsV2.parentMissing]: VerificationsStatusV2.Yellow,
+          [VerificationsStatusFlagsV2.issued]: VerificationsStatusV2.Yellow,
+        }};
+        let v2 = await verifications.getNestedVerificationsV2(accounts[1], topic, false, localQueryOptions);
+        await expect(v2.status).to.eq(VerificationsStatusV2.Yellow);
+        await expect(v2.verifications[0].statusFlags).to.include(VerificationsStatusFlagsV2.parentMissing);
+
         await verifications.setVerification(accounts[0], accounts[0], topicParent);
         computed = await verifications.getComputedVerification(accounts[1], topic);
         await expect(computed.warnings).to.not.include('parentMissing');
+
+        // V2
+        v2 = await verifications.getNestedVerificationsV2(accounts[1], topic, false, localQueryOptions);
+        await expect(v2.status).to.eq(VerificationsStatusV2.Yellow);
+        await expect(v2.verifications[0].statusFlags).not.to.include(VerificationsStatusFlagsV2.parentMissing);
       });
 
       it('verifications with an untrusted parent should have the warning "parentUntrusted"',
@@ -447,6 +576,17 @@ describe('Verifications handler', function() {
         await verifications.setVerification(accounts[0], accounts[0], topicParent);
         computed = await verifications.getComputedVerification(accounts[1], topic);
         await expect(computed.warnings).to.include('parentUntrusted');
+
+        // V2
+        const localQueryOptions = { validationOptions: {
+          [VerificationsStatusFlagsV2.issued]: VerificationsStatusV2.Yellow,
+          [VerificationsStatusFlagsV2.parentMissing]: VerificationsStatusV2.Yellow,
+          [VerificationsStatusFlagsV2.parentUntrusted]: VerificationsStatusV2.Yellow,
+          [VerificationsStatusFlagsV2.selfIssued]: VerificationsStatusV2.Yellow,
+        }};
+        const v2 = await verifications.getNestedVerificationsV2(accounts[1], topic, false, localQueryOptions);
+        await expect(v2.status).to.eq(VerificationsStatusV2.Yellow);
+        await expect(v2.verifications[0].statusFlags).to.include(VerificationsStatusFlagsV2.parentUntrusted);
       });
 
       it('verifications with the base "/evan" should be issued by the evan root account',
@@ -458,6 +598,12 @@ describe('Verifications handler', function() {
         await verifications.setVerification(accounts[0], accounts[1], topic);
         computed = await verifications.getComputedVerification(accounts[1], topic);
         await expect(computed.warnings).to.include('notEnsRootOwner');
+
+        // V2
+        const localQueryOptions = { validationOptions: { [VerificationsStatusFlagsV2.notEnsRootOwner]: VerificationsStatusV2.Yellow }};
+        const v2 = await verifications.getNestedVerificationsV2(accounts[1], topic, false, localQueryOptions);
+        await expect(v2.status).to.eq(VerificationsStatusV2.Yellow);
+        await expect(v2.verifications[0].statusFlags).to.include(VerificationsStatusFlagsV2.notEnsRootOwner);
       });
 
       it('sub verifications, where the parent verifications has the property has ' +
@@ -478,6 +624,19 @@ describe('Verifications handler', function() {
 
         await expect(parentComputed.disableSubVerifications).to.be.eq(true);
         await expect(computed.warnings).to.include('disableSubVerifications');
+
+        // V2
+        const localQueryOptions = { validationOptions: {
+          [VerificationsStatusFlagsV2.disableSubVerifications]: VerificationsStatusV2.Yellow,
+          [VerificationsStatusFlagsV2.issued]: VerificationsStatusV2.Yellow,
+          [VerificationsStatusFlagsV2.parentUntrusted]: VerificationsStatusV2.Yellow,
+        }};
+        const parentV2 = await verifications.getNestedVerificationsV2(accounts[0], parentTopic, false, localQueryOptions);
+        await expect(parentV2.verifications[0].raw.disableSubVerifications).to.be.eq(true);
+
+        const computedV2 = await verifications.getNestedVerificationsV2(accounts[1], topic, false, localQueryOptions);
+        await expect(computedV2.status).to.eq(VerificationsStatusV2.Yellow);
+        await expect(computedV2.verifications[0].statusFlags).to.include(VerificationsStatusFlagsV2.disableSubVerifications);
       });
     });
   });
@@ -778,10 +937,34 @@ describe('Verifications handler', function() {
 
           // check missing state is missing after set
           await verifications.setVerification(accounts[0], subject, topic, ...extraArgs);
-          const vava = await verifications.getVerifications(subject, topic, isIdentity);
           computed = await verifications.getComputedVerification(subject, topic, isIdentity);
+          const v2 = await verifications.getNestedVerificationsV2(subject, topic, isIdentity, queryOptions);
           await expect(computed.status).to.be.eq(0);
           await expect(computed.warnings).to.not.include('missing');
+        });
+
+        it('should parent', async () => {
+          let parentTopic = getRandomTopic('');
+          let topic = getRandomTopic(parentTopic);
+
+          // check missing state
+          let computed;
+          let parentComputed;
+          computed = await verifications.getComputedVerification(subject, topic, isIdentity);
+          await expect(computed.status).to.be.eq(-1);
+          await expect(computed.warnings).to.include('missing');
+
+          // check issued case
+          await verifications.setVerification(accounts[0], subject, parentTopic, ...extraArgs);
+          await verifications.setVerification(accounts[0], subject, topic, ...extraArgs);
+
+          await new Promise(s => setTimeout(s, 10000));
+
+          // load parent verifications and computed from child
+          parentComputed = await verifications.getComputedVerification(subject, parentTopic, isIdentity);
+          computed = await verifications.getComputedVerification(subject, topic, isIdentity);
+
+          const nested = await verifications.getNestedVerifications(subject, topic, isIdentity);
         });
 
         it('verifications with status 0 should have warning "issued"', async () => {
@@ -887,7 +1070,7 @@ describe('Verifications handler', function() {
         contractId = await baseContract.createUninitialized(
           'testdatacontract',
           accounts[0],
-          businessCenterDomain,
+          null,
         );
         await description.setDescriptionToContract(
           contractId,
@@ -920,7 +1103,7 @@ describe('Verifications handler', function() {
           const localContractId = await baseContract.createUninitialized(
           'testdatacontract',
           accounts[0],
-          businessCenterDomain,
+          null,
           );
           await description.setDescriptionToContract(
             localContractId,
@@ -966,7 +1149,7 @@ describe('Verifications handler', function() {
         const contractIdWithoutIdentity = await baseContract.createUninitialized(
           'testdatacontract',
           accounts[0],
-          businessCenterDomain,
+          null,
         );
 
          await description.setDescriptionToContract(
