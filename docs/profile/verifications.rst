@@ -505,8 +505,58 @@ Example
 
 .. code-block:: typescript
 
-  const nestedVerificationsV2 = await verifications.getNestedVerificationsV2(accounts[1], '/example1');
-
+  const validationOptions: VerificationsValidationOptions = {
+    disableSubVerifications: VerificationsStatusV2.Red,
+    expired:                 VerificationsStatusV2.Red,
+    invalid:                 VerificationsStatusV2.Red,
+    issued:                  VerificationsStatusV2.Yellow,
+    missing:                 VerificationsStatusV2.Red,
+    noIdentity:              VerificationsStatusV2.Red,
+    notEnsRootOwner:         VerificationsStatusV2.Yellow,
+    parentMissing:           VerificationsStatusV2.Yellow,
+    parentUntrusted:         VerificationsStatusV2.Yellow,
+    rejected:                VerificationsStatusV2.Red,
+    selfIssued:              VerificationsStatusV2.Yellow,
+  };
+  const queryOptions: VerificationsQueryOptions = {
+    validationOptions: validationOptions,
+  };
+  const nestedVerificationsV2 = await verifications.getNestedVerificationsV2(
+    accounts[1], '/example1', false, queryOptions);
+  console.dir(nestedVerificationsV2);
+  // Output:
+  // { verifications:
+  //    [ { details:
+  //         { creationDate: 1561722858000,
+  //           ensAddress:
+  //            '4d2027082fdec4ee253363756eccb1b5492f61fb6329f25d8a7976d7909c10ac.example1.verifications.evan',
+  //           id:
+  //            '0x855a3c10b9cd6d42da5fd5e9b61e0f98a5af79b1acbfee57a9e4f3c9721f9c5d',
+  //           issuer: '0x5035aEe29ea566F3296cdD97C29baB2b88C17c25',
+  //           issuerIdentity: '0xD2860FeC7A198A646f9fD1207B59aD42f00c3189',
+  //           subject: '0x9aE6533e7a2C732863C0aF792D5EA358518cd757',
+  //           subjectIdentity: '0x9F870954c615E4457660D22BE0F38FE0200b1Ed9',
+  //           subjectType: '0x9F870954c615E4457660D22BE0F38FE0200b1Ed9',
+  //           topic: '/example1',
+  //           status: 'green' },
+  //        raw:
+  //         { creationBlock: '224038',
+  //           creationDate: '1561722858',
+  //           data:
+  //            '0x0000000000000000000000000000000000000000000000000000000000000000',
+  //           disableSubVerifications: false,
+  //           signature:
+  //            '0x941f316d77f5c1dc8b38000ecbb60304554ee2fb36453487ef7822ce6d8c7ce5267bb62396cfb08191028099de2e28d0ffd4012608e8a622e9e7a6a9570a88231b',
+  //           status: 1,
+  //           topic:
+  //            '34884897835812838038558016063403566909277437558805531399344559176587016933548' },
+  //        statusFlags: [] } ],
+  //   levelComputed:
+  //    { subjectIdentity: '0x9F870954c615E4457660D22BE0F38FE0200b1Ed9',
+  //      subjectType: 'account',
+  //      topic: '/example1',
+  //      subject: '0x9aE6533e7a2C732863C0aF792D5EA358518cd757' },
+  //   status: 'green' }
 
 
 --------------------------------------------------------------------------------
@@ -1148,8 +1198,66 @@ Example
 
 .. code-block:: typescript
 
-  const nestedVerificationsV2 = await verifications.getNestedVerificationsV2(accounts[1], '/example1');
+  const validationOptions: VerificationsValidationOptions = {
+    disableSubVerifications: VerificationsStatusV2.Red,
+    expired:                 VerificationsStatusV2.Red,
+    invalid:                 VerificationsStatusV2.Red,
+    issued:                  VerificationsStatusV2.Yellow,
+    missing:                 VerificationsStatusV2.Red,
+    noIdentity:              VerificationsStatusV2.Red,
+    notEnsRootOwner:         VerificationsStatusV2.Yellow,
+    parentMissing:           VerificationsStatusV2.Yellow,
+    parentUntrusted:         VerificationsStatusV2.Yellow,
+    rejected:                VerificationsStatusV2.Red,
+    selfIssued:              VerificationsStatusV2.Yellow,
+  };
+  const queryOptions: VerificationsQueryOptions = {
+    validationOptions: validationOptions,
+  };
+  const nestedVerificationsV2 = await verifications.getNestedVerificationsV2(
+    accounts[1], '/example1', false, queryOptions);
+  console.dir(nestedVerificationsV2);
+  // Output:
+  // { verifications:
+  //    [ { details:
+  //         { creationDate: 1561722858000,
+  //           ensAddress:
+  //            '4d2027082fdec4ee253363756eccb1b5492f61fb6329f25d8a7976d7909c10ac.example1.verifications.evan',
+  //           id:
+  //            '0x855a3c10b9cd6d42da5fd5e9b61e0f98a5af79b1acbfee57a9e4f3c9721f9c5d',
+  //           issuer: '0x5035aEe29ea566F3296cdD97C29baB2b88C17c25',
+  //           issuerIdentity: '0xD2860FeC7A198A646f9fD1207B59aD42f00c3189',
+  //           subject: '0x9aE6533e7a2C732863C0aF792D5EA358518cd757',
+  //           subjectIdentity: '0x9F870954c615E4457660D22BE0F38FE0200b1Ed9',
+  //           subjectType: '0x9F870954c615E4457660D22BE0F38FE0200b1Ed9',
+  //           topic: '/example1',
+  //           status: 'green' },
+  //        raw:
+  //         { creationBlock: '224038',
+  //           creationDate: '1561722858',
+  //           data:
+  //            '0x0000000000000000000000000000000000000000000000000000000000000000',
+  //           disableSubVerifications: false,
+  //           signature:
+  //            '0x941f316d77f5c1dc8b38000ecbb60304554ee2fb36453487ef7822ce6d8c7ce5267bb62396cfb08191028099de2e28d0ffd4012608e8a622e9e7a6a9570a88231b',
+  //           status: 1,
+  //           topic:
+  //            '34884897835812838038558016063403566909277437558805531399344559176587016933548' },
+  //        statusFlags: [] } ],
+  //   levelComputed:
+  //    { subjectIdentity: '0x9F870954c615E4457660D22BE0F38FE0200b1Ed9',
+  //      subjectType: 'account',
+  //      topic: '/example1',
+  //      subject: '0x9aE6533e7a2C732863C0aF792D5EA358518cd757' },
+  //   status: 'green' }
+
   const trimmed = verifications.trimToStatusTree(nestedVerificationsV2);
+  console.dir(trimmed);
+  // Output:
+  // { status: 'green',
+  //   verifications:
+  //    [ { details: { status: 'green', topic: '/example1' },
+  //        statusFlags: [] } ] }
 
 
 

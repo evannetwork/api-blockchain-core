@@ -40,7 +40,7 @@ Many code examples here use variable naming from the tests. So there are a few a
 Different Types of Identities
 =============================
 
-Okay, this page is about berifications, so why does the first heading talk about some kind of identities? |br|
+Okay, this page is about verifications, so why does the first heading talk about some kind of identities? |br|
 The answer for this is pretty simple simple: Verifications are issued by identities.
 
 So what exactly is an identity? |br|
@@ -486,6 +486,80 @@ The call ``verifications.getNestedVerifications(accounts[0], '/example1/example1
 
             - own checks can be made, e.g. check if the issuer of the root verification is a well known and trusted account
             - use ``/evan`` derived verification paths, the root verification ``/evan`` is only trusted, if it is issued by a trusted root issuer, get in contact with us via info@evan.team for details on how to obtain a subverification like ``/evan/myOwnTrustedVerification``, that can be used for building widely accepted verification paths
+
+
+.. get-nested-verifications-v2:
+
+-----------------------------------------------------
+getNestedVerificationsV2
+-----------------------------------------------------
+
+The output from the last example has some aspects, where it could perform better:
+
+- the output is a bit lengthy and looks unstructured, some of the information here may not be useful in most situations and relies on predefined defaults (e.g. a default description, that isn't actually set is returned if no description is defined, which may lead to the opinion, that a description has been set)
+- it is quite hard to determine with a simple query and not further processing to determine if a valid verification is present or not
+- documentation about properties returned in verification is a bit sparse in some points
+
+An updated version of the ``getNestedVerifications`` has been added as ``getNestedVerificationsV2``. This version will replace the current one soon, but is available for now under the V2 name. This version is under development and may undergo further changes but the basic behavior will not change and it will replace the regular one at some point of time.
+
+A usage example:
+
+.. code-block:: typescript
+
+  const validationOptions: VerificationsValidationOptions = {
+    disableSubVerifications: VerificationsStatusV2.Red,
+    expired:                 VerificationsStatusV2.Red,
+    invalid:                 VerificationsStatusV2.Red,
+    issued:                  VerificationsStatusV2.Yellow,
+    missing:                 VerificationsStatusV2.Red,
+    noIdentity:              VerificationsStatusV2.Red,
+    notEnsRootOwner:         VerificationsStatusV2.Yellow,
+    parentMissing:           VerificationsStatusV2.Yellow,
+    parentUntrusted:         VerificationsStatusV2.Yellow,
+    rejected:                VerificationsStatusV2.Red,
+    selfIssued:              VerificationsStatusV2.Yellow,
+  };
+  const queryOptions: VerificationsQueryOptions = {
+    validationOptions: validationOptions,
+  };
+  const nestedVerificationsV2 = await verifications.getNestedVerificationsV2(
+    accounts[1], '/example1', false, queryOptions);
+  console.dir(nestedVerificationsV2);
+  // Output:
+  // { verifications:
+  //    [ { details:
+  //         { creationDate: 1561722858000,
+  //           ensAddress:
+  //            '4d2027082fdec4ee253363756eccb1b5492f61fb6329f25d8a7976d7909c10ac.example1.verifications.evan',
+  //           id:
+  //            '0x855a3c10b9cd6d42da5fd5e9b61e0f98a5af79b1acbfee57a9e4f3c9721f9c5d',
+  //           issuer: '0x5035aEe29ea566F3296cdD97C29baB2b88C17c25',
+  //           issuerIdentity: '0xD2860FeC7A198A646f9fD1207B59aD42f00c3189',
+  //           subject: '0x9aE6533e7a2C732863C0aF792D5EA358518cd757',
+  //           subjectIdentity: '0x9F870954c615E4457660D22BE0F38FE0200b1Ed9',
+  //           subjectType: '0x9F870954c615E4457660D22BE0F38FE0200b1Ed9',
+  //           topic: '/example1',
+  //           status: 'green' },
+  //        raw:
+  //         { creationBlock: '224038',
+  //           creationDate: '1561722858',
+  //           data:
+  //            '0x0000000000000000000000000000000000000000000000000000000000000000',
+  //           disableSubVerifications: false,
+  //           signature:
+  //            '0x941f316d77f5c1dc8b38000ecbb60304554ee2fb36453487ef7822ce6d8c7ce5267bb62396cfb08191028099de2e28d0ffd4012608e8a622e9e7a6a9570a88231b',
+  //           status: 1,
+  //           topic:
+  //            '34884897835812838038558016063403566909277437558805531399344559176587016933548' },
+  //        statusFlags: [] } ],
+  //   levelComputed:
+  //    { subjectIdentity: '0x9F870954c615E4457660D22BE0F38FE0200b1Ed9',
+  //      subjectType: 'account',
+  //      topic: '/example1',
+  //      subject: '0x9aE6533e7a2C732863C0aF792D5EA358518cd757' },
+  //   status: 'green' }
+
+The variable ``validationOptions`` from the example is a set of rules for about how to interpret the ``statusFlags`` from the ``verifications``. The last example no flags, but possible issues are tracked as status flags and are evaluated by given rules. The rules are explained in the respective interface and mostly match the warnings explained in the section below.
 
 
 
