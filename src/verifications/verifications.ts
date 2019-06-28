@@ -220,7 +220,7 @@ export interface VerificationsVerificationEntry {
  * @param      {Partial<VerificationsVerificationEntry>} verification   current verification result
  *                                                                      (without status)
  * @param      {Partial<VerificationsResultV2>}          partialResult  options for verifications query
- * @return     {VerificationsStatusV2}                   status for this verification
+ * @return     {Promise<VerificationsStatusV2>}                   status for this verification
  */
 export interface VerificationsVerificationEntryStatusComputer {
   (
@@ -236,7 +236,7 @@ export interface VerificationsVerificationEntryStatusComputer {
  * @param      {Partial<VerificationsResultV2>} partialResult  current verification result (without status)
  * @param      {VerificationsQueryOptions}      queryOptions   options for verifications query
  * @param      {VerificationsStatusV2}          currentStatus  current status of verification
- * @return     {VerificationsStatusV2}          updated status, will be used at verification status
+ * @return     {Promise<VerificationsStatusV2>} updated status, will be used at verification status
  */
 export interface VerificationsStatusComputer {
   (
@@ -269,6 +269,7 @@ export interface VerificationsOptions extends LoggerOptions {
   dfs: DfsInterface;
   executor: Executor;
   nameResolver: NameResolver;
+  registry?: string;
   storage?: string;
 }
 
@@ -278,11 +279,6 @@ export interface VerificationsOptions extends LoggerOptions {
  * @class      Verifications (name)
  */
 export class Verifications extends Logger {
-  cachedIdentities: any = { };
-  contracts: any = { };
-  encodingEnvelope = 'binary';
-  options: VerificationsOptions;
-  subjectTypes: any = { };
   public readonly defaultValidationOptions: VerificationsValidationOptions = {
     disableSubVerifications: VerificationsStatusV2.Red,
     expired:                 VerificationsStatusV2.Red,
@@ -299,35 +295,41 @@ export class Verifications extends Logger {
   public readonly defaultQueryOptions: VerificationsQueryOptions = {
     validationOptions: this.defaultValidationOptions,
   };
+  public cachedIdentities: any = { };
+  public contracts: any = { };
+  public encodingEnvelope = 'binary';
+  /** cache all the ens owners */
+  public ensOwners: any = { };
+  public options: VerificationsOptions;
+  /** check if currently the storage is ensuring, if yes, don't run it twice */
+  public storageEnsuring: Promise<any>;
+  public subjectTypes: any = { };
+  /** cache all the verifications using an object of promises, to be sure, that the verification is
+   * loaded only once */
+  public verificationCache: any = { };
+  /** backup already loaded verification descriptions */
+  public verificationDescriptions: any = { };
 
   /**
-   * check if currently the storage is ensuring, if yes, don't run it twice
+   * Creates a new Verifications instance.
+   *
+   * Note, that the option properties ``registry`` and ``resolver`` are optional but should be
+   * provided in most cases. As the module allows to create an own ENS structure, that includes an
+   * own ENS registry and an own default resolver for it, setting them beforehand is optional.
+   *
+   * @param    {VerificationsOptions} options 
    */
-  storageEnsuring: Promise<any>;
-
-  /**
-   * backup already loaded verification descriptions
-   */
-  verificationDescriptions: any = { };
-
-  /**
-   * cache all the verifications using an object of promises, to be sure, that the verification is
-   * loaded only once
-   */
-  verificationCache: any = { };
-
-  /**
-   * cache all the ens owners
-   */
-  ensOwners: any = { };
-
   constructor(options: VerificationsOptions) {
     super(options);
     this.options = options;
 
     if (options.storage) {
-      this.contracts.storage = this.options.contractLoader.loadContract('V00_UserRegistry',
-        options.storage);
+      this.contracts.storage = this.options.contractLoader.loadContract(
+        'V00_UserRegistry', options.storage);
+    }
+    if (options.registry) {
+      this.contracts.registry = this.options.contractLoader.loadContract(
+        'VerificationsRegistry', options.registry);
     }
   }
 
@@ -711,108 +713,6 @@ export class Verifications extends Logger {
   }
 
   /**
-   * Format given result to V2 data format.
-   *
-   * @param      {any}                        nestedVerificationsInput  verifications array
-   * @param      {VerificationsQueryOptions}  queryOptions              options for result
-   *                                                                    status computation
-   */
-  public async formatToV2(
-    nestedVerificationsInput: any[],
-    queryOptions: VerificationsQueryOptions,
-  ): Promise<VerificationsResultV2> {
-    const nestedVerifications = nestedVerificationsInput.filter(
-      verification => verification.status !== -1);
-    if (!nestedVerifications.length) {
-      return {
-        status: VerificationsStatusV2.Red,
-        verifications: [],
-      };
-    }
-    let verifications = [];
-    let levelComputed: any;
-
-    if (nestedVerifications.length) {
-      let parents;
-      if (nestedVerifications[0].parents &&
-          nestedVerifications[0].parents.length) {
-        parents = await this.formatToV2(nestedVerifications[0].parents, queryOptions);
-      }
-      levelComputed = {
-        subjectIdentity: nestedVerifications[0].subjectIdentity,
-        subjectType: nestedVerifications[0].subjectType,
-        topic: nestedVerifications[0].levelComputed.name,
-      };
-      if (nestedVerifications[0].subjectIdentity !== nestedVerifications[0].subject) {
-        levelComputed.subject = nestedVerifications[0].subject;
-      }
-      if (nestedVerifications[0].levelComputed.expirationDate) {
-        levelComputed.expirationDate = nestedVerifications[0].levelComputed.expirationDate;
-      }
-      if (parents) {
-        levelComputed.parents = parents;
-      }
-    }
-
-    // convert verification data
-    for (let nestedVerification of nestedVerifications) {
-      const verification: Partial<VerificationsVerificationEntry> = {
-        details: {
-          creationDate: nestedVerification.creationDate,
-          ensAddress: nestedVerification.ensAddress,
-          id: nestedVerification.id,
-          issuer: nestedVerification.issuerAccount,
-          issuerIdentity: nestedVerification.issuer,
-          subject: nestedVerification.subject,
-          subjectIdentity: nestedVerification.subjectIdentity,
-          subjectType: nestedVerification.subjectIdentity,
-          topic: nestedVerification.name,
-        },
-        raw: {
-          creationBlock: nestedVerification.creationBlock,
-          creationDate: typeof nestedVerification.creationDate === 'number' ?
-            `${nestedVerification.creationDate}`.replace(/...$/, '') :
-            nestedVerification.creationDate,
-          data: nestedVerification.data,
-          disableSubVerifications: nestedVerification.disableSubVerifications,
-          signature: nestedVerification.signature,
-          status: nestedVerification.status,
-          topic: nestedVerification.topic,
-        },
-      };
-      if (nestedVerification.subjectIdentity !== nestedVerification.subject) {
-        // .subject may be .subject's identity, ignore value in this case
-        levelComputed.subject = nestedVerification.subject;
-      }
-      if (nestedVerification.warnings) {
-        verification.statusFlags = nestedVerification.warnings;
-      }
-      if (nestedVerification.description && nestedVerification.description.author !== nullAddress) {
-        verification.details.description = nestedVerification.description;
-      }
-      if (nestedVerification.data && nestedVerification.data !== nullBytes32) {
-        verification.details.data = await this.options.dfs.get(
-          Ipfs.bytes32ToIpfsHash(nestedVerification.data));
-      }
-      ['expirationDate', 'rejectReason'].map((property) => {
-        if (nestedVerification[property]) {
-          verification[property] = nestedVerification[property];
-        }
-      });
-      verifications.push(verification);
-    }
-
-    const result: any = { verifications };
-    if (levelComputed) {
-      result.levelComputed = levelComputed;
-    }
-
-    result.status = await this.computeStatus(result, queryOptions);
-
-    return result;
-  }
-
-  /**
    * Loads a list of verifications for a topic and a subject and combines to a single view for a
    * simple verification status check.
    *
@@ -1162,7 +1062,7 @@ export class Verifications extends Logger {
   }
 
   /**
-   * Get verifications and their parent paths for a specific subject, then format it to update
+   * Get verifications and their parent paths for a specific subject, then format it to updated
    * result format.
    *
    * @param      {string}                     subject       subject (account/contract or identity)
@@ -1787,23 +1687,27 @@ export class Verifications extends Logger {
    * @return     {Promise<void>}  resolved when storage exists or storage was loaded
    */
   private async ensureStorage() {
-    if (!this.contracts.storage) {
+    if (!this.contracts.storage || !this.contracts.registry) {
       // only load the storage once at a time (this function could be called quickly several times)
       if (!this.storageEnsuring) {
         this.storageEnsuring = Promise.all([
-          this.options.nameResolver
+          this.options.storage || this.options.nameResolver
             .getAddress(`identities.${ this.options.nameResolver.config.labels.ensRoot }`),
-          this.options.nameResolver
+          this.options.registry || this.options.nameResolver
             .getAddress(`contractidentities.${ this.options.nameResolver.config.labels.ensRoot }`),
         ]);
       }
 
       // await storage address
       const [ identityStorage, contractIdentityStorage ] = await this.storageEnsuring;
-      this.contracts.storage = this.options.contractLoader.loadContract('V00_UserRegistry',
-        identityStorage);
-      this.contracts.registry = this.options.contractLoader.loadContract('VerificationsRegistry',
-        contractIdentityStorage);
+      if (!this.contracts.storage) {
+        this.contracts.storage = this.options.contractLoader.loadContract('V00_UserRegistry',
+          identityStorage);
+      }
+      if (!this.contracts.registry) {
+        this.contracts.registry = this.options.contractLoader.loadContract('VerificationsRegistry',
+          contractIdentityStorage);
+      }
     }
   }
 
@@ -1973,6 +1877,108 @@ export class Verifications extends Logger {
           'but no proper identity tx status event could be retrieved');
       }
     }
+  }
+
+  /**
+   * Format given result to V2 data format.
+   *
+   * @param      {any}                        nestedVerificationsInput  verifications array
+   * @param      {VerificationsQueryOptions}  queryOptions              options for result
+   *                                                                    status computation
+   */
+  private async formatToV2(
+    nestedVerificationsInput: any[],
+    queryOptions: VerificationsQueryOptions,
+  ): Promise<VerificationsResultV2> {
+    const nestedVerifications = nestedVerificationsInput.filter(
+      verification => verification.status !== -1);
+    if (!nestedVerifications.length) {
+      return {
+        status: VerificationsStatusV2.Red,
+        verifications: [],
+      };
+    }
+    let verifications = [];
+    let levelComputed: any;
+
+    if (nestedVerifications.length) {
+      let parents;
+      if (nestedVerifications[0].parents &&
+          nestedVerifications[0].parents.length) {
+        parents = await this.formatToV2(nestedVerifications[0].parents, queryOptions);
+      }
+      levelComputed = {
+        subjectIdentity: nestedVerifications[0].subjectIdentity,
+        subjectType: nestedVerifications[0].subjectType,
+        topic: nestedVerifications[0].levelComputed.name,
+      };
+      if (nestedVerifications[0].subjectIdentity !== nestedVerifications[0].subject) {
+        levelComputed.subject = nestedVerifications[0].subject;
+      }
+      if (nestedVerifications[0].levelComputed.expirationDate) {
+        levelComputed.expirationDate = nestedVerifications[0].levelComputed.expirationDate;
+      }
+      if (parents) {
+        levelComputed.parents = parents;
+      }
+    }
+
+    // convert verification data
+    for (let nestedVerification of nestedVerifications) {
+      const verification: Partial<VerificationsVerificationEntry> = {
+        details: {
+          creationDate: nestedVerification.creationDate,
+          ensAddress: nestedVerification.ensAddress,
+          id: nestedVerification.id,
+          issuer: nestedVerification.issuerAccount,
+          issuerIdentity: nestedVerification.issuer,
+          subject: nestedVerification.subject,
+          subjectIdentity: nestedVerification.subjectIdentity,
+          subjectType: nestedVerification.subjectIdentity,
+          topic: nestedVerification.name,
+        },
+        raw: {
+          creationBlock: nestedVerification.creationBlock,
+          creationDate: typeof nestedVerification.creationDate === 'number' ?
+            `${nestedVerification.creationDate}`.replace(/...$/, '') :
+            nestedVerification.creationDate,
+          data: nestedVerification.data,
+          disableSubVerifications: nestedVerification.disableSubVerifications,
+          signature: nestedVerification.signature,
+          status: nestedVerification.status,
+          topic: nestedVerification.topic,
+        },
+      };
+      if (nestedVerification.subjectIdentity !== nestedVerification.subject) {
+        // .subject may be .subject's identity, ignore value in this case
+        levelComputed.subject = nestedVerification.subject;
+      }
+      if (nestedVerification.warnings) {
+        verification.statusFlags = nestedVerification.warnings;
+      }
+      if (nestedVerification.description && nestedVerification.description.author !== nullAddress) {
+        verification.details.description = nestedVerification.description;
+      }
+      if (nestedVerification.data && nestedVerification.data !== nullBytes32) {
+        verification.details.data = await this.options.dfs.get(
+          Ipfs.bytes32ToIpfsHash(nestedVerification.data));
+      }
+      ['expirationDate', 'rejectReason'].map((property) => {
+        if (nestedVerification[property]) {
+          verification[property] = nestedVerification[property];
+        }
+      });
+      verifications.push(verification);
+    }
+
+    const result: any = { verifications };
+    if (levelComputed) {
+      result.levelComputed = levelComputed;
+    }
+
+    result.status = await this.computeStatus(result, queryOptions);
+
+    return result;
   }
 
   /**

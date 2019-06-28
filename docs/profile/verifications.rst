@@ -91,6 +91,7 @@ Parameters
     * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
     * ``logLogLevel`` - |source logLevel|_ (optional): messages with this level will be pushed to ``logLog``
+    * ``registry`` - ``string`` (optional): contract address of the identity storage registry
     * ``storage`` - ``string`` (optional): contract address of the identity storage registry
 
 -------
@@ -140,7 +141,7 @@ Creates a new identity for account or contract and registers them on the storage
 Parameters
 ----------
 
-#. ``accountId`` - ``string``: ccount that runs transaction, receiver of identity when omitting the other arguments
+#. ``accountId`` - ``string``: account that runs transaction, receiver of identity when omitting the other arguments
 #. ``contractId`` - ``string``: (optional) contract address to create the identity for, creates account identity for ``accountId`` if omitted
 #. ``updateDescription`` - ``boolean`` (optional): update description of contract, defaults to ``true``
 
@@ -466,6 +467,45 @@ Example
       parentComputed: [ ... ]
     }
   ]
+
+
+
+
+--------------------------------------------------------------------------------
+
+.. _verifications_getNestedVerificationsV2:
+
+getNestedVerificationsV2
+================================================================================
+
+.. code-block:: typescript
+
+  getNestedVerificationsV2(subject, topic[, isIdentity, queryOptions]);
+
+Get verifications and their parent paths for a specific subject, then format it to updated result format.
+
+----------
+Parameters
+----------
+
+#. ``subject`` - ``string``: subject (account/contract or identity)
+#. ``topic`` - ``string``: topic (verification name) to check
+#. ``isIdentity`` - ``boolean``: true if subject is identity
+#. ``queryOptions`` - ``VerificationsQueryOptions``: options for query and status computation
+
+-------
+Returns
+-------
+
+``Promise`` returns ``VerificationsResultV2``: verification result object with status, verification data and tree
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const nestedVerificationsV2 = await verifications.getNestedVerificationsV2(accounts[1], '/example1');
 
 
 
@@ -1009,7 +1049,7 @@ Example
 
 --------------------------------------------------------------------------------
 
-= Deployment =
+= Utilities =
 ==========================
 
 .. _verifications_createStructure:
@@ -1051,6 +1091,125 @@ Example
 
 
 
+.. _verifications_deleteFromVerificationCache:
+
+deleteFromVerificationCache
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.deleteFromVerificationCache(subject, topic);
+
+Delete a single entry from the verification cache object using subject and topic
+
+----------
+Parameters
+----------
+
+#. ``subject`` - ``string``: the subject that should be removed
+#. ``topic`` - ``string``: the topic that should be removed
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  verifications.deleteFromVerificationCache(accounts[1], '/some/verification');
+
+
+
+.. _verifications_trimToStatusTree:
+
+trimToStatusTree
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.trimToStatusTree(result);
+
+Trim ``VerificationsResultV2`` result down to statusFlags and status values for analysis purposes and debugging.
+
+----------
+Parameters
+----------
+
+#. ``inputResult`` - ``VerificationsResultV2``: result to trim down
+
+-------
+Returns
+-------
+
+``Promise`` returns ``any``: trimmed down tree
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const nestedVerificationsV2 = await verifications.getNestedVerificationsV2(accounts[1], '/example1');
+  const trimmed = verifications.trimToStatusTree(nestedVerificationsV2);
+
+
+
+--------------------------------------------------------------------------------
+
+Enums
+=====
+
+.. _verifications_VerificationsStatus:
+
+-------------------
+VerificationsStatus
+-------------------
+
+verification status from blockchain
+
+#. ``Issued``: issued by a non-issuer parent verification holder, self issued state is 0
+#. ``Confirmed``: issued by a non-issuer parent verification holder, self issued state is 0
+#. ``Rejected``: verification rejected status
+
+
+
+.. _verifications_VerificationsStatusFlagsV2:
+
+--------------------------
+VerificationsStatusFlagsV2
+--------------------------
+
+status annotations about verification, depending on defined ``VerificationsQueryOptions``, this may lead to the verification to be invalid or less trustworthy
+  
+#. ``disableSubVerifications``: parent verification does not allow subverifications
+#. ``expired``: verification has expired
+#. ``invalid``: signature does not match requirements, this could be because it hasn’t been signed by correct account or underlying checksum does not match subject, topic and data
+#. ``issued``: verification has been issued, but not accepted or rejected by subject
+#. ``missing``: verification has not been issued
+#. ``noIdentity``: given subject has no identity
+#. ``notEnsRootOwner``: verification path has a trusted root verification topic, but this verification is not signed by a trusted instance
+#. ``parentMissing``: parent verification is missing in path
+#. ``parentUntrusted``: verification path cannot be traced back to a trusted root verification
+#. ``rejected``: verification has been issued and then rejected by subject
+#. ``selfIssued``: verification issuer is the same account as the subject
+
+
+
+.. _verifications_VerificationsStatusV2:
+
+---------------------
+VerificationsStatusV2
+---------------------
+
+represents the status of a requested verification topic after applying rules in ``VerificationsQueryOptions``
+
+#. ``Green``: verification is valid according to ``VerificationsQueryOptions``
+#. ``Yellow``: verification may be valid but more checks may be required more for trusting it, see status flags for details
+#. ``Red``: verification is invalid, see status flags for details
+
+
+
+--------------------------------------------------------------------------------
+
 Interfaces
 ==========
 
@@ -1067,6 +1226,135 @@ information for submitting a delegated transaction, created with ``signSetVerifi
 #. ``value`` - ``number``: value to transfer, usually 0
 #. ``input`` - ``string``: abi encoded input for transaction
 #. ``signedTransactionInfo`` - ``string``: signed data from transaction
+
+
+
+.. _verifications_VerificationsQueryOptions:
+
+-------------------------
+VerificationsQueryOptions
+-------------------------
+
+options for ``getNestedVerificationsV2``, define how to calculate status of verification
+
+#. ``statusComputer`` - ``VerificationsStatusComputer`` (optional): function for setting verification with custom logic
+#. ``validationOptions`` - ``VerificationsValidationOptions`` (optional): specification of how to handle status flags of each single verification
+
+
+
+.. _verifications_VerificationsResultV2:
+
+---------------------
+VerificationsResultV2
+---------------------
+
+result of a verification query
+
+#. ``status`` - ``VerificationsStatusV2``: overall status of verification
+#. ``verifications`` - ``VerificationsVerificationEntry[]``: (optional): list of verifications on same topic and subject
+#. ``levelComputed`` (optional): consolidated information about verification
+    * ``subjectIdentity`` - ``string``: identity contract address or hash of subject
+    * ``subjectType`` - ``string``: type of subject (account/contract)
+    * ``topic`` - ``string``: topic (name) of verification
+    * ``expirationDate`` - ``number`` (optional): timestamp, when verification will expire, js timestamp
+    * ``parents`` - ``VerificationsResultV2`` (optional): verifications of parent path, issued for all issuers of verifications on this level
+    * ``subject`` - ``number`` (optional): subject accountId/contractId (if query was issued with ``isIdentity`` set to ``false``)
+
+
+
+.. _verifications_VerificationsVerificationEntry:
+
+------------------------------
+VerificationsVerificationEntry
+------------------------------
+
+a single verification; usually used in ``VerificationsResultV2``
+
+#. ``details``: details about verification
+    * ``creationDate`` - ``number``: js timestamp of verification creation
+    * ``ensAddress`` - ``string``: ens address of description for this verification
+    * ``id`` - ``string``: id in verification holder / verifications registry
+    * ``issuer`` - ``string``: account id of verification issuer
+    * ``issuerIdentity`` - ``string``: issuers identity contract id
+    * ``subjectIdentity`` - ``string``: identity (contract or identity hash) of subject
+    * ``subjectType`` - ``string``: type of subject (account/contract)
+    * ``topic`` - ``string``: topic of identity (name)
+    * ``data`` - ``any`` (optional): 32B data hash string of identity 
+    * ``description`` - ``any`` (optional): only if actually set 
+    * ``expirationDate`` - ``number`` (optional): expiration date of verification (js timestamp) 
+    * ``rejectReason`` - ``string`` (optional): if applicable, reason for verification rejection 
+    * ``status`` - ``VerificationsStatusV2`` (optional): status of verification, is optional during result computation and required when done 
+    * ``subject`` - ``string`` (optional): subject accountId/contractId (if query was issued with ``isIdentity`` set to ``false``)
+#. ``raw`` (optional): raw data about verification from contract
+    * ``creationBlock`` - ``string``: block in which verification was issued
+    * ``creationDate`` - ``string``: unix timestamp is s when verification was issued
+    * ``data`` - ``string``: 32B data hash string of identity, bytes32 zero if unset
+    * ``disableSubVerifications`` - ``boolean``: true if subverification are not allowed
+    * ``signature`` - ``string``: signature over verification data
+    * ``status`` - ``number``: status of verification, (issued, accepted, rejected, etc.)
+    * ``topic`` - ``string``: uint string of verification name (topic), is uint representation of sha3 of name
+#. ``statusFlags`` - ``string[]`` (optional): all found flags, those may not have impact on status, depends on ``VerificationsStatusFlagsV2``
+
+
+
+.. _verifications_VerificationsVerificationEntryStatusComputer:
+
+--------------------------------------------
+VerificationsVerificationEntryStatusComputer
+--------------------------------------------
+
+Computes status for a single verification. verification, partialResult.
+
+Parameters
+----------
+
+#. ``verification`` - ``Partial<VerificationsVerificationEntry>``: current verification result (without status)
+#. ``partialResult`` - ``Partial<VerificationsResultV2>``: options for verifications query
+
+Returns
+-------
+
+``Promise`` returns ``VerificationsStatusV2``: status for this verification
+
+
+
+.. _verifications_VerificationsStatusComputer:
+
+---------------------------
+VerificationsStatusComputer
+---------------------------
+
+Computes status from overall verifications result.
+This function is applied after each verification has received an own computed status.
+
+Parameters
+----------
+
+#. ``partialResult`` - ``Partial<VerificationsResultV2>``: current verification result (without status)
+#. ``queryOptions`` - ``VerificationsQueryOptions``: options for verifications query
+#. ``currentStatus`` - ``VerificationsStatusV2``: current status of verification
+
+Returns
+-------
+
+``Promise`` returns ``Promise<VerificationsStatusV2>``: updated status, will be used at verification status
+
+
+
+.. _verifications_VerificationsValidationOptions:
+
+------------------------------
+VerificationsValidationOptions
+------------------------------
+
+Options for verification status computation. Keys are string representations of
+``VerificationsStatusFlagsV2``, values can be ``VerificationsStatusV2`` or functions.
+If value is ``VerificationsStatusV2``, then finding given status flag sets verification value
+to given ``VerificationsStatusV2`` (if not already at a higher trust level).
+If value is function, pass verification to this function and set verification status to
+return value (if not already at a higher trust level).
+
+#. ``[id: string]`` - ``VerificationsStatusV2 | VerificationsVerificationEntryStatusComputer``: each key is a status flag and usually an enum value from ``VerificationsStatusFlagsV2``, though it is possible to use custom status flags
 
 
 
