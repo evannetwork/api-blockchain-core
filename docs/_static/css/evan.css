@@ -1,0 +1,178 @@
+/**** nav search side ***/
+
+.wy-nav-side .wy-side-nav-search {
+  position: relative;
+
+  text-align: left;
+
+  border-bottom: 1px solid #dce0e1;
+  background-color: #fff;
+}
+
+.wy-side-nav-search > div.version {
+  display: inline-block;
+
+  color: #e71096;
+}
+
+.wy-nav-side .wy-side-nav-search a {
+  font-size: 18px;
+  font-weight: 500;
+
+  text-align: left;
+
+  color: #000;
+}
+
+.wy-nav-side .wy-side-nav-search input {
+  border-radius: 3px;
+}
+
+.wy-nav-side .wy-side-nav-search:after,
+.wy-nav-side .wy-side-nav-search:before {
+  position: absolute;
+  top: 100%;
+  left: 25%;
+
+  width: 0;
+  height: 0;
+
+  content: ' ';
+  pointer-events: none;
+
+  border: solid transparent;
+}
+
+.wy-nav-side .wy-side-nav-search:after {
+  margin-left: -10px;
+
+  border-width: 10px;
+  border-top-color: #fff;
+}
+
+.wy-nav-side .wy-side-nav-search:before {
+  margin-left: -12px;
+
+  border-width: 12px;
+  border-top-color: #dce0e1;
+}
+
+/******** side panel *************/
+.wy-nav-side {
+  background: #f5f6fa;
+  box-shadow: 0 0 5px 0 grey;
+}
+
+.wy-menu-vertical header,
+.wy-menu-vertical p.caption {
+  margin-bottom: 10px;
+  padding: 10px;
+
+  color: #000;
+}
+
+.wy-nav-side a {
+  color: #000;
+}
+
+.wy-menu-vertical ul * {
+  background-color: transparent !important;
+}
+
+.wy-menu-vertical ul *:hover {
+  color: #64c6c1 !important;
+  background-color: transparent !important;
+}
+
+.wy-menu-vertical > ul {
+  padding-bottom: 10px;
+
+  border-bottom: 1px solid #dce0e1;
+  border-left: 3px solid transparent;
+}
+
+ul.current {
+  margin-left: 15px;
+
+  border-left: 5px solid #64c6c1;
+}
+
+.wy-menu-vertical li.toctree-l1.current > a {
+  border-top: 0;
+  border-bottom: 0;
+}
+
+.wy-menu-vertical li.current {
+  background-color: #f5f6fa !important;
+}
+
+.wy-menu-vertical li.on a,
+.wy-menu-vertical li.current > a {
+  background-color: #f5f6fa;
+}
+
+.wy-nav-top {
+  margin-top: -16px;
+}
+
+.wy-menu-vertical li.toctree-l2 a.current {
+  color: #64c6c1 !important;
+}
+
+/************* content **********/
+
+.wy-nav-shift {
+  padding-top: 1rem;
+}
+
+.wy-nav-content-wrap {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+
+  background-color: #f5f6fa;
+}
+
+.wy-nav-content {
+  right: 0;
+  left: 0;
+
+  margin: auto;
+
+  border: 2px solid #dce0e1;
+}
+
+.highlight {
+  background: #f5f5fa;
+}
+
+/******* read the docs stuff ************/
+.keep-us-sustainable {
+  border: 1px solid #dce0e1;
+  background-color: #fff;
+}
+
+.keep-us-sustainable * {
+  color: #000 !important;
+}
+
+.rst-versions .rst-current-version {
+  color: #000;
+  border-top: 1px solid #dce0e1;
+  background-color: #fff;
+}
+
+.rst-other-versions,
+.rst-versions {
+  background: #f5f5fa;
+  background-color: #f5f5fa;
+}
+
+.rst-other-versions *,
+.rst-versions *,
+.rst-current-version * {
+  color: #000 !important;
+}
+
+.rst-versions .rst-other-versions dd a {
+  color: #e71096 !important;
+}
