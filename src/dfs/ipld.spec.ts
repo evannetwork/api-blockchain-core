@@ -51,7 +51,7 @@ describe('IPLD handler', function() {
   let ipld: Ipld;
   let ipfs;
   let cryptoProvider: CryptoProvider;
-  let helperWeb3 = new Web3(null);
+  let helperWeb3 = TestUtils.getWeb3();
 
   before(async () => {
     // create new ipld handler on ipfs node
