@@ -317,7 +317,7 @@ export class Verifications extends Logger {
    * provided in most cases. As the module allows to create an own ENS structure, that includes an
    * own ENS registry and an own default resolver for it, setting them beforehand is optional.
    *
-   * @param    {VerificationsOptions} options 
+   * @param    {VerificationsOptions} options
    */
   constructor(options: VerificationsOptions) {
     super(options);
@@ -1173,6 +1173,17 @@ export class Verifications extends Logger {
         description,
       ] = await Promise.all(verificationDetails);
 
+      // check BigNumber Objects and convert back
+      if (expirationDate.toString) {
+        expirationDate = expirationDate.toString()
+      }
+      if (creationBlock.toNumber) {
+        creationBlock = creationBlock.toNumber()
+      }
+      if (creationDate.toString) {
+        creationDate = creationDate.toString()
+      }
+
       if (verification.issuer === nullAddress) {
         return false;
       }
@@ -1753,7 +1764,19 @@ export class Verifications extends Logger {
     ]);
     // flatten and filter events on execution id from identity tx
     const filtered = [ ...executed, ...failed ].filter(
-      event => event.returnValues && event.returnValues.executionId === executionId);
+      (event) => {
+        if (event.returnValues && event.returnValues.executionId) {
+          // check if executionId is a BigNumber object
+          if (event.returnValues.executionId.eq) {
+            return event.returnValues.executionId.eq(executionId)
+          } else {
+            // otherwise check normal equality
+            return event.returnValues.executionId === executionId
+          }
+        }
+        return false;
+      }
+    );
     if (filtered.length && filtered[0].event === 'Executed') {
       // if execution was successful
       if (eventInfo) {
@@ -1856,7 +1879,19 @@ export class Verifications extends Logger {
       ]);
       // flatten and filter events on execution id from identity tx
       const filtered = [ ...executed, ...failed ].filter(
-        event => event.returnValues && event.returnValues.executionId === executionId);
+        (event) => {
+          if (event.returnValues && event.returnValues.executionId) {
+            // check if executionId is a BigNumber object
+            if (event.returnValues.executionId.eq) {
+              return event.returnValues.executionId.eq(executionId)
+            } else {
+              // otherwise check normal equality
+              return event.returnValues.executionId === executionId
+            }
+          }
+          return false;
+        }
+      );
       if (filtered.length && filtered[0].event === 'Executed') {
         // if execution was successful
         if (originalEvent) {
