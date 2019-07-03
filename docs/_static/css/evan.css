@@ -141,6 +141,10 @@ ul.current {
   border: 2px solid #dce0e1;
 }
 
+.wy-nav-content p {
+  text-align: justify;
+}
+
 .highlight {
   background: #f5f5fa;
 }
