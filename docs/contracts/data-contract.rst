@@ -263,7 +263,7 @@ Example
 .. code-block:: typescript
 
   const sampleValue = 123;
-  await DataContract.setEntry(contract, 'entry_settable_by_owner', sampleValue, accounts[0]);
+  await dataContract.setEntry(contract, 'entry_settable_by_owner', sampleValue, accounts[0]);
 
 
 Entries are automatically encrypted before setting it in the contract. If you want to use values as is, without encrypting them, you can add them in raw mode, which sets them as ``bytes32`` values:
