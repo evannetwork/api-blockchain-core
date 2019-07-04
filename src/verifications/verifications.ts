@@ -595,7 +595,7 @@ export class Verifications extends Logger {
   }
 
   /**
-   * Gets and sets the default description for a verification if it does not exists.
+   * Gets and sets the default description for a verification if it does not exist.
    *
    * @param      {any}     verification  the verification that should be checked
    */
@@ -883,7 +883,7 @@ export class Verifications extends Logger {
    *   }
    */
   public async getNestedVerifications(subject: string, topic: string, isIdentity?: boolean) {
-    // prepend starting slash if it does not exists
+    // prepend starting slash if it does not exist
     if (topic.indexOf('/') !== 0) {
       topic = '/' + topic;
     }
