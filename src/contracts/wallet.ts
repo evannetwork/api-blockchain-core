@@ -257,15 +257,17 @@ export class Wallet extends Logger {
   }
 
   private encodeFunctionParams(functionName: string, contractInstance: any, params: any[]) {
-    return contractInstance.options.jsonInterface
-      .filter(json => json.name === functionName && json.inputs.length === params.length)
-      .map(json => [
-        json.inputs.map(input => input.type),
-        this.options.executor.web3.eth.abi.encodeFunctionSignature(json),
-      ])
-      .map(([types, signature]) =>
-        `${signature}${coder.encodeParameters(types, params).replace('0x', '')}`)[0]
-    ;
+    let functionAbi;
+    if (contractInstance.abiModel) {
+      functionAbi = contractInstance.abiModel.getMethod(functionName).abiItem;
+    } else {
+      functionAbi = contractInstance.options.jsonInterface
+        .filter(json => json.name === functionName && json.inputs.length === params.length)[0]
+    }
+    const types = functionAbi.inputs.map(input => input.type);
+    const signature = this.options.executor.web3.eth.abi.encodeFunctionSignature(functionAbi);
+
+    return `${signature}${coder.encodeParameters(types, params).replace('0x', '')}`;
   }
 
   private ensureContract(): any {
@@ -317,6 +319,7 @@ export class Wallet extends Logger {
               const events = {};
               const eventNames = [];
               let eventList = await walletInstance.getPastEvents(
+                'allEvents',
                 { fromBlock: event.blockNumber, toBlock: event.blockNumber });
               eventList = eventList.filter(ev => ev.transactionHash === event.transactionHash);
               eventList.forEach((entry) => {
@@ -394,6 +397,7 @@ export class Wallet extends Logger {
         }
       });
     } catch (ex) {
+      console.error(ex.stack)
       throw new Error(ex.message || ex);
     } finally {
       // cleanup subscriptions

@@ -119,7 +119,7 @@ describe('Business Center', function() {
     it('rejects an invite of a member', async () => {
       const selfJoinBc = await createBusinessCenter(0);
       const invitePromise = executor.executeContractTransaction(
-        selfJoinBc, 'invite', accounts[2], { from: accounts[0], autoGas: 1.1, });
+        selfJoinBc, 'invite', { from: accounts[0], autoGas: 1.1, }, accounts[2]);
       expect(invitePromise).to.be.rejected;
     });
   });
@@ -201,7 +201,7 @@ describe('Business Center', function() {
 
       it('rejects an invite of a member', async () => {
         const invitePromise = executor.executeContractTransaction(
-          currentBc, 'invite', accounts[1], { from: accounts[0], autoGas: 1.1, });
+          currentBc, 'invite', { from: accounts[0], autoGas: 1.1, }, accounts[1]);
         expect(invitePromise).to.be.rejected;
       });
 
