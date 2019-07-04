@@ -33,9 +33,11 @@ import {
   SignerInterface,
 } from '@evan.network/dbcp';
 
+import { AbiCoder } from 'web3-eth-abi';
 import { Wallet } from './wallet';
-import coder = require('web3-eth-abi');
 
+
+const coder: AbiCoder = new AbiCoder();
 
 /**
  * options for executor instance

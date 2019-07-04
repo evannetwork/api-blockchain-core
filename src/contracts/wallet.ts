@@ -25,7 +25,7 @@
   https://evan.network/license/
 */
 
-import coder = require('web3-eth-abi');
+import { AbiCoder } from 'web3-eth-abi';
 
 import {
   ContractLoader,
@@ -37,6 +37,8 @@ import {
   NameResolver,
 } from '@evan.network/dbcp';
 
+
+const coder: AbiCoder = new AbiCoder();
 
 export interface WalletOptions extends LoggerOptions {
   contractLoader: ContractLoader;
