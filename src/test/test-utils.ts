@@ -27,7 +27,7 @@
 
 import crypto = require('crypto');
 import smartContract = require('@evan.network/smart-contracts-core');
-import Web3 = require('web3');
+const Web3 = require('web3');
 
 import {
   AccountStore,
@@ -71,9 +71,9 @@ export const publicMailBoxExchange = 'mailboxKeyExchange';
 export const sampleContext = 'context sample';
 
 const web3Provider = <any>process.env.CHAIN_ENDPOINT || 'wss://testcore.evan.network/ws';
-const wsp = new Web3.providers.WebsocketProvider(
-      web3Provider, { clientConfig: { keepalive: true, keepaliveInterval: 5000 } });
-const localWeb3 = new Web3(wsp, { transactionConfirmationBlocks: 1 });
+//const wsp = new Web3.providers.WebsocketProvider(
+     //web3Provider, { clientConfig: { keepalive: true, keepaliveInterval: 5000 } });
+const localWeb3 = new Web3(web3Provider, null, { transactionConfirmationBlocks: 1 });
 const sampleKeys = {};
 // dataKeys
 sampleKeys[localWeb3.utils.soliditySha3(accounts[0])] =

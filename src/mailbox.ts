@@ -156,7 +156,7 @@ export class Mailbox extends Logger {
       const listAddress = this.nameResolver.bytes32ToAddress(listAddressHash);
       const listContract = this.contractLoader.loadContract('DataStoreList', listAddress);
       const listLength = await executor.executeContractCall(listContract, 'length');
-      results.totalResultCount = parseInt(listLength, 10);
+      results.totalResultCount = parseInt(listLength.toString(), 10);
       if (results.totalResultCount) {
         let ipld: Ipld;
         const mailIds = await this.nameResolver.getArrayFromListContract(listContract, count, offset, true);

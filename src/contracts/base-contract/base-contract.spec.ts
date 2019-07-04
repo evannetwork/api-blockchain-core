@@ -46,6 +46,10 @@ import { TestUtils } from '../../test/test-utils';
 
 use(chaiAsPromised);
 
+function timeout(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 
 describe('BaseContract', function() {
   this.timeout(60000);
@@ -324,7 +328,7 @@ describe('BaseContract', function() {
           eventHub.once('EventHub', null, 'ContractEvent',
             (event) => {
               const { sender, eventType } = event.returnValues;
-              return sender === contractId && eventType === '0';
+              return sender === contractId && eventType.toString() === '0';
             },
             (event) => { resolved = true; resolve(); }
           );

@@ -104,9 +104,7 @@ export class Onboarding extends Logger {
     }
 
     const web3Provider = `wss://${network}.evan.network/ws`;
-    const wsp = new Web3.providers.WebsocketProvider(
-          web3Provider, { clientConfig: { keepalive: true, keepaliveInterval: 5000 } });
-    const web3 = new Web3(wsp, { transactionConfirmationBlocks: 1 });
+    const web3 = new Web3(web3Provider, null, { transactionConfirmationBlocks: 1 });
 
     const runtimeConfig = await Onboarding.generateRuntimeConfig(mnemonic, password, web3);
 
