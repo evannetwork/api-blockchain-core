@@ -162,7 +162,8 @@ export class NameResolver extends Dbcp.NameResolver {
       throw new Error(msg);
     }
     const registrar = this.contractLoader.loadContract('PayableRegistrar', parentOnwer);
-    return this.executor.executeContractCall(registrar, 'price');
+    const price = await this.executor.executeContractCall(registrar, 'price');
+    return price.toString();
   }
 
   /**
