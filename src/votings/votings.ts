@@ -259,7 +259,7 @@ export class Votings extends Logger {
         from: accountId,
         // emit ProposalAdded(proposalID, beneficiary, weiAmount, jobDescription);
         event: { target: 'Congress', eventName: 'ProposalAdded' },
-        getEventResult: (_, args) => args.proposalID,
+        getEventResult: (_, args) => args.proposalID.toString(),
       },
       options.to,
       options.value,
@@ -305,11 +305,11 @@ export class Votings extends Logger {
       'memberId',
       targetAccount,
     );
-    if (memberId !== '0') {
+    if (memberId.toString() !== '0') {
       const fromContract = await this.options.executor.executeContractCall(
         this.ensureContract(contract),
         'members',
-        memberId,
+        memberId.toString(),
       );
       if (fromContract.member === targetAccount) {
         return {

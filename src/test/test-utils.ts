@@ -163,7 +163,7 @@ export class TestUtils {
     await solc.ensureCompiled();
     const contracts = solc.getContracts();
 
-    if (process.env.CI) {
+    /*if (process.env.CI) {
       const replace = (target, name, address) => {
         contracts[target].bytecode =
           contracts[target].bytecode.replace(
@@ -180,14 +180,14 @@ export class TestUtils {
         });
       };
 
-      updateBytecode('KeyHolderLibrary', '0xddCABC3034611943E516912B1f5397ee01cE090b');
+      /updateBytecode('KeyHolderLibrary', '0xddCABC3034611943E516912B1f5397ee01cE090b');
       updateBytecode('VerificationHolderLibrary', '0x5608ff4E854E17269103b17ff8A817a20A96A937');
       updateBytecode('VerificationsRegistryLibrary', '0xFFBC3d1551EDD6D2fE887dD5b9Eb95aad90de922');
       updateBytecode('DSRolesPerContractLibrary', '0xFE5CdcA776D31Fc9AcE7dEd9Be62f9c3730cc81c');
       updateBytecode('BaseContractZeroLibrary', '0x1C7eA92160dE3072d54083B39565f374f45986F4');
       updateBytecode('DataContractLibrary', '0xd6A3d8c6A3081ec1E30C6A535505d5FAF10A4715');
 
-    }
+    }*/
 
     return contracts;
   }

@@ -4,11 +4,11 @@ sudo: required
 
 matrix:
   include:
-  - name: "services contracts tests"
+  - name: "services contracts & digital-twin tests"
     node_js: "11"
     env:
       - ACCOUNT_MAP='{"0x001De828935e8c7e4cb56Fe610495cAe63fb2612":"01734663843202e2245e5796cb120510506343c67915eb4f9348ac0d8c2cf22a","0x0030C5e7394585400B1FB193DdbCb45a37Ab916E":"7d09c0873e3f8dc0c7282bb7c2ba76bfd432bff53c38ace06193d1e4faa977e7","0x00D1267B27C3A80080f9E1B6Ba01DE313b53Ab58":"a76a2b068fb715830d042ca40b1a4dab8d088b217d11af91d15b972a7afaf202"}'
-      - TESTSPECS='src/verifications/*.spec.ts src/profile/*.spec.ts src/*.spec.ts src/votings/*.spec.ts'
+      - TESTSPECS='src/verifications/*.spec.ts src/profile/*.spec.ts src/*.spec.ts src/votings/*.spec.ts src/contracts/digital-twin/*.spec.ts'
       - ENS_ADDRESS='0x9f8063ac44D23C99E943eA3DE3E1bb6Ab7678df0'
       - ENS_RESOLVER='0xc6b9F181BFa9eFA7679a3B3a786aB582AeE79dad'
       - CHAIN_ENDPOINT='ws://localhost:8546'
@@ -55,7 +55,8 @@ before_install:
   - docker run -d -p 127.0.0.1:8546:8546 -p 127.0.0.1:8545:8545 -u root --entrypoint /home/parity/bin/parity evannetwork/parity_testchain --chain /root/parity/spec.json --jsonrpc-interface all --unsafe-expose
 install:
   - npm install
-  - rm -rf node_modules/@evan.network/dbcp && git clone https://github.com/evannetwork/dbcp.git ../dbcp && cd ../dbcp && git checkout develop && npm i && npm run build && cd ../api-blockchain-core && mv ../dbcp ./node_modules/@evan.network
-  - cd node_modules/@evan.network && rm -rf smart-contracts-core && git clone https://github.com/evannetwork/smart-contracts-core.git && cd smart-contracts-core && git checkout develop && npm i && cd ../../../
+  - rm -rf node_modules/@evan.network/dbcp && git clone https://github.com/evannetwork/dbcp.git ../dbcp && cd ../dbcp && git checkout feature/CORE-223 && npm i && npm run build && cd ../api-blockchain-core && mv ../dbcp ./node_modules/@evan.network
+  - cd node_modules/@evan.network && rm -rf smart-contracts-core && git clone https://github.com/evannetwork/smart-contracts-core.git && cd smart-contracts-core && git checkout develop && npm i
+  - NODE_ENV='local' CHAIN_ENDPOINT='ws://localhost:8546' ACCOUNT_ID='0x001De828935e8c7e4cb56Fe610495cAe63fb2612' PRIVATE_KEY='01734663843202e2245e5796cb120510506343c67915eb4f9348ac0d8c2cf22a' node scripts/build-contracts.js && cd ../../../
   - rm -f node_modules/web3/*.d.ts
   - rm -f node_modules/web3/node_modules/web3-eth/types/*.d.ts
