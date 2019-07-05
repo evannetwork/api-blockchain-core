@@ -8,6 +8,11 @@
 ### Deprecations
 
 
+## Version 2.8.2
+### Fixes
+- fix dataKey generation with sha3
+
+
 ## Version 2.8.1
 ### Fixes
 - add support for `web3` `1.0.0-beta.55`
