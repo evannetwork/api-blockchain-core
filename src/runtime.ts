@@ -181,7 +181,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   } else {
     signerConfig.gasPrice = `${200e9}`;
   }
-  
+
   const signer = options.signer ||
     new SignerInternal({ accountStore, contractLoader, config: signerConfig, log, web3, });
   const executor = options.executor || new Executor(
@@ -220,7 +220,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   [web3.utils.soliditySha3(accountId), web3.utils.soliditySha3(accountId)].sort());
         const sha3Account = web3.utils.soliditySha3(accountId)
         const dataKey = web3.utils
-          .soliditySha3(accountId + runtimeConfig.keyConfig[accountId])
+          .keccak256(accountId + runtimeConfig.keyConfig[accountId])
           .replace(/0x/g, '');
         // now add the different hashed accountids and datakeys to the runtimeconfig
         runtimeConfig.keyConfig[sha3Account] = dataKey;
