@@ -4,6 +4,7 @@
 ### Features
 
 ### Fixes
+- fix dataKey generation with sha3
 
 ### Deprecations
 
