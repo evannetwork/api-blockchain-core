@@ -1654,16 +1654,21 @@ export class Verifications extends Logger {
           } else if (typeof this.defaultValidationOptions[statusFlag] === 'string') {
             tempStatus = this.defaultValidationOptions[statusFlag] as VerificationsStatusV2;
           }
-          if (tempStatus === VerificationsStatusV2.Green ||
-              tempStatus === bestReachableStatus) {
-            // if current verification is trustworthy, break and set status to "green"
-            currentVerificationStatus = bestReachableStatus;
+
+          if (tempStatus === VerificationsStatusV2.Red ||
+              bestReachableStatus === VerificationsStatusV2.Red) {
+            // if one status flag results red status, instant return, other flags does not need to
+            // be checked
+            currentVerificationStatus = VerificationsStatusV2.Red;
             break;
-          } else if (tempStatus === VerificationsStatusV2.Yellow &&
-              currentVerificationStatus === VerificationsStatusV2.Red) {
+          } else if (tempStatus === VerificationsStatusV2.Yellow) {
             // if current overall trust level is still "red" and current verification is "yellow",
             // increase trust level to "yellow"
             currentVerificationStatus = VerificationsStatusV2.Yellow;
+          } else if (currentVerificationStatus !== VerificationsStatusV2.Yellow) {
+            // within the first statusFlag check, currentVerificationStatus will be "red", so we can
+            // increase the latest status, never increase "yellow" state to "green"
+            currentVerificationStatus = bestReachableStatus;
           }
         }
         verification.details.status = currentVerificationStatus;

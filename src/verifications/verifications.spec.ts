@@ -516,7 +516,13 @@ describe('Verifications handler', function() {
         await expect(computed.warnings).to.include('expired');
 
         // V2
-        const localQueryOptions = { validationOptions: { [VerificationsStatusFlagsV2.expired]: VerificationsStatusV2.Yellow }};
+        const localQueryOptions = {
+          validationOptions: {
+            [VerificationsStatusFlagsV2.expired]: VerificationsStatusV2.Yellow,
+            [VerificationsStatusFlagsV2.issued]: VerificationsStatusV2.Green,
+            [VerificationsStatusFlagsV2.parentMissing]: VerificationsStatusV2.Green,
+          }
+        };
         const v2 = await verifications.getNestedVerificationsV2(accounts[1], topic, false, localQueryOptions);
         await expect(v2.status).to.eq(VerificationsStatusV2.Yellow);
         await expect(v2.verifications[0].statusFlags).to.include(VerificationsStatusFlagsV2.expired);
@@ -533,7 +539,13 @@ describe('Verifications handler', function() {
         await expect(computed.warnings).to.include('selfIssued');
 
         // V2
-        const localQueryOptions = { validationOptions: { [VerificationsStatusFlagsV2.selfIssued]: VerificationsStatusV2.Yellow }};
+        const localQueryOptions = {
+          validationOptions: {
+            [VerificationsStatusFlagsV2.selfIssued]: VerificationsStatusV2.Yellow,
+            [VerificationsStatusFlagsV2.issued]: VerificationsStatusV2.Green,
+            [VerificationsStatusFlagsV2.parentMissing]: VerificationsStatusV2.Green,
+          }
+        };
         const v2 = await verifications.getNestedVerificationsV2(accounts[0], topic, false, localQueryOptions);
         await expect(v2.status).to.eq(VerificationsStatusV2.Yellow);
         await expect(v2.verifications[0].statusFlags).to.include(VerificationsStatusFlagsV2.selfIssued);
@@ -551,10 +563,15 @@ describe('Verifications handler', function() {
         await expect(computed.warnings).to.include('parentMissing');
 
         // V2
-        const localQueryOptions = { validationOptions: {
-          [VerificationsStatusFlagsV2.parentMissing]: VerificationsStatusV2.Yellow,
-          [VerificationsStatusFlagsV2.issued]: VerificationsStatusV2.Yellow,
-        }};
+        const localQueryOptions = {
+          validationOptions: {
+            [VerificationsStatusFlagsV2.parentMissing]: VerificationsStatusV2.Yellow,
+            [VerificationsStatusFlagsV2.issued]: VerificationsStatusV2.Green,
+            // allow user[0] to create verifications for itself
+            [VerificationsStatusFlagsV2.selfIssued]: VerificationsStatusV2.Green,
+            [VerificationsStatusFlagsV2.parentUntrusted]: VerificationsStatusV2.Green,
+          }
+        };
         let v2 = await verifications.getNestedVerificationsV2(accounts[1], topic, false, localQueryOptions);
         await expect(v2.status).to.eq(VerificationsStatusV2.Yellow);
         await expect(v2.verifications[0].statusFlags).to.include(VerificationsStatusFlagsV2.parentMissing);
@@ -565,7 +582,8 @@ describe('Verifications handler', function() {
 
         // V2
         v2 = await verifications.getNestedVerificationsV2(accounts[1], topic, false, localQueryOptions);
-        await expect(v2.status).to.eq(VerificationsStatusV2.Yellow);
+        console.log(require('util').inspect(verifications.trimToStatusTree(v2), { colors: true, depth: 8 }));
+        await expect(v2.status).to.eq(VerificationsStatusV2.Green);
         await expect(v2.verifications[0].statusFlags).not.to.include(VerificationsStatusFlagsV2.parentMissing);
       });
 
@@ -608,6 +626,54 @@ describe('Verifications handler', function() {
         const v2 = await verifications.getNestedVerificationsV2(accounts[1], topic, false, localQueryOptions);
         await expect(v2.status).to.eq(VerificationsStatusV2.Yellow);
         await expect(v2.verifications[0].statusFlags).to.include(VerificationsStatusFlagsV2.notEnsRootOwner);
+      });
+
+      it('verifications V2 can be marked as "red" using a customComputer',
+      async () => {
+        let computed;
+        let topicParent = getRandomTopic('');
+        let topic = getRandomTopic(topicParent);
+
+        // issue verifications
+        await verifications.setVerification(accounts[0], accounts[1], topic);
+        await verifications.setVerification(accounts[0], accounts[0], topicParent);
+
+        // Check the following case: We want to check verifications, that can be issued by the same
+        // user, but the full path must be issued by them same account
+        let expectedIssuer = accounts[1];
+        const localQueryOptions = {
+          validationOptions: {
+            [ VerificationsStatusFlagsV2.issued ]: VerificationsStatusV2.Green,
+            [ VerificationsStatusFlagsV2.parentUntrusted ]: VerificationsStatusV2.Green,
+            [ VerificationsStatusFlagsV2.selfIssued ]: VerificationsStatusV2.Green,
+          },
+          statusComputer: (
+            subVerification: VerificationsResultV2,
+            subQueryOptions: VerificationsQueryOptions,
+            status: any
+          ) => {
+            if (status === VerificationsStatusV2.Red) {
+              return status;
+            } else {
+              // only allow evan as root issuer
+              const correctIssuer = subVerification.verifications
+                .some(verification => verification.details.issuer === expectedIssuer);
+
+              // if it's not the correct
+              return correctIssuer ? status : VerificationsStatusV2.Red;
+            }
+          }
+        };
+
+        // check using a wrong issuer
+        let v2 = await verifications.getNestedVerificationsV2(accounts[1], topic, false, localQueryOptions);
+        await expect(v2.status).to.eq(VerificationsStatusV2.Red);
+
+        // check with correct issuer
+        expectedIssuer = accounts[0];
+        v2 = await verifications.getNestedVerificationsV2(accounts[1], topic, false, localQueryOptions);
+
+        await expect(v2.status).to.eq(VerificationsStatusV2.Green);
       });
 
       it('sub verifications, where the parent verifications has the property has ' +
