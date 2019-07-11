@@ -4,6 +4,7 @@
 ### Features
 
 ### Fixes
+- fix verification v2 status compute and statusComputer
 
 ### Deprecations
 
