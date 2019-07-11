@@ -63,8 +63,6 @@ import { Sharing } from './contracts/sharing';
 import { Verifications } from './verifications/verifications';
 import { Votings } from './votings/votings';
 
-const KeyStore = require('../libs/eth-lightwallet/keystore');
-
 /**
  * runtime for interacting with dbcp, including helpers for transactions & co
  */
