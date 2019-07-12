@@ -1,12 +1,17 @@
 # api-blockchain-core
 
+
 ## Next Version
 ### Features
 
 ### Fixes
-- fix verification v2 status compute and statusComputer
 
 ### Deprecations
+
+
+## Version 2.8.3
+### Fixes
+- fix verification v2 status compute and statusComputer
 
 
 ## Version 2.8.2
