@@ -5,8 +5,14 @@
 ### Features
 
 ### Fixes
+- add `toString` to return correct value for `verification.raw.topic` BigNumber result returned by `web3` `1.0.0-beta.55` 
 
 ### Deprecations
+
+## Version 2.8.4
+### Fixes
+- add `toString` to return correct value for `verification.raw.topic` BigNumber result returned by `web3` `1.0.0-beta.55` 
+
 
 
 ## Version 2.8.3
