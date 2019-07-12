@@ -2,7 +2,7 @@
   "author": "evan GmbH",
   "dependencies": {
     "@evan.network/dbcp": "^1.6.4",
-    "@evan.network/smart-contracts-core": "^2.4.0",
+    "@evan.network/smart-contracts-core": "^2.4.2",
     "@types/node": "11.11.4",
     "ajv": "^5.5.1",
     "async-mutex": "^0.1.3",
