@@ -63,4 +63,4 @@ install:
   - NODE_ENV='local' CHAIN_ENDPOINT='ws://localhost:8546' ACCOUNT_ID='0x001De828935e8c7e4cb56Fe610495cAe63fb2612' PRIVATE_KEY='01734663843202e2245e5796cb120510506343c67915eb4f9348ac0d8c2cf22a' node scripts/build-contracts.js && cd ../../../
   - rm -f node_modules/web3/*.d.ts
   - rm -f node_modules/web3/node_modules/web3-eth/types/*.d.ts
-  - rm -f node_modules/web3-eth/*.d.ts
+  - rm -f node_modules/web3-eth/types/*.d.ts
