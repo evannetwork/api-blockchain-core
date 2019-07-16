@@ -2,6 +2,9 @@ language: node_js
 
 sudo: required
 
+cache:
+  npm: false
+
 matrix:
   include:
   - name: "services contracts & digital-twin tests"
