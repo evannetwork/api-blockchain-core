@@ -3,6 +3,7 @@
 
 ## Next Version
 ### Features
+- add support for `timeout` (adjusts transaction timeout) option to `Wallet` and `ExecutorWallet`
 
 ### Fixes
 

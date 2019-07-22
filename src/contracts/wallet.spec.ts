@@ -195,7 +195,7 @@ describe('Wallet handler', function() {
         expect(await web3.eth.getBalance(walletAddress)).to.eq(valueToSend.toString());
       });
 
-      it('intantly submits funds to target if instantly submitting transaction', async () => {
+      it('instantly submits funds to target if instantly submitting transaction', async () => {
         await createWallet(accounts[0], accounts[0], [accounts[0]]);
         const walletAddress = wallet.walletAddress;
 
