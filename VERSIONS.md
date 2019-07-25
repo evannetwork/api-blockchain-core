@@ -1,12 +1,24 @@
 # api-blockchain-core
 
-
 ## Next Version
 ### Features
 
 ### Fixes
 
 ### Deprecations
+
+
+## Version 2.9.0
+### Features
+- add support for `timeout` (adjusts transaction timeout) option to `Wallet` and `ExecutorWallet`
+
+### Fixes
+- fix executor agent to be compatible with web3 1.2 and 2.0
+
+
+## Version 2.8.4
+### Fixes
+- add `toString` to return correct value for `verification.raw.topic` BigNumber result returned by `web3` `1.0.0-beta.55`
 
 
 ## Version 2.8.3

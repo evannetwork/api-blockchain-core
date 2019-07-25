@@ -1220,7 +1220,7 @@ export class Verifications extends Logger {
         signature: (<any>verification).signature,
         status: verificationFlag,
         subject,
-        topic: verification.topic,
+        topic: verification.topic.toString(),
         uri: (<any>verification).uri,
         valid: await this.validateVerification(subject, verificationId, isIdentity),
       };
@@ -1556,7 +1556,7 @@ export class Verifications extends Logger {
     );
 
     const dataHash = this.options.nameResolver.soliditySha3(
-      subjectIdentity, verification.topic, verification.data).replace('0x', '');
+      subjectIdentity, verification.topic.toString(), verification.data).replace('0x', '');
     const recoveredAddress = this.options.executor.web3.eth.accounts.recover(
       dataHash, verification.signature);
     const issuerContract = this.options.contractLoader.loadContract(

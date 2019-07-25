@@ -46,6 +46,7 @@ export interface WalletOptions extends LoggerOptions {
   eventHub: EventHub;
   executor: Executor;
   nameResolver: NameResolver;
+  defaultOptions?: any;
 }
 
 /**
@@ -55,6 +56,7 @@ export interface WalletOptions extends LoggerOptions {
  */
 export class Wallet extends Logger {
   options: WalletOptions;
+  defaultOptions: any;
   defaultDescription: any = {
     'public': {
       'name': 'MultiSigWallet contract',
@@ -75,6 +77,7 @@ export class Wallet extends Logger {
   constructor(options: WalletOptions) {
     super(options);
     this.options = options;
+    this.defaultOptions = options.defaultOptions || {};
     this.defaultDescription.public.abis = {
       own: JSON.parse(this.options.contractLoader.contracts.MultiSigWallet.interface),
     };
@@ -283,16 +286,22 @@ export class Wallet extends Logger {
       target: any, functionName: string, inputOptions: any, ...functionArguments): Promise<any> {
     const subscriptions = [];
     let receipt;
+    let walletOptions = Object.assign(
+      { timeout: 300000 },
+      this.defaultOptions || {},
+      inputOptions,
+    );
     try {
       receipt = await new Promise(async (resolve, reject) => {
         try {
           let txResolved;
+          const transactionTimeout = walletOptions.eventTimeout || walletOptions.timeout;
           setTimeout(() => {
             if (!txResolved) {
               txResolved = true;
-              reject('wallet timeout');
+              reject(`wallet timeout after ${transactionTimeout}ms`);
             }
-          }, 600000);
+          }, transactionTimeout);
 
           // tx status variables
           let transactionHash;
@@ -358,7 +367,7 @@ export class Wallet extends Logger {
           };
 
           // execute to contract
-          const options = Object.assign(JSON.parse(JSON.stringify(inputOptions)), {
+          const options = Object.assign(JSON.parse(JSON.stringify(walletOptions)), {
             event: { target: 'MultiSigWallet', eventName: 'Confirmation', },
             getEventResult: async (event, args) => {
               this.log('received MultiSigWallet Confirmation event with hash: ' +
@@ -399,7 +408,6 @@ export class Wallet extends Logger {
         }
       });
     } catch (ex) {
-      console.error(ex.stack)
       throw new Error(ex.message || ex);
     } finally {
       // cleanup subscriptions

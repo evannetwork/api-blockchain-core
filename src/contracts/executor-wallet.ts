@@ -46,6 +46,7 @@ export interface ExecutorWalletOptions extends ExecutorOptions {
   contractLoader: ContractLoader;
   accountId: string;
   wallet: Wallet;
+  defaultOptions?: any;
 }
 
 
@@ -65,6 +66,7 @@ export class ExecutorWallet extends Executor {
   constructor(options: ExecutorWalletOptions) {
     super(options);
     this.options = options;
+    this.defaultOptions = options.defaultOptions || {};
   }
 
   /**
@@ -177,15 +179,17 @@ export class ExecutorWallet extends Executor {
     }
 
     // every argument beyond the third is an argument for the contract function
-    let options = Object.assign({}, this.defaultOptions || {}, inputOptions);
+    let options = Object.assign(
+      { timeout: 300000 },
+      this.defaultOptions || {},
+      inputOptions,
+    );
+
+    // keep timeout before deletion
+    const transactionTimeout = options.eventTimeout || options.timeout;
 
     // strip unrelated option
-    const validProperties = ['from', 'to', 'gasPrice', 'gas', 'value', 'data', 'nonce'];
-    Object.keys(options).forEach((option) => {
-      if (!validProperties.includes(option)) {
-        delete options[option];
-      }
-    });
+    this.scrubOptions(options);
 
     let autoGas;
     if (inputOptions.autoGas) {
@@ -248,9 +252,9 @@ export class ExecutorWallet extends Executor {
           if (isPending) {
             await stopWatching(true);
             logGas({ status: 'error', message: 'timeout' });
-            reject(new Error(`timeout during ${functionName}`));
+            reject(new Error(`timeout after ${transactionTimeout}ms during ${functionName}`));
           }
-        }, inputOptions.eventTimeout || 300000);
+        }, transactionTimeout);
 
         // if we wait for a 'result', pick this result from event watch and resolve the promise
         if (inputOptions.event) {
