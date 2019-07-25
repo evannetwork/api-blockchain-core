@@ -167,13 +167,23 @@ export class ExecutorAgent extends Executor {
   public async executeContractCall(contract: any, functionName: string, ...args): Promise<any>  {
     this.log(`starting contract call "${functionName}" via agent`, 'debug');
 
+    // web3 compatibility for 1.2 and 2.0
+    let functionSignature;
+    if (contract.options.jsonInterface) {
+      // web3 1.2
+      functionSignature = contract.options.jsonInterface.filter(fun => fun.name === functionName)[0];
+    } else {
+      // web3 2.0
+      functionSignature = contract.abiModel.abi.methods[functionName].signature;
+    }
+
     // submit to action
     return request({
       url: `${this.agentUrl}/api/smart-agents/executor/executeContractCall`,
       method: 'POST',
       body: {
         contractId: contract.options.address,
-        functionSignature: contract.options.jsonInterface.filter(fun => fun.name === functionName)[0],
+        functionSignature,
         functionName,
         functionArguments: args,
       },
