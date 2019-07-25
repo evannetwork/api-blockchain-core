@@ -174,7 +174,7 @@ export class ExecutorAgent extends Executor {
       functionSignature = contract.options.jsonInterface.filter(fun => fun.name === functionName)[0];
     } else {
       // web3 2.0
-      functionSignature = contract.abiModel.abi.methods[functionName].signature;
+      functionSignature = contract.abiModel.abi.methods[functionName].abiItem;
     }
 
     // submit to action
@@ -214,13 +214,23 @@ export class ExecutorAgent extends Executor {
         `value has been set to ${inputOptions.value} for tx "${functionName}"`);
     }
 
+    // web3 compatibility for 1.2 and 2.0
+    let functionSignature;
+    if (contract.options.jsonInterface) {
+      // web3 1.2
+      functionSignature = contract.options.jsonInterface.filter(fun => fun.name === functionName)[0];
+    } else {
+      // web3 2.0
+      functionSignature = contract.abiModel.abi.methods[functionName].abiItem;
+    }
+
     // submit to action
     return request({
       url: `${this.agentUrl}/api/smart-agents/executor/executeContractTransaction`,
       method: 'POST',
       body: {
         contractId: contract.options.address,
-        functionSignature: contract.options.jsonInterface.filter(fun => fun.name === functionName)[0],
+        functionSignature,
         functionName,
         options: inputOptions,
         functionArguments,
@@ -264,10 +274,17 @@ export class ExecutorAgent extends Executor {
         signature: fun.signature || null,
         count: fun.count || 1,
       };
+
       if (fun.contract) {
         newFun.contractId = fun.contract.options.address;
         if (fun.functionName) {
-          newFun.signature = fun.contract.options.jsonInterface.filter(ff => ff.name === fun.functionName)[0];
+          if (fun.contract.options.jsonInterface) {
+            // web3 1.2
+            newFun.signature  = fun.contract.options.jsonInterface.filter(ff => ff.name === fun.functionName)[0];
+          } else {
+            // web3 2.0
+            newFun.signature  = fun.contract.abiModel.abi.methods[fun.functionName].abiItem;
+          }
         }
       }
       return newFun;
