@@ -73,16 +73,16 @@
   },
   "scripts": {
     "build": "tsc",
-    "build-all": "env-cmd -f ./.env.local npm run build-contracts && env-cmd -f ./.env.local npm run build",
+    "build-all": "env-cmd --fallback -f ./.env.local npm run build-contracts && env-cmd --fallback -f ./.env.local npm run build",
     "build-contracts": "node ./scripts/buildContracts.js",
     "installl": "npm install && ./scripts/link.sh",
-    "test:contracts": "env-cmd -f ./.env.local npm run build && env-cmd -f ./.env.local mocha --exit --inspect -r ts-node/register src/contracts/*.spec.ts src/contracts/base-contract/*.spec.ts src/contracts/business-center/*.spec.ts src/contracts/service-contract/*.spec.ts",
-    "test:datacontract": "env-cmd -f ./.env.local npm run build && env-cmd -f ./.env.local mocha --exit --inspect -r ts-node/register src/contracts/data-contract/*.spec.ts",
-    "test:services": "env-cmd -f ./.env.local npm run build && env-cmd -f ./.env.local mocha --exit --inspect -r ts-node/register src/claims/*.spec.ts src/dfs/*.spec.ts src/encryption/*.spec.ts src/profile/*.spec.ts src/*.spec.ts",
-    "testunit": "env-cmd -f ./.env.local npm run build && env-cmd -f ./.env.local mocha --exit --inspect -r ts-node/register $*",
-    "testunitbail": "env-cmd -f ./.env.local npm run build && env-cmd -f ./.env.local mocha --exit -b --inspect -r ts-node/register $*",
-    "testunitbrk": "env-cmd -f ./.env.local npm run build && env-cmd -f ./.env.local mocha --exit --inspect-brk -r ts-node/register $*",
-    "testunitcoverage": "env-cmd -f ./.env.local npm run build && nyc -r lcov -e .ts -x \"$TESTSPECS\" mocha --exit -r ts-node/register $TESTSPECS && nyc report --reporter=text-lcov | coveralls"
+    "test:contracts": "env-cmd --fallback -f ./.env.local npm run build && env-cmd --fallback -f ./.env.local mocha --exit --inspect -r ts-node/register src/contracts/*.spec.ts src/contracts/base-contract/*.spec.ts src/contracts/business-center/*.spec.ts src/contracts/service-contract/*.spec.ts",
+    "test:datacontract": "env-cmd --fallback -f ./.env.local npm run build && env-cmd --fallback -f ./.env.local mocha --exit --inspect -r ts-node/register src/contracts/data-contract/*.spec.ts",
+    "test:services": "env-cmd --fallback -f ./.env.local npm run build && env-cmd --fallback -f ./.env.local mocha --exit --inspect -r ts-node/register src/claims/*.spec.ts src/dfs/*.spec.ts src/encryption/*.spec.ts src/profile/*.spec.ts src/*.spec.ts",
+    "testunit": "env-cmd --fallback -f ./.env.local npm run build && env-cmd --fallback -f ./.env.local mocha --exit --inspect -r ts-node/register $*",
+    "testunitbail": "env-cmd --fallback -f ./.env.local npm run build && env-cmd --fallback -f ./.env.local mocha --exit -b --inspect -r ts-node/register $*",
+    "testunitbrk": "env-cmd --fallback -f ./.env.local npm run build && env-cmd --fallback -f ./.env.local mocha --exit --inspect-brk -r ts-node/register $*",
+    "testunitcoverage": "env-cmd --fallback -f ./.env.local npm run build && nyc -r lcov -e .ts -x \"$TESTSPECS\" mocha --exit -r ts-node/register $TESTSPECS && nyc report --reporter=text-lcov | coveralls"
   },
   "types": "./dist/index.d.ts",
   "version": "2.9.0"
