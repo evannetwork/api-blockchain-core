@@ -2,6 +2,7 @@
 
 ## Next Version
 ### Features
+- update versions of dependencies
 
 ### Fixes
 
