@@ -63,7 +63,7 @@ export class Description extends Dbcp.Description {
             const sharingKey = await this.sharing.getKey(contractAddress, accountId, '*', result.cryptoInfo.block);
             const key = sharingKey;
             const privateData = await cryptor.decrypt(
-              Buffer.from(result.private, this.encodingEncrypted), { key, });
+              Buffer.from(result.private, this.encodingEncrypted as BufferEncoding), { key, });
               result.private = privateData;
           } catch (e) {
             result.private = new Error('wrong_key');
@@ -112,7 +112,7 @@ export class Description extends Dbcp.Description {
         content.cryptoInfo.block = blockNr;
       }
       hash = await this.dfs.add(
-        'description', Buffer.from(JSON.stringify(content), this.encodingEnvelope));
+        'description', Buffer.from(JSON.stringify(content), this.encodingEnvelope as BufferEncoding));
     }
     const contract = this.contractLoader.loadContract('Described', contractAddress);
     await this.executor.executeContractTransaction(contract, 'setContractDescription', {from: accountId, gas: 200000}, hash);
