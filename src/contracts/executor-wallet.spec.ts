@@ -69,7 +69,6 @@ describe('Signer Wallet', function() {
     await wallet0.create(accounts[0], accounts[0], [accounts[0]]);
     await wallet1.create(accounts[1], accounts[1], [accounts[1]]);
     executor = await TestUtils.getExecutor(web3);
-    executor.defaultOptions = { gasPrice: 110e9 };
     contractLoader = await TestUtils.getContractLoader(web3);
     nameResolver = await TestUtils.getNameResolver(web3);
     const eventHub = await TestUtils.getEventHub(web3);
