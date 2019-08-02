@@ -285,23 +285,28 @@ export class Container extends Logger {
       instanceConfig.factoryAddress ||
         options.nameResolver.getDomainName(options.nameResolver.config.domains.containerFactory),
       instanceConfig.accountId,
-      null,
-      envelope,
+      // [CORE-358]: do not set description here
+      // null,
+      // envelope,
     );
     const contractId = contract.options.address;
     instanceConfig.address = contractId;
 
-    // set description to contract
-    await options.description.setDescription(contractId, envelope, instanceConfig.accountId);
+    // [CORE-358]: do not set description here
+    // // set description to contract
+    // await options.description.setDescription(contractId, envelope, instanceConfig.accountId);
 
-    // create identity for index and write it to description
-    await options.verifications.createIdentity(config.accountId, contractId);
+    // [CORE-358]: TODO: create identity in factory
+    // // create identity for index and write it to description
+    // await options.verifications.createIdentity(config.accountId, contractId);
 
     const container = new Container(options, instanceConfig);
     await container.ensureContract();
 
     // write values from template to new contract
     await applyPlugin(options, instanceConfig, container);
+
+    // [CORE-358]: TODO: update description once
 
     return container;
   }
@@ -698,9 +703,11 @@ export class Container extends Logger {
    * @param      {string}  entryName  name of an entry in the container
    * @param      {any}     value      value to set
    */
-  public async setEntry(entryName: string, value: any): Promise<void> {
+  public async setEntry(entryName: string, value: any, updateDescription = true): Promise<void> {
     await this.ensureContract();
-    await this.ensureProperty(entryName, this.deriveSchema(value), 'entry');
+    if (updateDescription) {
+      await this.ensureProperty(entryName, this.deriveSchema(value), 'entry');
+    }
     const toSet = await this.encryptFilesIfRequired(entryName, value);
     await this.wrapPromise(
       'set entry',
@@ -1339,11 +1346,15 @@ async function applyPlugin(
         });
       }
     }
+    // [CORE-358]: TODO: handle keys (and therefore sharing) here
+    // await this.ensureKeyInSharing(propertyName);
+
     if (property.hasOwnProperty('value')) {
       // if value has been defined, wait for permissions to be completed, then set value
       tasks.push(async () => {
         await Throttle.all(permissionTasks);
-        await container.setEntry(propertyName, property.value);
+        // [CORE-358]: TODO: do not update fields here
+        await container.setEntry(propertyName, property.value, false);
       });
     } else {
       // if no value has been specified, flatten permission tasks and add to task list
