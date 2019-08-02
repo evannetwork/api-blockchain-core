@@ -25,7 +25,6 @@
   https://evan.network/license/
 */
 import 'mocha';
-import { BigNumber } from 'bignumber.js';
 import { ContractLoader, Executor } from '@evan.network/dbcp';
 import { expect, use } from 'chai';
 import chaiAsPromised = require('chai-as-promised');
