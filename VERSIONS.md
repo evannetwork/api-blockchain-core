@@ -2,12 +2,18 @@
 
 ## Next Version
 ### Features
+
+### Fixes
+
+### Deprecations
+
+
+## Version 2.10.0
+### Features
 - update versions of dependencies
 
 ### Fixes
 - remove unnecessary dependencies
-
-### Deprecations
 
 
 ## Version 2.9.0
