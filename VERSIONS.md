@@ -8,6 +8,14 @@
 ### Deprecations
 
 
+## Version 2.10.0
+### Features
+- update versions of dependencies
+
+### Fixes
+- remove unnecessary dependencies
+
+
 ## Version 2.9.0
 ### Features
 - add support for `timeout` (adjusts transaction timeout) option to `Wallet` and `ExecutorWallet`

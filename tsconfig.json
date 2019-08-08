@@ -19,7 +19,12 @@
     "src/**/*.ts"
   ],
   "exclude": [
+    "bundles",
+    "dist",
+    "docs",
+    "libs",
     "node_modules",
-    "**/*.spec.ts"
+    "scripts",
+    "src/**/*.spec.ts"
   ]
 }
