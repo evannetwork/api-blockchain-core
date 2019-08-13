@@ -315,6 +315,9 @@ export class ExecutorWallet extends Executor {
             // execute contract function
             // recover original from, as estimate converts from to lower case
             // overwrite given gas with estimation plus autoGas factor
+            if (inputOptions.timeout) {
+              options.timeout = inputOptions.timeout;
+            }
             if (autoGas) {
               this.web3.eth.getBlock('latest', (blockError, result) => {
                 if (blockError) {
