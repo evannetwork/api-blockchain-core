@@ -21,6 +21,7 @@
     "lodash": "^4.17.15",
     "promise-parallel-throttle": "^3.3.0",
     "prottle": "^1.0.3",
+    "scrypt": "^6.0.3",
     "scrypt-async": "^2.0.1",
     "secp256k1": "^3.6.2",
     "small-request": "^2.1.0",

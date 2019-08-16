@@ -4,6 +4,7 @@
 ### Features
 
 ### Fixes
+- add `node-scrypt` as dependency to fix browserify build
 
 ### Deprecations
 
