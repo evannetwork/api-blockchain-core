@@ -117,8 +117,10 @@ export class DataContract extends BaseContract {
       return contractInterface;
     })();
     const [contract, sharingInfo] = await Promise.all([contractP, sharingsHash ? { sharingsHash, } : this.createSharing(accountId)]);
-    await this.options.executor.executeContractTransaction(
-      contract, 'setSharing', { from: accountId, autoGas: 1.1, }, sharingInfo.sharingsHash);
+    if (sharingInfo.sharingsHash !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
+      await this.options.executor.executeContractTransaction(
+        contract, 'setSharing', { from: accountId, autoGas: 1.1, }, sharingInfo.sharingsHash);
+    }
     if (typeof contractDescription === 'object') {
       await this.options.description.setDescriptionToContract(contract.options.address, contractDescription, accountId);
     }
@@ -235,6 +237,14 @@ export class DataContract extends BaseContract {
         );
       }
     }
+  }
+
+  /**
+   * clears cached sharing information of this contract, can be used when sharings have been updated
+   * externally and new sharings should be fetched
+   */
+  public clearSharingCache() {
+    this.options.sharing.clearCache();
   }
 
   /**

@@ -867,6 +867,30 @@ Example
   const encryptedHash = '0x2222222222222222222222222222222222222222222222222222222222222222';
   const encrypted = await dataContract.decryptHash(encryptedHash, contract, accounts[0]);
 
+--------------------------------------------------------------------------------
+
+
+
+.. _data-contract_clearSharings:
+
+clearSharings
+================================================================================
+
+.. code-block:: typescript
+
+  dataContract.clearSharings();
+
+Clears cached sharing information of this contract Can be used when sharings have been updated
+externally and new sharings should be fetched.
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  dataContract.clearSharings();
+
 
 
 .. required for building markup
