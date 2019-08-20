@@ -488,6 +488,39 @@ export class Container extends Logger {
   }
 
   /**
+   * Derive type from item value, ensure, that it is in DBCPs  data schema. If no description is
+   * given, this function will fetch current description and update it. If a description is
+   * provided, this function will not update contracts description and only merge updates into given
+   * description.
+   *
+   * @param      {string}  name         property name
+   * @param      {any}     schema       data schema for given property
+   * @param      {any}     description  (optional): description ot update
+   * @return     {Promise<void>}  resolved when done
+   */
+  public async ensureTypeInSchema(name: string, schema: any, description?: any): Promise<void> {
+    await this.getMutex('schema').runExclusive(async () => {
+      let descriptionToEdit;
+      if (description) {
+        descriptionToEdit = description;
+      } else {
+        descriptionToEdit = await this.getDescription();
+      }
+      if (!descriptionToEdit.dataSchema) {
+        descriptionToEdit.dataSchema = {};
+      }
+      if (!descriptionToEdit.dataSchema[name]) {
+        const fieldId = name.replace(/[^a-zA-Z0-9]/g, '');
+        descriptionToEdit.dataSchema[name] = cloneDeep(schema);
+        descriptionToEdit.dataSchema[name].$id = `${fieldId}_schema`;
+        if (!description) {
+          await this.setDescription(descriptionToEdit);
+        }
+      }
+    });
+  }
+
+  /**
    * Get contract address of underlying ``DataContract``.
    */
   public async getContractAddress(): Promise<string> {
@@ -884,8 +917,6 @@ export class Container extends Logger {
         'DSRolesPerContract',
         await this.options.executor.executeContractCall(this.contract, 'authority'),
       );
-      const roleCount = await this.options.executor.executeContractCall(authority, 'roleCount');
-      const keccak256 = this.options.web3.utils.soliditySha3;
       for (let property of Object.keys(description.dataSchema)) {
         if (property === 'type') {
           continue;
@@ -1153,62 +1184,6 @@ export class Container extends Logger {
   }
 
   /**
-   * Ensure that container supports given property. If no description is given, this function will
-   * fetch current description and update it. If a description is provided, this function will not
-   * update contracts description and only merge updates into given description.
-   *
-   * @param      {string}  propertyName  name of an entry or list
-   * @param      {any}     dataSchema    ajv data schema
-   * @param      {string}  propertyType  (optional) 'list' if dataSchema.type is 'array', otherwise
-   *                                     'entry'
-   * @param      {any}     description   (optional): description to update
-   */
-  public async ensurePropertyInDescription(
-    propertyName: string,
-    dataSchema: any,
-    propertyType = dataSchema.type === 'array' ? 'list' : 'entry',
-    description?: any,
-  ): Promise<void> {
-    await this.ensureContract();
-    await this.ensurePermissionOnField(propertyName, propertyType);
-    await this.ensureKeyInSharing(propertyName);
-    await this.ensureTypeInSchema(propertyName, dataSchema, description);
-  }
-
-  /**
-   * Derive type from item value, ensure, that it is in DBCPs  data schema. If no description is
-   * given, this function will fetch current description and update it. If a description is
-   * provided, this function will not update contracts description and only merge updates into given
-   * description.
-   *
-   * @param      {string}  name         property name
-   * @param      {any}     schema       data schema for given property
-   * @param      {any}     description  (optional): description ot update
-   * @return     {Promise<void>}  resolved when done
-   */
-  private async ensureTypeInSchema(name: string, schema: any, description?: any): Promise<void> {
-    await this.getMutex('schema').runExclusive(async () => {
-      let descriptionToEdit;
-      if (description) {
-        descriptionToEdit = description;
-      } else {
-        descriptionToEdit = await this.getDescription();
-      }
-      if (!descriptionToEdit.dataSchema) {
-        descriptionToEdit.dataSchema = {};
-      }
-      if (!descriptionToEdit.dataSchema[name]) {
-        const fieldId = name.replace(/[^a-zA-Z0-9]/g, '');
-        descriptionToEdit.dataSchema[name] = cloneDeep(schema);
-        descriptionToEdit.dataSchema[name].$id = `${fieldId}_schema`;
-        if (!description) {
-          await this.setDescription(descriptionToEdit);
-        }
-      }
-    });
-  }
-
-  /**
    * get mutex for keyword, this can be used to lock several sections during updates
    *
    * @param      {string}  name    name of a section; e.g. 'sharings', 'schema'
@@ -1265,7 +1240,6 @@ export class Container extends Logger {
       // iterates over all roles and checks which roles are included
       const checkNumber = (bnum) => {
         const results = [];
-        let bn = new BigNumber(bnum);
         for (let i = 0; i < 256; i++) {
           const divisor = (new BigNumber(2)).pow(i);
           if (divisor.gt(bnum)) {
@@ -1357,38 +1331,40 @@ async function applyPlugin(
     };
   }
 
+  const permissionUpdates = {
+    roles: [],
+    operations: [],
+  };
   const propertyNames = Object.keys(properties);
-  let tasks = [];
   for (let propertyName of propertyNames) {
     const property: ContainerTemplateProperty = properties[propertyName];
-    // [CORE-358]: check if & how we could pass all groups and permissions
-    const permissionTasks = [];
     for (let role of Object.keys(property.permissions)) {
       for (let modification of property.permissions[role]) {
-        // allow setting this field; if value is specified, add value AFTER this
-        permissionTasks.push(async () => {
-          await options.rightsAndRoles.setOperationPermission(
-            await container.getContractAddress(),
-            config.accountId,
-            parseInt(role, 10),
-            propertyName,
-            getPropertyType(property.type),
-            getModificationType(modification),
-            true,
-          );
-        });
+        permissionUpdates.roles.push(parseInt(role, 10));
+        permissionUpdates.operations.push(options.rightsAndRoles.getOperationCapabilityHash(
+          propertyName,
+          getPropertyType(property.type),
+          getModificationType(modification),
+        ));
       }
     }
 
     // build schema in description (envelopes "public" property)
-    await container.ensurePropertyInDescription(
-      propertyName, property.dataSchema, property.type, envelope.public);
-
-    // values aren't set here anymore
-    // values are set after this anyway, so order of permissions of this field doesn't matter
-    tasks.push(...permissionTasks);
+    await container.ensureTypeInSchema(propertyName, property.dataSchema, envelope.public);
   }
-  await Throttle.all(tasks);
+
+  const dsAuth = options.contractLoader.loadContract('DSAuth', await container.getContractAddress());
+  const dsRolesAddress = await options.executor.executeContractCall(dsAuth, 'authority');
+  const dsRolesContract = options.contractLoader.loadContract('DSRolesPerContract', dsRolesAddress);
+  
+  await options.executor.executeContractTransaction(
+    dsRolesContract,
+    'setRoleOperationCapabilities',
+    { from: config.accountId },
+    permissionUpdates.roles,
+    permissionUpdates.operations,
+    true,
+  );
 
   // write description
   await options.description.setDescription(
@@ -1402,7 +1378,7 @@ async function applyPlugin(
     options, await container.getContractAddress(), config.accountId, propertyNames);
 
   // set values after desription has been set
-  tasks = [];
+  const tasks = [];
   for (let propertyName of propertyNames) {
     const property: ContainerTemplateProperty = properties[propertyName];
     if (property.hasOwnProperty('value')) {
