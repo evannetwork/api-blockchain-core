@@ -263,7 +263,7 @@ export class Container extends Logger {
 
     // check description values and upload it
     const envelope: Envelope = {
-      public: instanceConfig.description || Container.defaultDescription,
+      public: JSON.parse(JSON.stringify(instanceConfig.description || Container.defaultDescription)),
     };
 
     // ensure abi definition is saved to the data container
@@ -278,8 +278,21 @@ export class Container extends Logger {
       throw new Error(`validation of description failed with: ${JSON.stringify(validation)}`);
     }
 
+    // subscribe to emit IdentityCreated(newIdentity, msg.sender);
+    const contractIdentities = await options.nameResolver.getAddress('contractidentities.evan');
+    const identityP = new Promise((s) => {
+      const cisContract = options.contractLoader.loadContract('IdentityHolder', contractIdentities);
+      options.executor.eventHub.once(
+        'IdentityHolder',
+        contractIdentities,
+        'IdentityCreated',
+        () => true,
+        ({ returnValues: { identity }}) => { s(identity); },
+      )
+    });
+
     // create contract
-    const contract = await options.dataContract.create(
+    const contractP = options.dataContract.create(
       instanceConfig.factoryAddress ||
         options.nameResolver.getDomainName(options.nameResolver.config.domains.containerFactory),
       instanceConfig.accountId,
@@ -289,18 +302,17 @@ export class Container extends Logger {
       '0x0000000000000000000000000000000000000000000000000000000000000000',
     );
 
+    const [ contract, identity ] = await Promise.all([ contractP, identityP ]);
+
     const contractId = contract.options.address;
     instanceConfig.address = contractId;
-
     const container = new Container(options, instanceConfig);
     await container.ensureContract();
 
+    envelope.public.identity = identity;
+
     // write values from template to new contract
     await applyPlugin(options, instanceConfig, container, envelope);
-
-    // [CORE-358]: TODO: create identity in factory
-    // create identity for index and write it to description
-    await options.verifications.createIdentity(config.accountId, contractId);
 
     return container;
   }
