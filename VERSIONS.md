@@ -5,6 +5,7 @@
 
 ### Fixes
 - add `node-scrypt` as dependency to fix browserify build
+- fix `executor-agent`, `executeContractCall` to return correctly received `BigNumber` from `smart-agent-executor`
 
 ### Deprecations
 
