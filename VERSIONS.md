@@ -4,6 +4,7 @@
 ### Features
 - update versions of dependencies
 - improve performance of (digital twin) container reation process
+- add helper for creating smart agent auth headers
 
 ### Fixes
 - add `node-scrypt` as dependency to fix browserify build

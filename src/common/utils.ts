@@ -25,6 +25,27 @@
   https://evan.network/license/
 */
 
+import { Runtime } from '../index'
+
+
+/**
+ * create auth header data to authenticate with current account against a smart agent server
+ *
+ * @param      {Runtime}  runtime    an initialized runtime
+ * @param      {string}   message    (optional): message to sign, uses current timestamp by default
+ * @return     {Promise<string>}  auth header value as string
+ */
+export async function getSmartAgentAuthHeaders(runtime: Runtime, message?: string
+): Promise<string> {
+  const messageToSign = message || `${new Date().getTime()}`;
+  const signature = await runtime.signer.signMessage(runtime.activeAccount, messageToSign);
+  return [
+    `EvanAuth ${runtime.activeAccount}`,
+    `EvanMessage ${messageToSign}`,
+    `EvanSignedMessage ${signature}`
+  ].join(',');
+}
+
 /**
  * retrieves chain name from web3's connected networks id, testcore is 508674158, core is 49262, if
  * not matching any of both, chain is threaded as testcore
@@ -60,22 +81,22 @@ export function obfuscate(text: string): string {
 * @return {Promise}             resolves to: {Object} (the result from the function(error, result) {...} callback)
 */
 export async function promisify(funThis, functionName, ...args): Promise<any> {
- let functionArguments = args.slice(0);
+  let functionArguments = args.slice(0);
 
- return new Promise(function(resolve, reject) {
-   try {
-     // add callback function to arguments
-     functionArguments.push(function(error, result) {
-       if (error) {
-         reject(error);
-       } else {
-         resolve(result);
-       }
-     });
-     // run function
-     funThis[functionName].apply(funThis, functionArguments);
-   } catch (ex) {
-     reject(ex.message);
-   }
- });
+  return new Promise(function(resolve, reject) {
+    try {
+      // add callback function to arguments
+      functionArguments.push(function(error, result) {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      });
+      // run function
+      funThis[functionName].apply(funThis, functionArguments);
+    } catch (ex) {
+      reject(ex.message);
+    }
+  });
 }
