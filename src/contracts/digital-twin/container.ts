@@ -32,7 +32,6 @@ import { cloneDeep } from 'lodash';
 import {
   ContractLoader,
   CryptoProvider,
-  DfsInterface,
   Envelope,
   Executor,
   Logger,
@@ -41,7 +40,6 @@ import {
 
 import { DataContract } from '../data-contract/data-contract';
 import { Description } from '../../shared-description';
-import { Ipld } from '../../dfs/ipld';
 import { NameResolver } from '../../name-resolver';
 import { Profile } from '../../profile/profile';
 import { RightsAndRoles, ModificationType, PropertyType } from '../rights-and-roles';
@@ -234,10 +232,10 @@ export class Container extends Logger {
    *                                          to new `Container`
    */
   public static async clone(
-      options: ContainerOptions,
-      config: ContainerConfig,
-      source: Container,
-      copyValues = false,
+    options: ContainerOptions,
+    config: ContainerConfig,
+    source: Container,
+    copyValues = false,
   ): Promise<Container> {
     const plugin = await source.toPlugin(copyValues);
     return Container.create(options, { ...config, plugin });
@@ -257,15 +255,15 @@ export class Container extends Logger {
 
     // convert template properties to jsonSchema
     if (instanceConfig.plugin &&
-      instanceConfig.plugin.template &&
-      instanceConfig.plugin.template.properties) {
-        instanceConfig.description.dataSchema = toJsonSchema(
+        instanceConfig.plugin.template &&
+        instanceConfig.plugin.template.properties) {
+      instanceConfig.description.dataSchema = toJsonSchema(
         instanceConfig.plugin.template.properties)
     }
 
     // check description values and upload it
     const envelope: Envelope = {
-      public: instanceConfig.description || Container.defaultDescription,
+      public: JSON.parse(JSON.stringify(instanceConfig.description || Container.defaultDescription)),
     };
 
     // ensure abi definition is saved to the data container
@@ -280,28 +278,41 @@ export class Container extends Logger {
       throw new Error(`validation of description failed with: ${JSON.stringify(validation)}`);
     }
 
+    // subscribe to emit IdentityCreated(newIdentity, msg.sender);
+    const contractIdentities = await options.nameResolver.getAddress('contractidentities.evan');
+    const identityP = new Promise((s) => {
+      const cisContract = options.contractLoader.loadContract('IdentityHolder', contractIdentities);
+      options.executor.eventHub.once(
+        'IdentityHolder',
+        contractIdentities,
+        'IdentityCreated',
+        () => true,
+        ({ returnValues: { identity }}) => { s(identity); },
+      )
+    });
+
     // create contract
-    const contract = await options.dataContract.create(
+    const contractP = options.dataContract.create(
       instanceConfig.factoryAddress ||
         options.nameResolver.getDomainName(options.nameResolver.config.domains.containerFactory),
       instanceConfig.accountId,
       null,
-      envelope,
+      '0x0000000000000000000000000000000000000000000000000000000000000000',
+      true,
+      '0x0000000000000000000000000000000000000000000000000000000000000000',
     );
+
+    const [ contract, identity ] = await Promise.all([ contractP, identityP ]);
+
     const contractId = contract.options.address;
     instanceConfig.address = contractId;
-
-    // set description to contract
-    await options.description.setDescription(contractId, envelope, instanceConfig.accountId);
-
-    // create identity for index and write it to description
-    await options.verifications.createIdentity(config.accountId, contractId);
-
     const container = new Container(options, instanceConfig);
     await container.ensureContract();
 
+    envelope.public.identity = identity;
+
     // write values from template to new contract
-    await applyPlugin(options, instanceConfig, container);
+    await applyPlugin(options, instanceConfig, container, envelope);
 
     return container;
   }
@@ -392,7 +403,7 @@ export class Container extends Logger {
    * @param      {ContainerOptions}  options  runtime for new container
    * @param      {ContainerConfig}   config   config for new container
    */
-  constructor(options: ContainerOptions, config: ContainerConfig) {
+  public constructor(options: ContainerOptions, config: ContainerConfig) {
     super(options as LoggerOptions);
     this.options = options;
     this.config = config;
@@ -486,6 +497,39 @@ export class Container extends Logger {
     await this.ensurePermissionOnField(propertyName, propertyType);
     await this.ensureKeyInSharing(propertyName);
     await this.ensureTypeInSchema(propertyName, dataSchema);
+  }
+
+  /**
+   * Derive type from item value, ensure, that it is in DBCPs  data schema. If no description is
+   * given, this function will fetch current description and update it. If a description is
+   * provided, this function will not update contracts description and only merge updates into given
+   * description.
+   *
+   * @param      {string}  name         property name
+   * @param      {any}     schema       data schema for given property
+   * @param      {any}     description  (optional): description ot update
+   * @return     {Promise<void>}  resolved when done
+   */
+  public async ensureTypeInSchema(name: string, schema: any, description?: any): Promise<void> {
+    await this.getMutex('schema').runExclusive(async () => {
+      let descriptionToEdit;
+      if (description) {
+        descriptionToEdit = description;
+      } else {
+        descriptionToEdit = await this.getDescription();
+      }
+      if (!descriptionToEdit.dataSchema) {
+        descriptionToEdit.dataSchema = {};
+      }
+      if (!descriptionToEdit.dataSchema[name]) {
+        const fieldId = name.replace(/[^a-zA-Z0-9]/g, '');
+        descriptionToEdit.dataSchema[name] = cloneDeep(schema);
+        descriptionToEdit.dataSchema[name].$id = `${fieldId}_schema`;
+        if (!description) {
+          await this.setDescription(descriptionToEdit);
+        }
+      }
+    });
   }
 
   /**
@@ -651,7 +695,7 @@ export class Container extends Logger {
   /**
    * Gets the owner account id.
    */
-  async getOwner(): Promise<string> {
+  public async getOwner(): Promise<string> {
     const authContract = this.options.contractLoader.loadContract(
       'DSAuth',
       await this.getContractAddress()
@@ -698,9 +742,11 @@ export class Container extends Logger {
    * @param      {string}  entryName  name of an entry in the container
    * @param      {any}     value      value to set
    */
-  public async setEntry(entryName: string, value: any): Promise<void> {
+  public async setEntry(entryName: string, value: any, updateDescription = true): Promise<void> {
     await this.ensureContract();
-    await this.ensureProperty(entryName, this.deriveSchema(value), 'entry');
+    if (updateDescription) {
+      await this.ensureProperty(entryName, this.deriveSchema(value), 'entry');
+    }
     const toSet = await this.encryptFilesIfRequired(entryName, value);
     await this.wrapPromise(
       'set entry',
@@ -883,8 +929,6 @@ export class Container extends Logger {
         'DSRolesPerContract',
         await this.options.executor.executeContractCall(this.contract, 'authority'),
       );
-      const roleCount = await this.options.executor.executeContractCall(authority, 'roleCount');
-      const keccak256 = this.options.web3.utils.soliditySha3;
       for (let property of Object.keys(description.dataSchema)) {
         if (property === 'type') {
           continue;
@@ -1086,11 +1130,12 @@ export class Container extends Logger {
     let key = await this.options.sharing.getKey(
       this.contract.options.address, this.config.accountId, entryName);
     if (!key) {
-      // clear cache to remove failed key request
-      this.options.sharing.clearCache();
       const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aes');
       key = await cryptor.generateKey();
       await this.getMutex('sharing').runExclusive(async () => {
+        // clear cache to remove failed key request
+        this.options.sharing.clearCache();
+        this.options.dataContract.clearSharingCache();
         await this.options.sharing.addSharing(
           this.contract.options.address,
           this.config.accountId,
@@ -1151,27 +1196,6 @@ export class Container extends Logger {
   }
 
   /**
-   * derive type from item value, ensure, that it is in DBCPs data schema
-   *
-   * @param      {string}  name    property name
-   * @param      {any}     value   property value
-   */
-  private async ensureTypeInSchema(name: string, schema: any): Promise<void> {
-    await this.getMutex('schema').runExclusive(async () => {
-      const description = await this.getDescription();
-      if (!description.dataSchema) {
-        description.dataSchema = {};
-      }
-      if (!description.dataSchema[name]) {
-        const fieldId = name.replace(/[^a-zA-Z0-9]/g, '');
-        description.dataSchema[name] = cloneDeep(schema);
-        description.dataSchema[name].$id = `${fieldId}_schema`;
-        await this.setDescription(description);
-      }
-    });
-  }
-
-  /**
    * get mutex for keyword, this can be used to lock several sections during updates
    *
    * @param      {string}  name    name of a section; e.g. 'sharings', 'schema'
@@ -1228,7 +1252,6 @@ export class Container extends Logger {
       // iterates over all roles and checks which roles are included
       const checkNumber = (bnum) => {
         const results = [];
-        let bn = new BigNumber(bnum);
         for (let i = 0; i < 256; i++) {
           const divisor = (new BigNumber(2)).pow(i);
           if (divisor.gt(bnum)) {
@@ -1297,9 +1320,8 @@ async function applyPlugin(
   options: ContainerOptions,
   config: ContainerConfig,
   container: Container,
-): Promise<void> {
-  let tasks = [];
-
+  envelope: Envelope,
+): Promise<Envelope> {
   // use default template if omitted, get template properties
   let plugin;
   if (typeof config.plugin === 'undefined' || typeof config.plugin === 'string') {
@@ -1320,37 +1342,64 @@ async function applyPlugin(
       value: plugin.template.type,
     };
   }
-  for (let propertyName of Object.keys(properties)) {
+
+  const permissionUpdates = {
+    roles: [],
+    operations: [],
+  };
+  const propertyNames = Object.keys(properties);
+  for (let propertyName of propertyNames) {
     const property: ContainerTemplateProperty = properties[propertyName];
-    const permissionTasks = [];
     for (let role of Object.keys(property.permissions)) {
       for (let modification of property.permissions[role]) {
-        // allow setting this field; if value is specified, add value AFTER this
-        permissionTasks.push(async () => {
-          await options.rightsAndRoles.setOperationPermission(
-            await container.getContractAddress(),
-            config.accountId,
-            parseInt(role, 10),
-            propertyName,
-            getPropertyType(property.type),
-            getModificationType(modification),
-            true,
-          );
-        });
+        permissionUpdates.roles.push(parseInt(role, 10));
+        permissionUpdates.operations.push(options.rightsAndRoles.getOperationCapabilityHash(
+          propertyName,
+          getPropertyType(property.type),
+          getModificationType(modification),
+        ));
       }
     }
+
+    // build schema in description (envelopes "public" property)
+    await container.ensureTypeInSchema(propertyName, property.dataSchema, envelope.public);
+  }
+
+  const dsAuth = options.contractLoader.loadContract('DSAuth', await container.getContractAddress());
+  const dsRolesAddress = await options.executor.executeContractCall(dsAuth, 'authority');
+  const dsRolesContract = options.contractLoader.loadContract('DSRolesPerContract', dsRolesAddress);
+  
+  await options.executor.executeContractTransaction(
+    dsRolesContract,
+    'setRoleOperationCapabilities',
+    { from: config.accountId },
+    permissionUpdates.roles,
+    permissionUpdates.operations,
+    true,
+  );
+
+  // write description
+  await options.description.setDescription(
+    await container.getContractAddress(),
+    envelope,
+    config.accountId,
+  );
+
+  // write sharings to contract
+  await generateSharings(
+    options, await container.getContractAddress(), config.accountId, propertyNames);
+
+  // set values after desription has been set
+  const tasks = [];
+  for (let propertyName of propertyNames) {
+    const property: ContainerTemplateProperty = properties[propertyName];
     if (property.hasOwnProperty('value')) {
-      // if value has been defined, wait for permissions to be completed, then set value
-      tasks.push(async () => {
-        await Throttle.all(permissionTasks);
-        await container.setEntry(propertyName, property.value);
-      });
-    } else {
-      // if no value has been specified, flatten permission tasks and add to task list
-      tasks = tasks.concat(async () => Throttle.all(permissionTasks));
+      tasks.push(async () => container.setEntry(propertyName, property.value, false));
     }
   }
   await Throttle.all(tasks);
+  
+  return envelope;
 }
 
 /**
@@ -1367,6 +1416,47 @@ function checkConfigProperties(config: ContainerConfig, properties: string[]): v
   } else if (missing.length > 1) {
     throw new Error(`missing properties in config: "${missing.join(', ')}"`);
   }
+}
+
+/**
+ * Generates keys and sharings for given fields, used when creating new containers. This will store
+ * new sharings at given contract.
+ *
+ * @param      {any}       runtime          initialized runtime
+ * @param      {string}    contractAddress  contract to generate sharings for
+ * @param      {string}    accountId        executing account (contract owner)
+ * @param      {string[]}  fields           fields to generate keys for
+ */
+async function generateSharings(
+  runtime: any, contractAddress: string, accountId: string, fields: string[]
+) {
+  // get current sharing
+  const sharings = {};
+
+  // get block number and keys for sharing
+  const cryptor = runtime.cryptoProvider.getCryptorByCryptoAlgo('aes');
+  const keys = await Promise.all([
+    ...[...Array(fields.length + 1)].map(async () => cryptor.generateKey()),
+  ]);
+
+  // add hash key
+  const tasks = [];
+  tasks.push(async () =>
+    runtime.sharing.extendSharings(
+      sharings, accountId, accountId, '*', 'hashKey', keys[keys.length - 1], null)
+  );
+
+  for (let i = 0; i < fields.length; i++) {
+    tasks.push(async () =>
+      runtime.sharing.extendSharings(
+        sharings, accountId, accountId, fields[i], 0, keys[i])
+    );
+  }
+
+  await Throttle.all(tasks);
+
+  // save modifications
+  await runtime.sharing.saveSharingsToContract(contractAddress, sharings, accountId);
 }
 
 /**
