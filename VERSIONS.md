@@ -8,6 +8,17 @@
 ### Deprecations
 
 
+## Version 2.11.0
+### Features
+- update versions of dependencies
+- improve performance of (digital twin) container reation process
+- add helper for creating smart agent auth headers
+
+### Fixes
+- add `node-scrypt` as dependency to fix browserify build
+- fix `executor-agent`, `executeContractCall` to return correctly received `BigNumber` from `smart-agent-executor`
+
+
 ## Version 2.10.0
 ### Features
 - update versions of dependencies

@@ -25,8 +25,9 @@
   https://evan.network/license/
 */
 
-const https = require('https');
+const BigNumber = require('bignumber.js');
 const http = require('http');
+const https = require('https');
 const querystring = require('querystring');
 const url = require('url');
 
@@ -177,8 +178,7 @@ export class ExecutorAgent extends Executor {
       functionSignature = contract.abiModel.abi.methods[functionName].abiItem;
     }
 
-    // submit to action
-    return request({
+    let result: any = await request({
       url: `${this.agentUrl}/api/smart-agents/executor/executeContractCall`,
       method: 'POST',
       body: {
@@ -188,6 +188,23 @@ export class ExecutorAgent extends Executor {
         functionArguments: args,
       },
     });
+
+    // Request response would serialize the result and big numbers can't be detected. The server
+    // transforms BigNumbers to numbers and put them into an object, so they can be transformed into
+    // BigNumber again.
+    if (Array.isArray(result)) {
+      result.forEach((value, index) => {
+        if (value && value.isBigNumber) {
+          result[index] = new BigNumber(result[index].value);
+        }
+      });
+    } else {
+      if (result && result.isBigNumber) {
+        result = new BigNumber(result.value);
+      }
+    }
+
+    return result;
   }
 
   /**
