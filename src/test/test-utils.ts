@@ -43,6 +43,7 @@ import {
 
 import { accountMap } from './accounts';
 import { accounts } from './accounts';
+import { createDefaultRuntime, Runtime } from '../index';
 import { Aes } from '../encryption/aes';
 import { AesBlob } from '../encryption/aes-blob';
 import { AesEcb } from '../encryption/aes-ecb';
@@ -391,6 +392,17 @@ export class TestUtils {
 
   static getRandomBytes32(): string {
     return `0x${crypto.randomBytes(32).toString('hex')}`;
+  }
+
+  public static async getRuntime(accountId): Promise<Runtime> {
+    return createDefaultRuntime(
+      await TestUtils.getWeb3(),
+      await TestUtils.getIpfs(),
+      {
+        accountMap: { [accountId]: accountMap[accountId] },
+        keyConfig: sampleKeys,
+      }
+    );
   }
 
   static async getRightsAndRoles(web3) {
