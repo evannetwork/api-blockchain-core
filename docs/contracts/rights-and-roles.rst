@@ -20,16 +20,16 @@ The `RightsAndRoles <https://github.com/evannetwork/api-blockchain-core/tree/mas
 - `Function Permissions <https://evannetwork.github.io/docs/developers/concepts/smart-contract-permissioning.html#function-permissions>`_
 - `Operation Permissions <https://evannetwork.github.io/docs/developers/concepts/smart-contract-permissioning.html#operation-permissions>`_
 
-It allows to manage permissions for contracts, that use the authority `DSRolesPerContract.sol <https://github.com/evannetwork/smart-contracts/blob/master/contracts/DSRolesPerContract.sol>`_ for as its permission approach.
+It allows to manage permissions for contracts, that use the authority `DSRolesPerContract.sol <https://github.com/evannetwork/smart-contracts-core/blob/master/contracts/DSRolesPerContract.sol>`_ for as its permission approach.
 
-Contracts, that use `DSRolesPerContract <https://github.com/evannetwork/smart-contracts/blob/master/contracts/DSRolesPerContract.sol>`_ and therefore allow to configure its permissions with the ``RightsAndRoles`` module are:
+Contracts, that use `DSRolesPerContract <https://github.com/evannetwork/smart-contracts-core/blob/master/contracts/DSRolesPerContract.sol>`_ and therefore allow to configure its permissions with the ``RightsAndRoles`` module are:
 
-- `BaseContract <https://github.com/evannetwork/smart-contracts/blob/master/contracts/BaseContract.sol>`_
-- `DataContract <https://github.com/evannetwork/smart-contracts/blob/master/contracts/DataContract.sol>`_
-- `ServiceContract <https://github.com/evannetwork/smart-contracts/blob/master/contracts/ServiceContract.sol>`_
-- `Shared <https://github.com/evannetwork/smart-contracts/blob/master/contracts/Shared.sol>`_
-- `Described <https://github.com/evannetwork/smart-contracts/blob/master/contracts/Described.sol>`_
-- `BusinessCenter <https://github.com/evannetwork/smart-contracts/blob/master/contracts/BusinessCenter.sol>`_
+- `BaseContract <https://github.com/evannetwork/smart-contracts-core/blob/master/contracts/BaseContract.sol>`_
+- `DataContract <https://github.com/evannetwork/smart-contracts-core/blob/master/contracts/DataContract.sol>`_
+- `ServiceContract <https://github.com/evannetwork/smart-contracts-core/blob/master/contracts/ServiceContract.sol>`_
+- `Shared <https://github.com/evannetwork/smart-contracts-core/blob/master/contracts/Shared.sol>`_
+- `Described <https://github.com/evannetwork/smart-contracts-core/blob/master/contracts/Described.sol>`_
+- `BusinessCenter <https://github.com/evannetwork/smart-contracts-core/blob/master/contracts/BusinessCenter.sol>`_
 
 Also have a look at the  `Smart Contract Permissioning <https://evannetwork.github.io/docs/developers/concepts/smart-contract-permissioning.html>`_ section in the evan.network wiki.
 
@@ -185,7 +185,7 @@ getMembers
 
 Returns all roles with all members.
 
-The `DSRolesPerContract <https://github.com/evannetwork/smart-contracts/blob/master/contracts/DSRolesPerContract.sol>`_ authority tracks used roles and their members and allows to retrieve an overview with all roles and their members. To get this information, you can use the ``getMembes`` function.
+The `DSRolesPerContract <https://github.com/evannetwork/smart-contracts-core/blob/master/contracts/DSRolesPerContract.sol>`_ authority tracks used roles and their members and allows to retrieve an overview with all roles and their members. To get this information, you can use the ``getMembes`` function.
 
 ----------
 Parameters
@@ -282,9 +282,9 @@ setOperationPermission
 
 Allows or denies setting properties on a contract.
 
-"Operation Permissions" are capabilities granted per contract logic. They have a ``bytes32`` key, that represents the capability, e.g. in a `DataContract <https://github.com/evannetwork/smart-contracts/blob/master/contracts/DataContract.sol>`_ a capability to add values to a certain list can be granted.
+"Operation Permissions" are capabilities granted per contract logic. They have a ``bytes32`` key, that represents the capability, e.g. in a `DataContract <https://github.com/evannetwork/smart-contracts-core/blob/master/contracts/DataContract.sol>`_ a capability to add values to a certain list can be granted.
 
-The way, those capability hashes are build, depends on the contract logic and differs from contract to contract. For example a capability check for validation if a member is allowed to add an item to the list "example" in a `DataContract <https://github.com/evannetwork/smart-contracts/blob/master/contracts/DataContract.sol>`_ has four arguments, in this case:
+The way, those capability hashes are build, depends on the contract logic and differs from contract to contract. For example a capability check for validation if a member is allowed to add an item to the list "example" in a `DataContract <https://github.com/evannetwork/smart-contracts-core/blob/master/contracts/DataContract.sol>`_ has four arguments, in this case:
 
 - which role is allowed to do? (e.g. a member)
 - what type of element is modified? (--> a list)

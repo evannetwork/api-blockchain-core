@@ -18,7 +18,7 @@ IPLD
 
 `IPLD <https://github.com/ipld/ipld>`_ is a way to store data as trees. The used implementation relies on `js-ipld-graph-builder <https://github.com/ipld/js-ipld-graph-builder>`_ for iterating over tree nodes and setting new subtrees, but uses a few modifications to the standard:
 - nodes are not stored as `IPFS DAGs <https://github.com/ipfs/interface-ipfs-core/blob/master/SPEC/DAG.md>`_, but stored as play JSON IPFS files
-- nodes, that are encrypted, contain the property `cryptoInfo` for decryption (see `Encryption <encryption>`_)
+- nodes, that are encrypted, contain the property `cryptoInfo` for decryption (see :doc:`Encryption <Encryption>`)
 
 
 
@@ -176,7 +176,7 @@ To retrieve data from IPLD trees, use the `bytes32` hash from storing the data:
   // Output:
   // { personalInfo: { firstName: 'eris' } }
 
-For info about the ``Ipld.purgeCryptoInfo`` part see :doc:`Encryption <../encryption/index>`.
+For info about the ``Ipld.purgeCryptoInfo`` part see :doc:`Encryption <Encryption>`.
 
 The second argument is the path inside the tree. Passing '' means "retrieve data from root level". To get more specifc data, provide a path:
 
