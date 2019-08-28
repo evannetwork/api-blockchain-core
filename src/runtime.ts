@@ -50,6 +50,7 @@ import { Description } from './shared-description';
 import { EncryptionWrapper } from './encryption/encryption-wrapper';
 import { getEnvironment } from './common/utils';
 import { Ipfs } from './dfs/ipfs';
+import { IpfsLib } from './dfs/ipfs-lib';
 import { Ipld } from './dfs/ipld';
 import { KeyExchange } from './keyExchange';
 import { Mailbox } from './mailbox';
@@ -170,6 +171,8 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     Object.assign(runtimeConfig.keyConfig, tempConfig.keyConfig);
   }
 
+  const activeAccount = Object.keys(runtimeConfig.accountMap)[0];
+
   // executor
   const accountStore = options.accountStore ||
     new AccountStore({ accounts: runtimeConfig.accountMap, log, });
@@ -200,6 +203,12 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     nameResolver,
   });
   executor.eventHub = eventHub;
+
+  // check if the dfs remoteNode matches our ipfslib
+  if (!(dfs as Ipfs).remoteNode as any instanceof IpfsLib) {
+    (dfs as Ipfs).remoteNode = new IpfsLib(config.ipfsConfig);
+  }
+  (dfs as Ipfs).remoteNode.setRuntime({signer, activeAccount});
 
   // encryption
   const cryptoConfig = {};
@@ -277,7 +286,6 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     description,
   });
 
-  const activeAccount = Object.keys(runtimeConfig.accountMap)[0];
   const ipld = options.ipld || new Ipld({
     ipfs: dfs as Ipfs,
     keyProvider,

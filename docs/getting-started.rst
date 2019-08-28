@@ -19,7 +19,7 @@ Adding blockchain core
 
 First you need to get blockchain core and its dependencies into your project. This can be done using the following methods:
 
-- npm: ``npm install @evan.network/api-blockchain-core ipfs-api web3@1.0.0-beta.55``
+- npm: ``npm install @evan.network/api-blockchain-core web3@1.0.0-beta.55``
 
 After that you need to create a blockchain core runtime with a predefined configuration.
 
@@ -33,7 +33,6 @@ Configuring and initializing blockchain core
 .. code-block:: javascript
 
     // require blockchain-core dependencies
-    const IpfsApi = require('ipfs-api');
     const Web3 = require('web3');
 
     // require blockchain-core
@@ -62,7 +61,7 @@ Configuring and initializing blockchain core
         runtimeConfig.web3Provider,
         { clientConfig: { keepalive: true, keepaliveInterval: 5000 } });
       const web3 = new Web3(provider, null, { transactionConfirmationBlocks: 1 });
-      const dfs = new Ipfs({ remoteNode: new IpfsApi(runtimeConfig.ipfs), });
+      const dfs = new Ipfs({ dfsConfig: runtimeConfig.ipfs });
 
       // create runtime
       const runtime = await createDefaultRuntime(web3, dfs, { accountMap: runtimeConfig.accountMap, keyConfig: runtimeConfig.keyConfig });
@@ -76,7 +75,6 @@ or you can initialize the api-blockchain-core runtime with your mnemonic and you
 .. code-block:: javascript
 
     // require blockchain-core dependencies
-    const IpfsApi = require('ipfs-api');
     const Web3 = require('web3');
 
     // require blockchain-core
@@ -93,7 +91,7 @@ or you can initialize the api-blockchain-core runtime with your mnemonic and you
         web3Provider,
         { clientConfig: { keepalive: true, keepaliveInterval: 5000 } });
       const web3 = new Web3(provider, null, { transactionConfirmationBlocks: 1 });
-      const dfs = new Ipfs({ remoteNode: new IpfsApi(ipfsConfig), });
+      const dfs = new Ipfs({ dfsConfig: ipfsConfig });
 
       // create runtime
       const runtime = await createDefaultRuntime(

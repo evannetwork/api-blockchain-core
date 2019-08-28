@@ -54,7 +54,8 @@ export class IpfsLib {
       pinning: true,
       port: '5001',
       protocol: 'http',
-      base: '/api/v0' }, provider || {});
+      base: '/api/v0',
+      headers: {} }, provider || {});
     this.provider = data;
     this.files = {
       add: this.add.bind(this),
