@@ -4,6 +4,7 @@
 ### Features
 
 ### Fixes
+- fix `notEnsRootOwner` check to allow each account that gets the `/evan` account from the ens root owner
 
 ### Deprecations
 

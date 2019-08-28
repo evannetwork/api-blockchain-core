@@ -998,8 +998,7 @@ export class Verifications extends Logger {
               verification.parents = [ ];
 
               if (verification.name === '/evan' &&
-                 (verification.issuerAccount !== this.options.config.ensRootOwner ||
-                   verification.subject !== this.options.config.ensRootOwner)) {
+                verification.issuerAccount !== this.options.config.ensRootOwner) {
                 verification.warnings = [ 'notEnsRootOwner' ];
               } else {
                 const whitelistWarnings = [ 'expired', 'rejected', 'invalid', 'noIdentity',
