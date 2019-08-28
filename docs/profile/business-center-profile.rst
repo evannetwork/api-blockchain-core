@@ -311,7 +311,7 @@ Example
 .. _source cryptoProvider: ../encryption/crypto-provider.html
 
 .. |source ipld| replace:: ``Ipld``
-.. _source ipld: ../dfs/ipld.htmlp
+.. _source ipld: ../dfs/ipld.html
 
 .. |source logLevel| replace:: ``LogLevel``
 .. _source logLevel: ../common/logger.html#loglevel

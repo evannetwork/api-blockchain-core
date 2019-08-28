@@ -24,7 +24,7 @@ Using the ``ExecutorAgent`` allows to delegate transactions to users that do not
 
 Users without accounts are then interacting with the front-end the same way as regular users, but do not submit their transactions themselves, they make a REST request against a smart agent server. To prevent spamming and scamming, the users use tokens for their transactions. Tokens are basically like prepaid telephone card and allows to perform a limited set of functions for a limited amount of times. Tokens can only be created with a valid password.
 
-Let's say, we have created a `DataContract <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/database-contract/data-contract.ts>`_, that contains three questions, that should be answered by someone without an own blockchain account (think of a customer survey or something similar).
+Let's say, we have created a `DataContract <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/data-contract/data-contract.ts>`_, that contains three questions, that should be answered by someone without an own blockchain account (think of a customer survey or something similar).
 
 To allow that, first invite the corresponding smart agent account into the contract. Smart agent accounts for this should be known to the party, that wants to delegate transactions and their funds are maintained by this party, we'll use an example address for this here.
 
