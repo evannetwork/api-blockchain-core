@@ -307,14 +307,23 @@ export class TestUtils {
   }
 
   static async getIpfs(): Promise<Ipfs> {
-    const pk = await this.getAccountStore(null).getPrivateKey(accounts[0]);
+    const contracts = await this.getContracts();
+    const accountStore = this.getAccountStore({});
+    const contractLoader =  new ContractLoader({
+      contracts,
+      web3: this.getWeb3(),
+    });
+    const signer = new SignerInternal({
+      accountStore,
+      contractLoader,
+      config: {},
+      web3: this.getWeb3(),
+    });
     const ipfs = new Ipfs({
       dfsConfig: {host: 'ipfs.test.evan.network', port: '443', protocol: 'https'},
-      disablePin: true,
-      accountId: accounts[0],
-      privateKey: `0x${pk}`,
-      web3: this.getWeb3()
+      disablePin: true
     });
+    ipfs.setRuntime({signer, activeAccount:accounts[0]});
     return ipfs;
   }
 
