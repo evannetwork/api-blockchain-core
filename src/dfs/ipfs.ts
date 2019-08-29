@@ -61,7 +61,7 @@ export class Ipfs extends Logger implements DfsInterface {
   public dfsConfig: any;
   public disablePin: boolean;
   public cache: DfsCacheInterface;
-  public runtime: any;
+  public runtime: Runtime;
 
   /**
    * convert IPFS hash to bytes 32 see
