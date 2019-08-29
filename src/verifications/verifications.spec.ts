@@ -1236,7 +1236,7 @@ describe('Verifications handler', function() {
       });
     });
 
-    describe.only('that do not have a description', async () => {
+    describe('that do not have a description', async () => {
       let undescribedContract;
       let undescribedIdentity;
       const context: any = {};
