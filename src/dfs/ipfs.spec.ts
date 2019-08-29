@@ -37,12 +37,12 @@ describe('IPFS handler', function() {
     await ipfs.stop();
   });
 
-
   it('should add the auth header for every request', async () => {
     const randomContent = Math.random().toString();
     await ipfs.add('test', Buffer.from(randomContent, 'utf-8'));
     expect(ipfs.remoteNode.provider.headers.authorization).to.be.ok;
   });
+
   it('should be able to add a file', async () => {
     const randomContent = Math.random().toString();
     const hash = await ipfs.add('test', Buffer.from(randomContent, 'utf-8'));
