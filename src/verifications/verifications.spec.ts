@@ -50,7 +50,7 @@ import {
 const linker = require('solc/linker');
 
 function timeout(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 use(chaiAsPromised);
@@ -1135,8 +1135,6 @@ describe('Verifications handler', function() {
           'VerificationsRegistry', [], { from: accounts[2], gas: 8000000 });
         verifications.contracts.registry = verificationsRegistry;
 
-        const businessCenterDomain = nameResolver.getDomainName(
-          config.nameResolver.domains.businessCenter);
         contractId = await baseContract.createUninitialized(
           'testdatacontract',
           accounts[0],
@@ -1166,8 +1164,6 @@ describe('Verifications handler', function() {
       runGenericContractTests(context);
 
       it('does not return verification data, when identity and contract id mismatch', async () => {
-        const businessCenterDomain = nameResolver.getDomainName(
-          config.nameResolver.domains.businessCenter);
         // create two contracts with a verification
         const [ contractId1, contractId2 ] = await Promise.all([...Array(2)].map(async () => {
           const localContractId = await baseContract.createUninitialized(
@@ -1212,9 +1208,7 @@ describe('Verifications handler', function() {
       });
 
       it('verifications for a subject that has no identity should throw', async () => {
-        let topic = getRandomTopic('/evan'), computed;
-        const businessCenterDomain = nameResolver.getDomainName(
-          config.nameResolver.domains.businessCenter);
+        let topic = getRandomTopic('/evan');
 
         const contractIdWithoutIdentity = await baseContract.createUninitialized(
           'testdatacontract',
@@ -1222,7 +1216,7 @@ describe('Verifications handler', function() {
           null,
         );
 
-         await description.setDescriptionToContract(
+        await description.setDescriptionToContract(
           contractIdWithoutIdentity,
           {
             public: {
@@ -1242,18 +1236,16 @@ describe('Verifications handler', function() {
       });
     });
 
-    describe('that do not have a description', async () => {
+    describe.only('that do not have a description', async () => {
       let undescribedContract;
       let undescribedIdentity;
       const context: any = {};
 
       before(async () => {
-        const businessCenterDomain = nameResolver.getDomainName(
-          config.nameResolver.domains.businessCenter);
         undescribedContract = await executor.createContract(
           'TestContract',
           ['test'],
-          { from: accounts[0], gas: 400000 },
+          { from: accounts[0], gas: 500000 },
         );
         undescribedIdentity = await verifications.createIdentity(
           accounts[0], undescribedContract.options.address, false);
@@ -1262,10 +1254,10 @@ describe('Verifications handler', function() {
 
       runGenericContractTests(context);
 
-      it('throws no error when trying to set an identity on a contractId ', async () => {
+      it('throws an error when trying to set an identity on a contractId ', async () => {
         const setPromise = verifications.setVerification(
           accounts[0], undescribedContract.options.address, '/company', 0, null, null, false, true);
-        await expect(setPromise).to.be.fulfilled;
+        await expect(setPromise).to.be.rejected;
       });
     });
   });
