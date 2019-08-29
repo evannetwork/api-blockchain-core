@@ -17,7 +17,7 @@ Mailbox
 
 The `Mailbox <https://github.com/evannetwork/api-blockchain-core/blob/develop/src/mailbox.ts>`_ module is used for sending and retrieving bmails (blockchain mails) to other even.network members. Sending regular bmails between to parties requires them to have completed a `Key Exchange <key-exchange.html>`_ before being able to send encrypted messages. When exchanging the keys, bmails are encrypted with a commonly known key, that is only valid is this case and the underlying messages, that contain the actual keys are encrypted with Diffie Hellman keys, to ensure, that keys are exchanged in a safe manner (see `Key Exchange <key-exchange.html>`_ for details).
 
-The mailbox is a `smart contract <https://github.com/evannetwork/smart-contracts/blob/master/contracts/MailBox.sol>`_, that holds
+The mailbox is a `smart contract <https://github.com/evannetwork/smart-contracts-core/blob/master/contracts/MailBoxInterface.sol>`_, that holds
 
 - ``bytes32`` hashes, that are the encrypted contents of the mails
 - basic metadata about the mails, like

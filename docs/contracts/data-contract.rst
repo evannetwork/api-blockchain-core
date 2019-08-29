@@ -133,7 +133,7 @@ Now create a contract with:
 
   const contract = await dataContract.create(factoryName, accounts[0], businessCenterDomain);
 
-Okay, that does not provide a description for the contract. Let's add a description to the process. The definition is a `DBCP <https://github.com/evannetwork/dbcp/wiki)>`_ contract definition and is stored in an ``Envelope`` (see :doc:`Encryption <../encryption/index>`):
+Okay, that does not provide a description for the contract. Let's add a description to the process. The definition is a `DBCP <https://github.com/evannetwork/dbcp/wiki>`_ contract definition and is stored in an ``Envelope`` (see :doc:`Encryption <../encryption/index>`):
 
 .. code-block:: typescript
 

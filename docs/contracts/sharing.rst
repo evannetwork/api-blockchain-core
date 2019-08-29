@@ -788,7 +788,7 @@ Example
 .. _source executor: ../blockchain/executor.html
 
 .. |source keyProvider| replace:: ``KeyProvider``
-.. _source keyProvider: ../key-provider
+.. _source keyProvider: ../encryption/key-provider.html
 
 .. |source logLevel| replace:: ``LogLevel``
 .. _source logLevel: ../common/logger.html#loglevel
