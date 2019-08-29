@@ -268,7 +268,6 @@ export class Ipfs extends Logger implements DfsInterface {
    * checks/generates the auth header for ipfs is set and clears it every 60 seconds
    */
   private async checkAuthHeader() {
-    console.log(this.remoteNode.provider.headers.authorization)
     if (!this.remoteNode.provider.headers.authorization) {
       const ipfsAuthHeader = await utils.getSmartAgentAuthHeaders(this.runtime);
       this.remoteNode.provider.headers.authorization = ipfsAuthHeader;
