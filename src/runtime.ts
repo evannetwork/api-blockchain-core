@@ -208,7 +208,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   if (!(dfs as Ipfs).remoteNode as any instanceof IpfsLib) {
     (dfs as Ipfs).remoteNode = new IpfsLib(config.ipfsConfig);
   }
-  (dfs as Ipfs).remoteNode.setRuntime({signer, activeAccount});
+  (dfs as Ipfs).setRuntime({signer, activeAccount});
 
   // encryption
   const cryptoConfig = {};

@@ -1253,7 +1253,7 @@ describe('Verifications handler', function() {
         undescribedContract = await executor.createContract(
           'TestContract',
           ['test'],
-          { from: accounts[0], gas: 200000 },
+          { from: accounts[0], gas: 400000 },
         );
         undescribedIdentity = await verifications.createIdentity(
           accounts[0], undescribedContract.options.address, false);
