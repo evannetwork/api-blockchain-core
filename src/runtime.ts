@@ -223,8 +223,13 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     for (let accountId in runtimeConfig.keyConfig) {
       // check if the key is a valid accountId
       if (accountId.length === 42) {
-        const sha9Account = web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
-  [web3.utils.soliditySha3(accountId), web3.utils.soliditySha3(accountId)].sort());
+        const sha9Account = web3.utils.soliditySha3.apply(
+          web3.utils.soliditySha3,
+          [
+            web3.utils.soliditySha3(accountId),
+            web3.utils.soliditySha3(accountId)
+          ].sort()
+        );
         const sha3Account = web3.utils.soliditySha3(accountId)
         const dataKey = web3.utils
           .keccak256(accountId + runtimeConfig.keyConfig[accountId])

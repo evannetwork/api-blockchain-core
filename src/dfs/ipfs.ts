@@ -142,7 +142,6 @@ export class Ipfs extends Logger implements DfsInterface {
   public async addMultiple(files: FileToAdd[]): Promise<string[]> {
     let remoteFiles = [];
     try {
-
       await this.checkAuthHeader();
 
       remoteFiles = await this.remoteNode.files.add(files);
@@ -190,7 +189,6 @@ export class Ipfs extends Logger implements DfsInterface {
    * @return     data as text
    */
   public async get(hash: string, returnBuffer = false): Promise<any> {
-
     const ipfsHash = hash.startsWith('Qm') ? hash : Ipfs.bytes32ToIpfsHash(hash);
 
     // check if the hash equals 0x000000000000000000000000000000000
@@ -218,8 +216,6 @@ export class Ipfs extends Logger implements DfsInterface {
         reject(new Error(`error while getting ipfs hash ${ipfsHash}: rejected after ${ IPFS_TIMEOUT }ms`));
       }, IPFS_TIMEOUT)
     });
-
-    await this.checkAuthHeader();
 
     const getRemoteHash = this.remoteNode.files.cat(ipfsHash)
       .then((buffer: any) => {
