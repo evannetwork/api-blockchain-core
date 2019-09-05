@@ -323,7 +323,7 @@ export class TestUtils {
       dfsConfig: {host: 'ipfs.test.evan.network', port: '443', protocol: 'https'},
       disablePin: true
     });
-    ipfs.setRuntime({signer, activeAccount:accounts[0]});
+    ipfs.setRuntime({signer, activeAccount:accounts[0], web3:this.getWeb3()});
     return ipfs;
   }
 
