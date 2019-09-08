@@ -534,23 +534,24 @@ Attention
 
 If the data contract was created by the `container` by the |source digitalTwin|_ API you need to grant the permissions for
 removing list entries manually. To do this you can use the |source rightsAndRoles|_ API. The following example shows
-how to grant permissions to delete list entries from list `exampleList` to group 0:
+how to grant permissions to delete list entries from list `exampleList` to group 0.
 
 .. code-block:: typescript
 
-// make sure, you have required the enums from rights-and-roles.ts
-import { ModificationType, PropertyType } from '@evan.network/api-blockchain-core';
-const contract = '0x0000000000000000000000000000000000000123';
-const contractOwner = '0x0000000000000000000000000000000000000001';
-await rightsAndRoles.setOperationPermission(
-  contract,                   // contract to be updated
-  contractOwner,              // account, that can change permissions
-  0,                          // role id, uint8 value
-  'exampleList',              // name of the object
-  PropertyType.ListEntry,     // what type of element is modified
-  ModificationType.Remove,    // type of the modification
-  true,                       // grant this capability
-);
+  // make sure, you have required the enums from rights-and-roles.ts
+  import { ModificationType, PropertyType } from '@evan.network/api-blockchain-core';
+  const contract = '0x0000000000000000000000000000000000000123';
+  const contractOwner = '0x0000000000000000000000000000000000000001';
+  await rightsAndRoles.setOperationPermission(
+    contract,                   // contract to be updated
+    contractOwner,              // account, that can change permissions
+    0,                          // role id, uint8 value
+    'exampleList',              // name of the object
+    PropertyType.ListEntry,     // what type of element is modified
+    ModificationType.Remove,    // type of the modification
+    true,                       // grant this capability
+  );
+
 
 ----------
 Parameters
