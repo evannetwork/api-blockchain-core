@@ -582,7 +582,6 @@ describe('Verifications handler', function() {
 
         // V2
         v2 = await verifications.getNestedVerificationsV2(accounts[1], topic, false, localQueryOptions);
-        console.log(require('util').inspect(verifications.trimToStatusTree(v2), { colors: true, depth: 8 }));
         await expect(v2.status).to.eq(VerificationsStatusV2.Green);
         await expect(v2.verifications[0].statusFlags).not.to.include(VerificationsStatusFlagsV2.parentMissing);
       });
@@ -1264,50 +1263,51 @@ describe('Verifications handler', function() {
 
   describe('when using "cold" verifications and submitting them with an unrelated account', () => {
     it('allows to submit a "cold" transaction from another account to an account identity',
-    async () => {
-      const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
-      await timeout(1000);
+      async () => {
+        const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
+        await timeout(1000);
 
-      const topic = '/company';
+        const topic = '/company';
 
-      // on account[0]s side
-      // accounts[0] wants to issue a verification for accounts[1] via delegation
-      const txInfo = await verifications.signSetVerificationTransaction(
-        accounts[0], accounts[1], topic);
+        // on account[0]s side
+        // accounts[0] wants to issue a verification for accounts[1] via delegation
+        const txInfo = await verifications.signSetVerificationTransaction(
+          accounts[0], accounts[1], topic);
 
-      // on account[2]s side
-      // accounts[2] submits transaction, that actually issues verification
-      const verificationId = await verifications.executeVerification(accounts[2], txInfo);
+        // on account[2]s side
+        // accounts[2] submits transaction, that actually issues verification
+        const verificationId = await verifications.executeVerification(accounts[2], txInfo);
 
-      await timeout(1000);
-      expect(verificationId).to.be.ok;
-      const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company');
-      expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
-      expect(verificationsForAccount[oldLength])
-        .to.have.property('status', VerificationsStatus.Issued);
-    });
+        await timeout(1000);
+        expect(verificationId).to.be.ok;
+        const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company');
+        expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
+        expect(verificationsForAccount[oldLength])
+          .to.have.property('status', VerificationsStatus.Issued);
+      });
 
     it('allows to submit a "cold" transaction from another account to an account identity',
-    async () => {
-      const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
-      await timeout(1000);
+      async () => {
+        const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
+        await timeout(1000);
 
-      const topic = '/company';
+        const topic = '/company';
 
-      // on account[0]s side
-      const txInfo = await verifications.signSetVerificationTransaction(
-        accounts[0], accounts[1], topic);
+        // on account[0]s side
+        const txInfo = await verifications.signSetVerificationTransaction(
+          accounts[0], accounts[1], topic);
 
-      // on account[2]s side
-      const verificationId = await verifications.executeVerification(accounts[2], txInfo);
+        // on account[2]s side
+        const verificationId = await verifications.executeVerification(accounts[2], txInfo);
 
-      await timeout(1000);
-      expect(verificationId).to.be.ok;
-      const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company');
-      expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
-      expect(verificationsForAccount[oldLength])
-        .to.have.property('status', VerificationsStatus.Issued);
-    });
+        await timeout(1000);
+        expect(verificationId).to.be.ok;
+        const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company');
+        expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
+        expect(verificationsForAccount[oldLength])
+          .to.have.property('status', VerificationsStatus.Issued);
+      }
+    );
 
     it('allows to get execution nonce for a given identity', async () => {
       const nonce1 = await verifications.getExecutionNonce(accounts[0]);
@@ -1349,6 +1349,86 @@ describe('Verifications handler', function() {
         expect(verificationsForAccount[oldLengths[i]])
           .to.have.property('status', VerificationsStatus.Issued);
       }
+    });
+  });
+
+  describe('when performing "cold" transactions for any transactions', () => {
+    it('can prepare transactions and submit them with another account', async () => {
+      // create test contract
+      const testContract = await executor.createContract(
+        'TestContract', ['old data'], { from: accounts[0], gas: 500e3 });
+      let data = await executor.executeContractCall(testContract, 'data');
+
+      expect(data).to.eq('old data');
+
+      // on account[0]s side
+      const txInfo = await verifications.signTransaction(
+        testContract,
+        'setData',
+        { from: accounts[0] },
+        'new data',
+      );
+
+      // on account[2]s side
+      await verifications.executeTransaction(accounts[2], txInfo);
+
+      // now check
+      data = await executor.executeContractCall(testContract, 'data');
+
+      expect(data).to.eq('new data');
+    });
+
+    it('can prepare transactions and submit them with the same account', async () => {
+      // create test contract
+      const testContract = await executor.createContract(
+        'TestContract', ['old data'], { from: accounts[0], gas: 500e3 });
+      let data = await executor.executeContractCall(testContract, 'data');
+
+      expect(data).to.eq('old data');
+
+      // on account[0]s side
+      const txInfo = await verifications.signTransaction(
+        testContract,
+        'setData',
+        { from: accounts[0] },
+        'new data',
+      );
+
+      // on account[2]s side
+      await verifications.executeTransaction(accounts[0], txInfo);
+
+      // now check
+      data = await executor.executeContractCall(testContract, 'data');
+
+      expect(data).to.eq('new data');
+    });
+
+    it('can handle events when submitting transactions', async () => {
+      // create test contract
+      const testContract = await executor.createContract(
+        'TestContractEvent', [], { from: accounts[0], gas: 500e3 });
+
+      // on account[0]s side
+      const txInfo = await verifications.signTransaction(
+        testContract,
+        'fireEvent',
+        { from: accounts[0] },
+      );
+
+      const valueFromEvent = await verifications.executeTransaction(
+        accounts[2],
+        txInfo,
+        {
+          event: {
+            target: 'TestContractEvent',
+            eventName: 'EventFired',
+            contract: testContract,
+          },
+          getEventResult: (_, args) => { return args.fired; },
+        },
+      );
+
+      expect(valueFromEvent).to.eq(true);
     });
   });
 });

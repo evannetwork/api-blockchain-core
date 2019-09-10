@@ -110,8 +110,6 @@ export enum VerificationsStatusV2 {
 export interface VerificationsDelegationInfo {
   /** address of identity contract, that issues verification */
   sourceIdentity: string,
-  /** address of identity contract, that receives verification */
-  targetIdentity: string,
   /** value to transfer, usually 0 */
   value: number,
   /** abi encoded input for transaction */
@@ -119,7 +117,12 @@ export interface VerificationsDelegationInfo {
   /** signed data from transaction */
   signedTransactionInfo: string,
   /** source identity contract execution nonce for this transaction */
-  nonce: string,
+  nonce?: string,
+  /** address of identity contract, that receives verification,
+   * either this or `to` has to be given */
+  targetIdentity?: string,
+  /** address of target of transaction, either this or `targetIdentity` has to be given */
+  to?: string,
 }
 
 /**
@@ -680,34 +683,57 @@ export class Verifications extends Logger {
    */
   public async executeVerification(
     accountId: string,
-    {
+    txInfo: VerificationsDelegationInfo
+  ): Promise<any> {
+    return await this.executeTransaction(
+      accountId,
+      txInfo,
+      {
+        event: {
+          target: 'VerificationHolderLibrary',
+          targetAddress: txInfo.targetIdentity,
+          eventName: 'VerificationAdded',
+          contract: this.options.contractLoader.loadContract(
+            'VerificationHolderLibrary', txInfo.targetIdentity),
+        },
+        getEventResult: (_, args) => args.verificationId,
+      },
+    );
+  }
+
+  /**
+   * Executes a pre-signed transaction from from ``signTransaction`` of an identity. This can be and
+   * usually is a transaction, that has been prepared by the identity owner and is now submitted to
+   * the chain and executed by another account.
+   *
+   * @param      {string}                       accountId       account, that sends transaction to
+   *                                                            the blockchain and pays for it
+   * @param      {VerificationsDelegationInfo}  txInfo          details about the transaction
+   * @param      {<type>}                       event           The event
+   * @param      {Function}                     getEventResult  The get event result
+   * @param      {any}                          partialOptions  (optional) data for handling event triggered by this transaction
+   */
+  public async executeTransaction(
+    accountId: string,
+    txInfo: VerificationsDelegationInfo,
+    { event = null, getEventResult = null }: { event?: any; getEventResult?: Function } = {},
+  ): Promise<any> {
+    const {
       sourceIdentity,
-      targetIdentity,
+      to,
       value,
       input,
       signedTransactionInfo,
-    }: VerificationsDelegationInfo
-   ): Promise<string> {
-    const sourceIdentityContract = this.options.contractLoader.loadContract(
-      'VerificationHolder', sourceIdentity);
-    const targetIdentityContract = this.options.contractLoader.loadContract(
-      'VerificationHolder', targetIdentity);
-    // executeDelegated(address _to, uint256 _value, bytes _data, bytes _signedTransactionInfo)
-    return this.options.executor.executeContractTransaction(
-      sourceIdentityContract,
-      'executeDelegated',
-      {
-        from: accountId,
-        event: {
-          target: 'VerificationHolderLibrary',
-          targetAddress: targetIdentity,
-          eventName: 'VerificationAdded',
-        },
-        getEventResult: (_, args) => { return args.verificationId; },
-      },
-      targetIdentity,
-      value,
+    } = txInfo;
+
+    return this.executeAndHandleEventResult(
+      accountId,
       input,
+      event,
+      getEventResult,
+      sourceIdentity,
+      value,
+      to,
       signedTransactionInfo,
     );
   }
@@ -1392,7 +1418,8 @@ export class Verifications extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async setVerificationDescription(
-      accountId: string, topic: string, domain: string, description: any): Promise<void> {
+    accountId: string, topic: string, domain: string, description: any
+  ): Promise<void> {
     let toSet = JSON.parse(JSON.stringify(description));
     if (!toSet.hasOwnProperty('public')) {
       toSet = { public: toSet };
@@ -1402,6 +1429,58 @@ export class Verifications extends Logger {
 
     // clear cache for verifications using this description ens address
     this.deleteFromVerificationCache('*', topic);
+  }
+
+  /**
+   * Signs a transaction from an identity (offchain) and returns data, that can be used to submit it
+   * later on. Return value can be passed to ``executeTransaction``.
+   *
+   * Note that, when creating multiple signed transactions, the ``nonce`` argument **has to be
+   * specified and incremented between calls**, as the nonce is included in transaction data and
+   * restricts the order of transactions, that can be made.
+   *
+   * @param      {any}     contract             target contract of transcation or ``null`` if just sending funds 
+   * @param      {string}  functionName         function for transaction or ``null`` if just sending funds
+   * @param      {any}     options              options for transaction, supports from, to, nonce, input, value
+   * @param      {any[]}   args                 arguments for function transaction
+   * @returns    {VerificationsDelegationInfo}  prepared transaction for ``executeTransaction``
+   */
+  public async signTransaction(
+    contract: any = null,
+    functionName: string = null,
+    options: any,
+    ...args
+  ): Promise<VerificationsDelegationInfo> {
+    // sign arguments for on-chain check
+    const sourceIdentity = await this.getIdentityForAccount(options.from, true);
+
+    // fetch nonce as late as possible
+    const nonce = (typeof options.nonce !== 'undefined' && options.nonce !== -1) ?
+      `${options.nonce}` : await this.getExecutionNonce(sourceIdentity, true);
+
+    const input = contract ?
+      contract.methods[functionName].apply(contract.methods, args).encodeABI() :
+      options.input;
+
+    const to = contract ?
+      contract.options.address :
+      (options.to || null);
+
+    const value = options.value || 0;
+
+    // note that issuer is given for signing, as this ACCOUNT is used to sign the message
+    const signedTransactionInfo = await this.signPackedHash(
+      options.from , [sourceIdentity, nonce, to, value, input]);
+
+    // executeDelegated(address _to, uint256 _value, bytes _data, bytes _signedTransactionInfo)
+    return {
+      sourceIdentity,
+      to,
+      value,
+      input,
+      signedTransactionInfo,
+      nonce,
+    };
   }
 
   /**
@@ -1450,7 +1529,6 @@ export class Verifications extends Logger {
     // get input arguments
     const {
       targetIdentity,
-      subjectType,
       uint256VerificationName,
       sourceIdentity,
       signature,
@@ -1469,43 +1547,31 @@ export class Verifications extends Logger {
     );
 
     // sign arguments for on-chain check
-    const issuerIdentity = await this.getIdentityForAccount(issuer);
-    const input = issuerIdentity.methods.addVerificationWithMetadata(
-      // uint256 _topic,
-      uint256VerificationName,
-      // uint256 _scheme,
-      '1',
-      // address _issuer,
-      sourceIdentity,
-      // bytes _signature,
-      signature,
-      // bytes _data,
-      verificationData,
-      // string _uri,
-      '',
-      // uint256 _expirationDate,
-      expirationDate,
-      // bytes32 _description,
-      ensFullNodeHash,
-      // bool _disableSubVerifications
-      disabelSubVerifications,
-    ).encodeABI();
+    const targetIdentityContract =
+      this.options.contractLoader.loadContract('VerificationHolder', targetIdentity);
 
-    // fetch nonce as late as possible
-    const nonce = executionNonce !== -1 ?
-      `${executionNonce}` : await this.getExecutionNonce(sourceIdentity, true);
-    // note that issuer is given for signing, as this ACCOUNT is used to sign the message
-    const signedTransactionInfo = await this.signPackedHash(
-      issuer, [sourceIdentity, nonce, targetIdentity, 0, input]);
+    const txInfo = await this.signTransaction(
+      targetIdentityContract,
+      'addVerificationWithMetadata',
+      { from: issuer, nonce: executionNonce },
+      uint256VerificationName,  // uint256 _topic,
+      '1',  // uint256 _scheme,
+      sourceIdentity,  // address _issuer,
+      signature,  // bytes _signature,
+      verificationData,  // bytes _data,
+      verificationDataUrl,  // string _uri,
+      expirationDate,  // uint256 _expirationDate,
+      ensFullNodeHash,  // bytes32 _description,
+      disabelSubVerifications,  // bool _disableSubVerifications
+    );
 
-    // executeDelegated(address _to, uint256 _value, bytes _data, bytes _signedTransactionInfo)
     return {
-      sourceIdentity,
-      targetIdentity,
-      value: 0,
-      input,
-      signedTransactionInfo: signedTransactionInfo.signature,
-      nonce,
+      sourceIdentity: txInfo.sourceIdentity,
+      targetIdentity: txInfo.to,
+      value: txInfo.value,
+      input: txInfo.input,
+      signedTransactionInfo: txInfo.signedTransactionInfo,
+      nonce: txInfo.nonce,
     };
   }
 
@@ -1741,9 +1807,19 @@ export class Verifications extends Logger {
    *                             otherwise void
    */
   private async executeAndHandleEventResult(
-      accountId: string, data: string, eventInfo?: any, getEventResults?: Function): Promise<any> {
+    accountId: string,
+    data: string,
+    eventInfo?: any,
+    getEventResults?: Function,
+    sourceIdentity?: string,
+    value = 0,
+    to?: string,
+    signedTransactionInfo?: string,
+  ): Promise<any> {
     // get users identity
-    const userIdentity = await this.getIdentityForAccount(accountId);
+    const userIdentity = sourceIdentity ?
+      this.options.contractLoader.loadContract('VerificationHolder', sourceIdentity) :
+      await this.getIdentityForAccount(accountId);
 
     // prepare success + result event handling
     const options = {
@@ -1753,8 +1829,14 @@ export class Verifications extends Logger {
     };
 
     // run tx
-    const [executionId, blockNumber] = await this.options.executor.executeContractTransaction(
-      userIdentity, 'execute', options, this.contracts.registry.options.address, 0, data);
+    const [executionId, blockNumber] = await (this.options.executor.executeContractTransaction as any)(...[
+      userIdentity,
+      signedTransactionInfo ? 'executeDelegated' : 'execute',
+      options,
+      to || this.contracts.registry.options.address,
+      value,
+      data,
+    ].concat(signedTransactionInfo ? [signedTransactionInfo] : []));
 
     // fetch result from event
     // load user identity as a library, to retrieve library events from users identity
@@ -2175,9 +2257,7 @@ export class Verifications extends Logger {
    * @return     {any}     object with signed data
    */
   private async signPackedHash(accountId: string, toSign: any): Promise<any> {
-    return this.options.executor.web3.eth.accounts.sign(
-      this.options.nameResolver.soliditySha3(...toSign),
-      '0x' + await this.options.accountStore.getPrivateKey(accountId),
-    );
+    return this.options.executor.signer.signMessage(
+      accountId, this.options.nameResolver.soliditySha3(...toSign));
   }
 }

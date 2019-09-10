@@ -960,6 +960,122 @@ Example
 
 --------------------------------------------------------------------------------
 
+= Delegated Transactions =
+==========================
+
+.. _verifications_signTransaction:
+
+signTransaction
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.signTransaction(contract, functionName, options[, ...args]);
+
+Signs a transaction from an identity (offchain) and returns data, that can be used to submit it later on. Return value can be passed to ``executeTransaction``.
+
+Note that, when creating multiple signed transactions, the ``nonce`` argument **has to be specified and incremented between calls**, as the nonce is included in transaction data and restricts the order of transactions, that can be made.
+
+----------
+Parameters
+----------
+
+#. ``contract`` - ``any``: target contract of transcation or ``null`` if just sending funds
+#. ``functionName`` - ``string``: function for transaction or ``null`` if just sending funds 
+#. ``options`` - ``any``: options for transaction, supports from, to, nonce, input, value
+#. ``args`` - ``any[]`` (optional): arguments for function transaction
+
+-------
+Returns
+-------
+
+``Promise`` returns ``VerificationsDelegationInfo``: prepared transaction for ``executeTransaction``
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // create test contract
+  const testContract = await executor.createContract(
+    'TestContract', ['old data'], { from: accounts[0], gas: 500000 });
+  let data = await executor.executeContractCall(testContract, 'data');
+
+  expect(data).to.eq('old data');
+
+  // on account[0]s side
+  const txInfo = await verifications.signTransaction(
+    testContract,
+    'setData',
+    { from: accounts[0] },
+    'new data',
+  );
+
+  // on account[2]s side
+  await verifications.executeTransaction(accounts[2], txInfo);
+
+  // now check
+  data = await executor.executeContractCall(testContract, 'data');
+
+
+
+.. _verifications_executeTransaction:
+
+executeTransaction
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.executeTransaction(accountId, txInfo);
+
+Executes a presigned transaction from ``signTransaction`` of an identity. This can be and usually is a transaction, that has been prepared by the identity owner and is now submitted to the chain and executed by another account.
+
+----------
+Parameters
+----------
+
+#. ``accountId`` - ``string``: account, that sends transaction to the blockchain and pays for it
+#. ``txInfo`` - ``VerificationsDelegationInfo``: details about the transaction
+#. ``partialOptions`` - ``any`` (optional): data for handling event triggered by this transaction
+
+-------
+Returns
+-------
+
+``Promise`` returns ``any``: result of transaction (if received from event)
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // create test contract
+  const testContract = await executor.createContract(
+    'TestContract', ['old data'], { from: accounts[0], gas: 500000 });
+  let data = await executor.executeContractCall(testContract, 'data');
+
+  expect(data).to.eq('old data');
+
+  // on account[0]s side
+  const txInfo = await verifications.signTransaction(
+    testContract,
+    'setData',
+    { from: accounts[0] },
+    'new data',
+  );
+
+  // on account[2]s side
+  await verifications.executeTransaction(accounts[2], txInfo);
+
+  // now check
+  data = await executor.executeContractCall(testContract, 'data');
+
+
+
+--------------------------------------------------------------------------------
+
 = Descriptions =
 ==========================
 
@@ -1330,10 +1446,12 @@ VerificationsDelegationInfo
 information for submitting a delegated transaction, created with ``signSetVerificationTransaction`` consumed by ``executeVerification``
 
 #. ``sourceIdentity`` - ``string``: address of identity contract, that issues verification
-#. ``targetIdentity`` - ``string``: address of identity contract, that receives verification
 #. ``value`` - ``number``: value to transfer, usually 0
 #. ``input`` - ``string``: abi encoded input for transaction
 #. ``signedTransactionInfo`` - ``string``: signed data from transaction
+#. ``nonce`` - ``string``(nonce): source identity contract execution nonce for this transaction
+#. ``targetIdentity`` - ``string``(optional): address of identity contract, that receives verification, either this or ``to`` has to be given
+#. ``to`` - ``string`` (optional): address of target of transaction, either this or `targetIdentity` has to be given
 
 
 
