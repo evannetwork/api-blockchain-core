@@ -1029,7 +1029,7 @@ executeTransaction
 
   verifications.executeTransaction(accountId, txInfo);
 
-Executes a presigned transaction from ``signTransaction`` of an identity. This can be and usually is a transaction, that has been prepared by the identity owner and is now submitted to the chain and executed by another account.
+Executes a pre-signed transaction from ``signTransaction`` of an identity. This can be and usually is a transaction, that has been prepared by the identity owner and is now submitted to the chain and executed by another account.
 
 ----------
 Parameters

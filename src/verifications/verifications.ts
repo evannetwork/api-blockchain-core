@@ -25,7 +25,6 @@
   https://evan.network/license/
 */
 
-import coder = require('web3-eth-abi');
 import crypto = require('crypto');
 import prottle = require('prottle');
 import { BigNumber } from 'bignumber.js';
@@ -33,7 +32,6 @@ import {
   AccountStore,
   ContractLoader,
   Description,
-  EventHub,
   Executor,
   Logger,
   LoggerOptions,
@@ -109,20 +107,20 @@ export enum VerificationsStatusV2 {
  */
 export interface VerificationsDelegationInfo {
   /** address of identity contract, that issues verification */
-  sourceIdentity: string,
+  sourceIdentity: string;
   /** value to transfer, usually 0 */
-  value: number,
+  value: number;
   /** abi encoded input for transaction */
-  input: string,
+  input: string;
   /** signed data from transaction */
-  signedTransactionInfo: string,
+  signedTransactionInfo: string;
   /** source identity contract execution nonce for this transaction */
-  nonce?: string,
-  /** address of identity contract, that receives verification,
+  nonce?: string;
+  /** address of identity contract, that receives verification;
    * either this or `to` has to be given */
-  targetIdentity?: string,
+  targetIdentity?: string;
   /** address of target of transaction, either this or `targetIdentity` has to be given */
-  to?: string,
+  to?: string;
 }
 
 /**
@@ -130,9 +128,9 @@ export interface VerificationsDelegationInfo {
  */
 export interface VerificationsQueryOptions {
   /** specification of how to handle status flags of each single verification */
-  validationOptions?: VerificationsValidationOptions,
+  validationOptions?: VerificationsValidationOptions;
   /** function for setting verification with custom logic */
-  statusComputer?: VerificationsStatusComputer,
+  statusComputer?: VerificationsStatusComputer;
 }
 
 /**
@@ -140,24 +138,24 @@ export interface VerificationsQueryOptions {
  */
 export interface VerificationsResultV2 {
   /** overall status of verification */
-  status: VerificationsStatusV2,
+  status: VerificationsStatusV2;
   /** list of verifications on same topic and subject */
-  verifications?: VerificationsVerificationEntry[],
+  verifications?: VerificationsVerificationEntry[];
   /** consolidated information about verification  */
   levelComputed?: {
     /** identity contract address or hash of subject */
-    subjectIdentity: string,
+    subjectIdentity: string;
     /** type of subject (account/contract) */
-    subjectType: string,
+    subjectType: string;
     /** topic (name) of verification */
-    topic: string,
+    topic: string;
     /** js timestamp */
-    expirationDate?: number,
+    expirationDate?: number;
     /** verifications of parent path, issued for all issuers of verifications on this level */
-    parents?: VerificationsResultV2,
+    parents?: VerificationsResultV2;
     /** subject accountId/contractId (if query was issued with ``isIdentity`` set to ``false``) */
-    subject?: string,
-  },
+    subject?: string;
+  };
 }
 
 /**
@@ -167,54 +165,54 @@ export interface VerificationsVerificationEntry {
   /** details about verification */
   details: {
     /** js timestamp of verification creation */
-    creationDate: number,
+    creationDate: number;
     /** ens address of description for this verification */
-    ensAddress: string,
+    ensAddress: string;
     /** id in verification holder / verifications registry */
-    id: string,
+    id: string;
     /** account id of verification issuer */
-    issuer: string,
+    issuer: string;
     /** issuers identity contract id */
-    issuerIdentity: string,
+    issuerIdentity: string;
     /** identity (contract or identity hash) of subject */
-    subjectIdentity: string,
+    subjectIdentity: string;
     /** type of subject (account/contract) */
-    subjectType: string,
+    subjectType: string;
     /** topic of identity (name) */
-    topic: string,
+    topic: string;
     /** 32B data hash string of identity */
-    data?: any,
+    data?: any;
     /** only if actually set */
-    description?: any,
+    description?: any;
     /** expiration date of verification (js timestamp) */
-    expirationDate?: number,
+    expirationDate?: number;
     /** if applicable, reason for verification rejection */
-    rejectReason?: string,
+    rejectReason?: string;
     /** status of verification, is optional during result computation and required when done */
-    status?: VerificationsStatusV2,
+    status?: VerificationsStatusV2;
     /** subject accountId/contractId (if query was issued with ``isIdentity`` set to ``false``) */
-    subject?: string,
-  },
+    subject?: string;
+  };
   /** raw data about verification from contract */
   raw?: {
     /** block in which verification was issued */
-    creationBlock: string,
+    creationBlock: string;
     /** unix timestamp is s when verification was issued */
-    creationDate: string,
+    creationDate: string;
     /** 32B data hash string of identity, bytes32 zero if unset */
-    data: string,
+    data: string;
     /** true if subverification are not allowed */
-    disableSubVerifications: boolean,
+    disableSubVerifications: boolean;
     /** signature over verification data */
-    signature: string,
+    signature: string;
     /** status of verification, (issued, accepted, rejected, etc.) */
-    status: number,
+    status: number;
     /** uint string of verification name (topic), is uint representation of sha3 of name */
-    topic: string,
-  },
-  /** all found flags, those may not have impact on status,
+    topic: string;
+  };
+  /** all found flags, those may not have impact on statusm
    *  depends on ``VerificationsStatusFlagsV2`` */
-  statusFlags?: string[],
+  statusFlags?: string[];
 }
 
 /**
@@ -229,7 +227,7 @@ export interface VerificationsVerificationEntryStatusComputer {
   (
     verification: Partial<VerificationsVerificationEntry>,
     partialResult: Partial<VerificationsResultV2>,
-  ): Promise<VerificationsStatusV2>
+  ): Promise<VerificationsStatusV2>;
 }
 
 /**
@@ -246,7 +244,7 @@ export interface VerificationsStatusComputer {
     partialResult: Partial<VerificationsResultV2>,
     queryOptions: VerificationsQueryOptions,
     currentStatus: VerificationsStatusV2,
-  ): Promise<VerificationsStatusV2>
+  ): Promise<VerificationsStatusV2>;
 }
 
 /**
@@ -322,7 +320,7 @@ export class Verifications extends Logger {
    *
    * @param    {VerificationsOptions} options
    */
-  constructor(options: VerificationsOptions) {
+  public constructor(options: VerificationsOptions) {
     super(options);
     this.options = options;
 
@@ -355,7 +353,7 @@ export class Verifications extends Logger {
    * @return     {any}         computed verification including latest creationDate, combined color,
    *                           displayName
    */
-  public async computeVerifications(topic: string, verifications: Array<any>) {
+  public async computeVerifications(topic: string, verifications: any[]) {
     const computed: any = {
       creationDate: null,
       disableSubVerifications: verifications.filter(
@@ -724,7 +722,15 @@ export class Verifications extends Logger {
       value,
       input,
       signedTransactionInfo,
+      targetIdentity,
     } = txInfo;
+
+    const transactionTarget = to ?
+      to :  // to given directly
+      targetIdentity.length === 42 ?
+        targetIdentity :  // target identity contract given
+        this.contracts.registry.options.address  // contract/pseudonym identity given
+    ;
 
     return this.executeAndHandleEventResult(
       accountId,
@@ -733,7 +739,7 @@ export class Verifications extends Logger {
       getEventResult,
       sourceIdentity,
       value,
-      to,
+      transactionTarget,
       signedTransactionInfo,
     );
   }
@@ -1167,7 +1173,6 @@ export class Verifications extends Logger {
       verificationDetails.push((async () => {
         const descriptionNodeHash = await this.callOnIdentity(
           subject, isIdentity, 'getVerificationDescription', verificationId);
-        let parsedDescription;
         if (descriptionNodeHash === nullBytes32) {
           return null;
         } else {
@@ -1233,20 +1238,20 @@ export class Verifications extends Logger {
       return {
         creationBlock,
         creationDate,
-        data: (<any>verification).data,
+        data: (verification as any).data,
         description,
         disableSubVerifications,
         expirationDate: `${expirationDate}` === '0' ? null : expirationDate,
         expired: `${expirationDate}` === '0' ? false : expirationDate * 1000 < Date.now(),
         id: verificationId,
-        issuer: (<any>verification).issuer,
+        issuer: (verification as any).issuer,
         name: topic,
         rejectReason,
-        signature: (<any>verification).signature,
+        signature: (verification as any).signature,
         status: verificationFlag,
         subject,
         topic: verification.topic.toString(),
-        uri: (<any>verification).uri,
+        uri: (verification as any).uri,
         valid: await this.validateVerification(subject, verificationId, isIdentity),
       };
     }));
@@ -1345,15 +1350,15 @@ export class Verifications extends Logger {
    * @return     {Promise<string>}  verificationId
    */
   public async setVerification(
-      issuer: string,
-      subject: string,
-      topic: string,
-      expirationDate = 0,
-      verificationValue?: any,
-      descriptionDomain?: string,
-      disabelSubVerifications = false,
-      isIdentity = false,
-    ): Promise<string> {
+    issuer: string,
+    subject: string,
+    topic: string,
+    expirationDate = 0,
+    verificationValue?: any,
+    descriptionDomain?: string,
+    disabelSubVerifications = false,
+    isIdentity = false,
+  ): Promise<string> {
     await this.ensureStorage();
 
     const {
@@ -1608,7 +1613,8 @@ export class Verifications extends Logger {
    * @return     {Promise<boolean>}  resolves with true if the verification is valid, otherwise false
    */
   public async validateVerification(
-      subject: string, verificationId: string, isIdentity?: boolean): Promise<boolean> {
+    subject: string, verificationId: string, isIdentity?: boolean
+  ): Promise<boolean> {
     await this.ensureStorage();
 
     let subjectIdentity = isIdentity ? subject : await this.getIdentityForAccount(subject, true);
@@ -1745,10 +1751,10 @@ export class Verifications extends Logger {
     // bestReachableStatus has already been taken into consideration in last block,
     // so we can just take status flag here
     if (partialResult.verifications
-        .filter(v => v.details.status === VerificationsStatusV2.Green).length) {
+      .filter(v => v.details.status === VerificationsStatusV2.Green).length) {
       status = VerificationsStatusV2.Green;
     } else if (partialResult.verifications
-        .filter(v => v.details.status === VerificationsStatusV2.Yellow).length) {
+      .filter(v => v.details.status === VerificationsStatusV2.Yellow).length) {
       status = VerificationsStatusV2.Yellow;
     } else {
       status = VerificationsStatusV2.Red;
@@ -2143,15 +2149,16 @@ export class Verifications extends Logger {
     disabelSubVerifications = false,
     isIdentity = false,
   ): Promise<{
-    targetIdentity: string,
-    subjectType: string,
-    uint256VerificationName: string,
-    sourceIdentity: string,
-    signature: string,
-    verificationData: string,
-    verificationDataUrl: string,
-    ensFullNodeHash: string,
-  }> {
+      targetIdentity: string;
+      subjectType: string;
+      uint256VerificationName: string;
+      sourceIdentity: string;
+      signature: string;
+      verificationData: string;
+      verificationDataUrl: string;
+      ensFullNodeHash: string;
+    }>
+  {
     await this.ensureStorage();
     const subjectType = await this.getSubjectType(subject, isIdentity);
     let targetIdentity;

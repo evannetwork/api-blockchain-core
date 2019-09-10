@@ -39,7 +39,7 @@ You can **and should** give your digital twin a `DBCP <https://dbcp.online/en/ho
 
 .. code-block:: typescript
 
-    const description = description: {
+    const description = {
       name: 'Big Crane 250',
       description: 'Digital Twin for my heavy machine "Big Crane 250"',
       author: 'Manufacturer',
