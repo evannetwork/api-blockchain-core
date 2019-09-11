@@ -1002,8 +1002,6 @@ Example
     'TestContract', ['old data'], { from: accounts[0], gas: 500000 });
   let data = await executor.executeContractCall(testContract, 'data');
 
-  expect(data).to.eq('old data');
-
   // on account[0]s side
   const txInfo = await verifications.signTransaction(
     testContract,
@@ -1055,8 +1053,6 @@ Example
   const testContract = await executor.createContract(
     'TestContract', ['old data'], { from: accounts[0], gas: 500000 });
   let data = await executor.executeContractCall(testContract, 'data');
-
-  expect(data).to.eq('old data');
 
   // on account[0]s side
   const txInfo = await verifications.signTransaction(
