@@ -1345,7 +1345,7 @@ export class Verifications extends Logger {
    *                                                         so passing 'example' will link
    *                                                         verifications description to
    *                                                         'example.verifications.evan'
-   * @param      {boolean}          disabelSubVerifications  if true, verifications created under
+   * @param      {boolean}          disableSubVerifications  if true, verifications created under
    *                                                         this path are invalid
    * @return     {Promise<string>}  verificationId
    */
@@ -1356,7 +1356,7 @@ export class Verifications extends Logger {
     expirationDate = 0,
     verificationValue?: any,
     descriptionDomain?: string,
-    disabelSubVerifications = false,
+    disableSubVerifications = false,
     isIdentity = false,
   ): Promise<string> {
     await this.ensureStorage();
@@ -1377,7 +1377,7 @@ export class Verifications extends Logger {
       expirationDate,
       verificationValue,
       descriptionDomain,
-      disabelSubVerifications,
+      disableSubVerifications,
       isIdentity,
     );
 
@@ -1406,7 +1406,7 @@ export class Verifications extends Logger {
       verificationDataUrl,
       expirationDate,
       ensFullNodeHash,
-      disabelSubVerifications,
+      disableSubVerifications,
     );
   }
 
@@ -1508,7 +1508,7 @@ export class Verifications extends Logger {
    *                                                 under 'verifications.evan', so passing
    *                                                 'example' will link verifications description
    *                                                 to 'example.verifications.evan'
-   * @param      {boolean}  disabelSubVerifications  if true, verifications created under this path
+   * @param      {boolean}  disableSubVerifications  if true, verifications created under this path
    *                                                 are invalid
    * @param      {boolean}  isIdentity               (optional) true if given subject is an identity, defaults to ``false``
    *                                                 are invalid
@@ -1526,7 +1526,7 @@ export class Verifications extends Logger {
     expirationDate = 0,
     verificationValue?: any,
     descriptionDomain?: string,
-    disabelSubVerifications = false,
+    disableSubVerifications = false,
     isIdentity = false,
     executionNonce: string | number = -1,
   ): Promise<VerificationsDelegationInfo> {
@@ -1547,7 +1547,7 @@ export class Verifications extends Logger {
       expirationDate,
       verificationValue,
       descriptionDomain,
-      disabelSubVerifications,
+      disableSubVerifications,
       isIdentity,
     );
 
@@ -1567,7 +1567,7 @@ export class Verifications extends Logger {
       verificationDataUrl,  // string _uri,
       expirationDate,  // uint256 _expirationDate,
       ensFullNodeHash,  // bytes32 _description,
-      disabelSubVerifications,  // bool _disableSubVerifications
+      disableSubVerifications,  // bool _disableSubVerifications
     );
 
     return {
@@ -2135,7 +2135,7 @@ export class Verifications extends Logger {
    *                                                 under 'verifications.evan', so passing
    *                                                 'example' will link verifications description
    *                                                 to 'example.verifications.evan'
-   * @param      {boolean}  disabelSubVerifications  if true, verifications created under this path
+   * @param      {boolean}  disableSubVerifications  if true, verifications created under this path
    *                                                 are invalid
    * @return     {any}      data for setting verifications
    */
@@ -2146,7 +2146,7 @@ export class Verifications extends Logger {
     expirationDate = 0,
     verificationValue?: any,
     descriptionDomain?: string,
-    disabelSubVerifications = false,
+    disableSubVerifications = false,
     isIdentity = false,
   ): Promise<{
       targetIdentity: string;
