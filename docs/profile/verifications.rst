@@ -1445,7 +1445,7 @@ information for submitting a delegated transaction, created with ``signSetVerifi
 #. ``value`` - ``number``: value to transfer, usually 0
 #. ``input`` - ``string``: abi encoded input for transaction
 #. ``signedTransactionInfo`` - ``string``: signed data from transaction
-#. ``nonce`` - ``string``(nonce): source identity contract execution nonce for this transaction
+#. ``nonce`` - ``string``(optional): source identity contract execution nonce for this transaction
 #. ``targetIdentity`` - ``string``(optional): address of identity contract, that receives verification, either this or ``to`` has to be given
 #. ``to`` - ``string`` (optional): address of target of transaction, either this or `targetIdentity` has to be given
 
