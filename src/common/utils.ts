@@ -38,10 +38,12 @@ import { Runtime } from '../index'
 export async function getSmartAgentAuthHeaders(runtime: Runtime, message?: string
 ): Promise<string> {
   const messageToSign = message || `${new Date().getTime()}`;
-  const signature = await runtime.signer.signMessage(runtime.activeAccount, messageToSign);
+  const hexMessage = runtime.web3.utils.toHex(messageToSign);
+  const paddedMessage = hexMessage.length % 2 === 1 ? hexMessage.replace('0x', '0x0') : hexMessage;
+  const signature = await runtime.signer.signMessage(runtime.activeAccount, paddedMessage);
   return [
     `EvanAuth ${runtime.activeAccount}`,
-    `EvanMessage ${messageToSign}`,
+    `EvanMessage ${paddedMessage}`,
     `EvanSignedMessage ${signature}`
   ].join(',');
 }

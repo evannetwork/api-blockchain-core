@@ -50,6 +50,7 @@ import { Description } from './shared-description';
 import { EncryptionWrapper } from './encryption/encryption-wrapper';
 import { getEnvironment } from './common/utils';
 import { Ipfs } from './dfs/ipfs';
+import { IpfsLib } from './dfs/ipfs-lib';
 import { Ipld } from './dfs/ipld';
 import { KeyExchange } from './keyExchange';
 import { Mailbox } from './mailbox';
@@ -170,6 +171,8 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     Object.assign(runtimeConfig.keyConfig, tempConfig.keyConfig);
   }
 
+  const activeAccount = Object.keys(runtimeConfig.accountMap)[0];
+
   // executor
   const accountStore = options.accountStore ||
     new AccountStore({ accounts: runtimeConfig.accountMap, log, });
@@ -201,6 +204,12 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   });
   executor.eventHub = eventHub;
 
+  // check if the dfs remoteNode matches our ipfslib
+  if (!(dfs as Ipfs).remoteNode as any instanceof IpfsLib) {
+    (dfs as Ipfs).remoteNode = new IpfsLib(config.ipfsConfig);
+  }
+  (dfs as Ipfs).setRuntime({signer, activeAccount, web3});
+
   // encryption
   const cryptoConfig = {};
   cryptoConfig['aes'] = new Aes({ log });
@@ -214,8 +223,13 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     for (let accountId in runtimeConfig.keyConfig) {
       // check if the key is a valid accountId
       if (accountId.length === 42) {
-        const sha9Account = web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
-  [web3.utils.soliditySha3(accountId), web3.utils.soliditySha3(accountId)].sort());
+        const sha9Account = web3.utils.soliditySha3.apply(
+          web3.utils.soliditySha3,
+          [
+            web3.utils.soliditySha3(accountId),
+            web3.utils.soliditySha3(accountId)
+          ].sort()
+        );
         const sha3Account = web3.utils.soliditySha3(accountId)
         const dataKey = web3.utils
           .keccak256(accountId + runtimeConfig.keyConfig[accountId])
@@ -277,7 +291,6 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     description,
   });
 
-  const activeAccount = Object.keys(runtimeConfig.accountMap)[0];
   const ipld = options.ipld || new Ipld({
     ipfs: dfs as Ipfs,
     keyProvider,

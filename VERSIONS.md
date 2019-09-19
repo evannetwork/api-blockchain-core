@@ -8,6 +8,15 @@
 ### Deprecations
 
 
+## Version 2.12.0
+### Features
+- add generic support for preparing and executing transactions via identity
+
+### Fixes
+- fix `notEnsRootOwner` check to allow each account that gets the `/evan` account from the ens root owner
+- fix typos in variable naming
+
+
 ## Version 2.11.0
 ### Features
 - update versions of dependencies

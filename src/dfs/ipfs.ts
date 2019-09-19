@@ -17,7 +17,6 @@
 import { setTimeout, clearTimeout } from 'timers';
 import bs58 = require('bs58');
 import prottle = require('prottle');
-import _ = require('lodash');
 
 import {
   FileToAdd,
@@ -27,6 +26,8 @@ import {
   LoggerOptions,
 } from '@evan.network/dbcp';
 
+import { Runtime } from './../runtime';
+
 import { Payments } from './../payments';
 
 import { IpfsLib } from './ipfs-lib';
@@ -35,7 +36,6 @@ import utils = require('./../common/utils');
 
 
 const IPFS_TIMEOUT = 120000;
-const runFunctionAsPromise = utils.promisify;
 const requestWindowSize = 10;
 
 
@@ -57,14 +57,11 @@ export interface IpfsOptions extends LoggerOptions {
  * @brief      IPFS add/get data handler
  */
 export class Ipfs extends Logger implements DfsInterface {
-  remoteNode: any;
-  web3: any;
-  dfsConfig: any;
-  disablePin: boolean;
-  accountId: string;
-  payments: Payments;
-  privateKey: string;
-  cache: DfsCacheInterface;
+  public remoteNode: any;
+  public dfsConfig: any;
+  public disablePin: boolean;
+  public cache: DfsCacheInterface;
+  public runtime: Runtime;
 
   /**
    * convert IPFS hash to bytes 32 see
@@ -98,12 +95,8 @@ export class Ipfs extends Logger implements DfsInterface {
     return hash;
   }
 
-  constructor(options) {
+  public constructor(options) {
     super(options);
-    this.accountId = options.accountId;
-    this.web3 = options.web3;
-    this.privateKey = options.privateKey;
-    this.payments = options.payments;
     this.disablePin = options.disablePin || false;
     if (options.cache) {
       this.cache = options.cache;
@@ -112,26 +105,14 @@ export class Ipfs extends Logger implements DfsInterface {
       this.remoteNode = options.remoteNode;
     } else if (options.dfsConfig) {
       this.dfsConfig = options.dfsConfig;
-      if (this.accountId) {
-        const signer = this.accountId.toLowerCase();
-        const toSignedMessage = this.web3.utils.soliditySha3(new Date().getTime() + this.accountId).replace('0x', '');
-        const hexMessage = this.web3.utils.utf8ToHex(toSignedMessage);
-        const signedMessage = this.web3.eth.accounts.sign(toSignedMessage, this.privateKey);
-        options.dfsConfig.headers = {
-          authorization: `EvanAuth ${this.accountId},EvanMessage ${hexMessage},EvanSignedMessage ${signedMessage.signature}`
-        };
-        this.remoteNode = new IpfsLib(options.dfsConfig);
-      } else {
-        this.log('No accountId is given for IPFS api', 'warning');
-        this.remoteNode = new IpfsLib(options.dfsConfig);
-      }
+      this.remoteNode = new IpfsLib(options.dfsConfig);
     } else {
       this.log('No IPFS config of ipfs remotenode are given', 'error');
     }
 
   }
 
-  async stop(): Promise<any> {
+  public async stop(): Promise<any> {
     return true;
   }
 
@@ -143,7 +124,7 @@ export class Ipfs extends Logger implements DfsInterface {
    *
    * @return     ipfs hash of the data
    */
-  async add(name: string, data: Buffer): Promise<string> {
+  public async add(name: string, data: Buffer): Promise<string> {
     const files: FileToAdd[] = [{
       path: name,
       content: data,
@@ -158,9 +139,11 @@ export class Ipfs extends Logger implements DfsInterface {
    *
    * @return     ipfs hash array of the data
    */
-  async addMultiple(files: FileToAdd[]): Promise<string[]> {
+  public async addMultiple(files: FileToAdd[]): Promise<string[]> {
     let remoteFiles = [];
     try {
+      await this.checkAuthHeader();
+
       remoteFiles = await this.remoteNode.files.add(files);
       if (!remoteFiles.length) {
         throw new Error('no hash was returned');
@@ -192,7 +175,8 @@ export class Ipfs extends Logger implements DfsInterface {
    *
    * @param      hash  filehash of the pinned item
    */
-  async pinFileHash(file: any): Promise<any> {
+  public async pinFileHash(file: any): Promise<any> {
+    await this.checkAuthHeader();
     await this.remoteNode.pin.add(file.hash);
   }
 
@@ -204,7 +188,7 @@ export class Ipfs extends Logger implements DfsInterface {
    *
    * @return     data as text
    */
-  async get(hash: string, returnBuffer = false): Promise<any> {
+  public async get(hash: string, returnBuffer = false): Promise<any> {
     const ipfsHash = hash.startsWith('Qm') ? hash : Ipfs.bytes32ToIpfsHash(hash);
 
     // check if the hash equals 0x000000000000000000000000000000000
@@ -217,13 +201,6 @@ export class Ipfs extends Logger implements DfsInterface {
     if (this.cache) {
       let buffer = await this.cache.get(ipfsHash);
       if (buffer) {
-        const evanIdentity = Buffer.from(buffer.slice(0, 18));
-        const accIdBuf = Buffer.from(buffer.slice(18, 38));
-        const isAccountId = evanIdentity.toString() === '|||evanIdentity|||';
-        if (isAccountId) {
-          buffer = buffer.slice(38);
-        }
-
         if (returnBuffer) {
           return Buffer.from(buffer);
         } else {
@@ -239,15 +216,10 @@ export class Ipfs extends Logger implements DfsInterface {
         reject(new Error(`error while getting ipfs hash ${ipfsHash}: rejected after ${ IPFS_TIMEOUT }ms`));
       }, IPFS_TIMEOUT)
     });
+
     const getRemoteHash = this.remoteNode.files.cat(ipfsHash)
       .then((buffer: any) => {
         let fileBuffer = buffer;
-        const evanIdentity = Buffer.from(fileBuffer.slice(0, 18));
-        const accIdBuf = Buffer.from(fileBuffer.slice(18, 38));
-        const isAccountId = evanIdentity.toString() === '|||evanIdentity|||';
-        if (isAccountId) {
-          fileBuffer = fileBuffer.slice(38);
-        }
         const ret = fileBuffer.toString('binary');
         if (this.cache) {
           this.cache.add(ipfsHash, fileBuffer);
@@ -275,19 +247,29 @@ export class Ipfs extends Logger implements DfsInterface {
    * @param      {any}           privateKey    The account private
    * @return     {Promise<any>}  resolved when done
    */
-  async setAccountAndPrivateKey(accountId: string, privateKey: any) {
-    if (!this.dfsConfig) {
-      throw new Error('no dfsConfig set on ipfs instance')
+  public async setAccountAndPrivateKey() {
+    // deprecated
+  }
+
+  /**
+   * Sets the runtime.
+   *
+   * @param      {Runtime}  runtime  The runtime
+   */
+  public setRuntime(runtime: Runtime) {
+    this.runtime = runtime;
+  }
+
+  /**
+   * checks/generates the auth header for ipfs is set and clears it every 60 seconds
+   */
+  private async checkAuthHeader() {
+    if (!this.remoteNode.provider.headers.authorization) {
+      const ipfsAuthHeader = await utils.getSmartAgentAuthHeaders(this.runtime);
+      this.remoteNode.provider.headers.authorization = ipfsAuthHeader;
+      setTimeout(() => {
+        delete this.remoteNode.provider.headers.authorization
+      }, 60 * 1000)
     }
-    this.accountId = accountId;
-    this.privateKey = privateKey;
-    const signer = this.accountId.toLowerCase();
-    const toSignedMessage = this.web3.utils.soliditySha3(new Date().getTime() + this.accountId).replace('0x', '');
-    const hexMessage = this.web3.utils.utf8ToHex(toSignedMessage);
-    const signedMessage = this.web3.eth.accounts.sign(toSignedMessage, privateKey);
-    this.dfsConfig.headers = {
-      authorization: `EvanAuth ${this.accountId},EvanMessage ${hexMessage},EvanSignedMessage ${signedMessage.signature}`
-    };
-    this.remoteNode = new IpfsLib(this.dfsConfig);
   }
 }
