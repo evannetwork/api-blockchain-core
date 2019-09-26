@@ -4,6 +4,7 @@
 ### Features
 
 ### Fixes
+- remove custom agpl appendix
 
 ### Deprecations
 
