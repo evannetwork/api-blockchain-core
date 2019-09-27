@@ -115,16 +115,7 @@ describe('Profile helper', function() {
   });
 
   it('should be able to be add contact keys', async () => {
-    let profile = new Profile({
-      nameResolver,
-      defaultCryptoAlgo: 'aes',
-      dataContract,
-      contractLoader,
-      ipld,
-      executor,
-      accountId: accounts[0],
-      rightsAndRoles,
-    });
+    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await profile.addContactKey(accounts[0], 'context a', 'key 0x01_a');
     await profile.addContactKey(accounts[1], 'context a', 'key 0x02_a');
     await profile.addContactKey(accounts[1], 'context b', 'key 0x02_b');
@@ -136,16 +127,7 @@ describe('Profile helper', function() {
   });
 
   it('should be able to be add dapp bookmarks', async () => {
-    let profile = new Profile({
-      nameResolver,
-      defaultCryptoAlgo: 'aes',
-      dataContract,
-      contractLoader,
-      ipld,
-      executor,
-      accountId: accounts[0],
-      rightsAndRoles,
-    });
+    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await profile.addDappBookmark('sample1.test', sampleDesc);
 
     expect(await profile.getDappBookmark('sample1.test')).to.be.ok;
@@ -158,17 +140,8 @@ describe('Profile helper', function() {
       .to.eq('sampleUpdateTest');
   });
 
-  it('should be able to store data container plugins', async () => {
-    let profile = new Profile({
-      nameResolver,
-      defaultCryptoAlgo: 'aes',
-      dataContract,
-      contractLoader,
-      ipld,
-      executor,
-      accountId: accounts[0],
-      rightsAndRoles,
-    });
+  it.only('should be able to store data container plugins', async () => {
+    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     const templates = {
       templates: 'can',
       have: {
@@ -181,31 +154,13 @@ describe('Profile helper', function() {
     expect(await profile.getPlugins()).to.eq(templates);
 
     await profile.storeForAccount(profile.treeLabels.dtContainerPlugins);
-    profile = new Profile({
-      nameResolver,
-      defaultCryptoAlgo: 'aes',
-      dataContract,
-      contractLoader,
-      ipld,
-      executor,
-      accountId: accounts[0],
-      rightsAndRoles,
-    });
+    profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await profile.loadForAccount(profile.treeLabels.dtContainerPlugins);
     expect(await profile.getPlugins()).to.deep.eq(templates);
   });
 
   it('should be able to save an encrypted profile to IPLD', async () => {
-    let profile = new Profile({
-      nameResolver,
-      defaultCryptoAlgo: 'aes',
-      dataContract,
-      contractLoader,
-      ipld,
-      executor,
-      accountId: accounts[0],
-      rightsAndRoles,
-    });
+    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await profile.addContactKey(accounts[0], 'context a', 'key 0x01_a');
     await profile.addContactKey(accounts[1], 'context a', 'key 0x02_a');
     await profile.addContactKey(accounts[1], 'context b', 'key 0x02_b');
@@ -216,16 +171,7 @@ describe('Profile helper', function() {
     expect(ipldIpfsHash).not.to.be.undefined;
 
     // load it to new profile instance
-    const loadedProfile = new Profile({
-      nameResolver,
-      defaultCryptoAlgo: 'aes',
-      dataContract,
-      contractLoader,
-      ipld,
-      executor,
-      accountId: accounts[0],
-      rightsAndRoles,
-    });
+    const loadedProfile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await loadedProfile.loadFromIpld(profile.treeLabels.addressBook, ipldIpfsHash);
 
     // test contacts
@@ -264,16 +210,7 @@ describe('Profile helper', function() {
 
   it('should be able to set and load a profile for a given user from the blockchain shorthand', async () => {
     // create profile
-    const profile = new Profile({
-      nameResolver,
-      defaultCryptoAlgo: 'aes',
-      dataContract,
-      contractLoader,
-      ipld,
-      executor,
-      accountId: accounts[0],
-      rightsAndRoles,
-    });
+    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await profile.createProfile(keyExchange.getDiffieHellmanKeys());
     await profile.addContactKey(accounts[0], 'context a', 'key 0x01_a');
     await profile.addContactKey(accounts[1], 'context a', 'key 0x02_a');
@@ -285,16 +222,7 @@ describe('Profile helper', function() {
     await profile.storeForAccount(profile.treeLabels.addressBook);
 
     // load
-    const newProfile = new Profile({
-      nameResolver,
-      defaultCryptoAlgo: 'aes',
-      dataContract,
-      contractLoader,
-      ipld,
-      executor,
-      accountId: accounts[0],
-      rightsAndRoles,
-    });
+    const newProfile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
 
     // test contacts
     expect(await newProfile.getContactKey(accounts[0], 'context a')).to.eq('key 0x01_a');
@@ -307,42 +235,15 @@ describe('Profile helper', function() {
   });
 
   it('allow to check if a profile exists', async () => {
-    let profile = new Profile({
-      nameResolver,
-      defaultCryptoAlgo: 'aes',
-      dataContract,
-      contractLoader,
-      ipld,
-      executor,
-      accountId: '0xbbF5029Fd710d227630c8b7d338051B8E76d50B3',
-      rightsAndRoles,
-    });
+    let profile = await TestUtils.getProfile(web3, ipfs, ipld, '0xbbF5029Fd710d227630c8b7d338051B8E76d50B3');
     expect(await profile.exists()).to.be.false;
 
-    profile = new Profile({
-      nameResolver,
-      defaultCryptoAlgo: 'aes',
-      dataContract,
-      contractLoader,
-      ipld,
-      executor,
-      accountId: accounts[0],
-      rightsAndRoles,
-    });
+    profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     expect(await profile.exists()).to.be.true;
   });
 
   it('should remove a bookmark from a given profile', async () => {
-    let profile = new Profile({
-      nameResolver,
-      defaultCryptoAlgo: 'aes',
-      dataContract,
-      contractLoader,
-      ipld,
-      executor,
-      accountId: accounts[0],
-      rightsAndRoles,
-    });
+    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await profile.addDappBookmark('sample1.test', sampleDesc);
     await profile.addDappBookmark('sample2.test', sampleDesc);
 
@@ -358,16 +259,7 @@ describe('Profile helper', function() {
     // create new profile helper instance
     const from = Object.keys(accountMap)[0];
     ipld.originator = nameResolver.soliditySha3(from);
-    let profile = new Profile({
-      nameResolver,
-      defaultCryptoAlgo: 'aes',
-      dataContract,
-      contractLoader,
-      ipld,
-      executor,
-      accountId: accounts[0],
-      rightsAndRoles,
-    });
+    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
 
     // create new profile, set private key and keyexchange partial key
     await profile.createProfile(keyExchange.getDiffieHellmanKeys());
@@ -379,31 +271,13 @@ describe('Profile helper', function() {
     await profile.storeForAccount(profile.treeLabels.bookmarkedDapps);
 
     // load
-    const newProfile = new Profile({
-      nameResolver,
-      defaultCryptoAlgo: 'aes',
-      dataContract,
-      contractLoader,
-      ipld,
-      executor,
-      accountId: accounts[0],
-      rightsAndRoles,
-    });
+    const newProfile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     // test contacts
     expect(await profile.getDappBookmark('sample1.test')).to.deep.eq(sampleDesc);
   });
 
   it('should read a public part of a profile (e.g. public key)', async () => {
-    let profile = new Profile({
-      nameResolver,
-      defaultCryptoAlgo: 'aes',
-      dataContract,
-      contractLoader,
-      ipld,
-      executor,
-      accountId: accounts[0],
-      rightsAndRoles,
-    });
+    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
 
     const customMailbopx = new Mailbox({
       mailboxOwner: accounts[0],
@@ -433,16 +307,7 @@ describe('Profile helper', function() {
     const modifiedKeyStore = TestUtils.getKeyProvider(['mailboxKeyExchange']);
     ipld.keyProvider = modifiedKeyStore;
     // load
-    const newProfile = new Profile({
-      nameResolver,
-      defaultCryptoAlgo: 'aes',
-      dataContract,
-      contractLoader,
-      ipld,
-      executor,
-      accountId: accounts[0],
-      rightsAndRoles,
-    });
+    const newProfile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
 
     const pubKey = await newProfile.getPublicKey();
     expect(pubKey).to.be.ok;
@@ -455,16 +320,7 @@ describe('Profile helper', function() {
   });
 
   it('should be able to set a contact as known', async () => {
-    let profile = new Profile({
-      nameResolver,
-      defaultCryptoAlgo: 'aes',
-      dataContract,
-      contractLoader,
-      ipld,
-      executor,
-      accountId: accounts[0],
-      rightsAndRoles,
-    });
+    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
 
     await profile.createProfile(keyExchange.getDiffieHellmanKeys());
 
@@ -475,17 +331,7 @@ describe('Profile helper', function() {
   });
 
   it('should be able to set a contact as unknown', async () => {
-    let profile = new Profile({
-      nameResolver,
-      defaultCryptoAlgo: 'aes',
-      dataContract,
-      contractLoader,
-      ipld,
-      executor,
-      accountId: accounts[0],
-      rightsAndRoles,
-    });
-
+    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await profile.createProfile(keyExchange.getDiffieHellmanKeys());
 
     await profile.loadForAccount();
@@ -514,16 +360,7 @@ describe('Profile helper', function() {
       return accountIpld;
     };
     // separate profiles (with separate key providers for ipld)
-    const profile1 = new Profile({
-      nameResolver,
-      defaultCryptoAlgo: 'aes',
-      dataContract,
-      contractLoader,
-      ipld: await getKeyIpld(profileReceiver),
-      executor,
-      accountId: profileReceiver,
-      rightsAndRoles,
-    });
+    const profile1 = await TestUtils.getProfile(web3, ipfs, await getKeyIpld(profileReceiver), profileReceiver);
 
     // create profile data with profileReceiver (profileReceiver is the account, that will own the profile)
     const dhKeys = keyExchange.getDiffieHellmanKeys();
@@ -595,16 +432,7 @@ describe('Profile helper', function() {
     await executor.executeContractTransaction(
          contract, 'setMyProfile', { from: profileReceiver, autoGas: 1.1, }, profileContract.options.address);
     // can read own keys
-    const profile2 = new Profile({
-      nameResolver,
-      defaultCryptoAlgo: 'aes',
-      dataContract,
-      contractLoader,
-      ipld: await getKeyIpld(profileReceiver),
-      executor,
-      accountId: profileReceiver,
-      rightsAndRoles,
-    });
+    const profile2 = await TestUtils.getProfile(web3, ipfs, await getKeyIpld(profileReceiver), profileReceiver);
 
     // can read public key
     await profile2.loadForAccount(profile2.treeLabels.publicKey);

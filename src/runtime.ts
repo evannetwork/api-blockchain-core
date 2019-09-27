@@ -346,13 +346,17 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   let profile = options.profile || new Profile({
     accountId: activeAccount,
     contractLoader,
+    cryptoProvider,
     dataContract: dataContractOwn,
     defaultCryptoAlgo: 'aes',
+    description,
+    dfs,
     executor,
     ipld: ipldOwn,
     log,
     nameResolver,
     rightsAndRoles,
+    sharing,
   });
   // this key provider is linked to profile for key retrieval
   // keyProviderOwn is not linked to profile to prevent profile key lookups

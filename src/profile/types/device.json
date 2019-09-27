@@ -1,0 +1,86 @@
+{
+  "description": {
+    "description": "",
+    "imgSquare": "",
+    "name": "Device"
+  },
+  "permissions": [
+    "deviceDetails"
+  ],
+  "template": {
+    "properties": {
+      "deviceDetails": {
+        "dataSchema": {
+          "properties": {
+            "dataStreamSettings": {
+              "default": "",
+              "type": "string"
+            },
+            "location": {
+              "default": "",
+              "type": "string"
+            },
+            "manufacturer": {
+              "default": "",
+              "type": "string"
+            },
+            "owner": {
+              "default": "",
+              "type": "string"
+            },
+            "serialNumber": {
+              "default": "",
+              "type": "string"
+            },
+            "settings": {
+              "$comment": "{\"isEncryptedFile\": true}",
+              "default": {
+                "files": []
+              },
+              "properties": {
+                "additionalProperties": false,
+                "files": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "files"
+              ],
+              "type": "object"
+            },
+            "type": {
+              "$comment": "{\"isEncryptedFile\": true}",
+              "default": {
+                "files": []
+              },
+              "properties": {
+                "additionalProperties": false,
+                "files": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "files"
+              ],
+              "type": "object"
+            }
+          },
+          "type": "object"
+        },
+        "permissions": {
+          "0": [
+            "set"
+          ]
+        },
+        "type": "entry"
+      }
+    },
+    "type": "metadata"
+  }
+}
