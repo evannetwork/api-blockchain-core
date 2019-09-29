@@ -470,8 +470,13 @@ export class Profile extends Logger {
     // latest templates
     if (!ajvSpecs) {
       // load account details and type that should be resolved
-      const accountDetails = (await this.dataContract.getEntry(this.profileContract, 'accountDetails',
-        this.activeAccount)) || { profileType: 'unspecified' };
+      let accountDetails = (await this.dataContract.getEntry(this.profileContract, 'accountDetails',
+        this.activeAccount));
+      // fill empty details
+      if (!accountDetails ||
+          accountDetails === '0x0000000000000000000000000000000000000000000000000000000000000000') {
+        accountDetails = { profileType: 'unspecified' }
+      };
       data.accountDetails = accountDetails;
 
       // merge unspecified account specifications with the current selected one
@@ -506,29 +511,37 @@ export class Profile extends Logger {
           // check for file properties that should be decrypted
           await Promise.all(Object.keys(fields).map(async (fieldKey: string) => {
             if (fields[fieldKey].$comment &&
-                fields[fieldKey].$comment.indexOf('isEncryptedFile') !== -1 &&
-                typeof data[propKey][fieldKey] === 'string') {
-              // generate new keys
-              const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aesBlob');
-              const hashCryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aesEcb');
+                fields[fieldKey].$comment.indexOf('isEncryptedFile') !== -1) {
+              try {
+                // generate new keys
+                const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aesBlob');
+                const hashCryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aesEcb');
 
-              const hashKey = await this.options.sharing.getHashKey(
-                this.profileContract.options.address,
-                this.activeAccount
-              );
-              const contentKey = await this.options.sharing.getKey(
-                this.profileContract.options.address,
-                this.activeAccount,
-                propKey
-              );
-              const dencryptedHashBuffer = await hashCryptor.decrypt(
-                Buffer.from(data[propKey][fieldKey].substr(2), 'hex'),
-                { key: hashKey }
-              );
-              const retrieved = await (<any>this.options.dfs)
-                .get('0x' + dencryptedHashBuffer.toString('hex'), true);
-              data[propKey][fieldKey] = await cryptor.decrypt(retrieved, { key: contentKey });
-              data[propKey][fieldKey].forEach(file => file.size = file.file.length);
+                const hashKey = await this.options.sharing.getHashKey(
+                  this.profileContract.options.address,
+                  this.activeAccount
+                );
+                const contentKey = await this.options.sharing.getKey(
+                  this.profileContract.options.address,
+                  this.activeAccount,
+                  propKey
+                );
+
+                await Promise.all(data[propKey][fieldKey].files.map(async (file, index) => {
+                  const dencryptedHashBuffer = await hashCryptor.decrypt(
+                    Buffer.from(file.substr(2), 'hex'),
+                    { key: hashKey }
+                  );
+                  const retrieved = await (<any>this.options.dfs)
+                    .get('0x' + dencryptedHashBuffer.toString('hex'), true);
+                  const decrypted = await cryptor.decrypt(retrieved, { key: contentKey })
+                  decrypted.size = decrypted.file.length;
+                  data[propKey][fieldKey].files[index] = decrypted;
+                }));
+              } catch (ex) {
+                this.log(`could not decrypt files from profile property ${ propKey }.${ fieldKey }: ${ ex.message }`, 'warning');
+                data[propKey][fieldKey] = { files: [ ] };
+              }
             }
           }));
         }
@@ -897,30 +910,35 @@ export class Profile extends Logger {
       // check for files
       await Promise.all(Object.keys(fields).map(async (fieldKey) => {
         if (fields[fieldKey].$comment &&
-            fields[fieldKey].$comment.indexOf('isEncryptedFile') !== -1 &&
-            data[propKey][fieldKey] && data[propKey][fieldKey].length !== 0) {
-          const blobs = [];
-          data[propKey][fields[fieldKey]].forEach((control: any) =>
-            blobs.push({
+            fields[fieldKey].$comment.indexOf('isEncryptedFile') !== -1) {
+          const files = data[propKey][fieldKey] && data[propKey][fieldKey].files ?
+            data[propKey][fieldKey].files : data[propKey][fieldKey];
+
+          // reject empty file list
+          if (!files || files.length === 0) {
+            return;
+          }
+
+          await Promise.all(files.map(async (control: any, index: number) => {
+            const toEncrypt = {
               name: control.name,
               fileType: control.fileType,
               file: control.file
-            })
-          );
-          // generate new keys
-          const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aesBlob')
-          const hashCryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aesEcb')
-          const hashKey = await this.options.sharing.getHashKey(profileAddress, this.activeAccount);
-          const contentKey = await this.options.sharing.getKey(profileAddress, this.activeAccount,
-            data.type);
+            };
 
-          const encryptedFileBuffer = await cryptor.encrypt(blobs, { key: contentKey })
-          const stateMd5 = crypto.createHash('md5').update(encryptedFileBuffer).digest('hex')
-          const fileHash = await this.options.dfs.add(stateMd5, encryptedFileBuffer)
-          const encryptedHashBuffer = await hashCryptor.encrypt(
-            Buffer.from(fileHash.substr(2), 'hex'), { key: hashKey })
-          const encryptedHashString = `0x${encryptedHashBuffer.toString('hex')}`
-          data[propKey][fields[fieldKey]] = encryptedHashString;
+            // generate new keys
+            const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aesBlob')
+            const hashCryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aesEcb')
+            const hashKey = await this.options.sharing.getHashKey(profileAddress, this.activeAccount);
+            const contentKey = await this.options.sharing.getKey(profileAddress, this.activeAccount,
+              propKey);
+            const encryptedFileBuffer = await cryptor.encrypt(toEncrypt, { key: contentKey })
+            const stateMd5 = crypto.createHash('md5').update(encryptedFileBuffer).digest('hex')
+            const fileHash = await this.options.dfs.add(stateMd5, encryptedFileBuffer)
+            const encryptedHashBuffer = await hashCryptor.encrypt(
+              Buffer.from(fileHash.substr(2), 'hex'), { key: hashKey });
+            files[index] = `0x${encryptedHashBuffer.toString('hex')}`;
+          }));
         }
       }));
 
