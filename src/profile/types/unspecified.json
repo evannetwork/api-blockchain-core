@@ -16,7 +16,7 @@
               "default": "",
               "type": "string"
             },
-            "pictureSrc": {
+            "picture": {
               "$comment": "{\"isEncryptedFile\": true}",
               "default": {
                 "files": []

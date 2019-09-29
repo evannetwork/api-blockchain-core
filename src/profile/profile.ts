@@ -457,11 +457,6 @@ export class Profile extends Logger {
     const data: any = {  };
     let ajvSpecs;
 
-    // reset previous loaded profile contract to be sure to load corrcet profile data after
-    // migration
-    delete this.profileContract;
-    await this.loadForAccount();
-
     // try to resolve profiles dbcp and get it's data specification
     try {
       const description = await this.options.description
