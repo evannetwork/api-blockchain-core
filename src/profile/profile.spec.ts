@@ -26,7 +26,9 @@
 */
 
 import 'mocha';
-import { expect } from 'chai';
+import { expect, use } from 'chai';
+import { isEqual } from 'lodash';
+import chaiAsPromised = require('chai-as-promised');
 // import IpfsServer = require('ipfs');
 
 import {
@@ -40,15 +42,19 @@ import { accountMap } from '../test/accounts';
 import { accounts } from '../test/accounts';
 import { Aes } from '../encryption/aes';
 import { configTestcore as config } from '../config-testcore';
+import { createDefaultRuntime } from '../runtime';
 import { CryptoProvider } from '../encryption/crypto-provider';
 import { DataContract } from '../contracts/data-contract/data-contract';
 import { Ipld } from '../dfs/ipld';
 import { KeyExchange } from '../keyExchange';
 import { Mailbox } from '../mailbox';
+import { Onboarding } from '../onboarding';
 import { Profile } from './profile';
 import { RightsAndRoles } from '../contracts/rights-and-roles';
+import { Runtime } from '../runtime';
 import { TestUtils } from '../test/test-utils';
 
+use(chaiAsPromised);
 
 describe('Profile helper', function() {
   this.timeout(600000);
@@ -140,7 +146,7 @@ describe('Profile helper', function() {
       .to.eq('sampleUpdateTest');
   });
 
-  it.only('should be able to store data container plugins', async () => {
+  it('should be able to store data container plugins', async () => {
     let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     const templates = {
       templates: 'can',
@@ -454,5 +460,172 @@ describe('Profile helper', function() {
     await rightsAndRoles.removeAccountFromRole(profileContract, profileReceiver, profileReceiver, 0);
     // transfer ownership
     await rightsAndRoles.transferOwnership(profileContract, profileReceiver, profileTestUser);
+  });
+
+  describe.only('Handle data contract entries in profile', function() {
+    const mnemonics = {
+      old: 'distance castle notable toast siren smoke gym stable goat enact abstract absorb',
+      company: 'jeans token chimney when tape enable around loop space harsh file juice',
+      device: 'green lucky purse barrel scorpion universe sorry nest walnut enact stand price',
+    };
+
+    const dateString = Date.now().toString();
+    const companyProfileProperties = {
+      registration: {
+        company: `Company ${ dateString }`,
+        court: `trst ${ dateString }`,
+        register: 'hra',
+        registerNumber: `qwer ${ dateString }`,
+        salesTaxID: `qw ${ dateString }`,
+      },
+      contact: {
+        country: 'DE',
+        city: `City ${ dateString }`,
+        postalCode: '12345',
+        streetAndNumber: `Street ${ dateString }`,
+        website: 'https://evan.network'
+      }
+    };
+    const deviceProfileProperties = {
+      deviceDetails: {
+        dataStreamSettings: `dataStreamSettings ${ dateString }`,
+        location: `location ${ dateString }`,
+        manufacturer: `manufacturer ${ dateString }`,
+        owner: '0xcA4f9fF9e32a768BC68399B9F46d8A884089997d',
+        serialNumber: `serialNumber ${ dateString }`,
+        settings: { files: [] },
+        type: { files: [] }
+      }
+    };
+
+    /**
+     * Return the runtime for a test mnemonic.
+     *
+     * @param      {string}  mnemonic  mnemonic to create the runtime with
+     * @param      {string}  password  password to create the runtime with
+     */
+    async function getProfileRuntime(mnemonic: string, password = 'Evan1234') {
+      return createDefaultRuntime(
+        await TestUtils.getWeb3(),
+        await TestUtils.getIpfs(),
+        { mnemonic, password, }
+      );
+    }
+
+    it('cannot save properties to old profile', async () => {
+      const runtime = await getProfileRuntime(mnemonics.old);
+
+      const promise = runtime.profile.setProfileProperties({
+        accountDetails: {
+          accountName: 'Im\'m failing',
+          profileType: 'unspecified',
+        }
+      });
+      await expect(promise).to.be.rejected;
+    });
+
+    // TODO: test profile migration
+    it('can migrate old profile to new one', async () => {
+      throw new Error('not implemented');
+    });
+
+    // TODO: use new profile type switch function
+    it('can transform unspecified profile to company profile', async () => {
+      const newMnemonic = Onboarding.createMnemonic();
+      await Onboarding.createNewProfile(newMnemonic, 'Evan1234');
+      const runtime = await getProfileRuntime(newMnemonic);
+
+      await runtime.profile.setProfileProperties({
+        accountDetails: {
+          accountName: 'New company',
+          profileType: 'company',
+        }
+      });
+      const properties = await runtime.profile.getProfileProperties([ 'accountDetails' ]);
+      await expect(properties.accountDetails.accountName).to.be.eq('New company');
+    });
+
+    it('cannot transform specified profile to another profile type', async () => {
+      const newMnemonic = Onboarding.createMnemonic();
+      await Onboarding.createNewProfile(newMnemonic, 'Evan1234');
+      const runtime = await getProfileRuntime(newMnemonic);
+
+      await runtime.profile.setProfileProperties({
+        accountDetails: {
+          accountName: 'New company',
+          profileType: 'company',
+        }
+      });
+      const properties = await runtime.profile.getProfileProperties([ 'accountDetails' ]);
+      await expect(properties.accountDetails.accountName).to.be.eq('New company');
+
+      const promise = runtime.profile.setProfileProperties({
+        accountDetails: {
+          accountName: 'Now it\'s a device',
+          profileType: 'device',
+        }
+      });
+
+      await expect(promise).to.be.rejected;
+    });
+
+    it('can transform unspecified profile to device profile', async () => {
+      const newMnemonic = Onboarding.createMnemonic();
+      await Onboarding.createNewProfile(newMnemonic, 'Evan1234');
+      const runtime = await getProfileRuntime(newMnemonic);
+
+      await runtime.profile.setProfileProperties({
+        accountDetails: {
+          accountName: 'New device',
+          profileType: 'device',
+        }
+      });
+      const properties = await runtime.profile.getProfileProperties([ 'accountDetails' ]);
+      await expect(properties.accountDetails.accountName).to.be.eq('New device');
+    });
+
+    it('can transform unspecified profile to type that does not exists', async () => {
+      const newMnemonic = Onboarding.createMnemonic();
+      await Onboarding.createNewProfile(newMnemonic, 'Evan1234');
+      const runtime = await getProfileRuntime(newMnemonic);
+
+      const promise = runtime.profile.setProfileProperties({
+        accountDetails: {
+          accountName: 'custom profile',
+          profileType: 'my own type',
+        }
+      });
+
+      await expect(promise).to.be.rejected;
+    });
+
+    it('can save company profile specific properties to a profile of type company', async () => {
+      const runtime = await getProfileRuntime(mnemonics.company);
+      await runtime.profile.setProfileProperties(companyProfileProperties);
+      const newProfileProperties = await runtime.profile.getProfileProperties();
+      await expect(newProfileProperties.accountDetails.profileType).to.be.eq('company');
+      await expect(isEqual(companyProfileProperties.registration, newProfileProperties.registration)).to.be.true;
+      await expect(isEqual(companyProfileProperties.contact, newProfileProperties.contact)).to.be.true;
+    });
+
+    it('cannot save device profile specific properties into company profile', async () => {
+      const runtime = await getProfileRuntime(mnemonics.company);
+      const promise = runtime.profile.setProfileProperties(deviceProfileProperties);
+      await expect(promise).to.be.rejected;
+    });
+
+    it('can save device profile specific properties to a profile of type device', async () => {
+      const runtime = await getProfileRuntime(mnemonics.device);
+      await runtime.profile.setProfileProperties(deviceProfileProperties);
+      const newProfileProperties = await runtime.profile.getProfileProperties();
+      await expect(newProfileProperties.accountDetails.profileType).to.be.eq('device');
+      await expect(isEqual(deviceProfileProperties.deviceDetails, newProfileProperties.deviceDetails)).to.be.true;
+    });
+
+    it('cannot save company profile specific properties into device profile', async () => {
+      const runtime = await getProfileRuntime(mnemonics.device);
+      const promise = runtime.profile.setProfileProperties(companyProfileProperties);
+      await expect(promise).to.be.rejected;
+    });
   });
 });
