@@ -2,7 +2,7 @@
 Verifications
 ================================================================================
 
-.. list-table:: 
+.. list-table::
    :widths: auto
    :stub-columns: 1
 
@@ -45,7 +45,7 @@ Under this "path" a set of values can be found. These value describe the verific
   - 0: Issued
   - 1: Confirmed
 - ``signature``
-  Signature which is the proof that the verification issuer issued a verification of topic for this identity. 
+  Signature which is the proof that the verification issuer issued a verification of topic for this identity.
   It MUST be a signed message of the following structure: keccak256(address identityHolder_address, uint256 _ topic, bytes data)
 - ``creationDate``
   creationDate of the verification
@@ -105,7 +105,7 @@ Example
 -------
 
 .. code-block:: typescript
-  
+
   const verifications = new Verifications({
     accountStore,
     config,
@@ -255,6 +255,8 @@ setVerification
 
 Sets or creates a verification; this requires the issuer to have permissions for the parent verification (if verification name seen as a path, the parent 'folder').
 
+The "verificationValue" field can also be set to a custom JSON object with any data. For example DID, VC's, documents or any other custom value you want to attach to the verification.
+
 ----------
 Parameters
 ----------
@@ -282,9 +284,30 @@ Example
   // accounts[0] issues verification '/company' for accounts[1]
   const firstVerification = await verifications.setVerification(accounts[0], accounts[1], '/company');
 
+  // accounts[0] issues verification '/companyData' for accounts[1] with additional data attached
+  const secondVerification = await verifications.setVerification(accounts[0], accounts[1], '/companyData', 0, {
+    additionalDocument: <binary buffer>
+    vcDid: {
+      "@context": [
+        "https://www.w3.org/2018/credentials/v1",
+        "https://www.w3.org/2018/credentials/examples/v1"
+      ],
+      "id": "http://example.edu/credentials/3732",
+      "type": ["VerifiableCredential", "UniversityDegreeCredential"],
+      "credentialSubject": {
+        "id": "did:example:ebfeb1f712ebc6f1c276e12ec21",
+        "degree": {
+          "type": "BachelorDegree",
+          "name": "Bachelor of Science and Arts"
+        }
+      },
+      "proof": {  }
+    }
+  });
+
   // accounts[0] issues verification '/company' for accounts[1], sets an expiration date
   // and links to description domain 'sample'
-  const secondVerification = await verifications.setVerification(
+  const thirdVerification = await verifications.setVerification(
     accounts[0], accounts[1], '/company', expirationDate, verificationValue, 'example');
 
 
@@ -308,13 +331,13 @@ Parameters
 
 #. ``subject`` - ``string``: subject of the verifications
 #. ``topic`` - ``string``: name (/path) of a verification
-#. ``isIdentity`` - ``string`` (optional): indicates if the subject is already an identity 
+#. ``isIdentity`` - ``string`` (optional): indicates if the subject is already an identity
 
 -------
 Returns
 -------
 
-``Promise`` returns ``any[]``: verification info array, 
+``Promise`` returns ``any[]``: verification info array,
 
 Verifications have the following properties:
 
@@ -408,7 +431,7 @@ Example
 
   const nestedVerifications = await getNestedVerifications('0x123...', '/test')
 
-  // will return 
+  // will return
   [
     {
       // creator of the verification
@@ -793,7 +816,7 @@ rejectVerification
 
   verifications.rejectVerification(accountId, subject, verificationId[, rejectReason, isIdentity]);
 
-Reject a Verification. This verification will be marked as rejected but not deleted. This is important for tracking reasons. You can also optionally add a reject reason as JSON object to track additional informations about the rejection. Issuer and Subject can reject a special verification. 
+Reject a Verification. This verification will be marked as rejected but not deleted. This is important for tracking reasons. You can also optionally add a reject reason as JSON object to track additional informations about the rejection. Issuer and Subject can reject a special verification.
 
 ----------
 Parameters
@@ -981,7 +1004,7 @@ Parameters
 ----------
 
 #. ``contract`` - ``any``: target contract of transcation or ``null`` if just sending funds
-#. ``functionName`` - ``string``: function for transaction or ``null`` if just sending funds 
+#. ``functionName`` - ``string``: function for transaction or ``null`` if just sending funds
 #. ``options`` - ``any``: options for transaction, supports from, to, nonce, input, value
 #. ``args`` - ``any[]`` (optional): arguments for function transaction
 
@@ -1156,7 +1179,7 @@ getVerificationEnsAddress
   verifications.getVerificationEnsAddress(topic);
 
 Map the topic of a verification to it's default ens domain.
-  
+
 ----------
 Parameters
 ----------
@@ -1192,7 +1215,7 @@ ensureVerificationDescription
   verifications.ensureVerificationDescription(verification);
 
 Gets and sets the default description for a verification if it does not exists.
-  
+
 ----------
 Parameters
 ----------
@@ -1399,7 +1422,7 @@ VerificationsStatusFlagsV2
 --------------------------
 
 status annotations about verification, depending on defined ``VerificationsQueryOptions``, this may lead to the verification to be invalid or less trustworthy
-  
+
 #. ``disableSubVerifications``: parent verification does not allow subverifications
 #. ``expired``: verification has expired
 #. ``invalid``: signature does not match requirements, this could be because it hasn’t been signed by correct account or underlying checksum does not match subject, topic and data
@@ -1501,11 +1524,11 @@ a single verification; usually used in ``VerificationsResultV2``
     * ``subjectIdentity`` - ``string``: identity (contract or identity hash) of subject
     * ``subjectType`` - ``string``: type of subject (account/contract)
     * ``topic`` - ``string``: topic of identity (name)
-    * ``data`` - ``any`` (optional): 32B data hash string of identity 
-    * ``description`` - ``any`` (optional): only if actually set 
-    * ``expirationDate`` - ``number`` (optional): expiration date of verification (js timestamp) 
-    * ``rejectReason`` - ``string`` (optional): if applicable, reason for verification rejection 
-    * ``status`` - ``VerificationsStatusV2`` (optional): status of verification, is optional during result computation and required when done 
+    * ``data`` - ``any`` (optional): 32B data hash string of identity
+    * ``description`` - ``any`` (optional): only if actually set
+    * ``expirationDate`` - ``number`` (optional): expiration date of verification (js timestamp)
+    * ``rejectReason`` - ``string`` (optional): if applicable, reason for verification rejection
+    * ``status`` - ``VerificationsStatusV2`` (optional): status of verification, is optional during result computation and required when done
     * ``subject`` - ``string`` (optional): subject accountId/contractId (if query was issued with ``isIdentity`` set to ``false``)
 #. ``raw`` (optional): raw data about verification from contract
     * ``creationBlock`` - ``string``: block in which verification was issued
