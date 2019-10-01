@@ -255,7 +255,7 @@ setVerification
 
 Sets or creates a verification; this requires the issuer to have permissions for the parent verification (if verification name seen as a path, the parent 'folder').
 
-The "verificationValue" field can also set to a custom JSON object with any data. For example DID VC's, documents or any other custom value you want to attach to the verification.
+The "verificationValue" field can also be set to a custom JSON object with any data. For example DID, VC's, documents or any other custom value you want to attach to the verification.
 
 ----------
 Parameters
@@ -285,7 +285,7 @@ Example
   const firstVerification = await verifications.setVerification(accounts[0], accounts[1], '/company');
 
   // accounts[0] issues verification '/companyData' for accounts[1] with additional data attached
-  const firstVerification = await verifications.setVerification(accounts[0], accounts[1], '/company', 0, {
+  const secondVerification = await verifications.setVerification(accounts[0], accounts[1], '/companyData', 0, {
     additionalDocument: <binary buffer>
     vcDid: {
       "@context": [
