@@ -462,7 +462,7 @@ describe('Profile helper', function() {
     await rightsAndRoles.transferOwnership(profileContract, profileReceiver, profileTestUser);
   });
 
-  describe.only('Handle data contract entries in profile', function() {
+  describe.skip('Handle data contract entries in profile', function() {
     const mnemonics = {
       old: 'distance castle notable toast siren smoke gym stable goat enact abstract absorb',
       company: 'jeans token chimney when tape enable around loop space harsh file juice',
@@ -525,7 +525,7 @@ describe('Profile helper', function() {
     });
 
     // TODO: test profile migration
-    it('can migrate old profile to new one', async () => {
+    it.skip('can migrate old profile to new one', async () => {
       throw new Error('not implemented');
     });
 
