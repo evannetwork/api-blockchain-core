@@ -823,6 +823,7 @@ export class Profile extends Logger {
    *                             entry.
    */
   async setProfileProperties(data: any) {
+    await this.loadForAccount();
     const profileAddress = this.profileContract.address;
     let description;
     let profileType;
