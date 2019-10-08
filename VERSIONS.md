@@ -2,12 +2,18 @@
 
 ## Next Version
 ### Features
+
+### Fixes
+
+### Deprecations
+
+
+## Version 2.13.0
+### Features
 - add `setProfileProperties` and `getProfileProperties`
 
 ### Fixes
 - remove custom agpl appendix
-
-### Deprecations
 
 
 ## Version 2.12.0
