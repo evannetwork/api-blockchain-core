@@ -461,10 +461,13 @@ export class Profile extends Logger {
     try {
       const description = await this.options.description
         .getDescription(this.profileContract.address, this.activeAccount);
+
       if (description && description.public && description.public.dataSchema) {
         ajvSpecs = description.public.dataSchema;
       }
-    } catch (ex) { }
+    } catch (ex) {
+      this.log(`Problem getting profile contract description: ${ ex.message }`, 'error');
+    }
 
     // if no dbcp data specification could be loaded, resolve it from the profile type and the
     // latest templates
@@ -669,6 +672,7 @@ export class Profile extends Logger {
   async removeBcContract(bc: string, address: string): Promise<void> {
     this.ensureTree('contracts');
     const bcSet = await this.ipld.getLinkedGraph(this.trees['contracts'], bc);
+
     if (bcSet) {
       await this.ipld.remove(this.trees['contracts'], `${bc}/${address}`);
     }
