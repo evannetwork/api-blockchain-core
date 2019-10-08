@@ -370,20 +370,26 @@ export class TestUtils {
     return payments;
   }
 
-
   static async getProfile(web3, ipfs?, ipld?, accountId?): Promise<Profile> {
     const executor = await TestUtils.getExecutor(web3);
+    const dfs = ipfs || await TestUtils.getIpfs();
     executor.eventHub = await TestUtils.getEventHub(web3);
+
     const profile = new Profile({
       accountId: accountId || accounts[0],
       contractLoader: await TestUtils.getContractLoader(web3),
-      dataContract: await TestUtils.getDataContract(web3, ipfs),
+      cryptoProvider: await TestUtils.getCryptoProvider(),
+      dataContract: await TestUtils.getDataContract(web3, dfs),
       defaultCryptoAlgo: 'aes',
+      dfs,
+      description: await TestUtils.getDescription(web3),
       executor,
-      ipld: ipld || await TestUtils.getIpld(ipfs),
+      ipld: ipld || await TestUtils.getIpld(dfs),
       nameResolver: await TestUtils.getNameResolver(web3),
       rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
+      sharing: await TestUtils.getSharing(web3),
     });
+
     return profile;
   }
 

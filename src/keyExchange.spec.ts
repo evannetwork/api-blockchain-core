@@ -78,27 +78,8 @@ describe('KeyExchange class', function() {
     ipfs = await TestUtils.getIpfs();
     ipld = await TestUtils.getIpld(ipfs);
 
-    profile = new Profile({
-      accountId: accounts[0],
-      contractLoader: await TestUtils.getContractLoader(web3),
-      dataContract: await TestUtils.getDataContract(web3, ipfs),
-      defaultCryptoAlgo: 'aes',
-      executor: await TestUtils.getExecutor(web3),
-      ipld,
-      nameResolver: await TestUtils.getNameResolver(web3),
-      rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
-    });
-
-    profile2 = new Profile({
-      accountId: accounts[1],
-      contractLoader: await TestUtils.getContractLoader(web3),
-      dataContract: await TestUtils.getDataContract(web3, ipfs),
-      defaultCryptoAlgo: 'aes',
-      executor: await TestUtils.getExecutor(web3),
-      ipld,
-      nameResolver: await TestUtils.getNameResolver(web3),
-      rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
-    });
+    profile = await TestUtils.getProfile(web3, null, ipld, accounts[0]);
+    profile2 = await TestUtils.getProfile(web3, null, ipld, accounts[1]);
 
     mailbox = new Mailbox({
       mailboxOwner: accounts[0],
@@ -168,16 +149,7 @@ describe('KeyExchange class', function() {
     const result = await mailbox2.getMails(1, 0);
     const keys = Object.keys(result.mails);
     expect(result.mails[keys[0]].content.attachments[0].type).to.equal('commKey');
-    let profileFromMail = new Profile({
-      accountId: result.mails[keys[0]].content.from,
-      contractLoader: await TestUtils.getContractLoader(web3),
-      dataContract: await TestUtils.getDataContract(web3, ipfs),
-      defaultCryptoAlgo: 'aes',
-      executor: await TestUtils.getExecutor(web3),
-      ipld,
-      nameResolver: await TestUtils.getNameResolver(web3),
-      rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
-    });
+    let profileFromMail = await TestUtils.getProfile(web3, null, ipld, result.mails[keys[0]].content.from);
 
     const publicKeyProfile = await profileFromMail.getPublicKey();
     const commSecret = keyExchange2.computeSecretKey(publicKeyProfile);
@@ -190,16 +162,8 @@ describe('KeyExchange class', function() {
     const result = await mailbox2.getMails(1, 0);
     const keys = Object.keys(result.mails);
     expect(result.mails[keys[0]].content.attachments[0].type).to.equal('commKey');
-    let profileFromMail = new Profile({
-      accountId: result.mails[keys[0]].content.from,
-      contractLoader: await TestUtils.getContractLoader(web3),
-      dataContract: await TestUtils.getDataContract(web3, ipfs),
-      defaultCryptoAlgo: 'aes',
-      executor: await TestUtils.getExecutor(web3),
-      ipld,
-      nameResolver: await TestUtils.getNameResolver(web3),
-      rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
-    });
+
+    let profileFromMail = await TestUtils.getProfile(web3, null, ipld, result.mails[keys[0]].content.from);
     const keyExchangeOptions = {
       mailbox,
       cryptoProvider:  TestUtils.getCryptoProvider(),
@@ -219,16 +183,7 @@ describe('KeyExchange class', function() {
 
   it('should be able to send an invitation to a remote account', async () => {
     const remoteAddress = '';
-    const profileLocal = new Profile({
-      accountId: accounts[1],
-      contractLoader: await TestUtils.getContractLoader(web3),
-      dataContract: await TestUtils.getDataContract(web3, ipfs),
-      defaultCryptoAlgo: 'aes',
-      executor: await TestUtils.getExecutor(web3),
-      ipld,
-      nameResolver: await TestUtils.getNameResolver(web3),
-      rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
-    });
+    let profileLocal = await TestUtils.getProfile(web3, null, ipld, accounts[1]);
     const foreignPubkey = await profileLocal.getPublicKey();
     const commKey = await keyExchange1.generateCommKey();
     await keyExchange1.sendInvite(accounts[1], foreignPubkey, commKey, 'hi');

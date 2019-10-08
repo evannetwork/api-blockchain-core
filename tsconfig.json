@@ -4,20 +4,20 @@
     "declaration": true,
     "inlineSourceMap": true,
     "inlineSources": true,
-    "module": "commonjs",
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "target": "es2017",
     "lib": [
       "es2017"
     ],
+    "module": "commonjs",
+    "outDir": "./dist",
     "paths": {
-      "bcc": ["./src/dist/index.js"]
-    }
+      "bcc": [
+        "./src/dist/index.js"
+      ]
+    },
+    "resolveJsonModule": true,
+    "rootDir": "./src",
+    "target": "es2017"
   },
-  "include": [
-    "src/**/*.ts"
-  ],
   "exclude": [
     "bundles",
     "dist",
@@ -26,5 +26,8 @@
     "node_modules",
     "scripts",
     "src/**/*.spec.ts"
+  ],
+  "include": [
+    "src/**/*.ts"
   ]
 }

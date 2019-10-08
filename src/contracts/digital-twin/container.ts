@@ -1360,7 +1360,7 @@ async function applyPlugin(
   const dsAuth = options.contractLoader.loadContract('DSAuth', await container.getContractAddress());
   const dsRolesAddress = await options.executor.executeContractCall(dsAuth, 'authority');
   const dsRolesContract = options.contractLoader.loadContract('DSRolesPerContract', dsRolesAddress);
-  
+
   await options.executor.executeContractTransaction(
     dsRolesContract,
     'setRoleOperationCapabilities',
@@ -1390,7 +1390,7 @@ async function applyPlugin(
     }
   }
   await Throttle.all(tasks);
-  
+
   return envelope;
 }
 

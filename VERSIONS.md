@@ -2,6 +2,7 @@
 
 ## Next Version
 ### Features
+- add `setProfileProperties` and `getProfileProperties`
 
 ### Fixes
 - remove custom agpl appendix
