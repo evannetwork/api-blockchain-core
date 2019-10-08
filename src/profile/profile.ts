@@ -15,18 +15,15 @@
   write to the Free Software Foundation, Inc., 51 Franklin Street,
   Fifth Floor, Boston, MA, 02110-1301 USA, or download the license from
   the following URL: https://evan.network/license/
-
-  You can be released from the requirements of the GNU Affero General Public
-  License by purchasing a commercial license.
-  Buying such a license is mandatory as soon as you use this software or parts
-  of it on other blockchains than evan.network.
-
-  For more information, please contact evan GmbH at this address:
-  https://evan.network/license/
 */
+
+import * as Throttle from 'promise-parallel-throttle';
+import crypto = require('crypto');
+import { merge, cloneDeep, isEqual } from 'lodash';
 
 import {
   ContractLoader,
+  DfsInterface,
   Executor,
   Logger,
   LoggerOptions,
@@ -34,12 +31,15 @@ import {
   obfuscate,
 } from '@evan.network/dbcp';
 
+
+import * as accountTypes from './types/types';
 import { CryptoProvider } from '../encryption/crypto-provider';
 import { DataContract } from '../contracts/data-contract/data-contract';
+import { Description } from '../shared-description';
 import { Ipld } from '../dfs/ipld';
 import { KeyExchange } from '../keyExchange';
 import { RightsAndRoles, ModificationType, PropertyType } from '../contracts/rights-and-roles';
-
+import { Sharing } from '../contracts/sharing';
 
 /**
  * parameters for Profile constructor
@@ -47,12 +47,16 @@ import { RightsAndRoles, ModificationType, PropertyType } from '../contracts/rig
 export interface ProfileOptions extends LoggerOptions {
   accountId: string,
   contractLoader: ContractLoader,
+  description: Description,
+  cryptoProvider: CryptoProvider,
   dataContract: DataContract,
   defaultCryptoAlgo: string,
+  dfs: DfsInterface,
   executor: Executor,
   ipld: Ipld,
   nameResolver: NameResolver,
   rightsAndRoles: RightsAndRoles,
+  sharing: Sharing,
 }
 
 
@@ -94,6 +98,12 @@ export class Profile extends Logger {
     publicKey: 'publicKey',
   };
 
+  /**
+   * All available account types, mapped to it's data contract template specification. Each account
+   * type is based on the uspecified type, so each type includes this data too.
+   */
+  accountTypes = accountTypes;
+
   constructor(options: ProfileOptions) {
     super(options);
     this.activeAccount = options.accountId;
@@ -122,21 +132,6 @@ export class Profile extends Logger {
       await this.ipld.set(this.trees['contracts'], bc, {}, false);
     }
     await this.ipld.set(this.trees['contracts'], `${bc}/${address}`, data, false);
-  }
-
-  /**
-   * removes a contract (task contract etc. ) from a business center scope of the current profile
-   *
-   * @param      {string}         bc       business center ens address or contract address
-   * @param      {string}         address  contact address
-   * @return     {Promise<void>}  resolved when done
-   */
-  async removeBcContract(bc: string, address: string): Promise<void> {
-    this.ensureTree('contracts');
-    const bcSet = await this.ipld.getLinkedGraph(this.trees['contracts'], bc);
-    if (bcSet) {
-      await this.ipld.remove(this.trees['contracts'], `${bc}/${address}`);
-    }
   }
 
   /**
@@ -443,6 +438,115 @@ export class Profile extends Logger {
   }
 
   /**
+   * Return the saved profile information according to the specified profile type. No type directly
+   * uses unspecified type.
+   *
+   * @param      {Array<string>}  properties  Restrict properties that should be loaded.
+   * @return     {Promise<any>}  Property keys mapped to it's values. When a property was not set, a
+   *                             empty object will be returned
+   */
+  async getProfileProperties(properties?: Array<string>) {
+    const data: any = {  };
+    let ajvSpecs;
+
+    // try to resolve profiles dbcp and get it's data specification
+    try {
+      const description = await this.options.description
+        .getDescription(this.profileContract.address, this.activeAccount);
+
+      if (description && description.public && description.public.dataSchema) {
+        ajvSpecs = description.public.dataSchema;
+      }
+    } catch (ex) {
+      this.log(`Problem getting profile contract description: ${ ex.message }`, 'error');
+    }
+
+    // if no dbcp data specification could be loaded, resolve it from the profile type and the
+    // latest templates
+    if (!ajvSpecs) {
+      // load account details and type that should be resolved
+      let accountDetails = (await this.dataContract.getEntry(this.profileContract, 'accountDetails',
+        this.activeAccount));
+      // fill empty details
+      if (!accountDetails ||
+          accountDetails === '0x0000000000000000000000000000000000000000000000000000000000000000') {
+        accountDetails = { profileType: 'unspecified' }
+      };
+      data.accountDetails = accountDetails;
+
+      // merge unspecified account specifications with the current selected one
+      ajvSpecs = merge(
+        cloneDeep(this.accountTypes.unspecified),
+        cloneDeep(this.accountTypes[accountDetails.profileType]),
+      ).template.properties;
+    }
+
+    // load profile data
+    await Throttle.all(
+      Object.keys(ajvSpecs).map((propKey: string) => async () => {
+        // only load properties that should be loaded
+        if (!properties || properties.indexOf(propKey) !== -1) {
+          const prop = ajvSpecs[propKey];
+          const fields = prop.properties ? prop.properties : prop.dataSchema.properties;
+
+          switch (prop.type) {
+            case 'array': {
+              // TODO: load list entries
+              data[propKey] = [ ];
+              this.log('list entry loading for profile properties are not implemented!', 'warning');
+              break;
+            }
+            case 'entry':
+            default: {
+              data[propKey] = data[propKey] || (await this.dataContract.getEntry(
+                this.profileContract, propKey, this.activeAccount)) || { };
+            }
+          }
+
+          // check for file properties that should be decrypted
+          await Promise.all(Object.keys(fields).map(async (fieldKey: string) => {
+            if (fields[fieldKey].$comment &&
+                fields[fieldKey].$comment.indexOf('isEncryptedFile') !== -1) {
+              try {
+                // generate new keys
+                const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aesBlob');
+                const hashCryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aesEcb');
+
+                const hashKey = await this.options.sharing.getHashKey(
+                  this.profileContract.options.address,
+                  this.activeAccount
+                );
+                const contentKey = await this.options.sharing.getKey(
+                  this.profileContract.options.address,
+                  this.activeAccount,
+                  propKey
+                );
+
+                await Promise.all(data[propKey][fieldKey].files.map(async (file, index) => {
+                  const dencryptedHashBuffer = await hashCryptor.decrypt(
+                    Buffer.from(file.substr(2), 'hex'),
+                    { key: hashKey }
+                  );
+                  const retrieved = await (<any>this.options.dfs)
+                    .get('0x' + dencryptedHashBuffer.toString('hex'), true);
+                  const decrypted = await cryptor.decrypt(retrieved, { key: contentKey })
+                  decrypted.size = decrypted.file.length;
+                  data[propKey][fieldKey].files[index] = decrypted;
+                }));
+              } catch (ex) {
+                this.log(`could not decrypt files from profile property ${ propKey }.${ fieldKey }: ${ ex.message }`, 'warning');
+                data[propKey][fieldKey] = { files: [ ] };
+              }
+            }
+          }));
+        }
+      })
+    );
+
+    return data;
+  }
+
+  /**
    * get a key from an address in the address book
    *
    * @param      {string}        address  address to look up
@@ -548,6 +652,22 @@ export class Profile extends Logger {
     }
     this.trees[tree] = loaded;
     return this;
+  }
+
+  /**
+   * removes a contract (task contract etc. ) from a business center scope of the current profile
+   *
+   * @param      {string}         bc       business center ens address or contract address
+   * @param      {string}         address  contact address
+   * @return     {Promise<void>}  resolved when done
+   */
+  async removeBcContract(bc: string, address: string): Promise<void> {
+    this.ensureTree('contracts');
+    const bcSet = await this.ipld.getLinkedGraph(this.trees['contracts'], bc);
+
+    if (bcSet) {
+      await this.ipld.remove(this.trees['contracts'], `${bc}/${address}`);
+    }
   }
 
   /**
@@ -689,6 +809,143 @@ export class Profile extends Logger {
       plugins,
       true,
     );
+  }
+
+  /**
+   * Takes a set of profile properties and saves them into the profile data contract. If one
+   * property wasn't specified before, it will be permitted for writing.
+   *
+   * @param      {any}  payload  Object that should saved. Each entry will be saved as seperated
+   *                             entry.
+   */
+  async setProfileProperties(data: any) {
+    await this.loadForAccount();
+    const profileAddress = this.profileContract.address;
+    let description;
+    let profileType;
+
+    // gt profile type
+    if (data.accountDetails && data.accountDetails.profileType) {
+      profileType = data.accountDetails.profileType;
+    } else {
+      profileType = (await this.getProfileProperties([ 'accountDetails' ])).profileType;
+    }
+
+    // try to resolve profiles dbcp and get it's data specification
+    try {
+      description = await this.options.description
+        .getDescription(this.profileContract.address, this.activeAccount);
+    } catch (ex) { }
+
+    // fill empty dbcp entries
+    description = description || {
+      'public': {
+        'name': 'Profile Contract',
+        'description': 'Profile Contract',
+        'author': 'evan.network',
+        'tags': [
+          'profile'
+        ],
+        'version': '1.0.0',
+        'dbcpVersion': 2
+      }
+    };
+    description.public.dataSchema = description.public.dataSchema || { };
+
+    // latest profile type definition
+    const originDescription = cloneDeep(description);
+    const latestSpecification = merge(
+      cloneDeep(this.accountTypes.unspecified),
+      cloneDeep(this.accountTypes[profileType]),
+    );
+    const newFields = Object
+      .keys(latestSpecification.template.properties)
+      .filter((propKey: string) => !description.public.dataSchema[propKey]);
+
+    // apply latest specifications after new fields were checked
+    Object.keys(latestSpecification.template.properties).forEach((propKey: string) => {
+      description.public.dataSchema[propKey] = cloneDeep(latestSpecification.template
+        .properties[propKey].dataSchema);
+    });
+
+    // set new permissions
+    if (newFields.length > 0) {
+      const shared = this.options.contractLoader.loadContract('Shared', profileAddress);
+      const sharings = await this.options.sharing.getSharingsFromContract(shared);
+
+      await Throttle.all(newFields.map((propKey: string) => async () => {
+        // create unique keys for the new fields
+        const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aes');
+        const [contentKey, blockNr] = await Promise.all(
+          [cryptor.generateKey(), this.executor.web3.eth.getBlockNumber()])
+        await this.options.sharing.extendSharings(sharings, this.activeAccount,
+          this.activeAccount, propKey, blockNr, contentKey);
+        await this.options.rightsAndRoles.setOperationPermission(
+          profileAddress,            // contract to be updated
+          this.activeAccount,        // account, that can change permissions
+          0,                         // role id, uint8 value
+          propKey,                   // name of the object
+          PropertyType.Entry,        // what type of element is modified
+          ModificationType.Set,      // type of the modification
+          true,                      // grant this capability
+        );
+      }));
+
+      await this.options.sharing.saveSharingsToContract(profileAddress, sharings, this.activeAccount);
+      await this.options.sharing.getSharings(profileAddress);
+    }
+
+    // if description has changed, save it
+    if (!isEqual(originDescription, description)) {
+      await this.options.description.setDescription(profileAddress, description, this.activeAccount);
+    }
+
+    // save the data
+    await Throttle.all(Object.keys(data).map((propKey: string) => async () => {
+      const fields = description.public.dataSchema[propKey].properties;
+
+      // check for files
+      await Promise.all(Object.keys(fields).map(async (fieldKey) => {
+        if (fields[fieldKey].$comment &&
+            fields[fieldKey].$comment.indexOf('isEncryptedFile') !== -1) {
+          const files = data[propKey][fieldKey] && data[propKey][fieldKey].files ?
+            data[propKey][fieldKey].files : data[propKey][fieldKey];
+
+          // reject empty file list
+          if (!files || files.length === 0) {
+            return;
+          }
+
+          await Promise.all(files.map(async (control: any, index: number) => {
+            const toEncrypt = {
+              name: control.name,
+              fileType: control.fileType,
+              file: control.file
+            };
+
+            // generate new keys
+            const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aesBlob')
+            const hashCryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aesEcb')
+            const hashKey = await this.options.sharing.getHashKey(profileAddress, this.activeAccount);
+            const contentKey = await this.options.sharing.getKey(profileAddress, this.activeAccount,
+              propKey);
+            const encryptedFileBuffer = await cryptor.encrypt(toEncrypt, { key: contentKey })
+            const stateMd5 = crypto.createHash('md5').update(encryptedFileBuffer).digest('hex')
+            const fileHash = await this.options.dfs.add(stateMd5, encryptedFileBuffer)
+            const encryptedHashBuffer = await hashCryptor.encrypt(
+              Buffer.from(fileHash.substr(2), 'hex'), { key: hashKey });
+            files[index] = `0x${encryptedHashBuffer.toString('hex')}`;
+          }));
+        }
+      }));
+
+      await this.options.dataContract.setEntry(
+        this.profileContract,
+        propKey,
+        data[propKey],
+        this.activeAccount
+      );
+    }));
   }
 
   /**

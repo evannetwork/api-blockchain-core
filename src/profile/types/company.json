@@ -1,0 +1,83 @@
+{
+  "description": {
+    "description": "",
+    "imgSquare": "",
+    "name": "Company"
+  },
+  "permissions": [
+    "contact",
+    "registration"
+  ],
+  "template": {
+    "properties": {
+      "contact": {
+        "dataSchema": {
+          "properties": {
+            "city": {
+              "default": "",
+              "type": "string"
+            },
+            "country": {
+              "default": "",
+              "type": "string"
+            },
+            "postalCode": {
+              "default": "",
+              "type": "string"
+            },
+            "streetAndNumber": {
+              "default": "",
+              "type": "string"
+            },
+            "website": {
+              "default": "",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "permissions": {
+          "0": [
+            "set"
+          ]
+        },
+        "type": "entry"
+      },
+      "registration": {
+        "dataSchema": {
+          "properties": {
+            "company": {
+              "default": "",
+              "minLength": 1,
+              "type": "string"
+            },
+            "court": {
+              "default": "",
+              "type": "string"
+            },
+            "register": {
+              "default": "",
+              "type": "string"
+            },
+            "registerNumber": {
+              "default": "",
+              "type": "string"
+            },
+            "salesTaxID": {
+              "default": "",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "permissions": {
+          "0": [
+            "set"
+          ]
+        },
+        "type": "entry"
+      }
+    },
+    "type": "metadata"
+  }
+}

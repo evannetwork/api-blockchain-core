@@ -17,36 +17,12 @@
   the following URL: https://evan.network/license/
 */
 
-import {
-  CryptoInfo,
-  Cryptor,
-} from '@evan.network/dbcp';
+import * as unspecified from './unspecified.json';
+import * as company from './company.json';
+import * as device from './device.json';
 
-import * as Dbcp from '@evan.network/dbcp';
-
-
-/**
- * wrapper for supported cryptors
- *
- * @class      CryptoProvider (name)
- */
-export class CryptoProvider extends Dbcp.CryptoProvider {
-  constructor(cryptors) {
-    super(cryptors);
-  }
-
-  /**
-   * get a Cryptor matching the provided CryptoInfo
-   *
-   * @param      {CryptoInfo}  info    details about en-/decryption
-   * @return     {Cryptor}     matching cryptor
-   */
-  getCryptorByCryptoInfo(info: CryptoInfo): Cryptor {
-    switch (info.algorithm) {
-      case 'aes-256-cbc': return this.cryptors.aes;
-      case 'unencrypted': return this.cryptors.unencrypted;
-      case 'aes-blob': return this.cryptors.aesBlob;
-      default: throw new Error(`algorithm unsupported ${info.algorithm}`);
-    }
-  }
+export {
+  unspecified,
+  company,
+  device,
 }

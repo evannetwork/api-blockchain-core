@@ -1,0 +1,55 @@
+{
+  "description": {
+    "description": "",
+    "imgSquare": "",
+    "name": "unspecified"
+  },
+  "permissions": [
+    "accountDetails"
+  ],
+  "template": {
+    "properties": {
+      "accountDetails": {
+        "dataSchema": {
+          "properties": {
+            "accountName": {
+              "default": "",
+              "type": "string"
+            },
+            "picture": {
+              "$comment": "{\"isEncryptedFile\": true}",
+              "default": {
+                "files": []
+              },
+              "properties": {
+                "additionalProperties": false,
+                "files": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "files"
+              ],
+              "type": "object"
+            },
+            "profileType": {
+              "default": "",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "permissions": {
+          "0": [
+            "set"
+          ]
+        },
+        "type": "entry"
+      }
+    },
+    "type": "metadata"
+  }
+}

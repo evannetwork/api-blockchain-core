@@ -15,14 +15,6 @@
   write to the Free Software Foundation, Inc., 51 Franklin Street,
   Fifth Floor, Boston, MA, 02110-1301 USA, or download the license from
   the following URL: https://evan.network/license/
-
-  You can be released from the requirements of the GNU Affero General Public
-  License by purchasing a commercial license.
-  Buying such a license is mandatory as soon as you use this software or parts
-  of it on other blockchains than evan.network.
-
-  For more information, please contact evan GmbH at this address:
-  https://evan.network/license/
 */
 
 import * as Throttle from 'promise-parallel-throttle';
@@ -1368,7 +1360,7 @@ async function applyPlugin(
   const dsAuth = options.contractLoader.loadContract('DSAuth', await container.getContractAddress());
   const dsRolesAddress = await options.executor.executeContractCall(dsAuth, 'authority');
   const dsRolesContract = options.contractLoader.loadContract('DSRolesPerContract', dsRolesAddress);
-  
+
   await options.executor.executeContractTransaction(
     dsRolesContract,
     'setRoleOperationCapabilities',
@@ -1398,7 +1390,7 @@ async function applyPlugin(
     }
   }
   await Throttle.all(tasks);
-  
+
   return envelope;
 }
 
