@@ -106,7 +106,7 @@ describe('Container', function() {
       expect(await container.getOwner()).to.be.eq(owner);
     });
 
-    it('writes plguin type to automatic field "type"', async () => {
+    it('writes plugin type to automatic field "type"', async () => {
       const plugin: ContainerPlugin = {
         template: {
           type: Math.floor(Math.random() * 1e12).toString(36),
@@ -476,6 +476,88 @@ describe('Container', function() {
       await Container.deleteContainerPlugin(profile, pluginName);
       plugins = await Container.getContainerPlugins(profile);
       expect(plugins).to.not.have.property(pluginName);
+    });
+  });
+
+  describe('when setting multiple entries at once with storeData', async () => {
+    it('can save data to automatically generated entries', async () => {
+      const container = await Container.create(runtimes[owner], defaultConfig);
+      await container.ensureProperty('testField', Container.defaultSchemas.stringEntry);
+      const randomString = Math.floor(Math.random() * 1e12).toString(36);
+      await container.setEntry('testField', randomString);
+      expect(await container.getEntry('testField')).to.eq(randomString);
+
+      const anotherRandomString = Math.floor(Math.random() * 1e12).toString(36);
+      await container.storeData({
+        testField: anotherRandomString,
+      });
+      expect(await container.getEntry('testField')).to.eq(anotherRandomString);
+    });
+
+    it('can save data to automatically generated list entries', async () => {
+      const container = await Container.create(runtimes[owner], defaultConfig);
+      await container.ensureProperty('testList', Container.defaultSchemas.numberList);
+      const randomNumbers = [...Array(3)].map(() => Math.floor(Math.random() * 1e12));
+      await container.addListEntries('testList', randomNumbers);
+      expect(await container.getListEntries('testList')).to.deep.eq(randomNumbers);
+      const moreRandomNumbers = [...Array(3)].map(() => Math.floor(Math.random() * 1e12));
+      await container.storeData({
+        testList: moreRandomNumbers,
+      });
+      expect(await container.getListEntries('testList')).to.deep.eq([...randomNumbers, ...moreRandomNumbers]);
+    });
+
+    it('can save data to entries from plugins', async () => {
+      const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+      plugin.template.properties.testField = {
+        dataSchema: { type: 'string' },
+        permissions: { 0: ['set'] },
+        type: 'entry',
+      };
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+      const randomString = Math.floor(Math.random() * 1e12).toString(36);
+      await container.storeData({
+        testField: randomString,
+      });
+      expect(await container.getEntry('testField')).to.eq(randomString);
+    });
+
+    it('can extend list data of lists from plugins', async () => {
+      const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+      plugin.template.properties.testList = {
+        dataSchema: { type: 'array', items: { type: 'number' } },
+        permissions: { 0: ['set'] },
+        type: 'list',
+      };
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+      const randomNumbers = [...Array(3)].map(() => Math.floor(Math.random() * 1e12));
+      await container.addListEntries('testList', randomNumbers);
+      expect(await container.getListEntries('testList')).to.deep.eq(randomNumbers);
+      const moreRandomNumbers = [...Array(3)].map(() => Math.floor(Math.random() * 1e12));
+      await container.storeData({
+        testList: moreRandomNumbers,
+      });
+      expect(await container.getListEntries('testList')).to.deep.eq([...randomNumbers, ...moreRandomNumbers]);
+    });
+
+    it('can implicitly add new entries to data schema', async () => {
+      const container = await Container.create(runtimes[owner], defaultConfig);
+      await container.ensureProperty('testField', Container.defaultSchemas.stringEntry);
+      const randomString = Math.floor(Math.random() * 1e12).toString(36);
+      await container.storeData({
+        testField: randomString,
+      });
+      expect(await container.getEntry('testField')).to.eq(randomString);
+    });
+
+    it('can implicitly add new lists to data schema', async () => {
+      const container = await Container.create(runtimes[owner], defaultConfig);
+      await container.ensureProperty('testList', Container.defaultSchemas.numberList);
+      const randomNumbers = [...Array(3)].map(() => Math.floor(Math.random() * 1e12));
+      await container.storeData({
+        testList: randomNumbers,
+      });
+      expect(await container.getListEntries('testList')).to.deep.eq([...randomNumbers]);
     });
   });
 

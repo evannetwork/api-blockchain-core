@@ -884,6 +884,42 @@ export class Container extends Logger {
   }
 
   /**
+   * Store data to a container. This allows to
+   * - store data into already existing entries and/or list entries
+   * - implicitely create new entries and/or list entries (the same logic for deciding on their type
+   *   is applied as in `setEntry`/`addListEntries` is applied here)
+   * - in case of entries, their value is overwritten
+   * - in case of list entries, given values are added to the list
+   *
+   * @param      {any}  data      object with keys, that are names of lists or entries and values,
+   *                              that are the values to store to them
+   * @return     {Promise<void>}  resolved when done
+   */
+  public async storeData(data: { [id: string]: any }): Promise<void> {
+    await this.ensureContract();
+
+    // fetch description, for checking types
+    const description = await this.getDescription();
+
+    // create a task function for each field
+    const tasks = Object.keys(data).map((property) => async () => {
+      let type;
+      if (description.dataSchema && description.dataSchema[property]) {
+        type = description.dataSchema[property].type;
+      } else {
+        type = this.deriveSchema(data[property]).type;
+      }
+      // add field or entry, based on property type
+      await (type === 'array' ?
+        this.addListEntries(property, data[property]) :
+        this.setEntry(property, data[property])
+      );
+    });
+
+    await Throttle.all(tasks);
+  }
+
+  /**
    * Export current container state as plugin.
    *
    * @param      {boolean}  getValues  export entry values or not (list entries are always excluded)
