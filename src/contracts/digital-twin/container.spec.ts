@@ -557,7 +557,7 @@ describe('Container', function() {
         expect(await consumerContainer.getListEntries('testList')).to.deep.eq([randomString]);
       });
 
-      it.only('can share write access a property from owner to another user', async() => {
+      it('can share write access a property from owner to another user', async() => {
         const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
         plugin.template.properties.testList = {
           dataSchema: { type: 'array', items: { type: 'string' } },
