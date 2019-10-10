@@ -93,6 +93,8 @@ export interface ContainerShareConfig {
   read?: string[];
   /** list of properties, that are shared readable and writable */
   readWrite?: string[];
+  /** list of properties, that are giving the rights to remove listentries */
+  removeListEntries?: string[];
 }
 
 /**
@@ -778,7 +780,7 @@ export class Container extends Logger {
         `tried to share properties, but missing one or more in schema: ${missingProperties}`);
     }
     // for all share configs
-    for (let { accountId, read = [], readWrite = [] } of shareConfigs) {
+    for (let { accountId, read = [], readWrite = [], removeListEntries = [] } of shareConfigs) {
       //////////////////////////////////////////////////// ensure that account is member in contract
       if (! await this.options.executor.executeContractCall(
           this.contract, 'isConsumer', accountId)) {
@@ -822,6 +824,57 @@ export class Container extends Logger {
             property,
             getPropertyType(schemaProperties[property].type),
             ModificationType.Set,
+            true,
+          );
+        }
+
+        // ensure that account has role
+        const hasRole = await this.options.executor.executeContractCall(
+          authority, 'hasUserRole', accountId, permittedRole);
+        if (!hasRole) {
+          await this.options.rightsAndRoles.addAccountToRole(
+            this.contract, this.config.accountId, accountId, permittedRole);
+        }
+      }
+
+
+      for (let property of removeListEntries) {
+        const propertyType = getPropertyType(schemaProperties[property].type);
+
+        // throw error if remove should be given on no list
+        if (propertyType !== PropertyType.ListEntry) {
+          throw new Error(`property "${property}" is no list. Can not give remove rights`);
+        }
+
+        // get permissions from contract
+        const hash = this.options.rightsAndRoles.getOperationCapabilityHash(
+          property,
+          propertyType,
+          ModificationType.Remove,
+        );
+        const rolesMap = await this.options.executor.executeContractCall(
+          authority,
+          'getOperationCapabilityRoles',
+          '0x0000000000000000000000000000000000000000',
+          hash,
+        );
+        const binary = (new BigNumber(rolesMap)).toString(2);
+        // search for role with permissions
+        let permittedRole = [...binary].reverse().join('').indexOf('1');
+        if (permittedRole < this.reservedRoles) {
+          // if not found or included in reserved roles, add new role
+          const roleCount = await this.options.executor.executeContractCall(authority, 'roleCount');
+          if (roleCount >= 256) {
+            throw new Error(`could not share property "${property}", maximum role count reached`);
+          }
+          permittedRole = Math.max(this.reservedRoles, roleCount);
+          await this.options.rightsAndRoles.setOperationPermission(
+            authority,
+            this.config.accountId,
+            permittedRole,
+            property,
+            propertyType,
+            ModificationType.Remove,
             true,
           );
         }
