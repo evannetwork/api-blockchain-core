@@ -138,7 +138,7 @@ describe('Profile helper', function() {
       .to.eq('sampleUpdateTest');
   });
 
-  it('should be able to store data container plugins', async () => {
+  it.only('should be able to store data container plugins', async () => {
     let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     const templates = {
       templates: 'can',
