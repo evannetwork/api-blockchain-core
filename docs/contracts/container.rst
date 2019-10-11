@@ -805,6 +805,16 @@ Share configurations are given per user, that receives gets data shared with. Th
       - aforementioned roles roles start at role 64, the first 64 roles are system reserved for smart contract custom logic or in-detail role configurations
       - possible roles can go up to 255, so it is possible to add up to 192 properties to a container
 
+- ``removeListEntries``:
+
+    - properties listed here will be threaded the same way as those in the field ``read``
+    - additionally the following applies:
+
+      - if not already done so, a role, that has ``Remove`` permissions will be added for this field
+      - given ``accountId`` will be added to the group responsible for this field
+      - aforementioned roles roles start at role 64, the first 64 roles are system reserved for smart contract custom logic or in-detail role configurations
+      - possible roles can go up to 255, so it is possible to add up to 192 properties to a container
+
 ----------
 Parameters
 ----------

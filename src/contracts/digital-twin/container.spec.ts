@@ -570,6 +570,7 @@ describe('Container', function() {
         expect(await container.getListEntries('testList')).to.deep.eq([randomString]);
 
         await container.shareProperties([{ accountId: consumer, readWrite: ['testList'] }]);
+        await TestUtils.nextBlock(runtimes[consumer].executor, consumer);
         const consumerContainer = new Container(
           runtimes[consumer],
           { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
@@ -583,6 +584,38 @@ describe('Container', function() {
           .to.deep.eq([randomString, newRandomString]);
         expect(await container.getListEntries('testList'))
           .to.deep.eq([randomString, newRandomString]);
+      });
+
+      it('can share remove access a property from owner to another user', async() => {
+        const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+        plugin.template.properties.testList = {
+          dataSchema: { type: 'array', items: { type: 'string' } },
+          permissions: { 0: ['set'] },
+          type: 'list',
+        };
+        const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+        const randomString = Math.floor(Math.random() * 1e12).toString(36);
+        await container.addListEntries('testList', [randomString]);
+        expect(await container.getListEntries('testList')).to.deep.eq([randomString]);
+
+        await container.shareProperties([{ accountId: consumer, readWrite: ['testList'], removeListEntries: ['testList'] }]);
+        const consumerContainer = new Container(
+          runtimes[consumer],
+          { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
+        );
+        expect(await consumerContainer.getListEntries('testList')).to.deep.eq([randomString]);
+
+        // now add list entry with invited user
+        const newRandomString = Math.floor(Math.random() * 1e12).toString(36);
+        await consumerContainer.addListEntries('testList', [newRandomString]);
+
+        const containerId = await consumerContainer.getContractAddress();
+        await runtimes[consumer].dataContract.removeListEntry(containerId, 'testList', 1, consumer);
+
+        expect(await consumerContainer.getListEntries('testList'))
+          .to.deep.eq([randomString]);
+        expect(await container.getListEntries('testList'))
+          .to.deep.eq([randomString]);
       });
     });
 
