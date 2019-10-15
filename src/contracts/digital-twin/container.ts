@@ -245,6 +245,18 @@ export class Container extends Logger {
   ): Promise<Container> {
     const instanceConfig = cloneDeep(config);
 
+    // subscribe to emit IdentityCreated(newIdentity, msg.sender);
+    const contractIdentities = await options.nameResolver.getAddress('contractidentities.evan');
+    const identityP = new Promise((s) => {
+      options.executor.eventHub.once(
+        'IdentityHolder',
+        contractIdentities,
+        'IdentityCreated',
+        () => true,
+        ({ returnValues: { identity }}) => { s(identity); },
+      )
+    });
+
     // convert template properties to jsonSchema
     if (instanceConfig.plugin &&
         instanceConfig.plugin.template &&
@@ -269,19 +281,6 @@ export class Container extends Logger {
     if (validation !== true) {
       throw new Error(`validation of description failed with: ${JSON.stringify(validation)}`);
     }
-
-    // subscribe to emit IdentityCreated(newIdentity, msg.sender);
-    const contractIdentities = await options.nameResolver.getAddress('contractidentities.evan');
-    const identityP = new Promise((s) => {
-      const cisContract = options.contractLoader.loadContract('IdentityHolder', contractIdentities);
-      options.executor.eventHub.once(
-        'IdentityHolder',
-        contractIdentities,
-        'IdentityCreated',
-        () => true,
-        ({ returnValues: { identity }}) => { s(identity); },
-      )
-    });
 
     // create contract
     const contractP = options.dataContract.create(
@@ -1044,6 +1043,9 @@ export class Container extends Logger {
    * @param      {any}     value      (raw) value to analyze
    */
   private async decryptFilesIfRequired(propertyName: string, value: any): Promise<ContainerFile[]> {
+    if (value === '0x0000000000000000000000000000000000000000000000000000000000000000') {
+      return value;
+    }
     let result = value;
     const description = await this.getDescription();
     if (!description.dataSchema || !description.dataSchema[propertyName]) {
