@@ -1053,6 +1053,12 @@ export class Container extends Logger {
     }
     const decrypt = async (toEncrypt) => {
       const encryptedFiles = await Throttle.all(toEncrypt.files.map(file => async () => {
+        try {
+          JSON.parse(file);
+        } catch (ex) {
+          this.log(`can't validate file ${file}, no valid JSON`, 'error');
+          return null;
+        }
         const decrypted = await this.options.dataContract.decrypt(
           file,
           this.contract,
@@ -1063,7 +1069,7 @@ export class Container extends Logger {
         return decrypted.private;
       }));
 
-      return { files: encryptedFiles };
+      return { files: encryptedFiles.filter((f) => f !== null) };
     };
     result = await this.applyIfEncrypted(description.dataSchema[propertyName], value, decrypt);
 

@@ -748,7 +748,16 @@ export class Profile extends Logger {
    */
   async setProfileProperties(data: any) {
     await this.loadForAccount();
-    const accountDetails = await this.getProfileProperty('accountDetails');
+
+
+    let accountDetails;
+
+    try {
+      accountDetails = await this.getProfileProperty('accountDetails');
+    } catch (e) {
+      accountDetails = null;
+    }
+
     let profileType = (accountDetails && accountDetails.profileType) ?
       accountDetails.profileType : 'unspecified';
 
