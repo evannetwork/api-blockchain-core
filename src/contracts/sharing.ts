@@ -391,10 +391,11 @@ export class Sharing extends Logger {
         !this.sharingCache[address][sharingId][partnerHash] ||
         !this.sharingCache[address][sharingId][partnerHash][sectionHash] ||
         !this.sharingCache[address][sharingId][partnerHash][sectionHash][block]) {
+      const sharingsValue = await this.getSharings(address, null, null, null, sharingId);
       if (!this.sharingCache[address]) {
         this.sharingCache[address] = {};
       }
-      this.sharingCache[address][sharingId] = await this.getSharings(address, null, null, null, sharingId);
+      this.sharingCache[address][sharingId] = sharingsValue;
     }
     // check partner
     const partnerSections = this.sharingCache[address][sharingId][partnerHash];
