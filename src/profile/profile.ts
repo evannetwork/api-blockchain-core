@@ -73,18 +73,18 @@ export interface DappBookmark {
  * @class      Profile (name)
  */
 export class Profile extends Logger {
-  activeAccount: string;
-  contractLoader: ContractLoader;
-  dataContract: DataContract;
-  defaultCryptoAlgo: string;
-  executor: Executor;
-  ipld: Ipld;
-  nameResolver: NameResolver;
-  options: ProfileOptions;
-  profileContract: any;
-  profileContainer: Container;
-  trees: any;
-  treeLabels = {
+  public activeAccount: string;
+  public contractLoader: ContractLoader;
+  public dataContract: DataContract;
+  public defaultCryptoAlgo: string;
+  public executor: Executor;
+  public ipld: Ipld;
+  public nameResolver: NameResolver;
+  public options: ProfileOptions;
+  public profileContract: any;
+  public profileContainer: Container;
+  public trees: any;
+  public treeLabels = {
     activeVerifications: 'activeVerifications',
     addressBook: 'addressBook',
     bookmarkedDapps: 'bookmarkedDapps',
@@ -101,9 +101,9 @@ export class Profile extends Logger {
    * All available account types, mapped to it's data contract template specification. Each account
    * type is based on the uspecified type, so each type includes this data too.
    */
-  accountTypes = accountTypes;
+  public accountTypes = accountTypes;
 
-  constructor(options: ProfileOptions) {
+  public constructor(options: ProfileOptions) {
     super(options);
     this.activeAccount = options.accountId;
     this.contractLoader = options.contractLoader;
@@ -124,7 +124,7 @@ export class Profile extends Logger {
    * @param      {any}            data     bookmark metadata
    * @return     {Promise<void>}  resolved when done
    */
-  async addBcContract(bc: string, address: string, data: any): Promise<void> {
+  public async addBcContract(bc: string, address: string, data: any): Promise<void> {
     this.ensureTree('contracts');
     const bcSet = await this.ipld.getLinkedGraph(this.trees['contracts'], bc);
     if (!bcSet) {
@@ -141,7 +141,7 @@ export class Profile extends Logger {
    * @param      {string}         key      communication key to store
    * @return     {Promise<void>}  resolved when done
    */
-  async addContactKey(address: string, context: string, key: string): Promise<void> {
+  public async addContactKey(address: string, context: string, key: string): Promise<void> {
     this.log(
       `add contact key: account "${address}", context "${context}", key "${obfuscate(key)}"`,
       'debug');
@@ -175,7 +175,7 @@ export class Profile extends Logger {
    * @param      {string}  address  contract address
    * @return     {any}     bookmark info
    */
-  async addContract(address: string, data: any): Promise<any> {
+  public async addContract(address: string, data: any): Promise<any> {
     this.ensureTree('contracts');
     await this.ipld.set(this.trees['contracts'], address, data, false);
   }
@@ -187,7 +187,7 @@ export class Profile extends Logger {
    * @param      {DappBookmark}   description  description for bookmark
    * @return     {Promise<void>}  resolved when done
    */
-  async addDappBookmark(address: string, description: DappBookmark): Promise<void> {
+  public async addDappBookmark(address: string, description: DappBookmark): Promise<void> {
     this.ensureTree('bookmarkedDapps');
     if (!address || !description) {
       throw new Error('no valid description or address given!');
@@ -208,7 +208,7 @@ export class Profile extends Logger {
    * @param      {string}         value    value of the profile key
    * @return     {Promise<void>}  resolved when done
    */
-  async addProfileKey(address: string, key: string, value: string): Promise<void> {
+  public async addProfileKey(address: string, key: string, value: string): Promise<void> {
     this.ensureTree('addressBook');
     const profileSet = await this.ipld.getLinkedGraph(this.trees['addressBook'], `profile`);
     if (!profileSet) {
@@ -228,7 +228,7 @@ export class Profile extends Logger {
    * @param      {string}         key     public Diffie Hellman key part to store
    * @return     {Promise<void>}  resolved when done
    */
-  async addPublicKey(key: string): Promise<void> {
+  public async addPublicKey(key: string): Promise<void> {
     this.ensureTree('publicKey');
     await this.ipld.set(this.trees['publicKey'], 'publicKey', key, true);
   }
@@ -239,7 +239,7 @@ export class Profile extends Logger {
    * @param      {string}         keys    communication key to store
    * @return     {Promise<void>}  resolved when done
    */
-  async createProfile(keys: any): Promise<void> {
+  public async createProfile(keys: any): Promise<void> {
     // create new profile contract and store in profile index
     const factoryDomain = this.nameResolver.getDomainName(
       this.nameResolver.config.domains.profileFactory);
@@ -277,7 +277,7 @@ export class Profile extends Logger {
    *
    * @return     {Promise<boolean>}  true if a contract was registered, false if not
    */
-  async exists(): Promise<boolean> {
+  public async exists(): Promise<boolean> {
     try {
       const ensName = this.nameResolver.getDomainName(this.nameResolver.config.domains.profile);
       const address = await this.nameResolver.getAddress(ensName);
@@ -297,7 +297,7 @@ export class Profile extends Logger {
    *
    * @return     {any}     bookmark info
    */
-  async getAddressBook(): Promise<any> {
+  public async getAddressBook(): Promise<any> {
     if (!this.trees[this.treeLabels.addressBook]) {
       await this.loadForAccount(this.treeLabels.addressBook);
     }
@@ -310,7 +310,7 @@ export class Profile extends Logger {
    * @param      {string}        address  contact address
    * @return     {Promise<any>}  bookmark info
    */
-  async getAddressBookAddress(address: string): Promise<any> {
+  public async getAddressBookAddress(address: string): Promise<any> {
     if (!this.trees[this.treeLabels.addressBook]) {
       await this.loadForAccount(this.treeLabels.addressBook);
     }
@@ -324,7 +324,7 @@ export class Profile extends Logger {
    * @param      {string}        address  contact address
    * @return     {Promise<any>}  bookmark info
    */
-  async getBcContract(bc: string, address: string): Promise<any> {
+  public async getBcContract(bc: string, address: string): Promise<any> {
     if (!this.trees[this.treeLabels.contracts]) {
       await this.loadForAccount(this.treeLabels.contracts);
     }
@@ -337,7 +337,7 @@ export class Profile extends Logger {
    * @param      {string}        bc      business center
    * @return     {Promise<any>}  bc contracts.
    */
-  async getBcContracts(bc: string): Promise<any> {
+  public async getBcContracts(bc: string): Promise<any> {
     if (!this.trees[this.treeLabels.contracts]) {
       await this.loadForAccount(this.treeLabels.contracts);
     }
@@ -349,7 +349,7 @@ export class Profile extends Logger {
    *
    * @return     {any}  all bookmarks for profile
    */
-  async getBookmarkDefinitions(): Promise<any> {
+  public async getBookmarkDefinitions(): Promise<any> {
     if (!this.trees[this.treeLabels.bookmarkedDapps]) {
       await this.loadForAccount(this.treeLabels.bookmarkedDapps);
     }
@@ -363,7 +363,7 @@ export class Profile extends Logger {
    * @param      {string}           context  store key for this context, can be a contract, bc, etc.
    * @return     {Promise<string>}  matching key
    */
-  async getContactKey(address: string, context: string): Promise<string> {
+  public async getContactKey(address: string, context: string): Promise<string> {
     let addressHash;
     // check if address is already hashed
     if (address.length === 42) {
@@ -387,7 +387,7 @@ export class Profile extends Logger {
    * @param      {string}        address  contact address
    * @return     {Promise<any>}  bookmark info
    */
-  async getContract(address: string): Promise<any> {
+  public async getContract(address: string): Promise<any> {
     if (!this.trees[this.treeLabels.contracts]) {
       await this.loadForAccount(this.treeLabels.contracts);
     }
@@ -399,7 +399,7 @@ export class Profile extends Logger {
    *
    * @return     {Promise<any>}  contracts info
    */
-  async getContracts(): Promise<any> {
+  public async getContracts(): Promise<any> {
     if (!this.trees[this.treeLabels.contracts]) {
       await this.loadForAccount(this.treeLabels.contracts);
     }
@@ -413,7 +413,7 @@ export class Profile extends Logger {
    * @param      {string}        address  ENS name or contract address (if no ENS name is set)
    * @return     {Promise<any>}  bookmark info
    */
-  async getDappBookmark(address: string): Promise<any> {
+  public async getDappBookmark(address: string): Promise<any> {
     if (!this.trees[this.treeLabels.bookmarkedDapps]) {
       await this.loadForAccount(this.treeLabels.bookmarkedDapps);
     }
@@ -427,7 +427,7 @@ export class Profile extends Logger {
    * @param      {string}            accountId  account id of a contact
    * @return     {Promise<boolean>}  true if known account
    */
-  async getContactKnownState(accountId: string): Promise<boolean> {
+  public async getContactKnownState(accountId: string): Promise<boolean> {
     const value = await this.dataContract.getMappingValue(
       this.profileContract,
       'contacts',
@@ -444,7 +444,7 @@ export class Profile extends Logger {
    *
    * @param      {string}  context  key context
    */
-  async getEncryptionKey(context: string): Promise<any> {
+  public async getEncryptionKey(context: string): Promise<any> {
     if (!this.trees[this.treeLabels.encryptionKeys]) {
       await this.loadForAccount(this.treeLabels.encryptionKeys);
     }
@@ -463,7 +463,7 @@ export class Profile extends Logger {
    * @return     {Promise<any>}  Property keys mapped to it's values. When a property was not set, a
    *                             empty object will be returned
    */
-  async getProfileProperty(property: string): Promise<any> {
+  public async getProfileProperty(property: string): Promise<any> {
     const description = await this.profileContainer.getDescription();
 
     if (!description.dataSchema || !description.dataSchema[property]) {
@@ -485,7 +485,7 @@ export class Profile extends Logger {
    * @param      {string}        key      type of key to get
    * @return     {Promise<any>}  key
    */
-  async getProfileKey(address: string, key: string): Promise<any> {
+  public async getProfileKey(address: string, key: string): Promise<any> {
     if (!this.trees[this.treeLabels.addressBook]) {
       await this.loadForAccount(this.treeLabels.addressBook);
     }
@@ -498,7 +498,7 @@ export class Profile extends Logger {
    *
    * @return     {any}  public key
    */
-  async getPublicKey(): Promise<any> {
+  public async getPublicKey(): Promise<any> {
     if (!this.trees[this.treeLabels.publicKey]) {
       await this.loadForAccount(this.treeLabels.publicKey);
     }
@@ -508,7 +508,7 @@ export class Profile extends Logger {
   /**
    * get plugin from profile
    */
-  async getPlugins(): Promise<any> {
+  public async getPlugins(): Promise<any> {
     if (!this.trees[this.treeLabels.dtContainerPlugins]) {
       await this.loadForAccount(this.treeLabels.dtContainerPlugins);
     }
@@ -526,7 +526,7 @@ export class Profile extends Logger {
    * @param      {string}         tree    tree to load ('bookmarkedDapps', 'contracts', ...)
    * @return     {Promise<void>}  resolved when done
    */
-  async loadForAccount(tree?: string): Promise<void> {
+  public async loadForAccount(tree?: string): Promise<void> {
     // ensure profile contract
     if (!this.profileContract) {
       const ensName = this.nameResolver.getDomainName(this.nameResolver.config.domains.profile);
@@ -580,7 +580,7 @@ export class Profile extends Logger {
    *                                               hash
    * @return     {Promise<Profile>}  this profile
    */
-  async loadFromIpld(tree: string, ipldIpfsHash: string): Promise<Profile> {
+  public async loadFromIpld(tree: string, ipldIpfsHash: string): Promise<Profile> {
     let loaded;
     try {
       loaded = await this.ipld.getLinkedGraph(ipldIpfsHash);
@@ -603,7 +603,7 @@ export class Profile extends Logger {
    * @param      {string}         address  contact address
    * @return     {Promise<void>}  resolved when done
    */
-  async removeBcContract(bc: string, address: string): Promise<void> {
+  public async removeBcContract(bc: string, address: string): Promise<void> {
     this.ensureTree('contracts');
     const bcSet = await this.ipld.getLinkedGraph(this.trees['contracts'], bc);
 
@@ -618,7 +618,7 @@ export class Profile extends Logger {
    * @param      {string}         address  account key of the contact
    * @return     {Promise<void>}  resolved when done
    */
-  async removeContact(address: string): Promise<void> {
+  public async removeContact(address: string): Promise<void> {
     const addressHash = this.nameResolver.soliditySha3.apply(this.nameResolver, [
       this.nameResolver.soliditySha3(address),
       this.nameResolver.soliditySha3(this.activeAccount),
@@ -634,7 +634,7 @@ export class Profile extends Logger {
    * @param      {string}         address  address of the bookmark to remove
    * @return     {Promise<void>}  resolved when done
    */
-  async removeDappBookmark(address: string): Promise<void> {
+  public async removeDappBookmark(address: string): Promise<void> {
     if (!address ) {
       throw new Error('no valid address given!');
     }
@@ -648,7 +648,7 @@ export class Profile extends Logger {
    * @param      {any}            bookmarks  bookmarks to set
    * @return     {Promise<void>}  resolved when done
    */
-  async setDappBookmarks(bookmarks: any): Promise<void> {
+  public async setDappBookmarks(bookmarks: any): Promise<void> {
     if (!bookmarks) {
       throw new Error('no valid bookmarks are given');
     }
@@ -666,7 +666,7 @@ export class Profile extends Logger {
    *
    * @return     {string[]}  array of topics of verifications that should be displayed
    */
-  async loadActiveVerifications(): Promise<string[]> {
+  public async loadActiveVerifications(): Promise<string[]> {
     const defaultVerifications = [
       '/evan/onboarding/termsofuse',
     ];
@@ -685,7 +685,7 @@ export class Profile extends Logger {
    * @param      {any}            bookmarks  bookmarks to set
    * @return     {Promise<void>}  resolved when done
    */
-  async setActiveVerifications(verifications: string[]): Promise<void> {
+  public async setActiveVerifications(verifications: string[]): Promise<void> {
     if (!verifications) {
       throw new Error('no verifications are given');
     }
@@ -708,7 +708,7 @@ export class Profile extends Logger {
    * @param      {boolean}        contactKnown  true if known, false if not
    * @return     {Promise<void>}  resolved when done
    */
-  async setContactKnownState(accountId: string, contactKnown: boolean): Promise<void> {
+  public async setContactKnownState(accountId: string, contactKnown: boolean): Promise<void> {
     await this.dataContract.setMappingValue(
       this.profileContract,
       'contacts',
@@ -726,7 +726,7 @@ export class Profile extends Logger {
    * @param      {string}  context  key context
    * @param      {string}  key      key value
    */
-  async setEncryptionKey(context: string, key: string): Promise<void> {
+  public async setEncryptionKey(context: string, key: string): Promise<void> {
     this.ensureTree(this.treeLabels.encryptionKeys);
 
     await this.ipld.set(
@@ -742,7 +742,7 @@ export class Profile extends Logger {
    *
    * @param      {any}     plugin  entire collections of plugin to store in profile
    */
-  async setPlugins(plugins: any): Promise<void> {
+  public async setPlugins(plugins: any): Promise<void> {
     this.ensureTree(this.treeLabels.dtContainerPlugins);
 
     await this.ipld.set(
@@ -760,7 +760,7 @@ export class Profile extends Logger {
    * @param      {any}  payload  Object that should saved. Each entry will be saved as seperated
    *                             entry.
    */
-  async setProfileProperties(data: any): Promise<void> {
+  public async setProfileProperties(data: any): Promise<void> {
     await this.loadForAccount();
 
     // older profiles may have an invalid format in files, use these as unspecified
@@ -815,7 +815,7 @@ export class Profile extends Logger {
    * @param      {string}   ipldHash  store this hash instead of the current tree for account
    * @return     {Promise}  resolved when done
    */
-  async storeForAccount(tree: string, ipldHash?: string): Promise<void> {
+  public async storeForAccount(tree: string, ipldHash?: string): Promise<void> {
     await this.ensurePropertyInProfile(tree);
     if (ipldHash) {
       this.log(`store tree "${tree}" with given hash to profile contract for account ` +
@@ -848,7 +848,7 @@ export class Profile extends Logger {
    * @param      {string}           tree    tree to store ('bookmarkedDapps', 'contracts', ...)
    * @return     {Promise<string>}  hash of the ipfs file
    */
-  async storeToIpld(tree: string): Promise<string> {
+  public async storeToIpld(tree: string): Promise<string> {
     return await this.ipld.store(this.trees[tree]);
   }
 

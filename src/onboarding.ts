@@ -57,7 +57,7 @@ export interface OnboardingOptions extends LoggerOptions {
  * @class      Mailbox (name)
  */
 export class Onboarding extends Logger {
-  options: OnboardingOptions;
+  public options: OnboardingOptions;
 
 
   /**
@@ -353,7 +353,7 @@ export class Onboarding extends Logger {
     });
   }
 
-  constructor(optionsInput: OnboardingOptions) {
+  public constructor(optionsInput: OnboardingOptions) {
     super(optionsInput);
     this.options = optionsInput;
   }
@@ -367,7 +367,7 @@ export class Onboarding extends Logger {
    *                                           [web3 >=1.0] / web.toWei(10, 'ether') [web3 < 1.0]
    * @return     {Promise<void>}   resolved when done
    */
-  async sendInvitation(invitation: InvitationMail, weiToSend: string): Promise<void> {
+  public async sendInvitation(invitation: InvitationMail, weiToSend: string): Promise<void> {
     // build bmail container
     const mail: Mail = {
       content: {
