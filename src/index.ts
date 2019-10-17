@@ -80,11 +80,12 @@ const utils = { getSmartAgentAuthHeaders };
 export { utils };
 
 /******** export these libraries to be able to build the blockchain-core into an umd bundle ********/
+import * as AccountType from './profile/types/types';
 import Web3 = require('web3');
-import prottle = require('prottle');
 import crypto = require('crypto');
-import lodash = require('lodash');
 import keystore = require('../libs/eth-lightwallet/keystore.js');
+import lodash = require('lodash');
+import prottle = require('prottle');
 // assign to export Buffer;
 const buffer = Buffer;
 // load adjusted bitcore mnemonic lib and do not load the full API specification to reduce bundle size
@@ -96,4 +97,16 @@ let logLog = [ ];
 // push everything into the logLog
 let logLogLevel = 0;
 
-export { Web3, prottle, crypto, keystore, Mnemonic, instanceId, logLog, logLogLevel, buffer, lodash }
+export {
+  AccountType,
+  Mnemonic,
+  Web3,
+  buffer,
+  crypto,
+  instanceId,
+  keystore,
+  lodash,
+  logLog,
+  logLogLevel,
+  prottle,
+}

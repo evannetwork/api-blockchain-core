@@ -767,6 +767,54 @@ Example
 
 ------------------------------------------------------------------------------
 
+= Store multiple properties =
+=============================
+
+.. _container_storeData:
+
+storeData
+================================================================================
+
+.. code-block:: typescript
+
+  container.storeData(data);
+
+Store data to a container. This allows to
+   * - store data into already existing entries and/or list entries
+   * - implicitely create new entries and/or list entries (the same logic for deciding on their type is applied as in `setEntry`/`addListEntries` is applied here)
+   * - in case of entries, their value is overwritten
+   * - in case of list entries, given values are added to the list
+
+----------
+Parameters
+----------
+
+#. ``data`` - ``object``: object with keys, that are names of lists or entries and values, that are the values to store to them
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const sampleValue = 123;
+  await container.storeData({
+    'numberField': sampleValue,
+  });
+  console.log(await container.getEntry('numberField'));
+  // Output:
+  // 123
+
+
+
+------------------------------------------------------------------------------
+
 = Share Container Data =
 ========================
 

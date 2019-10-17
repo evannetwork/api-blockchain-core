@@ -1215,7 +1215,7 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``Array<string>``: array of topics of verificationss that should be displayed (e.g. [ '/company/tuev', '/test/1234' ] )
+``Promise`` returns ``string[]``: array of topics of verificationss that should be displayed (e.g. [ '/company/tuev', '/test/1234' ] )
 
 -------
 Example
@@ -1244,7 +1244,7 @@ Save an array of active verificationss to the profile.
 Parameters
 ----------
 
-#. ``bookmarks`` - ``Array<string>``: bookmarks to set
+#. ``bookmarks`` - ``string[]``: bookmarks to set
 
 -------
 Returns
