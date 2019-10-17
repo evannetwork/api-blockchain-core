@@ -99,6 +99,25 @@ describe('Profile helper', function() {
     rightsAndRoles = await TestUtils.getRightsAndRoles(web3);
   });
 
+  it('should create a new Profile', async () => {
+    // create new profile helper instance
+    const from = Object.keys(accountMap)[0];
+    ipld.originator = nameResolver.soliditySha3(from);
+    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
+
+    // create new profile, set private key and keyexchange partial key
+    await profile.createProfile(keyExchange.getDiffieHellmanKeys());
+
+    // add a bookmark
+    await profile.addDappBookmark('sample1.test', sampleDesc);
+
+    // store tree to contract
+    await profile.storeForAccount(profile.treeLabels.bookmarkedDapps);
+
+    // test contacts
+    expect(await profile.getDappBookmark('sample1.test')).to.deep.eq(sampleDesc);
+  });
+
   it('should be able to be add contact keys', async () => {
     let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await profile.addContactKey(accounts[0], 'context a', 'key 0x01_a');
@@ -235,25 +254,6 @@ describe('Profile helper', function() {
     await profile.removeDappBookmark('sample1.test');
     expect(await profile.getDappBookmark('sample1.test')).not.to.be.ok;
     expect(await profile.getDappBookmark('sample2.test')).to.be.ok;
-  });
-
-  it('should create a new Profile', async () => {
-    // create new profile helper instance
-    const from = Object.keys(accountMap)[0];
-    ipld.originator = nameResolver.soliditySha3(from);
-    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
-
-    // create new profile, set private key and keyexchange partial key
-    await profile.createProfile(keyExchange.getDiffieHellmanKeys());
-
-    // add a bookmark
-    await profile.addDappBookmark('sample1.test', sampleDesc);
-
-    // store tree to contract
-    await profile.storeForAccount(profile.treeLabels.bookmarkedDapps);
-
-    // test contacts
-    expect(await profile.getDappBookmark('sample1.test')).to.deep.eq(sampleDesc);
   });
 
   it('should read a public part of a profile (e.g. public key)', async () => {
