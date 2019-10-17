@@ -450,11 +450,11 @@ export class Profile extends Logger {
    * Return the saved profile information according to the specified profile type. No type directly
    * uses unspecified type.
    *
-   * @param      {Array<string>}  properties  Restrict properties that should be loaded.
+   * @param      {string}        property  Restrict properties that should be loaded.
    * @return     {Promise<any>}  Property keys mapped to it's values. When a property was not set, a
    *                             empty object will be returned
    */
-  async getProfileProperty(property: string) {
+  async getProfileProperty(property: string): Promise<any> {
     const description = await this.profileContainer.getDescription();
 
     if (!description.dataSchema || !description.dataSchema[property]) {
@@ -650,9 +650,9 @@ export class Profile extends Logger {
   /**
    * Load all verifications that should be displayed for this profile within the ui.
    *
-   * @return     {Array<string>}  array of topics of verifications that should be displayed
+   * @return     {string[]}  array of topics of verifications that should be displayed
    */
-  async loadActiveVerifications() {
+  async loadActiveVerifications(): Promise<string[]> {
     const defaultVerifications = [
       '/evan/onboarding/termsofuse',
     ];
@@ -671,7 +671,7 @@ export class Profile extends Logger {
    * @param      {any}            bookmarks  bookmarks to set
    * @return     {Promise<void>}  resolved when done
    */
-  async setActiveVerifications(verifications: Array<string>): Promise<void> {
+  async setActiveVerifications(verifications: string[]): Promise<void> {
     if (!verifications) {
       throw new Error('no verifications are given');
     }
@@ -746,7 +746,7 @@ export class Profile extends Logger {
    * @param      {any}  payload  Object that should saved. Each entry will be saved as seperated
    *                             entry.
    */
-  async setProfileProperties(data: any) {
+  async setProfileProperties(data: any): Promise<void> {
     await this.loadForAccount();
 
     // older profiles may have an invalid format in files, use these as unspecified
