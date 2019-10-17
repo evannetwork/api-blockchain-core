@@ -749,19 +749,18 @@ export class Profile extends Logger {
   async setProfileProperties(data: any) {
     await this.loadForAccount();
 
-
+    // older profiles may have an invalid format in files, use these as unspecified
     let accountDetails;
-
     try {
       accountDetails = await this.getProfileProperty('accountDetails');
-    } catch (e) {
-      accountDetails = null;
+    } catch (ex) {
+      this.log('could not get account details, will use this profile as unspecified; ' +
+        '${ex.message || ex}', 'warning');
     }
 
+    // get profile type and forbid invalid type transitions
     let profileType = (accountDetails && accountDetails.profileType) ?
       accountDetails.profileType : 'unspecified';
-
-    // get profile type and forbid invalid type transitions
     if (data.accountDetails &&
         data.accountDetails.profileType &&
         data.accountDetails.profileType !== profileType &&

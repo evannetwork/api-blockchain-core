@@ -2,8 +2,10 @@
 
 ## Next Version
 ### Features
+- use container logic for profile management
 
 ### Fixes
+- fix race conditions in sharings update, which could occur when sharings are updated in parallel
 
 ### Deprecations
 
