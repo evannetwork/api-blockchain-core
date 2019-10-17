@@ -19,8 +19,7 @@
 
 import KeyStore = require('../libs/eth-lightwallet/keystore');
 import Web3 = require('web3');
-// import https = require('https');
-import http = require('http');
+import https = require('https');
 
 import {
   Logger,
@@ -204,10 +203,8 @@ export class Onboarding extends Logger {
         });
 
         const reqOptions = {
-          // hostname: `agents${network === 'testcore' ? '.test' : ''}.evan.network`,
-          hostname: `192.168.100.166`,
-          // port: 443,
-          port: 8080,
+          hostname: `agents${network === 'testcore' ? '.test' : ''}.evan.network`,
+          port: 443,
           path: '/api/smart-agents/profile/create',
           method: 'POST',
           headers: {
@@ -216,7 +213,7 @@ export class Onboarding extends Logger {
           }
         };
 
-        const reqProfileReq = http.request(reqOptions, function (res) {
+        const reqProfileReq = https.request(reqOptions, function (res) {
           const chunks = [];
 
           res.on('data', function (chunk) {
@@ -337,8 +334,7 @@ export class Onboarding extends Logger {
         }
       }
 
-      // const req = https.request(options, (res) => {
-      const req = http.request(options, (res) => {
+      const req = https.request(options, (res) => {
         res.on('data', () => {
           resolve()
         })
