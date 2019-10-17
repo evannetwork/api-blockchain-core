@@ -21,7 +21,6 @@ import 'mocha';
 import { expect, use } from 'chai';
 import { isEqual } from 'lodash';
 import chaiAsPromised = require('chai-as-promised');
-// import IpfsServer = require('ipfs');
 
 import {
   ContractLoader,
@@ -32,18 +31,13 @@ import {
 
 import { accountMap } from '../test/accounts';
 import { accounts } from '../test/accounts';
-import { Aes } from '../encryption/aes';
 import { configTestcore as config } from '../config-testcore';
 import { createDefaultRuntime } from '../runtime';
-import { CryptoProvider } from '../encryption/crypto-provider';
 import { DataContract } from '../contracts/data-contract/data-contract';
-import { Ipld } from '../dfs/ipld';
 import { KeyExchange } from '../keyExchange';
 import { Mailbox } from '../mailbox';
 import { Onboarding } from '../onboarding';
-import { Profile } from './profile';
 import { RightsAndRoles } from '../contracts/rights-and-roles';
-import { Runtime } from '../runtime';
 import { TestUtils } from '../test/test-utils';
 
 use(chaiAsPromised);
@@ -56,7 +50,6 @@ describe('Profile helper', function() {
   let ensName;
   let web3;
   let dataContract: DataContract;
-  let contractLoader: ContractLoader;
   let keyExchange;
   let mailbox;
   let executor;
@@ -74,17 +67,11 @@ describe('Profile helper', function() {
     img: 'img',
     primaryColor: '#FFFFFF',
   };
-  const emptyProfile = {
-    bookmarkedDapps: {},
-    addressBook: {},
-    contracts: {}
-  }
 
   before(async () => {
     web3 = TestUtils.getWeb3();
     ipfs = await TestUtils.getIpfs();
     ipld = await TestUtils.getIpld(ipfs);
-    contractLoader = await TestUtils.getContractLoader(web3);
     dataContract = await TestUtils.getDataContract(web3, ipld.ipfs)
     nameResolver = await TestUtils.getNameResolver(web3);
     ensName = nameResolver.getDomainName(config.nameResolver.domains.profile);
@@ -190,12 +177,10 @@ describe('Profile helper', function() {
   it('should be able to set and load a value for a given users profile contract from the blockchain', async () => {
     const address = await nameResolver.getAddress(ensName);
     const contract = nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
-    const label = await nameResolver.sha3('profiles');
     const valueToSet = '0x0000000000000000000000000000000000000004';
     let hash;
     const from = Object.keys(accountMap)[0];
     hash = await nameResolver.executor.executeContractCall(contract, 'getProfile', from, { from, });
-    const internalSigner = nameResolver.executor.signer as SignerInternal;
     await nameResolver.executor.executeContractTransaction(
       contract,
       'setMyProfile',
@@ -216,7 +201,6 @@ describe('Profile helper', function() {
     await profile.addDappBookmark('sample1.test', sampleDesc);
 
     // store
-    const from = Object.keys(accountMap)[0];
     await profile.storeForAccount(profile.treeLabels.addressBook);
 
     // load
@@ -268,8 +252,6 @@ describe('Profile helper', function() {
     // store tree to contract
     await profile.storeForAccount(profile.treeLabels.bookmarkedDapps);
 
-    // load
-    const newProfile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     // test contacts
     expect(await profile.getDappBookmark('sample1.test')).to.deep.eq(sampleDesc);
   });
@@ -294,9 +276,6 @@ describe('Profile helper', function() {
       keyProvider: TestUtils.getKeyProvider(),
     };
     const customKeyExchange = new KeyExchange(keyExchangeOptions);
-
-    // store
-    const from = Object.keys(accountMap)[0];
 
     await profile.createProfile(customKeyExchange.getDiffieHellmanKeys());
 
@@ -366,7 +345,7 @@ describe('Profile helper', function() {
     await profile1.addProfileKey(profileReceiver, 'alias', 'sample user 1');
     await profile1.addPublicKey(dhKeys.publicKey.toString('hex'));
     const sharing = await dataContract.createSharing(profileReceiver);
-    const fileHashes = <any>{};
+    const fileHashes: any = {};
     fileHashes[profile1.treeLabels.addressBook] = await profile1.storeToIpld(profile1.treeLabels.addressBook);
     fileHashes[profile1.treeLabels.publicKey] = await profile1.storeToIpld(profile1.treeLabels.publicKey);
     fileHashes.sharingsHash = sharing.sharingsHash;
@@ -428,7 +407,7 @@ describe('Profile helper', function() {
     const address = await nameResolver.getAddress(profileIndexDomain);
     const contract = nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
     await executor.executeContractTransaction(
-         contract, 'setMyProfile', { from: profileReceiver, autoGas: 1.1, }, profileContract.options.address);
+      contract, 'setMyProfile', { from: profileReceiver, autoGas: 1.1, }, profileContract.options.address);
     // can read own keys
     const profile2 = await TestUtils.getProfile(web3, ipfs, await getKeyIpld(profileReceiver), profileReceiver);
 

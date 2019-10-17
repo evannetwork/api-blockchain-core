@@ -17,44 +17,38 @@
   the following URL: https://evan.network/license/
 */
 
+import KeyStore = require('../libs/eth-lightwallet/keystore');
+import Web3 = require('web3');
+// import https = require('https');
+import http = require('http');
+
 import {
-  ContractLoader,
   Logger,
   LoggerOptions,
-  NameResolver,
-  KeyProvider,
 } from '@evan.network/dbcp';
 
-import { CryptoProvider } from './encryption/crypto-provider';
 import { Ipfs } from './dfs/ipfs';
-import { Ipld } from './dfs/ipld';
 import { Mail, Mailbox } from './mailbox';
-import { promisify } from './common/utils';
 import { createDefaultRuntime } from './runtime';
-
-const KeyStore = require('../libs/eth-lightwallet/keystore');
-const Web3 = require('web3');
-// const https = require('https');
-const http = require('http');
 
 /**
  * mail that will be sent to invitee
  */
 export interface InvitationMail {
-  body: string,
-  subject: string,
-  to: string,
-  fromAlias?: string,
-  lang?: string,
+  body: string;
+  subject: string;
+  to: string;
+  fromAlias?: string;
+  lang?: string;
 }
 
 /**
  * parameters for Onboarding constructor
  */
 export interface OnboardingOptions extends LoggerOptions {
-  mailbox: Mailbox,
-  smartAgentId: string,
-  executor: any,
+  mailbox: Mailbox;
+  smartAgentId: string;
+  executor: any;
 }
 
 /**
@@ -82,9 +76,8 @@ export class Onboarding extends Logger {
    *
    * @return     {Promise<any>}   resolved when done
    */
-  public static async createNewProfile(mnemonic: string, password: string, network = 'testcore'): Promise<any> {
-    console.log(mnemonic)
-    console.log(password)
+  public static async createNewProfile(mnemonic: string, password: string, network = 'testcore'
+  ): Promise<any> {
     if (!mnemonic) {
       throw new Error(`mnemonic is a required parameter!`);
     }
@@ -98,12 +91,13 @@ export class Onboarding extends Logger {
     }
 
     const web3Provider = `wss://${network}.evan.network/ws`;
-    const web3 = new Web3(web3Provider, null, { transactionConfirmationBlocks: 1 });
+    // use Web3 without its typings to avoid issues with constructor typing
+    const web3 = new (Web3 as any)(web3Provider, null, { transactionConfirmationBlocks: 1 });
 
-    const runtimeConfig = await Onboarding.generateRuntimeConfig(mnemonic, password, web3);
+    const runtimeConfig: any = await Onboarding.generateRuntimeConfig(mnemonic, password, web3);
 
-    const accountId = Object.keys((<any>runtimeConfig).accountMap)[0];
-    const privateKey = (<any>runtimeConfig).accountMap[accountId];
+    const accountId = Object.keys((runtimeConfig).accountMap)[0];
+    const privateKey = (runtimeConfig).accountMap[accountId];
     const ipfs = new Ipfs({
       dfsConfig: {
         host: `ipfs${network === 'testcore' ? '.test' : ''}.evan.network`,
@@ -118,7 +112,8 @@ export class Onboarding extends Logger {
 
     const runtime = await createDefaultRuntime(web3, ipfs, runtimeConfig);
 
-    await Onboarding.createOfflineProfile(runtime, 'Generated via API', accountId, privateKey, network)
+    await Onboarding.createOfflineProfile(
+      runtime, 'Generated via API', accountId, privateKey, network)
 
     return {
       mnemonic,
@@ -136,7 +131,7 @@ export class Onboarding extends Logger {
    */
   public static async generateRuntimeConfig(mnemonic: string, password: string, web3: any) {
     // generate a new vault from the mnemnonic and the password
-    const vault = await new Promise((res) => {
+    const vault: any = await new Promise((res) => {
       KeyStore.createVault({
         seedPhrase: mnemonic,
         password: password,
@@ -147,13 +142,13 @@ export class Onboarding extends Logger {
     });
     // get the derived key
     const pwDerivedKey = await new Promise((res) => {
-      (<any>vault).keyFromPassword(password, (err, result) => res(result));
+      (vault).keyFromPassword(password, (err, result) => res(result));
     });
     // generate one initial address
-    (<any>vault).generateNewAddress(pwDerivedKey, 1);
+    (vault).generateNewAddress(pwDerivedKey, 1);
 
-    const accountId = web3.utils.toChecksumAddress((<any>vault).getAddresses()[0]);
-    const pKey = (<any>vault).exportPrivateKey(accountId.toLowerCase(), pwDerivedKey);
+    const accountId = web3.utils.toChecksumAddress((vault).getAddresses()[0]);
+    const pKey = (vault).exportPrivateKey(accountId.toLowerCase(), pwDerivedKey);
 
     const sha9Account = web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
       [web3.utils.soliditySha3(accountId), web3.utils.soliditySha3(accountId)].sort());
@@ -201,7 +196,7 @@ export class Onboarding extends Logger {
       const signature = runtime.web3.eth.accounts.sign('Gimme Gimme Gimme!', pk).signature;
       // request a new profile contract
 
-      const requestedProfile = await new Promise((resolve, rej) => {
+      const requestedProfile = await new Promise((resolve) => {
 
         const requestProfilePayload = JSON.stringify({
           accountId: accountId,
@@ -239,7 +234,8 @@ export class Onboarding extends Logger {
 
 
       const dhKeys = runtime.keyExchange.getDiffieHellmanKeys();
-      await profile.addContactKey(runtime.activeAccount, 'dataKey', dhKeys.privateKey.toString('hex'));
+      await profile.addContactKey(
+        runtime.activeAccount, 'dataKey', dhKeys.privateKey.toString('hex'));
       await profile.addProfileKey(runtime.activeAccount, 'alias', alias);
       await profile.addPublicKey(dhKeys.publicKey.toString('hex'));
 
@@ -249,16 +245,21 @@ export class Onboarding extends Logger {
       const fileHashes: any = {};
 
 
-      const cryptorAes = runtime.cryptoProvider.getCryptorByCryptoAlgo(runtime.dataContract.options.defaultCryptoAlgo);
-      const hashCryptor = runtime.cryptoProvider.getCryptorByCryptoAlgo(runtime.dataContract.cryptoAlgorithHashes);
+      const cryptorAes = runtime.cryptoProvider.getCryptorByCryptoAlgo(
+        runtime.dataContract.options.defaultCryptoAlgo);
+      const hashCryptor = runtime.cryptoProvider.getCryptorByCryptoAlgo(
+        runtime.dataContract.cryptoAlgorithHashes);
       const [accountDetailsContentKey, hashKey, blockNr] = await Promise.all(
         [cryptorAes.generateKey(), hashCryptor.generateKey(), runtime.web3.eth.getBlockNumber()]);
 
       const sharings =  {};
-      await runtime.sharing.extendSharings(sharings, accountId, accountId, 'accountDetails', blockNr, accountDetailsContentKey);
-      await runtime.sharing.extendSharings(sharings, accountId, accountId, '*', 'hashKey', hashKey);
+      await runtime.sharing.extendSharings(
+        sharings, accountId, accountId, 'accountDetails', blockNr, accountDetailsContentKey);
+      await runtime.sharing.extendSharings(
+        sharings, accountId, accountId, '*', 'hashKey', hashKey);
 
-      let sharingsHash = await runtime.dfs.add('sharing', Buffer.from(JSON.stringify(sharings), runtime.dataContract.encodingUnencrypted));
+      let sharingsHash = await runtime.dfs.add(
+        'sharing', Buffer.from(JSON.stringify(sharings), runtime.dataContract.encodingUnencrypted));
 
       const accountDetails = await cryptorAes.encrypt({
         accountName: alias
@@ -268,9 +269,11 @@ export class Onboarding extends Logger {
 
       const envelope = {
         private: accountDetails.toString('hex'),
-        cryptoInfo: cryptorAes.getCryptoInfo(runtime.nameResolver.soliditySha3((requestedProfile as any).contractId)),
+        cryptoInfo: cryptorAes.getCryptoInfo(
+          runtime.nameResolver.soliditySha3((requestedProfile as any).contractId)),
       };
-      let accountDetailsHash = await runtime.dfs.add('accountDetails', Buffer.from(JSON.stringify(envelope)));
+      let accountDetailsHash = await runtime.dfs.add(
+        'accountDetails', Buffer.from(JSON.stringify(envelope)));
       profile.ipld.hashLog.push(`${ accountDetailsHash.toString('hex') }`)
       fileHashes.properties  = {
         entries: {
@@ -283,19 +286,29 @@ export class Onboarding extends Logger {
       fileHashes.properties.entries.accountDetails = `0x${ fileHashes.properties.entries.accountDetails
         .toString('hex') }`;
 
-      fileHashes.properties.entries[profile.treeLabels.addressBook] = await profile.storeToIpld(profile.treeLabels.addressBook);
-      fileHashes.properties.entries[profile.treeLabels.publicKey] = await profile.storeToIpld(profile.treeLabels.publicKey);
+      fileHashes.properties.entries[profile.treeLabels.addressBook] =
+        await profile.storeToIpld(profile.treeLabels.addressBook);
+      fileHashes.properties.entries[profile.treeLabels.publicKey] =
+        await profile.storeToIpld(profile.treeLabels.publicKey);
       fileHashes.sharingsHash = sharingsHash;
       fileHashes.properties.entries[profile.treeLabels.addressBook] = await cryptor.encrypt(
         Buffer.from(fileHashes.properties.entries[profile.treeLabels.addressBook].substr(2), 'hex'),
         { key: hashKey, }
       )
-      fileHashes.properties.entries[profile.treeLabels.addressBook] = `0x${fileHashes.properties.entries[profile.treeLabels.addressBook].toString('hex')}`;
+      fileHashes.properties.entries[profile.treeLabels.addressBook] =
+        `0x${fileHashes.properties.entries[profile.treeLabels.addressBook].toString('hex')}`;
       // keep only unique values, ignore addressbook (encrypted hash)
-      fileHashes.ipfsHashes = [...profile.ipld.hashLog, ...Object.keys(fileHashes.properties.entries).map(key => fileHashes.properties.entries[key])];
+      fileHashes.ipfsHashes = [
+        ...profile.ipld.hashLog,
+        ...Object.keys(fileHashes.properties.entries)
+          .map(key => fileHashes.properties.entries[key]),
+      ];
       fileHashes.ipfsHashes = (
         (arrArg) => arrArg.filter(
-          (elem, pos, arr) => arr.indexOf(elem) === pos && (elem !== fileHashes.properties.entries[profile.treeLabels.addressBook] && elem !== fileHashes.properties.entries.accountDetails)
+          (elem, pos, arr) =>
+            arr.indexOf(elem) === pos &&
+            (elem !== fileHashes.properties.entries[profile.treeLabels.addressBook] &&
+              elem !== fileHashes.properties.entries.accountDetails)
         )
       )(fileHashes.ipfsHashes);
       // clear hash log
@@ -326,7 +339,7 @@ export class Onboarding extends Logger {
 
       // const req = https.request(options, (res) => {
       const req = http.request(options, (res) => {
-        res.on('data', (d) => {
+        res.on('data', () => {
           resolve()
         })
       })

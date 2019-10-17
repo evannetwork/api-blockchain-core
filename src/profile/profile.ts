@@ -17,10 +17,6 @@
   the following URL: https://evan.network/license/
 */
 
-import * as Throttle from 'promise-parallel-throttle';
-import crypto = require('crypto');
-import { merge, cloneDeep, isEqual } from 'lodash';
-
 import {
   ContractLoader,
   DfsInterface,
@@ -30,14 +26,12 @@ import {
   obfuscate,
 } from '@evan.network/dbcp';
 
-
 import * as accountTypes from './types/types';
-import { Container, ContainerOptions } from '../contracts/digital-twin/container';
+import { Container } from '../contracts/digital-twin/container';
 import { CryptoProvider } from '../encryption/crypto-provider';
 import { DataContract } from '../contracts/data-contract/data-contract';
 import { Description } from '../shared-description';
 import { Ipld } from '../dfs/ipld';
-import { KeyExchange } from '../keyExchange';
 import { NameResolver } from '../name-resolver';
 import { RightsAndRoles, ModificationType, PropertyType } from '../contracts/rights-and-roles';
 import { Sharing } from '../contracts/sharing';
@@ -46,18 +40,18 @@ import { Sharing } from '../contracts/sharing';
  * parameters for Profile constructor
  */
 export interface ProfileOptions extends LoggerOptions {
-  accountId: string,
-  contractLoader: ContractLoader,
-  description: Description,
-  cryptoProvider: CryptoProvider,
-  dataContract: DataContract,
-  defaultCryptoAlgo: string,
-  dfs: DfsInterface,
-  executor: Executor,
-  ipld: Ipld,
-  nameResolver: NameResolver,
-  rightsAndRoles: RightsAndRoles,
-  sharing: Sharing,
+  accountId: string;
+  contractLoader: ContractLoader;
+  description: Description;
+  cryptoProvider: CryptoProvider;
+  dataContract: DataContract;
+  defaultCryptoAlgo: string;
+  dfs: DfsInterface;
+  executor: Executor;
+  ipld: Ipld;
+  nameResolver: NameResolver;
+  rightsAndRoles: RightsAndRoles;
+  sharing: Sharing;
 }
 
 
@@ -65,11 +59,11 @@ export interface ProfileOptions extends LoggerOptions {
  * bookmark to a dapp
  */
 export interface DappBookmark {
-  description: string,
-  img: string,
-  primaryColor: string,
-  secondaryColor?: string,
-  title: string,
+  description: string;
+  img: string;
+  primaryColor: string;
+  secondaryColor?: string;
+  title: string;
 }
 
 
@@ -148,7 +142,9 @@ export class Profile extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   async addContactKey(address: string, context: string, key: string): Promise<void> {
-    this.log(`add contact key: account "${address}", context "${context}", key "${obfuscate(key)}"`, 'debug');
+    this.log(
+      `add contact key: account "${address}", context "${context}", key "${obfuscate(key)}"`,
+      'debug');
     this.ensureTree('addressBook');
 
     let addressHash;
@@ -165,7 +161,8 @@ export class Profile extends Logger {
     if (!keysSet) {
       await this.ipld.set(this.trees['addressBook'], 'keys', {}, true);
     }
-    const contactSet = await this.ipld.getLinkedGraph(this.trees['addressBook'], `keys/${addressHash}`);
+    const contactSet = await this.ipld.getLinkedGraph(
+      this.trees['addressBook'], `keys/${addressHash}`);
     if (!contactSet) {
       await this.ipld.set(this.trees['addressBook'], `keys/${addressHash}`, {}, true);
     }
@@ -198,7 +195,8 @@ export class Profile extends Logger {
     await this.ipld.set(this.trees['bookmarkedDapps'], `bookmarkedDapps/${address}`, {}, true);
     const descriptionKeys = Object.keys(description);
     for (let key of descriptionKeys) {
-      await this.ipld.set(this.trees['bookmarkedDapps'], `bookmarkedDapps/${address}/${key}`, description[key], true);
+      await this.ipld.set(
+        this.trees['bookmarkedDapps'], `bookmarkedDapps/${address}/${key}`, description[key], true);
     }
   }
 
@@ -216,7 +214,8 @@ export class Profile extends Logger {
     if (!profileSet) {
       await this.ipld.set(this.trees['addressBook'], `profile`, {}, true);
     }
-    const addressSet = await this.ipld.getLinkedGraph(this.trees['addressBook'], `profile/${address}`);
+    const addressSet = await this.ipld.getLinkedGraph(
+      this.trees['addressBook'], `profile/${address}`);
     if (!addressSet) {
       await this.ipld.set(this.trees['addressBook'], `profile/${address}`, {}, true);
     }
@@ -242,7 +241,8 @@ export class Profile extends Logger {
    */
   async createProfile(keys: any): Promise<void> {
     // create new profile contract and store in profile index
-    const factoryDomain = this.nameResolver.getDomainName(this.nameResolver.config.domains.profileFactory);
+    const factoryDomain = this.nameResolver.getDomainName(
+      this.nameResolver.config.domains.profileFactory);
     this.profileContract = await this.dataContract.create(factoryDomain, this.activeAccount);
     this.profileContainer = new Container(
       { ...this.options, verifications: null, web3: this.options.executor.web3 },
@@ -252,9 +252,14 @@ export class Profile extends Logger {
       (async () => {
         const ensName = this.nameResolver.getDomainName(this.nameResolver.config.domains.profile);
         const address = await this.nameResolver.getAddress(ensName);
-        const contract = this.nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
+        const contract = this.nameResolver.contractLoader.loadContract(
+          'ProfileIndexInterface', address);
         await this.executor.executeContractTransaction(
-          contract, 'setMyProfile', { from: this.activeAccount, autoGas: 1.1, }, this.profileContract.options.address);
+          contract,
+          'setMyProfile',
+          { from: this.activeAccount, autoGas: 1.1, },
+          this.profileContract.options.address,
+        );
       })(),
       (async () => {
         await this.addContactKey(this.activeAccount, 'dataKey', keys.privateKey.toString('hex'));
@@ -276,7 +281,8 @@ export class Profile extends Logger {
     try {
       const ensName = this.nameResolver.getDomainName(this.nameResolver.config.domains.profile);
       const address = await this.nameResolver.getAddress(ensName);
-      const indexContract = this.nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
+      const indexContract = this.nameResolver.contractLoader.loadContract(
+        'ProfileIndexInterface', address);
       const profileContractAddress = await this.executor.executeContractCall(
         indexContract, 'getProfile', this.activeAccount, { from: this.activeAccount, });
       return profileContractAddress !== '0x0000000000000000000000000000000000000000';
@@ -371,7 +377,8 @@ export class Profile extends Logger {
     if (!this.trees[this.treeLabels.addressBook]) {
       await this.loadForAccount(this.treeLabels.addressBook);
     }
-    return this.ipld.getLinkedGraph(this.trees[this.treeLabels.addressBook], `keys/${addressHash}/${context}`);
+    return this.ipld.getLinkedGraph(
+      this.trees[this.treeLabels.addressBook], `keys/${addressHash}/${context}`);
   }
 
   /**
@@ -396,7 +403,8 @@ export class Profile extends Logger {
     if (!this.trees[this.treeLabels.contracts]) {
       await this.loadForAccount(this.treeLabels.contracts);
     }
-    return this.ipld.getLinkedGraph(this.trees[this.treeLabels.contracts], this.treeLabels.contracts);
+    return this.ipld.getLinkedGraph(
+      this.trees[this.treeLabels.contracts], this.treeLabels.contracts);
   }
 
   /**
@@ -409,7 +417,8 @@ export class Profile extends Logger {
     if (!this.trees[this.treeLabels.bookmarkedDapps]) {
       await this.loadForAccount(this.treeLabels.bookmarkedDapps);
     }
-    return this.ipld.getLinkedGraph(this.trees[this.treeLabels.bookmarkedDapps], `bookmarkedDapps/${address}`);
+    return this.ipld.getLinkedGraph(
+      this.trees[this.treeLabels.bookmarkedDapps], `bookmarkedDapps/${address}`);
   }
 
   /**
@@ -480,7 +489,8 @@ export class Profile extends Logger {
     if (!this.trees[this.treeLabels.addressBook]) {
       await this.loadForAccount(this.treeLabels.addressBook);
     }
-    return this.ipld.getLinkedGraph(this.trees[this.treeLabels.addressBook], `profile/${address}/${key}`);
+    return this.ipld.getLinkedGraph(
+      this.trees[this.treeLabels.addressBook], `profile/${address}/${key}`);
   }
 
   /**
@@ -521,16 +531,18 @@ export class Profile extends Logger {
     if (!this.profileContract) {
       const ensName = this.nameResolver.getDomainName(this.nameResolver.config.domains.profile);
       const address = await this.nameResolver.getAddress(ensName);
-      const indexContract = this.nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
+      const indexContract =
+        this.nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
       const profileContractAddress = await this.executor.executeContractCall(
         indexContract, 'getProfile', this.activeAccount, { from: this.activeAccount, });
       if (profileContractAddress === '0x0000000000000000000000000000000000000000') {
         throw new Error(`no profile found for account "${this.activeAccount}"`);
       } else {
         const contractAddress = profileContractAddress.length === 66 ?
-          this.executor.web3.utils.toChecksumAddress(profileContractAddress.substr(0, 42)) : profileContractAddress;
-        this.profileContract = this.contractLoader.loadContract('DataContractInterface', contractAddress);
-        // TOOD: align runtime/options properly
+          this.executor.web3.utils.toChecksumAddress(profileContractAddress.substr(0, 42)) :
+          profileContractAddress;
+        this.profileContract =
+          this.contractLoader.loadContract('DataContractInterface', contractAddress);
         this.profileContainer = new Container(
           { ...this.options, verifications: null, web3: this.options.executor.web3 },
           { accountId: this.activeAccount, address: this.profileContract.address },
@@ -540,9 +552,11 @@ export class Profile extends Logger {
     if (tree) {
       let hash;
       if (tree === this.treeLabels.publicKey) {
-        hash = await this.dataContract.getEntry(this.profileContract, tree, this.activeAccount, false, false);
+        hash = await this.dataContract.getEntry(
+          this.profileContract, tree, this.activeAccount, false, false);
       } else {
-        hash = await this.dataContract.getEntry(this.profileContract, tree, this.activeAccount, false, true);
+        hash = await this.dataContract.getEntry(
+          this.profileContract, tree, this.activeAccount, false, true);
       }
       if (hash === '0x0000000000000000000000000000000000000000000000000000000000000000') {
         this.trees[tree] = {
@@ -569,7 +583,7 @@ export class Profile extends Logger {
   async loadFromIpld(tree: string, ipldIpfsHash: string): Promise<Profile> {
     let loaded;
     try {
-     loaded = await this.ipld.getLinkedGraph(ipldIpfsHash);
+      loaded = await this.ipld.getLinkedGraph(ipldIpfsHash);
     } catch (e) {
       this.log(`could not load profile from ipld ${ e.message || e }`, 'error');
       loaded = {
@@ -804,19 +818,25 @@ export class Profile extends Logger {
   async storeForAccount(tree: string, ipldHash?: string): Promise<void> {
     await this.ensurePropertyInProfile(tree);
     if (ipldHash) {
-      this.log(`store tree "${tree}" with given hash to profile contract for account "${this.activeAccount}"`);
+      this.log(`store tree "${tree}" with given hash to profile contract for account ` +
+        `"${this.activeAccount}"`);
       if (tree === this.treeLabels.publicKey) {
-        await this.dataContract.setEntry(this.profileContract, tree, ipldHash, this.activeAccount, false, false);
+        await this.dataContract.setEntry(
+          this.profileContract, tree, ipldHash, this.activeAccount, false, false);
       } else {
-        await this.dataContract.setEntry(this.profileContract, tree, ipldHash, this.activeAccount, false, false);
+        await this.dataContract.setEntry(
+          this.profileContract, tree, ipldHash, this.activeAccount, false, false);
       }
     } else {
-      this.log(`store tree "${tree}" to ipld and then to profile contract for account "${this.activeAccount}"`);
+      this.log(`store tree "${tree}" to ipld and then to profile contract for account ` +
+        `"${this.activeAccount}"`);
       const stored = await this.storeToIpld(tree);
       if (tree === this.treeLabels.publicKey) {
-        await this.dataContract.setEntry(this.profileContract, tree, stored, this.activeAccount, false, false);
+        await this.dataContract.setEntry(
+          this.profileContract, tree, stored, this.activeAccount, false, false);
       } else {
-        await this.dataContract.setEntry(this.profileContract, tree, stored, this.activeAccount, false, true);
+        await this.dataContract.setEntry(
+          this.profileContract, tree, stored, this.activeAccount, false, true);
       }
       await this.loadForAccount(tree);
     }
@@ -842,7 +862,7 @@ export class Profile extends Logger {
     const hash = this.options.rightsAndRoles.getOperationCapabilityHash(
       tree, PropertyType.Entry, ModificationType.Set);
     if (!await this.options.rightsAndRoles.canCallOperation(
-        this.profileContract.options.address, this.activeAccount, hash)) {
+      this.profileContract.options.address, this.activeAccount, hash)) {
       await this.options.rightsAndRoles.setOperationPermission(
         this.profileContract,
         this.activeAccount,
