@@ -34,7 +34,8 @@ import { createDefaultRuntime } from './runtime';
 
 const KeyStore = require('../libs/eth-lightwallet/keystore');
 const Web3 = require('web3');
-const https = require('https');
+// const https = require('https');
+const http = require('http');
 
 /**
  * mail that will be sent to invitee
@@ -82,7 +83,8 @@ export class Onboarding extends Logger {
    * @return     {Promise<any>}   resolved when done
    */
   public static async createNewProfile(mnemonic: string, password: string, network = 'testcore'): Promise<any> {
-
+    console.log(mnemonic)
+    console.log(password)
     if (!mnemonic) {
       throw new Error(`mnemonic is a required parameter!`);
     }
@@ -116,7 +118,7 @@ export class Onboarding extends Logger {
 
     const runtime = await createDefaultRuntime(web3, ipfs, runtimeConfig);
 
-    await Onboarding._createOfflineProfile(runtime, 'Generated via API', accountId, privateKey, network)
+    await Onboarding.createOfflineProfile(runtime, 'Generated via API', accountId, privateKey, network)
 
     return {
       mnemonic,
@@ -181,7 +183,7 @@ export class Onboarding extends Logger {
    * @param      {string}  pKey       private key
    * @param      {string}  network    selected network (testcore/core) - defaults to testcore
    */
-  private static async _createOfflineProfile(
+  public static async createOfflineProfile(
     runtime: any,
     alias: string,
     accountId: string,
@@ -194,44 +196,127 @@ export class Onboarding extends Logger {
       profile.ipld.ipfs.disablePin = true;
       // clear hash log
       profile.ipld.hashLog = [];
+
+      const pk = '0x' + pKey;
+      const signature = runtime.web3.eth.accounts.sign('Gimme Gimme Gimme!', pk).signature;
+      // request a new profile contract
+
+      const requestedProfile = await new Promise((resolve, rej) => {
+
+        const requestProfilePayload = JSON.stringify({
+          accountId: accountId,
+          signature: signature,
+        });
+
+        const reqOptions = {
+          // hostname: `agents${network === 'testcore' ? '.test' : ''}.evan.network`,
+          hostname: `192.168.100.166`,
+          // port: 443,
+          port: 8080,
+          path: '/api/smart-agents/profile/create',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': requestProfilePayload.length
+          }
+        };
+
+        const reqProfileReq = http.request(reqOptions, function (res) {
+          const chunks = [];
+
+          res.on('data', function (chunk) {
+            chunks.push(chunk);
+          });
+
+          res.on('end', function () {
+            const body = Buffer.concat(chunks);
+            resolve(JSON.parse(body.toString()))
+          });
+        });
+        reqProfileReq.write(requestProfilePayload);
+        reqProfileReq.end();
+      })
+
+
       const dhKeys = runtime.keyExchange.getDiffieHellmanKeys();
       await profile.addContactKey(runtime.activeAccount, 'dataKey', dhKeys.privateKey.toString('hex'));
       await profile.addProfileKey(runtime.activeAccount, 'alias', alias);
       await profile.addPublicKey(dhKeys.publicKey.toString('hex'));
-      const sharing = await runtime.dataContract.createSharing(runtime.activeAccount);
-      const fileHashes: any = {};
-      fileHashes[profile.treeLabels.addressBook] = await profile.storeToIpld(profile.treeLabels.addressBook);
-      fileHashes[profile.treeLabels.publicKey] = await profile.storeToIpld(profile.treeLabels.publicKey);
-      fileHashes.sharingsHash = sharing.sharingsHash;
+
+
+      // set initial structure by creating addressbook structure and saving it to ipfs
       const cryptor = runtime.cryptoProvider.getCryptorByCryptoAlgo('aesEcb');
-      fileHashes[profile.treeLabels.addressBook] = await cryptor.encrypt(
-        Buffer.from(fileHashes[profile.treeLabels.addressBook].substr(2), 'hex'),
-        { key: sharing.hashKey, }
+      const fileHashes: any = {};
+
+
+      const cryptorAes = runtime.cryptoProvider.getCryptorByCryptoAlgo(runtime.dataContract.options.defaultCryptoAlgo);
+      const hashCryptor = runtime.cryptoProvider.getCryptorByCryptoAlgo(runtime.dataContract.cryptoAlgorithHashes);
+      const [accountDetailsContentKey, hashKey, blockNr] = await Promise.all(
+        [cryptorAes.generateKey(), hashCryptor.generateKey(), runtime.web3.eth.getBlockNumber()]);
+
+      const sharings =  {};
+      await runtime.sharing.extendSharings(sharings, accountId, accountId, 'accountDetails', blockNr, accountDetailsContentKey);
+      await runtime.sharing.extendSharings(sharings, accountId, accountId, '*', 'hashKey', hashKey);
+
+      let sharingsHash = await runtime.dfs.add('sharing', Buffer.from(JSON.stringify(sharings), runtime.dataContract.encodingUnencrypted));
+
+      const accountDetails = await cryptorAes.encrypt({
+        accountName: alias
+      }, {
+        key: accountDetailsContentKey
+      });
+
+      const envelope = {
+        private: accountDetails.toString('hex'),
+        cryptoInfo: cryptorAes.getCryptoInfo(runtime.nameResolver.soliditySha3((requestedProfile as any).contractId)),
+      };
+      let accountDetailsHash = await runtime.dfs.add('accountDetails', Buffer.from(JSON.stringify(envelope)));
+      profile.ipld.hashLog.push(`${ accountDetailsHash.toString('hex') }`)
+      fileHashes.properties  = {
+        entries: {
+          accountDetails: await cryptor.encrypt(
+            Buffer.from(accountDetailsHash.substr(2), 'hex'),
+            { key: hashKey, })
+        }
+      }
+
+      fileHashes.properties.entries.accountDetails = `0x${ fileHashes.properties.entries.accountDetails
+        .toString('hex') }`;
+
+      fileHashes.properties.entries[profile.treeLabels.addressBook] = await profile.storeToIpld(profile.treeLabels.addressBook);
+      fileHashes.properties.entries[profile.treeLabels.publicKey] = await profile.storeToIpld(profile.treeLabels.publicKey);
+      fileHashes.sharingsHash = sharingsHash;
+      fileHashes.properties.entries[profile.treeLabels.addressBook] = await cryptor.encrypt(
+        Buffer.from(fileHashes.properties.entries[profile.treeLabels.addressBook].substr(2), 'hex'),
+        { key: hashKey, }
       )
-      fileHashes[profile.treeLabels.addressBook] = `0x${fileHashes[profile.treeLabels.addressBook].toString('hex')}`;
+      fileHashes.properties.entries[profile.treeLabels.addressBook] = `0x${fileHashes.properties.entries[profile.treeLabels.addressBook].toString('hex')}`;
       // keep only unique values, ignore addressbook (encrypted hash)
-      const addressBookHash = fileHashes[profile.treeLabels.addressBook];
-      fileHashes.ipfsHashes = [...profile.ipld.hashLog, ...Object.keys(fileHashes).map(key => fileHashes[key])];
+      fileHashes.ipfsHashes = [...profile.ipld.hashLog, ...Object.keys(fileHashes.properties.entries).map(key => fileHashes.properties.entries[key])];
       fileHashes.ipfsHashes = (
         (arrArg) => arrArg.filter(
-          (elem, pos, arr) => arr.indexOf(elem) === pos && elem !== addressBookHash)
-        )(fileHashes.ipfsHashes);
+          (elem, pos, arr) => arr.indexOf(elem) === pos && (elem !== fileHashes.properties.entries[profile.treeLabels.addressBook] && elem !== fileHashes.properties.entries.accountDetails)
+        )
+      )(fileHashes.ipfsHashes);
       // clear hash log
       profile.ipld.hashLog = [];
       // re-enable pinning
       profile.ipld.ipfs.disablePin = false;
 
-      const pk = '0x' + pKey;
-      const signature = runtime.web3.eth.accounts.sign('Gimme Gimme Gimme!', pk).signature;
+
       const data = JSON.stringify({
         accountId: accountId,
         signature: signature,
         profileInfo: fileHashes,
+        accessToken: (requestedProfile as any).accessToken,
+        contractId: (requestedProfile as any).contractId,
       })
       const options = {
-        hostname: `agents${network === 'testcore' ? '.test' : ''}.evan.network`,
-        port: 443,
-        path: '/api/smart-agents/faucet/handout',
+        // hostname: `agents${network === 'testcore' ? '.test' : ''}.evan.network`,
+        hostname: `192.168.100.166`,
+        // port: 443,
+        port: 8080,
+        path: '/api/smart-agents/profile/fill',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -239,7 +324,8 @@ export class Onboarding extends Logger {
         }
       }
 
-      const req = https.request(options, (res) => {
+      // const req = https.request(options, (res) => {
+      const req = http.request(options, (res) => {
         res.on('data', (d) => {
           resolve()
         })
