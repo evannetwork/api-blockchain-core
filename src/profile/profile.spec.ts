@@ -454,11 +454,10 @@ describe('Profile helper', function() {
     await rightsAndRoles.transferOwnership(profileContract, profileReceiver, profileTestUser);
   });
 
-  describe.skip('Handle data contract entries in profile', function() {
+  describe('Handle data contract entries in profile', function() {
     const mnemonics = {
-      old: 'distance castle notable toast siren smoke gym stable goat enact abstract absorb',
-      company: 'jeans token chimney when tape enable around loop space harsh file juice',
-      device: 'green lucky purse barrel scorpion universe sorry nest walnut enact stand price',
+      company: 'place connect elite pigeon toilet song suggest primary endless science lizard tomato',
+      device: 'cement fatal hybrid wing always amateur top good maximum snake screen first',
     };
 
     const dateString = Date.now().toString();
@@ -496,7 +495,7 @@ describe('Profile helper', function() {
      * @param      {string}  mnemonic  mnemonic to create the runtime with
      * @param      {string}  password  password to create the runtime with
      */
-    async function getProfileRuntime(mnemonic: string, password = 'Evan1234') {
+    async function getProfileRuntime(mnemonic: string, password = 'Test1234') {
       return createDefaultRuntime(
         await TestUtils.getWeb3(),
         await TestUtils.getIpfs(),
@@ -504,27 +503,9 @@ describe('Profile helper', function() {
       );
     }
 
-    it.skip('[unsure if this should fail] cannot save properties to old profile', async () => {
-      const runtime = await getProfileRuntime(mnemonics.old);
-
-      const promise = runtime.profile.setProfileProperties({
-        accountDetails: {
-          accountName: 'Im\'m failing',
-          profileType: 'unspecified',
-        }
-      });
-      await expect(promise).to.be.rejected;
-    });
-
-    // TODO: test profile migration
-    it.skip('[unsure what should actually happen here] can migrate old profile to new one', async () => {
-      throw new Error('not implemented');
-    });
-
-    // TODO: use new profile type switch function
     it('can transform unspecified profile to company profile', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      await Onboarding.createNewProfile(newMnemonic, 'Evan1234');
+      await Onboarding.createNewProfile(newMnemonic, 'Test1234');
       const runtime = await getProfileRuntime(newMnemonic);
 
       await runtime.profile.setProfileProperties({
@@ -539,7 +520,7 @@ describe('Profile helper', function() {
 
     it('cannot transform specified profile to another profile type', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      await Onboarding.createNewProfile(newMnemonic, 'Evan1234');
+      await Onboarding.createNewProfile(newMnemonic, 'Test1234');
       const runtime = await getProfileRuntime(newMnemonic);
 
       await runtime.profile.setProfileProperties({
@@ -563,7 +544,7 @@ describe('Profile helper', function() {
 
     it('can transform unspecified profile to device profile', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      await Onboarding.createNewProfile(newMnemonic, 'Evan1234');
+      await Onboarding.createNewProfile(newMnemonic, 'Test1234');
       const runtime = await getProfileRuntime(newMnemonic);
 
       await runtime.profile.setProfileProperties({
@@ -578,7 +559,7 @@ describe('Profile helper', function() {
 
     it('can transform unspecified profile to type that does not exists', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      await Onboarding.createNewProfile(newMnemonic, 'Evan1234');
+      await Onboarding.createNewProfile(newMnemonic, 'Test1234');
       const runtime = await getProfileRuntime(newMnemonic);
 
       const promise = runtime.profile.setProfileProperties({
@@ -608,7 +589,7 @@ describe('Profile helper', function() {
       await expect(promise).to.be.rejected;
     });
 
-    it.skip('[retest with new profile] can save device profile specific properties to a profile of type device', async () => {
+    it('can save device profile specific properties to a profile of type device', async () => {
       const runtime = await getProfileRuntime(mnemonics.device);
       await runtime.profile.setProfileProperties(deviceProfileProperties);
       const [accountDetails, deviceDetails] =
@@ -618,7 +599,7 @@ describe('Profile helper', function() {
       await expect(isEqual(deviceProfileProperties.deviceDetails, deviceDetails)).to.be.true;
     });
 
-    it.skip('[retest with new profile] cannot save company profile specific properties into device profile', async () => {
+    it('cannot save company profile specific properties into device profile', async () => {
       const runtime = await getProfileRuntime(mnemonics.device);
       const promise = runtime.profile.setProfileProperties(companyProfileProperties);
       await expect(promise).to.be.rejected;
