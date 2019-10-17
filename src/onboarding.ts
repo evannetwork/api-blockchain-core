@@ -322,10 +322,8 @@ export class Onboarding extends Logger {
         contractId: (requestedProfile as any).contractId,
       })
       const options = {
-        // hostname: `agents${network === 'testcore' ? '.test' : ''}.evan.network`,
-        hostname: `192.168.100.166`,
-        // port: 443,
-        port: 8080,
+        hostname: `agents${network === 'testcore' ? '.test' : ''}.evan.network`,
+        port: 443,
         path: '/api/smart-agents/profile/fill',
         method: 'POST',
         headers: {
