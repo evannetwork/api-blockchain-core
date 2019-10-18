@@ -565,6 +565,27 @@ export class Sharing extends Logger {
     if (this.hashCache[shareContract.options.address] && this.hashCache[shareContract.options.address][sharingId]) {
       delete this.hashCache[shareContract.options.address][sharingId];
     }
+    this.clearCache();
+  }
+
+  public async trimSharings(
+      sharings: any,
+      originator: string,
+      partner: string,
+      section?: string,
+      block?: number|string): Promise<string> {
+    const partnerHash = this.options.nameResolver.soliditySha3(partner);
+    if (!section) {
+      delete sharings[partnerHash];
+    } else if (sharings[partnerHash]) {
+      const sectionHash = this.options.nameResolver.soliditySha3(section);
+      if (!block) {
+        delete sharings[partnerHash][sectionHash];
+      } else if (sharings[partnerHash][sectionHash] && sharings[partnerHash][sectionHash][block]) {
+        delete sharings[partnerHash][sectionHash][block];
+      }
+    }
+    return sharings;
   }
 
   private async decryptSharings(sharings: any, _partner?: string, _section?: string, _block?: number): Promise<any> {

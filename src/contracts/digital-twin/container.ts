@@ -98,6 +98,20 @@ export interface ContainerShareConfig {
 }
 
 /**
+ * config for unsharing multiple fields from one account (write and/or readWrite access)
+ */
+export interface ContainerUnshareConfig {
+  /** account, that gets properties unshared */
+  accountId: string;
+  /** list of properties, that are unshared (read and write permissions) */
+  readWrite?: string[];
+  /** list of properties, that are losing the rights to remove listentries */
+  removeListEntries?: string[];
+  /** list of properties, for which write permissions should be removed */
+  write?: string[];
+}
+
+/**
  * base definition of a container instance, covers properties setup and permissions
  */
 export interface ContainerPlugin {
@@ -1048,6 +1062,209 @@ export class Container extends Logger {
     return plugin;
   }
 
+  public async unshareProperties(unshareConfigs: ContainerUnshareConfig[]): Promise<void> {
+    await this.ensureContract();
+    this.log(`unsharing properties`, 'debug');
+    ///////////////////////////////////////////////////////////////////////////// check requirements
+    // check ownership
+    const authority = this.options.contractLoader.loadContract(
+      'DSRolesPerContract',
+      await this.options.executor.executeContractCall(this.contract, 'authority'),
+    );
+    if (!await this.options.executor.executeContractCall(
+      authority, 'hasUserRole', this.config.accountId, 0)) {
+      throw new Error(`current account "${this.config.accountId}" is unable to unshare ` +
+        'properties, as it isn\'t owner of the underlying contract ' +
+        this.contract.options.address);
+    }
+
+    // check fields
+    const schemaProperties = (await this.toPlugin(false)).template.properties;
+    const sharedProperties = Array.from(
+      new Set([].concat(...unshareConfigs.map(unshareConfig => [].concat(
+        unshareConfig.write, unshareConfig.readWrite)))))
+      .filter(property => property !== undefined);
+    const missingProperties = sharedProperties
+      .filter(property => !schemaProperties.hasOwnProperty(property));
+    if (missingProperties.length) {
+      throw new Error(
+        `tried to share properties, but missing one or more in schema: ${missingProperties}`);
+    }
+    // for all share configs
+    for (let { accountId, readWrite = [], removeListEntries = [], write = [] } of unshareConfigs) {
+      this.log(`checking unshare configs`, 'debug');
+      // remove write permissions for all in readWrite and write
+      for (let property of [...readWrite, ...write]) {
+        this.log(`removing write permissions for ${property}`, 'debug');
+        const propertyType = getPropertyType(schemaProperties[property].type);
+        // search for role with permissions
+        let permittedRole = await this.getPermittedRole(
+          authority, property, propertyType, ModificationType.Set);
+        if (permittedRole < this.reservedRoles) {
+          // if not found or included in reserved roles, exit
+          this.log('can not find a role that has write permissions for property ' + property);
+        } else {
+          // remove account from role
+          const hasRole = await this.options.executor.executeContractCall(
+            authority, 'hasUserRole', accountId, permittedRole);
+          if (hasRole) {
+            await this.options.rightsAndRoles.removeAccountFromRole(
+              this.contract, this.config.accountId, accountId, permittedRole);
+          }
+
+          // if no members are left, remove role
+          const memberCount = await this.options.executor.executeContractCall(
+            authority, 'role2userCount', permittedRole);
+          if (memberCount.eq(0)) {
+            this.log(`removing role for property "${property}"`, 'debug')
+            await this.options.rightsAndRoles.setOperationPermission(
+              authority,
+              this.config.accountId,
+              permittedRole,
+              property,
+              getPropertyType(schemaProperties[property].type),
+              ModificationType.Set,
+              false,
+            );
+          }
+        }
+      }
+
+      /////////////////////// check if only remaining property is 'type', cleanup if that's the case
+      const shareConfig = await this.getContainerShareConfigForAccount(accountId);
+      const remainingFields = Array.from(new Set([
+        ...(shareConfig.read ? shareConfig.read : []),
+        ...(shareConfig.readWrite ? shareConfig.readWrite : []),
+      ]));
+      if (remainingFields.length === 1 && remainingFields[0] === 'type') {
+        // remove property
+        let permittedRole = await this.getPermittedRole(
+          authority, 'type', PropertyType.Entry, ModificationType.Set);
+        await this.options.rightsAndRoles.removeAccountFromRole(
+          this.contract, this.config.accountId, accountId, permittedRole);
+
+        // remove read if applicable
+        readWrite.push('type');
+
+        // uninvite
+        this.options.dataContract.removeFromContract(
+          null, await this.getContractAddress(), this.config.accountId, accountId);
+      }
+
+      ///////////////////////////////////////////////////////////////// remove list entries handling
+      for (let property of removeListEntries) {
+        const propertyType = getPropertyType(schemaProperties[property].type);
+
+        // throw error if remove should be given on no list
+        if (propertyType !== PropertyType.ListEntry) {
+          throw new Error(`property "${property}" is no list. Can not give remove rights`);
+        }
+
+        // search for role with permissions
+        let permittedRole = await this.getPermittedRole(
+          authority, property, propertyType, ModificationType.Remove);
+        if (permittedRole < this.reservedRoles) {
+          // if not found or included in reserved roles, exit
+          throw new Error(`can not find a role that has remove permissions for list "${property}"`);
+        }
+
+        // remove account from role
+        const hasRole = await this.options.executor.executeContractCall(
+          authority, 'hasUserRole', accountId, permittedRole);
+        if (hasRole) {
+          await this.options.rightsAndRoles.removeAccountFromRole(
+            this.contract, this.config.accountId, accountId, permittedRole);
+        }
+
+        // if no members are left, remove role
+        const memberCount = await this.options.executor.executeContractCall(
+          authority, 'role2userCount', permittedRole);
+        if (memberCount.eq(0)) {
+          await this.options.rightsAndRoles.setOperationPermission(
+            authority,
+            this.config.accountId,
+            permittedRole,
+            property,
+            getPropertyType(schemaProperties[property].type),
+            ModificationType.Set,
+            false,
+          );
+        }
+      }
+
+      //////////////////////////////////////////////////////// ensure encryption keys for properties
+      // run with mutex to prevent breaking sharing info
+      await this.getMutex('sharing').runExclusive(async () => {
+        this.log(`checking read permisssions`, 'debug');
+        // checkout sharings
+        const sharings = await this.options.sharing.getSharingsFromContract(this.contract);
+
+        // check if account already has a hash key
+        const sha3 = (...args) => this.options.nameResolver.soliditySha3(...args);
+        const isShared = (section, block?) => {
+          if (!sharings[sha3(accountId)] ||
+              !sharings[sha3(accountId)][sha3(section)] ||
+              (typeof block !== 'undefined' && !sharings[sha3(accountId)][sha3(section)][block])) {
+            return false;
+          }
+          return true;
+        };
+        let modified = false;
+
+        // remove keys for readWrite
+        for (let property of readWrite) {
+          this.log(`checking read permissions for ${property}`, 'debug');
+          if (isShared(property)) {
+            this.log(`removing key for ${property}`, 'debug');
+            await this.options.sharing.trimSharings(
+              sharings, this.config.accountId, accountId, property);
+            modified = true;
+          }
+        }
+        // cleanup sharings, this requires on a few conditions,
+        // that are met, when sharings are managed by Container API
+        if (sharings[sha3(accountId)] &&  // account has any sharing
+          Object.keys(sharings[sha3(accountId)]).length === 2 &&  // only 2 sections remain
+          sharings[sha3(accountId)][sha3('*')] &&  // * section remains
+          Object.keys(sharings[sha3(accountId)][sha3('*')]).length === 1 && // only 1 entry in *
+          sharings[sha3(accountId)][sha3('*')].hashKey &&  // only the hash key in *
+          sharings[sha3(accountId)][sha3('type')]) {  // type remains
+          this.log(`account from sharings`, 'debug');
+          await this.options.sharing.trimSharings(sharings, this.config.accountId, accountId);
+          modified = true;
+        }
+
+        if (modified) {
+          this.log(`sharings updated, saving sharings`, 'debug');
+          // store sharings
+          await this.options.sharing.saveSharingsToContract(
+            this.contract.options.address, sharings, this.config.accountId);
+        }
+
+        // inner mutex, as we also rely on sharings
+        await this.getMutex('description').runExclusive(async () => {
+          // check if field still exists in updated sharing, if not remove field schema
+          const description = await this.getDescription();
+          const propertyHashes = [];
+          for (let accountHash of Object.keys(sharings)) {
+            propertyHashes.push(...Object.keys(sharings[accountHash]));
+          }
+          modified = false;
+          for (let property of readWrite) {
+            if (!propertyHashes.includes(this.options.nameResolver.soliditySha3(property))) {
+              delete description.dataSchema[property];
+              modified = true;
+            }
+          }
+          if (modified) {
+
+          }
+          await this.setDescription(description);
+        });
+      });
+    }
+  }
+
   /**
    * Helper function for encrypting and decrypting, checks if a given property requires file
    * encryption.
@@ -1318,6 +1535,33 @@ export class Container extends Logger {
       operationHash = '0x8dd27a19ebb249760a6490a8d33442a54b5c3c8504068964b74388bfe83458be';
     }
     return keccak256(keccak256(label, keccak256(name)), operationHash);
+  }
+
+  private async getPermittedRole(
+    authority: any, property: string, propertyType: PropertyType, modificationType: ModificationType
+  ): Promise<number> {
+    // get permissions from contract
+    const hash = this.options.rightsAndRoles.getOperationCapabilityHash(
+      property,
+      propertyType,
+      modificationType,
+    );
+    const rolesMap = await this.options.executor.executeContractCall(
+      authority,
+      'getOperationCapabilityRoles',
+      '0x0000000000000000000000000000000000000000',
+      hash,
+    );
+    // search for role with permissions
+    // build string with all roles and 1/0 depending on permissions
+    const binary = (new BigNumber(rolesMap)).toString(2);
+    // check index in group list, ignore reserved roles for this
+    let index = [...binary.substr(0, binary.length - this.reservedRoles)]
+      .reverse().join('').indexOf('1');
+    // if group was found, re-apply reserved roles count, result is group with permission
+    const permittedRole = (index === -1) ? index : (index + this.reservedRoles);
+
+    return permittedRole;
   }
 
   /**

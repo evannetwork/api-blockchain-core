@@ -401,13 +401,22 @@ export class TestUtils {
     return `0x${crypto.randomBytes(32).toString('hex')}`;
   }
 
-  public static async getRuntime(accountId): Promise<Runtime> {
+  public static async getRuntime(accountId, requestedKeys?): Promise<Runtime> {
+    let keys;
+    if (!requestedKeys) {
+      keys = sampleKeys;
+    } else {
+      keys = {};
+      requestedKeys.forEach((key) => {
+        keys[key] = sampleKeys[key];
+      });
+    }
     return createDefaultRuntime(
       await TestUtils.getWeb3(),
       await TestUtils.getIpfs(),
       {
         accountMap: { [accountId]: accountMap[accountId] },
-        keyConfig: sampleKeys,
+        keyConfig: keys,
       }
     );
   }
