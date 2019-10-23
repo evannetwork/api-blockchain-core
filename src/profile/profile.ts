@@ -457,7 +457,7 @@ export class Profile extends Logger {
 
   /**
    * Return the saved profile information according to the specified profile type. No type directly
-   * uses unspecified type.
+   * uses "user" type.
    *
    * @param      {string}        property  Restrict properties that should be loaded.
    * @return     {Promise<any>}  Property keys mapped to it's values. When a property was not set, a
@@ -763,22 +763,22 @@ export class Profile extends Logger {
   public async setProfileProperties(data: any): Promise<void> {
     await this.loadForAccount();
 
-    // older profiles may have an invalid format in files, use these as unspecified
+    // older profiles may have an invalid format in files, use these as user
     let accountDetails;
     try {
       accountDetails = await this.getProfileProperty('accountDetails');
     } catch (ex) {
-      this.log('could not get account details, will use this profile as unspecified; ' +
+      this.log('could not get account details, will use this profile as user; ' +
         '${ex.message || ex}', 'warning');
     }
 
     // get profile type and forbid invalid type transitions
     let profileType = (accountDetails && accountDetails.profileType) ?
-      accountDetails.profileType : 'unspecified';
+      accountDetails.profileType : 'user';
     if (data.accountDetails &&
         data.accountDetails.profileType &&
         data.accountDetails.profileType !== profileType &&
-        profileType !== 'unspecified') {
+        profileType !== 'user') {
       throw new Error(`invalid profile type change ${accountDetails.profileType} ` +
         `--> ${data.accountDetails.profileType}, change not allowed`);
     }
@@ -796,7 +796,7 @@ export class Profile extends Logger {
 
     // build array with allowed fields (may include duplicates)
     const allowedFields = [
-      ...Object.keys(this.accountTypes.unspecified.template.properties),
+      ...Object.keys(this.accountTypes.user.template.properties),
       ...Object.keys(this.accountTypes[profileType].template.properties),
     ];
     // look for properties, that are not allowed in allowed fields (aka forbidden)
