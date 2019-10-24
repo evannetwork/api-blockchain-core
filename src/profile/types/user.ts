@@ -21,7 +21,7 @@ export default JSON.parse(`{
   "description": {
     "description": "",
     "imgSquare": "",
-    "name": "unspecified"
+    "name": "user"
   },
   "permissions": [
     "accountDetails"
