@@ -433,7 +433,7 @@ describe('Profile helper', function() {
     await rightsAndRoles.transferOwnership(profileContract, profileReceiver, profileTestUser);
   });
 
-  describe('Handle data contract entries in profile', function() {
+  describe.skip('Handle data contract entries in profile', function() {
     const mnemonics = {
       company: 'place connect elite pigeon toilet song suggest primary endless science lizard tomato',
       device: 'cement fatal hybrid wing always amateur top good maximum snake screen first',
