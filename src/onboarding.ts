@@ -171,17 +171,19 @@ export class Onboarding extends Logger {
   /**
    * creates a complete profile and emits it to the given smart agent
    *
-   * @param      {any}     runtime    initialized runtime
-   * @param      {string}  alias      alias of the profile
-   * @param      {string}  accountId  accountId of the privateKey
-   * @param      {string}  pKey       private key
-   * @param      {string}  network    selected network (testcore/core) - defaults to testcore
+   * @param      {any}     runtime         initialized runtime
+   * @param      {string}  alias           alias of the profile
+   * @param      {string}  accountId       accountId of the privateKey
+   * @param      {string}  pKey            private key
+   * @param      {string}  recaptchaToken  The recaptcha token
+   * @param      {string}  network         selected network (testcore/core) - defaults to testcore
    */
   public static async createOfflineProfile(
     runtime: any,
     alias: string,
     accountId: string,
     pKey: string,
+    recaptchaToken: string,
     network = 'testcore'
   ) {
     return new Promise(async (resolve, reject) => {
@@ -200,6 +202,7 @@ export class Onboarding extends Logger {
         const requestProfilePayload = JSON.stringify({
           accountId: accountId,
           signature: signature,
+          captchaToken: recaptchaToken
         });
 
         const reqOptions = {
