@@ -261,16 +261,17 @@ export class Onboarding extends Logger {
 
     // setup sharings for new profile
     const sharings = {};
+    const profileKeys = Object.keys(profileData);
     // add hashKey
     await runtime.sharing.extendSharings(
       sharings, accountId, accountId, '*', 'hashKey', hashKey);
     // extend sharings for profile data
-    const dataContentKeys = await Promise.all(Object.keys(profileData).map(
-      () => cryptorAes.generateKey()));
-    await Object.keys(profileData).forEach((key: string, index: number) =>
-      runtime.sharing.extendSharings(
-        sharings, accountId, accountId, key, blockNr, dataContentKeys[index])
-    );
+    const dataContentKeys = await Promise.all(profileKeys.map(() => cryptorAes.generateKey()));
+    for (let i = 0; i < profileKeys.length; i++) {
+      await runtime.sharing.extendSharings(
+        sharings, accountId, accountId, profileKeys[i], blockNr, dataContentKeys[i]);
+    }
+    // upload sharings
     let sharingsHash = await runtime.dfs.add(
       'sharing', Buffer.from(JSON.stringify(sharings), runtime.dataContract.encodingUnencrypted));
 
