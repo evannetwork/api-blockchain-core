@@ -259,14 +259,11 @@ export class Onboarding extends Logger {
       runtime.web3.eth.getBlockNumber(),
     ]);
 
+    // setup sharings for new profile
     const sharings = {};
-
     // add hashKey
     await runtime.sharing.extendSharings(
       sharings, accountId, accountId, '*', 'hashKey', hashKey);
-    let sharingsHash = await runtime.dfs.add(
-      'sharing', Buffer.from(JSON.stringify(sharings), runtime.dataContract.encodingUnencrypted));
-
     // extend sharings for profile data
     const dataContentKeys = await Promise.all(Object.keys(profileData).map(
       () => cryptorAes.generateKey()));
@@ -274,6 +271,8 @@ export class Onboarding extends Logger {
       runtime.sharing.extendSharings(
         sharings, accountId, accountId, key, blockNr, dataContentKeys[index])
     );
+    let sharingsHash = await runtime.dfs.add(
+      'sharing', Buffer.from(JSON.stringify(sharings), runtime.dataContract.encodingUnencrypted));
 
     // used to exclude encrypted hashes from fileHashes.ipfsHashes
     const ipfsExcludeHashes = [ ];
