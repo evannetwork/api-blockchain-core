@@ -147,6 +147,9 @@ export interface ContainerVerificationEntry {
   verificationValue?: string;
 }
 
+// helper
+const pendingIdentities = [];
+
 /**
  * helper class for managing data contracts; all values are stored encrypted, hashes are encrypted
  * as well, use `contract` property and `DataContract` module for custom logic for special cases
@@ -254,8 +257,17 @@ export class Container extends Logger {
         'IdentityHolder',
         contractIdentities,
         'IdentityCreated',
-        () => true,
-        ({ returnValues: { identity }}) => { s(identity); },
+        ({ returnValues: { identity }}) => {
+          if (!pendingIdentities.includes(identity)) {
+            pendingIdentities.push(identity);
+            return true;
+          } else {
+            return false;
+          }
+        },
+        ({ returnValues: { identity }}) => {
+          s(identity);
+        },
       )
     });
 
@@ -302,7 +314,23 @@ export class Container extends Logger {
     const container = new Container(options, instanceConfig);
     await container.ensureContract();
 
-    envelope.public.identity = identity;
+    // now check all remaining identities if they match the new created contract
+    const identityHolderContract = options.contractLoader.loadContract(
+      'IdentityHolder',
+      contractIdentities
+    );
+
+    const targetIdentity = pendingIdentities.find(async (pendingIdentity) => {
+      const targetContract = await options.executor.executeContractCall(
+        identityHolderContract,
+        'getOwner',
+        pendingIdentity
+      );
+      return targetContract === contractId;
+    })
+
+    pendingIdentities.splice(pendingIdentities.indexOf(targetIdentity), 1);
+    envelope.public.identity = targetIdentity;
 
     // write values from template to new contract
     await applyPlugin(options, instanceConfig, container, envelope);
