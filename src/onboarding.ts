@@ -279,7 +279,6 @@ export class Onboarding extends Logger {
     const ipfsExcludeHashes = [ ];
     // encrypt profileData
     fileHashes.properties = { entries: { } };
-    const encryptedProfileData = { };
     await Promise.all(Object.keys(profileData).map(async (key: string, index: number) => {
       const encrypted = await cryptorAes.encrypt(
         profileData[key],
