@@ -103,6 +103,27 @@ export class Profile extends Logger {
    */
   public accountTypes = accountTypes;
 
+  /**
+   * Check if profile data is correct, according to a specific profile type. Throws, when the data
+   * is invalid.
+   *
+   * @param      {any}     data    profile data (accountDetails, registration, contact, ...)
+   * @param      {string}  type    profile type (user, company, device)
+   * @return     {Promise<void>}  resolved when done
+   */
+  public static checkCorrectProfileData(data: any, type: string) {
+    // build array with allowed fields (may include duplicates)
+    const allowedFields = [
+      ...Object.keys(accountTypes.user.template.properties),
+      ...Object.keys(accountTypes[type].template.properties),
+    ];
+    // look for properties, that are not allowed in allowed fields (aka forbidden)
+    const notAllowed = Object.keys(data).filter(key => !allowedFields.includes(key));
+    if (notAllowed.length) {
+      throw new Error(`one or more fields are not allowed in profile: ${notAllowed}`);
+    }
+  }
+
   public constructor(options: ProfileOptions) {
     super(options);
     this.activeAccount = options.accountId;
@@ -795,15 +816,7 @@ export class Profile extends Logger {
     }
 
     // build array with allowed fields (may include duplicates)
-    const allowedFields = [
-      ...Object.keys(this.accountTypes.user.template.properties),
-      ...Object.keys(this.accountTypes[profileType].template.properties),
-    ];
-    // look for properties, that are not allowed in allowed fields (aka forbidden)
-    const notAllowed = Object.keys(data).filter(key => !allowedFields.includes(key));
-    if (notAllowed.length) {
-      throw new Error(`one or more fields are not allowed in profile: ${notAllowed}`);
-    }
+    Profile.checkCorrectProfileData(data, profileType);
 
     await this.profileContainer.storeData(data);
   }
