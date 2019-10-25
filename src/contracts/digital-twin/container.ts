@@ -307,7 +307,7 @@ export class Container extends Logger {
       '0x0000000000000000000000000000000000000000000000000000000000000000',
     );
 
-    const [ contract, identity ] = await Promise.all([ contractP, identityP ]);
+    const [ contract ] = await Promise.all([ contractP, identityP ]);
 
     const contractId = contract.options.address;
     instanceConfig.address = contractId;
