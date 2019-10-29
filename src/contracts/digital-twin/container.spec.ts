@@ -125,7 +125,10 @@ describe('Container', function() {
       expect(await container3.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
 
 
-      for(let container of [container1, container2, container3]) {
+      const verifications: ContainerVerificationEntry[] = [...Array(3)].map(
+        (_, i) => (<ContainerVerificationEntry> { topic: `verifcation_${i}` }));
+
+      for (let container of [container1, container2, container3]) {
         await container.addVerifications(verifications);
         const verificationsResults = await container.getVerifications();
         expect(verificationsResults.length).to.eq(3);
