@@ -194,7 +194,7 @@ Example
     },
     "contact": {
       "country": "DE",
-      "city": "Cirty",
+      "city": "City",
       "postalCode": "12345",
       "streetAndNumber": "street",
       "website": "https://evan.network"
