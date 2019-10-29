@@ -105,7 +105,12 @@ describe('Container', function() {
       const [container1, container2, container3] = await Promise.all([
         Container.create(runtimes[owner], defaultConfig),
         Container.create(runtimes[owner], defaultConfig),
-        Container.create(runtimes[consumer], { accountId: consumer, description, plugin: 'metadata' })
+        Container.create(runtimes[consumer], {
+          accountId: consumer,
+          description,
+          plugin: 'metadata',
+          factoryAddress: defaultConfig.factoryAddress
+        })
       ])
 
       const desc1 = await container1.getDescription();

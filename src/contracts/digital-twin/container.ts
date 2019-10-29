@@ -777,7 +777,6 @@ export class Container extends Logger {
       'set entry',
       this.options.dataContract.setEntry(this.contract, entryName, toSet, this.config.accountId),
     );
-    console.log('done set')
   }
 
   /**
@@ -1521,7 +1520,6 @@ async function applyPlugin(
   }
   await Throttle.all(tasks);
 
-  console.log('done throttle')
   return envelope;
 }
 
