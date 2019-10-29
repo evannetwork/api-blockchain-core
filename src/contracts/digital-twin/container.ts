@@ -147,7 +147,7 @@ export interface ContainerVerificationEntry {
   verificationValue?: string;
 }
 
-// helper
+// helper for handling global pending created identities
 const pendingIdentities = [];
 
 /**
@@ -252,24 +252,20 @@ export class Container extends Logger {
 
     // subscribe to emit IdentityCreated(newIdentity, msg.sender);
     const contractIdentities = await options.nameResolver.getAddress('contractidentities.evan');
-    const identityP = new Promise((s) => {
-      options.executor.eventHub.once(
-        'IdentityHolder',
-        contractIdentities,
-        'IdentityCreated',
-        ({ returnValues: { identity }}) => {
-          if (!pendingIdentities.includes(identity)) {
-            pendingIdentities.push(identity);
-            return true;
-          } else {
-            return false;
-          }
-        },
-        ({ returnValues: { identity }}) => {
-          s(identity);
-        },
-      )
-    });
+    const identitiesSubscription = await options.executor.eventHub.subscribe(
+      'IdentityHolder',
+      contractIdentities,
+      'IdentityCreated',
+      ({ returnValues: { identity }}) => {
+        if (!pendingIdentities.includes(identity)) {
+          pendingIdentities.push(identity);
+          return true;
+        } else {
+          return false;
+        }
+      },
+      () => {}
+    );
 
     // convert template properties to jsonSchema
     if (instanceConfig.plugin &&
@@ -297,7 +293,7 @@ export class Container extends Logger {
     }
 
     // create contract
-    const contractP = options.dataContract.create(
+    const contract = await options.dataContract.create(
       instanceConfig.factoryAddress ||
         options.nameResolver.getDomainName(options.nameResolver.config.domains.containerFactory),
       instanceConfig.accountId,
@@ -306,8 +302,6 @@ export class Container extends Logger {
       true,
       '0x0000000000000000000000000000000000000000000000000000000000000000',
     );
-
-    const [ contract ] = await Promise.all([ contractP, identityP ]);
 
     const contractId = contract.options.address;
     instanceConfig.address = contractId;
@@ -328,6 +322,11 @@ export class Container extends Logger {
       );
       return targetContract === contractId;
     })
+
+    // after found the correct identity, stop the subscription
+    options.executor.eventHub.unsubscribe({
+      subscription: identitiesSubscription
+    });
 
     pendingIdentities.splice(pendingIdentities.indexOf(targetIdentity), 1);
     envelope.public.identity = targetIdentity;
@@ -773,6 +772,7 @@ export class Container extends Logger {
       'set entry',
       this.options.dataContract.setEntry(this.contract, entryName, toSet, this.config.accountId),
     );
+    console.log('done set')
   }
 
   /**
@@ -1516,6 +1516,7 @@ async function applyPlugin(
   }
   await Throttle.all(tasks);
 
+  console.log('done throttle')
   return envelope;
 }
 
