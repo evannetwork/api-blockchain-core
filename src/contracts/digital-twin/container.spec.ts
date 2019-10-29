@@ -101,7 +101,6 @@ describe('Container', function() {
     });
 
     it('can create multiple new contracts in parallel without colliding identities', async () => {
-
       const [container1, container2, container3] = await Promise.all([
         Container.create(runtimes[owner], defaultConfig),
         Container.create(runtimes[owner], defaultConfig),
