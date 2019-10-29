@@ -147,6 +147,9 @@ export interface ContainerVerificationEntry {
   verificationValue?: string;
 }
 
+// helper for handling global pending created identities
+const pendingIdentities = [];
+
 /**
  * helper class for managing data contracts; all values are stored encrypted, hashes are encrypted
  * as well, use `contract` property and `DataContract` module for custom logic for special cases
@@ -249,15 +252,20 @@ export class Container extends Logger {
 
     // subscribe to emit IdentityCreated(newIdentity, msg.sender);
     const contractIdentities = await options.nameResolver.getAddress('contractidentities.evan');
-    const identityP = new Promise((s) => {
-      options.executor.eventHub.once(
-        'IdentityHolder',
-        contractIdentities,
-        'IdentityCreated',
-        () => true,
-        ({ returnValues: { identity }}) => { s(identity); },
-      )
-    });
+    const identitiesSubscription = await options.executor.eventHub.subscribe(
+      'IdentityHolder',
+      contractIdentities,
+      'IdentityCreated',
+      ({ returnValues: { identity }}) => {
+        if (!pendingIdentities.includes(identity)) {
+          pendingIdentities.push(identity);
+          return true;
+        } else {
+          return false;
+        }
+      },
+      () => {}
+    );
 
     // convert template properties to jsonSchema
     if (instanceConfig.plugin &&
@@ -285,7 +293,7 @@ export class Container extends Logger {
     }
 
     // create contract
-    const contractP = options.dataContract.create(
+    const contract = await options.dataContract.create(
       instanceConfig.factoryAddress ||
         options.nameResolver.getDomainName(options.nameResolver.config.domains.containerFactory),
       instanceConfig.accountId,
@@ -295,14 +303,38 @@ export class Container extends Logger {
       '0x0000000000000000000000000000000000000000000000000000000000000000',
     );
 
-    const [ contract, identity ] = await Promise.all([ contractP, identityP ]);
-
     const contractId = contract.options.address;
     instanceConfig.address = contractId;
     const container = new Container(options, instanceConfig);
     await container.ensureContract();
 
-    envelope.public.identity = identity;
+    // now check all remaining identities if they match the new created contract
+    const identityHolderContract = options.contractLoader.loadContract(
+      'IdentityHolder',
+      contractIdentities
+    );
+
+    const resolvedIdentities = await Promise.all(pendingIdentities.map(async (pendingIdentity) => {
+      return {
+        identity: pendingIdentity,
+        contract: await options.executor.executeContractCall(
+          identityHolderContract,
+          'getLink',
+          pendingIdentity
+        )
+      }
+    }));
+    const targetIdentity = resolvedIdentities.find((resolvedIdentity) => {
+      return new RegExp(`${contractId.substr(2)}$`, 'i').test(resolvedIdentity.contract);
+    });
+
+    // after found the correct identity, stop the subscription
+    options.executor.eventHub.unsubscribe({
+      subscription: identitiesSubscription
+    });
+
+    pendingIdentities.splice(pendingIdentities.indexOf(targetIdentity.identity), 1);
+    envelope.public.identity = targetIdentity.identity;
 
     // write values from template to new contract
     await applyPlugin(options, instanceConfig, container, envelope);
