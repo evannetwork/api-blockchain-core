@@ -103,6 +103,29 @@ export class Profile extends Logger {
    */
   public accountTypes = accountTypes;
 
+  /**
+   * Check if profile data is correct, according to a specific profile type. Throws, when the data
+   * is invalid.
+   *
+   * @param      {any}     data    profile data (accountDetails, registration, contact, ...)
+   * @param      {string}  type    profile type (user, company, device)
+   * @return     {booleaen}       true, when it's valid
+   */
+  public static checkCorrectProfileData(data: any, type: string) {
+    // build array with allowed fields (may include duplicates)
+    const allowedFields = [
+      ...Object.keys(accountTypes.user.template.properties),
+      ...Object.keys(accountTypes[type].template.properties),
+    ];
+    // look for properties, that are not allowed in allowed fields (aka forbidden)
+    const notAllowed = Object.keys(data).filter(key => !allowedFields.includes(key));
+    if (notAllowed.length) {
+      throw new Error(`one or more fields are not allowed in profile: ${notAllowed}`);
+    }
+
+    return true;
+  }
+
   public constructor(options: ProfileOptions) {
     super(options);
     this.activeAccount = options.accountId;
@@ -460,8 +483,7 @@ export class Profile extends Logger {
    * uses "user" type.
    *
    * @param      {string}        property  Restrict properties that should be loaded.
-   * @return     {Promise<any>}  Property keys mapped to it's values. When a property was not set, a
-   *                             empty object will be returned
+   * @return     {Promise<any>}  the wantet profile object data (e.g. accountDetails, registration)
    */
   public async getProfileProperty(property: string): Promise<any> {
     const description = await this.profileContainer.getDescription();
@@ -754,11 +776,11 @@ export class Profile extends Logger {
   }
 
   /**
-   * Takes a set of profile properties and saves them into the profile data contract. If one
-   * property wasn't specified before, it will be permitted for writing.
+   * Takes a set of profile properties and saves them into the profile DataContainer. Throws errors,
+   * if not the correct properties are applied for the specified account type.
    *
-   * @param      {any}  payload  Object that should saved. Each entry will be saved as seperated
-   *                             entry.
+   * @param      {any}  data    Object that should saved. Each entry will be saved as seperated
+   *                            entry.
    */
   public async setProfileProperties(data: any): Promise<void> {
     await this.loadForAccount();
@@ -795,15 +817,7 @@ export class Profile extends Logger {
     }
 
     // build array with allowed fields (may include duplicates)
-    const allowedFields = [
-      ...Object.keys(this.accountTypes.user.template.properties),
-      ...Object.keys(this.accountTypes[profileType].template.properties),
-    ];
-    // look for properties, that are not allowed in allowed fields (aka forbidden)
-    const notAllowed = Object.keys(data).filter(key => !allowedFields.includes(key));
-    if (notAllowed.length) {
-      throw new Error(`one or more fields are not allowed in profile: ${notAllowed}`);
-    }
+    Profile.checkCorrectProfileData(data, profileType);
 
     await this.profileContainer.storeData(data);
   }

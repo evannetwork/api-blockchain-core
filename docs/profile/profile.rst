@@ -148,6 +148,60 @@ Example
   await profile.createProfile(keyExchange.getDiffieHellmanKeys());
 
 
+------------------------------------------------------------------------------
+
+.. _profile_checkCorrectProfileData:
+
+checkCorrectProfileData
+================================================================================
+
+.. code-block:: typescript
+
+  profile.checkCorrectProfileData();
+
+Check if profile data is correct, according to a specific profile type. Throws, when the data is invalid.
+
+----------
+Parameters
+----------
+
+#. ``data`` - ``object``: profile data (accountDetails, registration, contact, ...) (see setProfileProperties for example values)
+#. ``type`` - ``string``: profileType (user, company, device)
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: true if a contract was registered, false if not
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  console.log(await Profile.checkCorrectProfileData({
+    "accountDetails": {
+      "accountName": "Test",
+      "profileType": "company"
+    },
+    "registration": {
+      "company": "Company Name",
+      "court": "register court1",
+      "register": "hrb",
+      "registerNumber": "Registration Number",
+      "salesTaxID": "tax id"
+    },
+    "contact": {
+      "country": "DE",
+      "city": "City",
+      "postalCode": "12345",
+      "streetAndNumber": "street",
+      "website": "https://evan.network"
+    }
+  }, 'company'));
+  // Output:
+  // true
 
 ------------------------------------------------------------------------------
 
@@ -222,6 +276,44 @@ Example
   // true
 
 
+------------------------------------------------------------------------------
+
+.. _profile_getProfileProperty:
+
+getProfileProperty
+================================================================================
+
+.. code-block:: typescript
+
+  profile.getProfileProperty(property);
+
+Return the saved profile information according to the specified profile type. No type directly uses "user" type.
+
+----------
+Parameters
+----------
+
+#. ``property`` - ``string``: Restrict properties that should be loaded.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: true if known account
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+    console.log(await profile.getProfileProperty('accountDetails'));
+  // Output:
+  // {
+  //    "accountName": "Test",
+  //    "profileType": "company"
+  // }
+
 
 ------------------------------------------------------------------------------
 
@@ -257,6 +349,60 @@ Example
 
   // mark accountId as a known contact
   profile.setContactKnownState(accountId, true);
+
+
+------------------------------------------------------------------------------
+
+.. _profile_setProfileProperties:
+
+setProfileProperties
+================================================================================
+
+.. code-block:: typescript
+
+  profile.setProfileProperties(payload);
+
+Takes a set of profile properties and saves them into the profile DataContainer. Throws errors, if not the correct properties are applied for the specified account type.
+
+----------
+Parameters
+----------
+
+#. ``payload`` - ``any``: Object that should saved. Each entry will be saved as seperated entry.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // mark accountId as a known contact
+  profile.setProfileProperties({
+    "accountDetails": {
+      "accountName": "Test",
+      "profileType": "company"
+    },
+    "registration": {
+      "company": "Company Name",
+      "court": "register court1",
+      "register": "hrb",
+      "registerNumber": "Registration Number",
+      "salesTaxID": "tax id"
+    },
+    "contact": {
+      "country": "DE",
+      "city": "Cirty",
+      "postalCode": "12345",
+      "streetAndNumber": "street",
+      "website": "https://evan.network"
+    }
+  });
 
 
 
