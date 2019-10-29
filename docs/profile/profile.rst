@@ -165,7 +165,7 @@ Check if profile data is correct, according to a specific profile type. Throws, 
 Parameters
 ----------
 
-#. ``data`` - ``object``: profile data (accountDetails, registration, contact, ...) (see at setProfileProperties for example value)
+#. ``data`` - ``object``: profile data (accountDetails, registration, contact, ...) (see setProfileProperties for example values)
 #. ``type`` - ``string``: profileType (user, company, device)
 
 -------
