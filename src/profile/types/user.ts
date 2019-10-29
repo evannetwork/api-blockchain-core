@@ -67,6 +67,14 @@ export default JSON.parse(`{
           ]
         },
         "type": "entry"
+      },
+      "type": {
+        "permissions": {
+          "0": [
+            "set"
+          ]
+        },
+        "type": "string"
       }
     },
     "type": "metadata"
