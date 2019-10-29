@@ -67,6 +67,17 @@ export default JSON.parse(`{
           ]
         },
         "type": "entry"
+      },
+      "type": {
+        "dataSchema": {
+          "type": "string"
+        },
+        "permissions": {
+          "0": [
+            "set"
+          ]
+        },
+        "type": "entry"
       }
     },
     "type": "metadata"
