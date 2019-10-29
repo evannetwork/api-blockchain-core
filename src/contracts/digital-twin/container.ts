@@ -314,22 +314,27 @@ export class Container extends Logger {
       contractIdentities
     );
 
-    const targetIdentity = pendingIdentities.find(async (pendingIdentity) => {
-      const targetContract = await options.executor.executeContractCall(
-        identityHolderContract,
-        'getOwner',
-        pendingIdentity
-      );
-      return targetContract === contractId;
-    })
+    const resolvedIdentities = await Promise.all(pendingIdentities.map(async (pendingIdentity) => {
+      return {
+        identity: pendingIdentity,
+        contract: await options.executor.executeContractCall(
+          identityHolderContract,
+          'getLink',
+          pendingIdentity
+        )
+      }
+    }));
+    const targetIdentity = resolvedIdentities.find((resolvedIdentity) => {
+      return new RegExp(`${contractId.substr(2)}$`, 'i').test(resolvedIdentity.contract);
+    });
 
     // after found the correct identity, stop the subscription
     options.executor.eventHub.unsubscribe({
       subscription: identitiesSubscription
     });
 
-    pendingIdentities.splice(pendingIdentities.indexOf(targetIdentity), 1);
-    envelope.public.identity = targetIdentity;
+    pendingIdentities.splice(pendingIdentities.indexOf(targetIdentity.identity), 1);
+    envelope.public.identity = targetIdentity.identity;
 
     // write values from template to new contract
     await applyPlugin(options, instanceConfig, container, envelope);
