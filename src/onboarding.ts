@@ -193,6 +193,11 @@ export class Onboarding extends Logger {
     }
     profileData.accountDetails.profileType = profileData.accountDetails.profileType || 'user';
 
+    // fill empty container type
+    if (!profileData.type) {
+      profileData.type = 'profile';
+    }
+
     // build array with allowed fields (may include duplicates)
     Profile.checkCorrectProfileData(profileData, profileData.accountDetails.profileType);
 
