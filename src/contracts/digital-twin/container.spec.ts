@@ -124,6 +124,20 @@ describe('Container', function() {
       expect(await container2.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
       expect(await container3.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
 
+
+      for(let container of [container1, container2, container3]) {
+        await container.addVerifications(verifications);
+        const verificationsResults = await container.getVerifications();
+        expect(verificationsResults.length).to.eq(3);
+        // all validation lists should have at least 1 valid verification
+        const allValid = verificationsResults.every(vs => vs.some(v => v.valid));
+        expect(allValid).to.be.true;
+        // all validations should be confirmed, as issuing account is owner
+        const allConfirmed = verificationsResults.every(
+          vs => vs.some(v => v.status === VerificationsStatus.Confirmed));
+        expect(allConfirmed).to.be.true;
+      }
+
     });
 
     it('can get the correct owner for contracts', async () => {
