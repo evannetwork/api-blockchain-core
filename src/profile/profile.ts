@@ -574,7 +574,6 @@ export class Profile extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async loadForAccount(tree?: string): Promise<void> {
-    this.throwIfNotOwner('load secured profile data');
     // ensure profile contract
     if (!this.profileContract) {
       const ensName = this.nameResolver.getDomainName(this.nameResolver.config.domains.profile);
@@ -598,6 +597,8 @@ export class Profile extends Logger {
       }
     }
     if (tree) {
+      this.throwIfNotOwner('load secured profile data');
+
       let hash;
       if (tree === this.treeLabels.publicKey) {
         hash = await this.dataContract.getEntry(
