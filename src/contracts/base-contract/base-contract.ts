@@ -116,7 +116,7 @@ export class BaseContract extends Logger {
       if (businessCenterAddress != '0x0000000000000000000000000000000000000000') {
         const businessCenterContract = await this.options.loader.loadContract('BusinessCenterInterface', businessCenterAddress);
         try{
-          const returnedContract = await this.options.executor.executeContractCall(businessCenterContract,'joinSchema');
+          const returnedContract = await this.options.executor.executeContractCall(businessCenterContract, 'joinSchema');
           console.log(returnedContract)
         }
         catch(e){
