@@ -1250,12 +1250,11 @@ export class Container extends Logger {
           this.log(`checking read permissions for ${property}`, 'debug');
           if (isShared(property)) {
             this.log(`removing key for ${property}`, 'debug');
-            await this.options.sharing.trimSharings(
-              sharings, this.config.accountId, accountId, property);
+            await this.options.sharing.trimSharings(sharings, accountId, property);
             modified = true;
           }
         }
-        // cleanup sharings, this requires on a few conditions,
+        // cleanup sharings, this relies on a few conditions,
         // that are met, when sharings are managed by Container API
         if (sharings[sha3(accountId)] &&  // account has any sharing
           Object.keys(sharings[sha3(accountId)]).length === 2 &&  // only 2 sections remain
@@ -1264,7 +1263,7 @@ export class Container extends Logger {
           sharings[sha3(accountId)][sha3('*')].hashKey &&  // only the hash key in *
           sharings[sha3(accountId)][sha3('type')]) {  // type remains
           this.log(`account from sharings`, 'debug');
-          await this.options.sharing.trimSharings(sharings, this.config.accountId, accountId);
+          await this.options.sharing.trimSharings(sharings, accountId);
           modified = true;
         }
 
