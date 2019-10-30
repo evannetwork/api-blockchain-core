@@ -95,12 +95,20 @@ describe('BaseContract', function() {
     await ipfs.stop();
   });
 
-  it('can be created', async () => {
+  it.only('can be created', async () => {
     const contractId = await baseContract.createUninitialized(
       'testdatacontract',
       accounts[0],
       businessCenterDomain);
     expect(contractId).not.to.be.undefined;
+  });
+
+  it.only('can not be created', async () => {
+    const contractPromise = baseContract.createUninitialized(
+      'testdatacontract',
+      accounts[0],
+      'testdatacontract.factory.testbc.evan');
+    expect(contractPromise).to.be.rejected;
   });
 
   it('can have new members invited to it by the owner', async () => {
