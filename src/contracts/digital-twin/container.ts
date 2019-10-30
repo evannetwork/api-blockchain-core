@@ -781,9 +781,10 @@ export class Container extends Logger {
     }
 
     // check fields
+    const localShareConfig = cloneDeep(shareConfigs);
     const schemaProperties = (await this.toPlugin(false)).template.properties;
     const sharedProperties = Array.from(
-      new Set([].concat(...shareConfigs.map(shareConfig => [].concat(
+      new Set([].concat(...localShareConfig.map(shareConfig => [].concat(
         shareConfig.read, shareConfig.readWrite)))))
       .filter(property => property !== undefined);
     const missingProperties = sharedProperties
@@ -793,7 +794,7 @@ export class Container extends Logger {
         `tried to share properties, but missing one or more in schema: ${missingProperties}`);
     }
     // for all share configs
-    for (let { accountId, read = [], readWrite = [], removeListEntries = [] } of shareConfigs) {
+    for (let { accountId, read = [], readWrite = [], removeListEntries = [] } of localShareConfig) {
       //////////////////////////////////////////////////// ensure that account is member in contract
       if (! await this.options.executor.executeContractCall(
           this.contract, 'isConsumer', accountId)) {
@@ -1079,9 +1080,10 @@ export class Container extends Logger {
     }
 
     // check fields
+    const localUnshareConfigs = cloneDeep(unshareConfigs);
     const schemaProperties = (await this.toPlugin(false)).template.properties;
     const sharedProperties = Array.from(
-      new Set([].concat(...unshareConfigs.map(unshareConfig => [].concat(
+      new Set([].concat(...localUnshareConfigs.map(unshareConfig => [].concat(
         unshareConfig.write, unshareConfig.readWrite)))))
       .filter(property => property !== undefined);
     const missingProperties = sharedProperties
@@ -1091,7 +1093,7 @@ export class Container extends Logger {
         `tried to share properties, but missing one or more in schema: ${missingProperties}`);
     }
     // for all share configs
-    for (let { accountId, readWrite = [], removeListEntries = [], write = [] } of unshareConfigs) {
+    for (let { accountId, readWrite = [], removeListEntries = [], write = [] } of localUnshareConfigs) {
       this.log(`checking unshare configs`, 'debug');
       // remove write permissions for all in readWrite and write
       for (let property of [...readWrite, ...write]) {
