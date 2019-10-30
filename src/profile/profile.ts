@@ -42,14 +42,15 @@ import { Sharing } from '../contracts/sharing';
 export interface ProfileOptions extends LoggerOptions {
   accountId: string;
   contractLoader: ContractLoader;
-  description: Description;
   cryptoProvider: CryptoProvider;
   dataContract: DataContract;
   defaultCryptoAlgo: string;
+  description: Description;
   dfs: DfsInterface;
   executor: Executor;
   ipld: Ipld;
   nameResolver: NameResolver;
+  profileOwner: string;
   rightsAndRoles: RightsAndRoles;
   sharing: Sharing;
 }
@@ -81,8 +82,9 @@ export class Profile extends Logger {
   public ipld: Ipld;
   public nameResolver: NameResolver;
   public options: ProfileOptions;
-  public profileContract: any;
   public profileContainer: Container;
+  public profileContract: any;
+  public profileOwner: string;
   public trees: any;
   public treeLabels = {
     activeVerifications: 'activeVerifications',
@@ -135,8 +137,9 @@ export class Profile extends Logger {
     this.executor = options.executor;
     this.ipld = options.ipld;
     this.nameResolver = options.nameResolver;
-    this.trees = {};
     this.options = options;
+    this.profileOwner = options.profileOwner || this.activeAccount;
+    this.trees = {};
   }
 
   /**
@@ -486,6 +489,11 @@ export class Profile extends Logger {
    * @return     {Promise<any>}  the wantet profile object data (e.g. accountDetails, registration)
    */
   public async getProfileProperty(property: string): Promise<any> {
+    // run loadAccount, when it's not runned before
+    if (!this.profileContainer) {
+      await this.loadForAccount();
+    }
+
     const description = await this.profileContainer.getDescription();
 
     if (!description.dataSchema || !description.dataSchema[property]) {
@@ -556,9 +564,9 @@ export class Profile extends Logger {
       const indexContract =
         this.nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
       const profileContractAddress = await this.executor.executeContractCall(
-        indexContract, 'getProfile', this.activeAccount, { from: this.activeAccount, });
+        indexContract, 'getProfile', this.profileOwner, { from: this.activeAccount, });
       if (profileContractAddress === '0x0000000000000000000000000000000000000000') {
-        throw new Error(`no profile found for account "${this.activeAccount}"`);
+        throw new Error(`no profile found for account "${this.profileOwner}"`);
       } else {
         const contractAddress = profileContractAddress.length === 66 ?
           this.executor.web3.utils.toChecksumAddress(profileContractAddress.substr(0, 42)) :
