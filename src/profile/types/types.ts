@@ -19,10 +19,10 @@
 
 import company from './company';
 import device from './device';
-import unspecified from './unspecified';
+import user from './user';
 
 export {
-  unspecified,
   company,
   device,
+  user
 }

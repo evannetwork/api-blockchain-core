@@ -42,16 +42,17 @@ import { Sharing } from '../contracts/sharing';
 export interface ProfileOptions extends LoggerOptions {
   accountId: string;
   contractLoader: ContractLoader;
-  description: Description;
   cryptoProvider: CryptoProvider;
   dataContract: DataContract;
   defaultCryptoAlgo: string;
+  description: Description;
   dfs: DfsInterface;
   executor: Executor;
   ipld: Ipld;
   nameResolver: NameResolver;
   rightsAndRoles: RightsAndRoles;
   sharing: Sharing;
+  profileOwner?: string;
 }
 
 
@@ -81,8 +82,9 @@ export class Profile extends Logger {
   public ipld: Ipld;
   public nameResolver: NameResolver;
   public options: ProfileOptions;
-  public profileContract: any;
   public profileContainer: Container;
+  public profileContract: any;
+  public profileOwner: string;
   public trees: any;
   public treeLabels = {
     activeVerifications: 'activeVerifications',
@@ -103,6 +105,29 @@ export class Profile extends Logger {
    */
   public accountTypes = accountTypes;
 
+  /**
+   * Check if profile data is correct, according to a specific profile type. Throws, when the data
+   * is invalid.
+   *
+   * @param      {any}     data    profile data (accountDetails, registration, contact, ...)
+   * @param      {string}  type    profile type (user, company, device)
+   * @return     {booleaen}       true, when it's valid
+   */
+  public static checkCorrectProfileData(data: any, type: string) {
+    // build array with allowed fields (may include duplicates)
+    const allowedFields = [
+      ...Object.keys(accountTypes.user.template.properties),
+      ...Object.keys(accountTypes[type].template.properties),
+    ];
+    // look for properties, that are not allowed in allowed fields (aka forbidden)
+    const notAllowed = Object.keys(data).filter(key => !allowedFields.includes(key));
+    if (notAllowed.length) {
+      throw new Error(`one or more fields are not allowed in profile: ${notAllowed}`);
+    }
+
+    return true;
+  }
+
   public constructor(options: ProfileOptions) {
     super(options);
     this.activeAccount = options.accountId;
@@ -112,8 +137,9 @@ export class Profile extends Logger {
     this.executor = options.executor;
     this.ipld = options.ipld;
     this.nameResolver = options.nameResolver;
-    this.trees = {};
     this.options = options;
+    this.profileOwner = options.profileOwner || this.activeAccount;
+    this.trees = {};
   }
 
   /**
@@ -125,6 +151,7 @@ export class Profile extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async addBcContract(bc: string, address: string, data: any): Promise<void> {
+    this.throwIfNotOwner('add a contract to a specific scope');
     this.ensureTree('contracts');
     const bcSet = await this.ipld.getLinkedGraph(this.trees['contracts'], bc);
     if (!bcSet) {
@@ -134,7 +161,7 @@ export class Profile extends Logger {
   }
 
   /**
-   * add a key for a contact to bookmarks
+   * add a key for a contact to address book
    *
    * @param      {string}         address  account key of the contact
    * @param      {string}         context  store key for this context, can be a contract, bc, etc.
@@ -145,6 +172,7 @@ export class Profile extends Logger {
     this.log(
       `add contact key: account "${address}", context "${context}", key "${obfuscate(key)}"`,
       'debug');
+    this.throwIfNotOwner('add a key for a contact to address book');
     this.ensureTree('addressBook');
 
     let addressHash;
@@ -176,6 +204,7 @@ export class Profile extends Logger {
    * @return     {any}     bookmark info
    */
   public async addContract(address: string, data: any): Promise<any> {
+    this.throwIfNotOwner('add a contract');
     this.ensureTree('contracts');
     await this.ipld.set(this.trees['contracts'], address, data, false);
   }
@@ -188,6 +217,7 @@ export class Profile extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async addDappBookmark(address: string, description: DappBookmark): Promise<void> {
+    this.throwIfNotOwner('add a dapp bookmark');
     this.ensureTree('bookmarkedDapps');
     if (!address || !description) {
       throw new Error('no valid description or address given!');
@@ -209,6 +239,7 @@ export class Profile extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async addProfileKey(address: string, key: string, value: string): Promise<void> {
+    this.throwIfNotOwner('add a profile value to an account');
     this.ensureTree('addressBook');
     const profileSet = await this.ipld.getLinkedGraph(this.trees['addressBook'], `profile`);
     if (!profileSet) {
@@ -229,6 +260,7 @@ export class Profile extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async addPublicKey(key: string): Promise<void> {
+    this.throwIfNotOwner('set public key');
     this.ensureTree('publicKey');
     await this.ipld.set(this.trees['publicKey'], 'publicKey', key, true);
   }
@@ -240,6 +272,10 @@ export class Profile extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async createProfile(keys: any): Promise<void> {
+    if (this.activeAccount !== this.profileOwner) {
+      throw new Error('creating profiles for other accounts is not supported' +
+        `"${this.activeAccount}" tried to create a profile for "${this.profileOwner}"`);
+    }
     // create new profile contract and store in profile index
     const factoryDomain = this.nameResolver.getDomainName(
       this.nameResolver.config.domains.profileFactory);
@@ -284,7 +320,7 @@ export class Profile extends Logger {
       const indexContract = this.nameResolver.contractLoader.loadContract(
         'ProfileIndexInterface', address);
       const profileContractAddress = await this.executor.executeContractCall(
-        indexContract, 'getProfile', this.activeAccount, { from: this.activeAccount, });
+        indexContract, 'getProfile', this.profileOwner, { from: this.activeAccount, });
       return profileContractAddress !== '0x0000000000000000000000000000000000000000';
     } catch (ex) {
       this.log(`error occurred while checking if profile exists; ${ex.message || ex}`, 'debug');
@@ -364,6 +400,7 @@ export class Profile extends Logger {
    * @return     {Promise<string>}  matching key
    */
   public async getContactKey(address: string, context: string): Promise<string> {
+    this.throwIfNotOwner('read a contact key');
     let addressHash;
     // check if address is already hashed
     if (address.length === 42) {
@@ -388,6 +425,7 @@ export class Profile extends Logger {
    * @return     {Promise<any>}  bookmark info
    */
   public async getContract(address: string): Promise<any> {
+    this.throwIfNotOwner('get a contract');
     if (!this.trees[this.treeLabels.contracts]) {
       await this.loadForAccount(this.treeLabels.contracts);
     }
@@ -400,6 +438,7 @@ export class Profile extends Logger {
    * @return     {Promise<any>}  contracts info
    */
   public async getContracts(): Promise<any> {
+    this.throwIfNotOwner('get all contracts');
     if (!this.trees[this.treeLabels.contracts]) {
       await this.loadForAccount(this.treeLabels.contracts);
     }
@@ -414,6 +453,7 @@ export class Profile extends Logger {
    * @return     {Promise<any>}  bookmark info
    */
   public async getDappBookmark(address: string): Promise<any> {
+    this.throwIfNotOwner('get dapp bookmarks');
     if (!this.trees[this.treeLabels.bookmarkedDapps]) {
       await this.loadForAccount(this.treeLabels.bookmarkedDapps);
     }
@@ -432,7 +472,7 @@ export class Profile extends Logger {
       this.profileContract,
       'contacts',
       accountId,
-      this.activeAccount,
+      this.profileOwner,
       false,
       false,
     );
@@ -445,6 +485,7 @@ export class Profile extends Logger {
    * @param      {string}  context  key context
    */
   public async getEncryptionKey(context: string): Promise<any> {
+    this.throwIfNotOwner('get an encryption key');
     if (!this.trees[this.treeLabels.encryptionKeys]) {
       await this.loadForAccount(this.treeLabels.encryptionKeys);
     }
@@ -457,13 +498,17 @@ export class Profile extends Logger {
 
   /**
    * Return the saved profile information according to the specified profile type. No type directly
-   * uses unspecified type.
+   * uses "user" type.
    *
    * @param      {string}        property  Restrict properties that should be loaded.
-   * @return     {Promise<any>}  Property keys mapped to it's values. When a property was not set, a
-   *                             empty object will be returned
+   * @return     {Promise<any>}  the wantet profile object data (e.g. accountDetails, registration)
    */
   public async getProfileProperty(property: string): Promise<any> {
+    // run loadAccount, when it's not runned before
+    if (!this.profileContainer) {
+      await this.loadForAccount();
+    }
+
     const description = await this.profileContainer.getDescription();
 
     if (!description.dataSchema || !description.dataSchema[property]) {
@@ -486,6 +531,7 @@ export class Profile extends Logger {
    * @return     {Promise<any>}  key
    */
   public async getProfileKey(address: string, key: string): Promise<any> {
+    this.throwIfNotOwner('get a profile value');
     if (!this.trees[this.treeLabels.addressBook]) {
       await this.loadForAccount(this.treeLabels.addressBook);
     }
@@ -509,6 +555,7 @@ export class Profile extends Logger {
    * get plugin from profile
    */
   public async getPlugins(): Promise<any> {
+    this.throwIfNotOwner('get plugins');
     if (!this.trees[this.treeLabels.dtContainerPlugins]) {
       await this.loadForAccount(this.treeLabels.dtContainerPlugins);
     }
@@ -534,9 +581,9 @@ export class Profile extends Logger {
       const indexContract =
         this.nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
       const profileContractAddress = await this.executor.executeContractCall(
-        indexContract, 'getProfile', this.activeAccount, { from: this.activeAccount, });
+        indexContract, 'getProfile', this.profileOwner, { from: this.activeAccount, });
       if (profileContractAddress === '0x0000000000000000000000000000000000000000') {
-        throw new Error(`no profile found for account "${this.activeAccount}"`);
+        throw new Error(`no profile found for account "${this.profileOwner}"`);
       } else {
         const contractAddress = profileContractAddress.length === 66 ?
           this.executor.web3.utils.toChecksumAddress(profileContractAddress.substr(0, 42)) :
@@ -550,6 +597,8 @@ export class Profile extends Logger {
       }
     }
     if (tree) {
+      this.throwIfNotOwner('load secured profile data');
+
       let hash;
       if (tree === this.treeLabels.publicKey) {
         hash = await this.dataContract.getEntry(
@@ -581,6 +630,7 @@ export class Profile extends Logger {
    * @return     {Promise<Profile>}  this profile
    */
   public async loadFromIpld(tree: string, ipldIpfsHash: string): Promise<Profile> {
+    this.throwIfNotOwner('load secured profile data');
     let loaded;
     try {
       loaded = await this.ipld.getLinkedGraph(ipldIpfsHash);
@@ -604,6 +654,7 @@ export class Profile extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async removeBcContract(bc: string, address: string): Promise<void> {
+    this.throwIfNotOwner('remove a contract from a specific scope');
     this.ensureTree('contracts');
     const bcSet = await this.ipld.getLinkedGraph(this.trees['contracts'], bc);
 
@@ -619,6 +670,7 @@ export class Profile extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async removeContact(address: string): Promise<void> {
+    this.throwIfNotOwner('remove a contract');
     const addressHash = this.nameResolver.soliditySha3.apply(this.nameResolver, [
       this.nameResolver.soliditySha3(address),
       this.nameResolver.soliditySha3(this.activeAccount),
@@ -635,6 +687,7 @@ export class Profile extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async removeDappBookmark(address: string): Promise<void> {
+    this.throwIfNotOwner('remove a dapp bookmark');
     if (!address ) {
       throw new Error('no valid address given!');
     }
@@ -649,6 +702,7 @@ export class Profile extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async setDappBookmarks(bookmarks: any): Promise<void> {
+    this.throwIfNotOwner('update a dapp bookmark');
     if (!bookmarks) {
       throw new Error('no valid bookmarks are given');
     }
@@ -667,6 +721,7 @@ export class Profile extends Logger {
    * @return     {string[]}  array of topics of verifications that should be displayed
    */
   public async loadActiveVerifications(): Promise<string[]> {
+    this.throwIfNotOwner('get verifications');
     const defaultVerifications = [
       '/evan/onboarding/termsofuse',
     ];
@@ -686,6 +741,7 @@ export class Profile extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async setActiveVerifications(verifications: string[]): Promise<void> {
+    this.throwIfNotOwner('set verifications');
     if (!verifications) {
       throw new Error('no verifications are given');
     }
@@ -709,6 +765,7 @@ export class Profile extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async setContactKnownState(accountId: string, contactKnown: boolean): Promise<void> {
+    this.throwIfNotOwner('set a contact known state');
     await this.dataContract.setMappingValue(
       this.profileContract,
       'contacts',
@@ -727,6 +784,7 @@ export class Profile extends Logger {
    * @param      {string}  key      key value
    */
   public async setEncryptionKey(context: string, key: string): Promise<void> {
+    this.throwIfNotOwner('set an encryption key');
     this.ensureTree(this.treeLabels.encryptionKeys);
 
     await this.ipld.set(
@@ -743,6 +801,7 @@ export class Profile extends Logger {
    * @param      {any}     plugin  entire collections of plugin to store in profile
    */
   public async setPlugins(plugins: any): Promise<void> {
+    this.throwIfNotOwner('set plugins value');
     this.ensureTree(this.treeLabels.dtContainerPlugins);
 
     await this.ipld.set(
@@ -754,31 +813,31 @@ export class Profile extends Logger {
   }
 
   /**
-   * Takes a set of profile properties and saves them into the profile data contract. If one
-   * property wasn't specified before, it will be permitted for writing.
+   * Takes a set of profile properties and saves them into the profile DataContainer. Throws errors,
+   * if not the correct properties are applied for the specified account type.
    *
-   * @param      {any}  payload  Object that should saved. Each entry will be saved as seperated
-   *                             entry.
+   * @param      {any}  data    Object that should saved. Each entry will be saved as seperated
+   *                            entry.
    */
   public async setProfileProperties(data: any): Promise<void> {
     await this.loadForAccount();
 
-    // older profiles may have an invalid format in files, use these as unspecified
+    // older profiles may have an invalid format in files, use these as user
     let accountDetails;
     try {
       accountDetails = await this.getProfileProperty('accountDetails');
     } catch (ex) {
-      this.log('could not get account details, will use this profile as unspecified; ' +
+      this.log('could not get account details, will use this profile as user; ' +
         '${ex.message || ex}', 'warning');
     }
 
     // get profile type and forbid invalid type transitions
     let profileType = (accountDetails && accountDetails.profileType) ?
-      accountDetails.profileType : 'unspecified';
+      accountDetails.profileType : 'user';
     if (data.accountDetails &&
         data.accountDetails.profileType &&
         data.accountDetails.profileType !== profileType &&
-        profileType !== 'unspecified') {
+        profileType !== 'user') {
       throw new Error(`invalid profile type change ${accountDetails.profileType} ` +
         `--> ${data.accountDetails.profileType}, change not allowed`);
     }
@@ -795,15 +854,7 @@ export class Profile extends Logger {
     }
 
     // build array with allowed fields (may include duplicates)
-    const allowedFields = [
-      ...Object.keys(this.accountTypes.unspecified.template.properties),
-      ...Object.keys(this.accountTypes[profileType].template.properties),
-    ];
-    // look for properties, that are not allowed in allowed fields (aka forbidden)
-    const notAllowed = Object.keys(data).filter(key => !allowedFields.includes(key));
-    if (notAllowed.length) {
-      throw new Error(`one or more fields are not allowed in profile: ${notAllowed}`);
-    }
+    Profile.checkCorrectProfileData(data, profileType);
 
     await this.profileContainer.storeData(data);
   }
@@ -816,6 +867,7 @@ export class Profile extends Logger {
    * @return     {Promise}  resolved when done
    */
   public async storeForAccount(tree: string, ipldHash?: string): Promise<void> {
+    this.throwIfNotOwner('store secured profile data');
     await this.ensurePropertyInProfile(tree);
     if (ipldHash) {
       this.log(`store tree "${tree}" with given hash to profile contract for account ` +
@@ -850,6 +902,18 @@ export class Profile extends Logger {
    */
   public async storeToIpld(tree: string): Promise<string> {
     return await this.ipld.store(this.trees[tree]);
+  }
+
+  /**
+   * Throws an exception if a profile was loaded for another account.
+   *
+   * @param      {string}  action  description of the action that should be performed
+   */
+  private throwIfNotOwner(action: string) {
+    if (this.activeAccount !== this.profileOwner) {
+      throw new Error(`tried to ${action} on "${this.profileOwner}"s profile with ` +
+        `"${this.activeAccount}", this is only supported for the owner of a profile`);
+    }
   }
 
   /**

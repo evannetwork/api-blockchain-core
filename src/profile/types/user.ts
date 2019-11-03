@@ -21,7 +21,7 @@ export default JSON.parse(`{
   "description": {
     "description": "",
     "imgSquare": "",
-    "name": "unspecified"
+    "name": "user"
   },
   "permissions": [
     "accountDetails"
@@ -60,6 +60,17 @@ export default JSON.parse(`{
             }
           },
           "type": "object"
+        },
+        "permissions": {
+          "0": [
+            "set"
+          ]
+        },
+        "type": "entry"
+      },
+      "type": {
+        "dataSchema": {
+          "type": "string"
         },
         "permissions": {
           "0": [

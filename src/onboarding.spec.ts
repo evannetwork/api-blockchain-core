@@ -80,7 +80,7 @@ describe('Onboarding helper', function() {
     expect(mnemonic).to.be.an('string');
   })
 
-  it('should create a new profile with a new mnemonic on the testcore', async () => {
+  it.skip('should create a new profile with a new mnemonic on the testcore', async () => {
     const mnemonic = Onboarding.createMnemonic();
     await Onboarding.createNewProfile(mnemonic, 'Test1234');
     expect(mnemonic).to.be.an('string');

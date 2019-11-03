@@ -433,7 +433,7 @@ describe('Profile helper', function() {
     await rightsAndRoles.transferOwnership(profileContract, profileReceiver, profileTestUser);
   });
 
-  describe('Handle data contract entries in profile', function() {
+  describe.skip('Handle data contract entries in profile', function() {
     const mnemonics = {
       company: 'place connect elite pigeon toilet song suggest primary endless science lizard tomato',
       device: 'cement fatal hybrid wing always amateur top good maximum snake screen first',
@@ -482,7 +482,7 @@ describe('Profile helper', function() {
       );
     }
 
-    it('can transform unspecified profile to company profile', async () => {
+    it('can transform user profile to company profile', async () => {
       const newMnemonic = Onboarding.createMnemonic();
       await Onboarding.createNewProfile(newMnemonic, 'Test1234');
       const runtime = await getProfileRuntime(newMnemonic);
@@ -521,7 +521,7 @@ describe('Profile helper', function() {
       await expect(promise).to.be.rejected;
     });
 
-    it('can transform unspecified profile to device profile', async () => {
+    it('can transform user profile to device profile', async () => {
       const newMnemonic = Onboarding.createMnemonic();
       await Onboarding.createNewProfile(newMnemonic, 'Test1234');
       const runtime = await getProfileRuntime(newMnemonic);
@@ -536,7 +536,7 @@ describe('Profile helper', function() {
       await expect(accountDetails.accountName).to.be.eq('New device');
     });
 
-    it('can transform unspecified profile to type that does not exists', async () => {
+    it('can transform user profile to type that does not exists', async () => {
       const newMnemonic = Onboarding.createMnemonic();
       await Onboarding.createNewProfile(newMnemonic, 'Test1234');
       const runtime = await getProfileRuntime(newMnemonic);

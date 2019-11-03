@@ -106,6 +106,48 @@ describe('Container', function() {
       expect(await container.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
     });
 
+    it('can create multiple new contracts in parallel without colliding identities', async () => {
+      const [container1, container2, container3] = await Promise.all([
+        Container.create(runtimes[owner], defaultConfig),
+        Container.create(runtimes[owner], defaultConfig),
+        Container.create(runtimes[consumer], {
+          accountId: consumer,
+          description,
+          plugin: 'metadata',
+          factoryAddress: defaultConfig.factoryAddress
+        })
+      ])
+
+      const desc1 = await container1.getDescription();
+      const desc2 = await container2.getDescription();
+      const desc3 = await container3.getDescription();
+
+      expect(desc1.identity).to.not.eq(desc2.identity);
+      expect(desc2.identity).to.not.eq(desc3.identity);
+      expect(desc1.identity).to.not.eq(desc3.identity)
+      expect(await container1.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
+      expect(await container2.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
+      expect(await container3.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
+
+
+      const verifications: ContainerVerificationEntry[] = [...Array(3)].map(
+        (_, i) => (<ContainerVerificationEntry> { topic: `verifcation_${i}` }));
+
+      for (let container of [container1, container2, container3]) {
+        await container.addVerifications(verifications);
+        const verificationsResults = await container.getVerifications();
+        expect(verificationsResults.length).to.eq(3);
+        // all validation lists should have at least 1 valid verification
+        const allValid = verificationsResults.every(vs => vs.some(v => v.valid));
+        expect(allValid).to.be.true;
+        // all validations should be confirmed, as issuing account is owner
+        const allConfirmed = verificationsResults.every(
+          vs => vs.some(v => v.status === VerificationsStatus.Confirmed));
+        expect(allConfirmed).to.be.true;
+      }
+
+    });
+
     it('can get the correct owner for contracts', async () => {
       const container = await Container.create(runtimes[owner], defaultConfig);
 
