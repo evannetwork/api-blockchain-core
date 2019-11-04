@@ -576,8 +576,8 @@ export class Sharing extends Logger {
    * just setting partner to null.
    *
    * @param      {any}           sharings  sharings to trim
-   * @param      {string}        partner   partner to remove keys for
-   * @param      {string}        section   field or section to remove keys for
+   * @param      {string}        partner   Ethereum account id to remove keys for
+   * @param      {string}        section   data section to remove keys for
    * @param      {numberstring}  block     block to remove keys for
    */
   public async trimSharings(

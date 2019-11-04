@@ -1095,6 +1095,13 @@ export class Container extends Logger {
     return plugin;
   }
 
+  /**
+   * Remove keys and/or permissions for a user; this also handles role permissions, role
+   * memberships.
+   *
+   * @param      {ContainerUnshareConfig[]}  unshareConfigs  list of account-field setups to remove
+   *                                                         permissions/keys for
+   */
   public async unshareProperties(unshareConfigs: ContainerUnshareConfig[]): Promise<void> {
     await this.ensureContract();
     this.log(`unsharing properties`, 'debug');
