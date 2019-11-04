@@ -128,7 +128,7 @@ export interface ContainerTemplate {
   /** type of the template (equals name of the template) */
   type: string;
   /** list of properties included in this template, key is field name, value is property setup */
-  properties?: { [id: string]: ContainerTemplateProperty; }
+  properties?: { [id: string]: ContainerTemplateProperty };
 }
 
 /**
@@ -216,7 +216,7 @@ export class Container extends Logger {
   };
   public static defaultPlugin = 'metadata';
   public static profilePluginsKey = 'templates.datacontainer.digitaltwin.evan';
-  public static plugins: { [id: string]: ContainerPlugin; } = {
+  public static plugins: { [id: string]: ContainerPlugin } = {
     metadata: {
       description: {
         name: '',
@@ -230,7 +230,7 @@ export class Container extends Logger {
   };
   private config: ContainerConfig;
   private contract: any;
-  private mutexes: { [id: string]: Mutex; };
+  private mutexes: { [id: string]: Mutex };
   private options: ContainerOptions;
   private reservedRoles = 64;
 

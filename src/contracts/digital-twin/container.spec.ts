@@ -36,8 +36,6 @@ import {
   ContainerConfig,
   ContainerOptions,
   ContainerPlugin,
-  ContainerTemplate,
-  ContainerTemplateProperty,
   ContainerVerificationEntry,
 } from './container';
 
@@ -58,7 +56,7 @@ describe('Container', function() {
     version: '0.1.0',
     dbcpVersion: 2,
   };
-  let runtimes: { [id: string]: ContainerOptions; } = {};
+  let runtimes: { [id: string]: ContainerOptions } = {};
   let sha3: Function;
 
   before(async () => {
@@ -848,7 +846,7 @@ describe('Container', function() {
     });
   });
 
-  describe.only('when unsharing properties', async () => {
+  describe('when unsharing properties', async () => {
     it('can revoke read access of one property from owner to another user', async() => {
       const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
       plugin.template.properties.testField = {
@@ -894,8 +892,6 @@ describe('Container', function() {
         .getSharingsFromContract(newConsumerRuntime.contractLoader.loadContract(
           'DataContract', await container.getContractAddress()));
       expect(contractSharings).not.to.haveOwnProperty(sha3(consumer));
-
-      const description = await consumerContainer.getDescription();
     });
 
     it('can revoke read access of multiple properties from owner to another user', async() => {
@@ -1016,9 +1012,6 @@ describe('Container', function() {
       ((consumerContainer as any).options as ContainerOptions).sharing.clearCache();
       consumerSharing = ((consumerContainer as any).options as ContainerOptions).sharing;
       shareConfig = await container.getContainerShareConfigForAccount(consumer);
-      const contractSharings2 = await consumerSharing
-        .getSharingsFromContract(newConsumerRuntime.contractLoader.loadContract(
-          'DataContract', await container.getContractAddress()));
       await expect(consumerContainer.getEntry('testField'))
         .to.be.rejectedWith('could not get entry; no hashKey key found');
       expect(shareConfig).not.to.haveOwnProperty('read');
@@ -1147,9 +1140,6 @@ describe('Container', function() {
       ((consumerContainer as any).options as ContainerOptions).sharing.clearCache();
       consumerSharing = ((consumerContainer as any).options as ContainerOptions).sharing;
       shareConfig = await container.getContainerShareConfigForAccount(consumer);
-      const contractSharings2 = await consumerSharing
-        .getSharingsFromContract(newConsumerRuntime.contractLoader.loadContract(
-          'DataContract', await container.getContractAddress()));
       expect(await consumerContainer.getEntry('testField'))
         .to.eq(randomString);
       expect(shareConfig).to.haveOwnProperty('read');
@@ -1198,7 +1188,7 @@ describe('Container', function() {
     it('can set verifications to container', async () => {
       const container = await Container.create(runtimes[owner], defaultConfig);
       const verifications: ContainerVerificationEntry[] = [...Array(3)].map(
-        (_, i) => (<ContainerVerificationEntry> { topic: `verifcation_${i}` }));
+        (_, i) => ({ topic: `verifcation_${i}` }));
       await container.addVerifications(verifications);
       const verificationsResults = await container.getVerifications();
       expect(verificationsResults.length).to.eq(3);
