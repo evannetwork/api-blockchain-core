@@ -95,7 +95,7 @@ describe('BaseContract', function() {
     await ipfs.stop();
   });
 
-  it.only('can be created', async () => {
+  it('can be created', async () => {
     const contractId = await baseContract.createUninitialized(
       'testdatacontract',
       accounts[0],
@@ -103,7 +103,7 @@ describe('BaseContract', function() {
     expect(contractId).not.to.be.undefined;
   });
 
-  it.only('can not be created', async () => {
+  it('can not be created', async () => {
     const contractPromise = baseContract.createUninitialized(
       'testdatacontract',
       accounts[0],
