@@ -113,15 +113,18 @@ export class BaseContract extends Logger {
     let businessCenterAddress;
     if (businessCenterDomain) {
       businessCenterAddress = await this.options.nameResolver.getAddress(businessCenterDomain);
-      if (businessCenterAddress != '0x0000000000000000000000000000000000000000') {
-        const businessCenterContract = await this.options.loader.loadContract('BusinessCenterInterface', businessCenterAddress);
-        //console.log(businessCenterContract)
-        try{
-          const returnedContract = await this.options.executor.executeContractCall(businessCenterContract,'joinSchema');
-          console.log(returnedContract)
-        }
-        catch(e){
-          console.log(e)
+      if (businessCenterAddress !== '0x0000000000000000000000000000000000000000') {
+        const businessCenterContract = await this.options.loader.loadContract(
+          'BusinessCenterInterface',
+          businessCenterAddress
+        );
+
+        try {
+          const returnedContract = await this.options.executor.executeContractCall(
+            businessCenterContract,
+            'joinSchema'
+          );
+        } catch (e) {
           throw new Error("There is no Business Center domain exisiting");
         }
       }
