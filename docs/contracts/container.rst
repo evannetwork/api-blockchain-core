@@ -1018,6 +1018,64 @@ Example
 
 --------------------------------------------------------------------------------
 
+.. _container_unshareProperties:
+
+unshareProperties
+================================================================================
+
+.. code-block:: typescript
+
+  container.unshareProperties(unshareConfigs);
+
+Remove keys and/or permissions for a user; this also handles role permissions, role memberships.
+
+----------
+Parameters
+----------
+
+#. ``unshareConfigs`` - ``ContainerUnshareConfig[]``: list of account-field setups to remove permissions/keys for
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+
+  const accountId1 = '0x0000000000000000000000000000000000000001';
+  const accountId2 = '0x0000000000000000000000000000000000000002';
+
+  // open container with accountId1
+  const container = new Container(options, { ...config, accountId: accountId1 });
+
+  // assuming, that entry 'myField' has been shared with accountId2
+  // unshare field from accountId1 to accountId2
+  await container.unshareProperties([{
+    accountId: accountId2,
+    read: ['myField'],
+  }]);
+
+  // fetch value with accountId2
+  const accountId2Container = new Container(options, { ...config, accountId: accountId2 });
+  let value;
+  try {
+    value = await accountId2Container.getEntry('myField');
+    console.log(value);
+  } catch (ex) {
+    console.error('could not get entry');
+  }
+  // Output:
+  // could not get entry
+
+
+--------------------------------------------------------------------------------
+
 = Validating Containers =
 =========================
 

@@ -311,6 +311,60 @@ Example
 
 --------------------------------------------------------------------------------
 
+.. _sharing_trimSharings:
+
+trimSharings
+================================================================================
+
+.. code-block:: typescript
+
+  sharing.trimSharings(sharings, partner[, partner, section, block);
+
+Removes properties from given sharing. If a block is given, the specific blocks key is removed, if
+no block is given, all keys for this section are removed. The same goes for section and partner.
+Note that only the last properties can be omitted and not properties in between can be set to null.
+So for example it is not possible to remove the same field for all accounts by just setting partner
+to null.
+
+----------
+Parameters
+----------
+
+#. ``sharings`` - ``any``: sharings to trim
+#. ``partner`` - ``string``: Ethereum account id to remove keys for
+#. ``section`` - ``string``: data section the key is intended for or '*'
+#. ``block`` - ``number|string``: block to remove keys for
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // this sample will undo undo the changes from the last example (extendSharings)
+  // two sample users, user1 wants to share a key with user2
+  const user1 = '0x0000000000000000000000000000000000000001';
+  const user2 = '0x0000000000000000000000000000000000000002';
+
+  // get current sharings
+  const sharings = await sharing.getSharingsFromContract(contract);
+
+  // remove key from last time
+  await sharing.trim(sharings, user2, '*', blockNr);
+
+  // finally store to contract
+  await sharing.saveSharingsToContract(contract.options.address, sharings, user1);
+
+
+
+--------------------------------------------------------------------------------
+
 .. _sharing_bumpSharings:
 
 bumpSharings

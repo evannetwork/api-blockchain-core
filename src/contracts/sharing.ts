@@ -565,6 +565,39 @@ export class Sharing extends Logger {
     if (this.hashCache[shareContract.options.address] && this.hashCache[shareContract.options.address][sharingId]) {
       delete this.hashCache[shareContract.options.address][sharingId];
     }
+    this.clearCache();
+  }
+
+  /**
+   * Removes properties from given sharing. If a block is given, the specific blocks key is removed,
+   * if no block is given, all keys for this section are removed. The same goes for section and
+   * partner. Note that only the last properties can be omitted and not properties in between can be
+   * set to null. So for example it is not possible to remove the same field for all accounts by
+   * just setting partner to null.
+   *
+   * @param      {any}           sharings  sharings to trim
+   * @param      {string}        partner   Ethereum account id to remove keys for
+   * @param      {string}        section   data section to remove keys for
+   * @param      {numberstring}  block     block to remove keys for
+   */
+  public async trimSharings(
+    sharings: any,
+    partner: string,
+    section?: string,
+    block?: number|string
+  ): Promise<string> {
+    const partnerHash = this.options.nameResolver.soliditySha3(partner);
+    if (!section) {
+      delete sharings[partnerHash];
+    } else if (sharings[partnerHash]) {
+      const sectionHash = this.options.nameResolver.soliditySha3(section);
+      if (!block) {
+        delete sharings[partnerHash][sectionHash];
+      } else if (sharings[partnerHash][sectionHash] && sharings[partnerHash][sectionHash][block]) {
+        delete sharings[partnerHash][sectionHash][block];
+      }
+    }
+    return sharings;
   }
 
   private async decryptSharings(sharings: any, _partner?: string, _section?: string, _block?: number): Promise<any> {
