@@ -2,6 +2,14 @@
 
 ## Next Version
 ### Features
+
+### Fixes
+
+### Deprecations
+
+
+## Version 2.14.0
+### Features
 - use container logic for profile management
 - update onboarding logic to fit current profile setup
 - add more clearnup and hardening to `unshareProperties` for `Container` API
@@ -10,8 +18,6 @@
 
 ### Fixes
 - fix race conditions in sharings update, which could occur when sharings are updated in parallel
-
-### Deprecations
 
 
 ## Version 2.13.0
