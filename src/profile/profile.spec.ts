@@ -21,7 +21,6 @@ import 'mocha';
 import { expect, use } from 'chai';
 import { isEqual } from 'lodash';
 import chaiAsPromised = require('chai-as-promised');
-// import IpfsServer = require('ipfs');
 
 import {
   ContractLoader,
@@ -32,18 +31,13 @@ import {
 
 import { accountMap } from '../test/accounts';
 import { accounts } from '../test/accounts';
-import { Aes } from '../encryption/aes';
 import { configTestcore as config } from '../config-testcore';
 import { createDefaultRuntime } from '../runtime';
-import { CryptoProvider } from '../encryption/crypto-provider';
 import { DataContract } from '../contracts/data-contract/data-contract';
-import { Ipld } from '../dfs/ipld';
 import { KeyExchange } from '../keyExchange';
 import { Mailbox } from '../mailbox';
 import { Onboarding } from '../onboarding';
-import { Profile } from './profile';
 import { RightsAndRoles } from '../contracts/rights-and-roles';
-import { Runtime } from '../runtime';
 import { TestUtils } from '../test/test-utils';
 
 use(chaiAsPromised);
@@ -56,7 +50,6 @@ describe('Profile helper', function() {
   let ensName;
   let web3;
   let dataContract: DataContract;
-  let contractLoader: ContractLoader;
   let keyExchange;
   let mailbox;
   let executor;
@@ -74,17 +67,11 @@ describe('Profile helper', function() {
     img: 'img',
     primaryColor: '#FFFFFF',
   };
-  const emptyProfile = {
-    bookmarkedDapps: {},
-    addressBook: {},
-    contracts: {}
-  }
 
   before(async () => {
     web3 = TestUtils.getWeb3();
     ipfs = await TestUtils.getIpfs();
     ipld = await TestUtils.getIpld(ipfs);
-    contractLoader = await TestUtils.getContractLoader(web3);
     dataContract = await TestUtils.getDataContract(web3, ipld.ipfs)
     nameResolver = await TestUtils.getNameResolver(web3);
     ensName = nameResolver.getDomainName(config.nameResolver.domains.profile);
@@ -110,6 +97,25 @@ describe('Profile helper', function() {
     executor = await TestUtils.getExecutor(web3);
     executor.eventHub = eventHub;
     rightsAndRoles = await TestUtils.getRightsAndRoles(web3);
+  });
+
+  it('should create a new Profile', async () => {
+    // create new profile helper instance
+    const from = Object.keys(accountMap)[0];
+    ipld.originator = nameResolver.soliditySha3(from);
+    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
+
+    // create new profile, set private key and keyexchange partial key
+    await profile.createProfile(keyExchange.getDiffieHellmanKeys());
+
+    // add a bookmark
+    await profile.addDappBookmark('sample1.test', sampleDesc);
+
+    // store tree to contract
+    await profile.storeForAccount(profile.treeLabels.bookmarkedDapps);
+
+    // test contacts
+    expect(await profile.getDappBookmark('sample1.test')).to.deep.eq(sampleDesc);
   });
 
   it('should be able to be add contact keys', async () => {
@@ -190,12 +196,10 @@ describe('Profile helper', function() {
   it('should be able to set and load a value for a given users profile contract from the blockchain', async () => {
     const address = await nameResolver.getAddress(ensName);
     const contract = nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
-    const label = await nameResolver.sha3('profiles');
     const valueToSet = '0x0000000000000000000000000000000000000004';
     let hash;
     const from = Object.keys(accountMap)[0];
     hash = await nameResolver.executor.executeContractCall(contract, 'getProfile', from, { from, });
-    const internalSigner = nameResolver.executor.signer as SignerInternal;
     await nameResolver.executor.executeContractTransaction(
       contract,
       'setMyProfile',
@@ -216,7 +220,6 @@ describe('Profile helper', function() {
     await profile.addDappBookmark('sample1.test', sampleDesc);
 
     // store
-    const from = Object.keys(accountMap)[0];
     await profile.storeForAccount(profile.treeLabels.addressBook);
 
     // load
@@ -253,27 +256,6 @@ describe('Profile helper', function() {
     expect(await profile.getDappBookmark('sample2.test')).to.be.ok;
   });
 
-  it('should create a new Profile', async () => {
-    // create new profile helper instance
-    const from = Object.keys(accountMap)[0];
-    ipld.originator = nameResolver.soliditySha3(from);
-    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
-
-    // create new profile, set private key and keyexchange partial key
-    await profile.createProfile(keyExchange.getDiffieHellmanKeys());
-
-    // add a bookmark
-    await profile.addDappBookmark('sample1.test', sampleDesc);
-
-    // store tree to contract
-    await profile.storeForAccount(profile.treeLabels.bookmarkedDapps);
-
-    // load
-    const newProfile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
-    // test contacts
-    expect(await profile.getDappBookmark('sample1.test')).to.deep.eq(sampleDesc);
-  });
-
   it('should read a public part of a profile (e.g. public key)', async () => {
     let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
 
@@ -294,9 +276,6 @@ describe('Profile helper', function() {
       keyProvider: TestUtils.getKeyProvider(),
     };
     const customKeyExchange = new KeyExchange(keyExchangeOptions);
-
-    // store
-    const from = Object.keys(accountMap)[0];
 
     await profile.createProfile(customKeyExchange.getDiffieHellmanKeys());
 
@@ -366,7 +345,7 @@ describe('Profile helper', function() {
     await profile1.addProfileKey(profileReceiver, 'alias', 'sample user 1');
     await profile1.addPublicKey(dhKeys.publicKey.toString('hex'));
     const sharing = await dataContract.createSharing(profileReceiver);
-    const fileHashes = <any>{};
+    const fileHashes: any = {};
     fileHashes[profile1.treeLabels.addressBook] = await profile1.storeToIpld(profile1.treeLabels.addressBook);
     fileHashes[profile1.treeLabels.publicKey] = await profile1.storeToIpld(profile1.treeLabels.publicKey);
     fileHashes.sharingsHash = sharing.sharingsHash;
@@ -428,7 +407,7 @@ describe('Profile helper', function() {
     const address = await nameResolver.getAddress(profileIndexDomain);
     const contract = nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
     await executor.executeContractTransaction(
-         contract, 'setMyProfile', { from: profileReceiver, autoGas: 1.1, }, profileContract.options.address);
+      contract, 'setMyProfile', { from: profileReceiver, autoGas: 1.1, }, profileContract.options.address);
     // can read own keys
     const profile2 = await TestUtils.getProfile(web3, ipfs, await getKeyIpld(profileReceiver), profileReceiver);
 
@@ -456,9 +435,8 @@ describe('Profile helper', function() {
 
   describe.skip('Handle data contract entries in profile', function() {
     const mnemonics = {
-      old: 'distance castle notable toast siren smoke gym stable goat enact abstract absorb',
-      company: 'jeans token chimney when tape enable around loop space harsh file juice',
-      device: 'green lucky purse barrel scorpion universe sorry nest walnut enact stand price',
+      company: 'place connect elite pigeon toilet song suggest primary endless science lizard tomato',
+      device: 'cement fatal hybrid wing always amateur top good maximum snake screen first',
     };
 
     const dateString = Date.now().toString();
@@ -496,7 +474,7 @@ describe('Profile helper', function() {
      * @param      {string}  mnemonic  mnemonic to create the runtime with
      * @param      {string}  password  password to create the runtime with
      */
-    async function getProfileRuntime(mnemonic: string, password = 'Evan1234') {
+    async function getProfileRuntime(mnemonic: string, password = 'Test1234') {
       return createDefaultRuntime(
         await TestUtils.getWeb3(),
         await TestUtils.getIpfs(),
@@ -504,27 +482,9 @@ describe('Profile helper', function() {
       );
     }
 
-    it('cannot save properties to old profile', async () => {
-      const runtime = await getProfileRuntime(mnemonics.old);
-
-      const promise = runtime.profile.setProfileProperties({
-        accountDetails: {
-          accountName: 'Im\'m failing',
-          profileType: 'unspecified',
-        }
-      });
-      await expect(promise).to.be.rejected;
-    });
-
-    // TODO: test profile migration
-    it.skip('can migrate old profile to new one', async () => {
-      throw new Error('not implemented');
-    });
-
-    // TODO: use new profile type switch function
-    it('can transform unspecified profile to company profile', async () => {
+    it('can transform user profile to company profile', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      await Onboarding.createNewProfile(newMnemonic, 'Evan1234');
+      await Onboarding.createNewProfile(newMnemonic, 'Test1234');
       const runtime = await getProfileRuntime(newMnemonic);
 
       await runtime.profile.setProfileProperties({
@@ -533,13 +493,13 @@ describe('Profile helper', function() {
           profileType: 'company',
         }
       });
-      const properties = await runtime.profile.getProfileProperties([ 'accountDetails' ]);
-      await expect(properties.accountDetails.accountName).to.be.eq('New company');
+      const accountDetails = await runtime.profile.getProfileProperty('accountDetails');
+      await expect(accountDetails.accountName).to.be.eq('New company');
     });
 
     it('cannot transform specified profile to another profile type', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      await Onboarding.createNewProfile(newMnemonic, 'Evan1234');
+      await Onboarding.createNewProfile(newMnemonic, 'Test1234');
       const runtime = await getProfileRuntime(newMnemonic);
 
       await runtime.profile.setProfileProperties({
@@ -548,8 +508,8 @@ describe('Profile helper', function() {
           profileType: 'company',
         }
       });
-      const properties = await runtime.profile.getProfileProperties([ 'accountDetails' ]);
-      await expect(properties.accountDetails.accountName).to.be.eq('New company');
+      const accountDetails = await runtime.profile.getProfileProperty('accountDetails');
+      await expect(accountDetails.accountName).to.be.eq('New company');
 
       const promise = runtime.profile.setProfileProperties({
         accountDetails: {
@@ -561,9 +521,9 @@ describe('Profile helper', function() {
       await expect(promise).to.be.rejected;
     });
 
-    it('can transform unspecified profile to device profile', async () => {
+    it('can transform user profile to device profile', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      await Onboarding.createNewProfile(newMnemonic, 'Evan1234');
+      await Onboarding.createNewProfile(newMnemonic, 'Test1234');
       const runtime = await getProfileRuntime(newMnemonic);
 
       await runtime.profile.setProfileProperties({
@@ -572,13 +532,13 @@ describe('Profile helper', function() {
           profileType: 'device',
         }
       });
-      const properties = await runtime.profile.getProfileProperties([ 'accountDetails' ]);
-      await expect(properties.accountDetails.accountName).to.be.eq('New device');
+      const accountDetails = await runtime.profile.getProfileProperty('accountDetails');
+      await expect(accountDetails.accountName).to.be.eq('New device');
     });
 
-    it('can transform unspecified profile to type that does not exists', async () => {
+    it('can transform user profile to type that does not exists', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      await Onboarding.createNewProfile(newMnemonic, 'Evan1234');
+      await Onboarding.createNewProfile(newMnemonic, 'Test1234');
       const runtime = await getProfileRuntime(newMnemonic);
 
       const promise = runtime.profile.setProfileProperties({
@@ -594,10 +554,12 @@ describe('Profile helper', function() {
     it('can save company profile specific properties to a profile of type company', async () => {
       const runtime = await getProfileRuntime(mnemonics.company);
       await runtime.profile.setProfileProperties(companyProfileProperties);
-      const newProfileProperties = await runtime.profile.getProfileProperties();
-      await expect(newProfileProperties.accountDetails.profileType).to.be.eq('company');
-      await expect(isEqual(companyProfileProperties.registration, newProfileProperties.registration)).to.be.true;
-      await expect(isEqual(companyProfileProperties.contact, newProfileProperties.contact)).to.be.true;
+      const [accountDetails, contact, registration] =
+        await Promise.all(['accountDetails', 'contact', 'registration'].map(
+          p => runtime.profile.getProfileProperty(p)));
+      await expect(accountDetails.profileType).to.be.eq('company');
+      await expect(isEqual(companyProfileProperties.registration, registration)).to.be.true;
+      await expect(isEqual(companyProfileProperties.contact, contact)).to.be.true;
     });
 
     it('cannot save device profile specific properties into company profile', async () => {
@@ -609,9 +571,11 @@ describe('Profile helper', function() {
     it('can save device profile specific properties to a profile of type device', async () => {
       const runtime = await getProfileRuntime(mnemonics.device);
       await runtime.profile.setProfileProperties(deviceProfileProperties);
-      const newProfileProperties = await runtime.profile.getProfileProperties();
-      await expect(newProfileProperties.accountDetails.profileType).to.be.eq('device');
-      await expect(isEqual(deviceProfileProperties.deviceDetails, newProfileProperties.deviceDetails)).to.be.true;
+      const [accountDetails, deviceDetails] =
+        await Promise.all(['accountDetails', 'deviceDetails'].map(
+          p => runtime.profile.getProfileProperty(p)));
+      await expect(accountDetails.profileType).to.be.eq('device');
+      await expect(isEqual(deviceProfileProperties.deviceDetails, deviceDetails)).to.be.true;
     });
 
     it('cannot save company profile specific properties into device profile', async () => {

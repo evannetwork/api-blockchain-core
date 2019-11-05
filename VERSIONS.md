@@ -8,6 +8,18 @@
 ### Deprecations
 
 
+## Version 2.14.0
+### Features
+- use container logic for profile management
+- update onboarding logic to fit current profile setup
+- add more clearnup and hardening to `unshareProperties` for `Container` API
+- add support to remove sharings to `Sharings` API
+- improve support for working with profiles of other users via `Profile` API
+
+### Fixes
+- fix race conditions in sharings update, which could occur when sharings are updated in parallel
+
+
 ## Version 2.13.0
 ### Features
 - add `setProfileProperties` and `getProfileProperties`

@@ -93,6 +93,22 @@ export interface ContainerShareConfig {
   read?: string[];
   /** list of properties, that are shared readable and writable */
   readWrite?: string[];
+  /** list of properties, that are giving the rights to remove listentries */
+  removeListEntries?: string[];
+}
+
+/**
+ * config for unsharing multiple fields from one account (write and/or readWrite access)
+ */
+export interface ContainerUnshareConfig {
+  /** account, that gets properties unshared */
+  accountId: string;
+  /** list of properties, that are unshared (read and write permissions) */
+  readWrite?: string[];
+  /** list of properties, that are losing the rights to remove listentries */
+  removeListEntries?: string[];
+  /** list of properties, for which write permissions should be removed */
+  write?: string[];
 }
 
 /**
@@ -112,7 +128,7 @@ export interface ContainerTemplate {
   /** type of the template (equals name of the template) */
   type: string;
   /** list of properties included in this template, key is field name, value is property setup */
-  properties?: { [id: string]: ContainerTemplateProperty; }
+  properties?: { [id: string]: ContainerTemplateProperty };
 }
 
 /**
@@ -144,6 +160,9 @@ export interface ContainerVerificationEntry {
   /** reference to additional validation details */
   verificationValue?: string;
 }
+
+// helper for handling global pending created identities
+const pendingIdentities = [];
 
 /**
  * helper class for managing data contracts; all values are stored encrypted, hashes are encrypted
@@ -197,7 +216,7 @@ export class Container extends Logger {
   };
   public static defaultPlugin = 'metadata';
   public static profilePluginsKey = 'templates.datacontainer.digitaltwin.evan';
-  public static plugins: { [id: string]: ContainerPlugin; } = {
+  public static plugins: { [id: string]: ContainerPlugin } = {
     metadata: {
       description: {
         name: '',
@@ -211,7 +230,7 @@ export class Container extends Logger {
   };
   private config: ContainerConfig;
   private contract: any;
-  private mutexes: { [id: string]: Mutex; };
+  private mutexes: { [id: string]: Mutex };
   private options: ContainerOptions;
   private reservedRoles = 64;
 
@@ -245,6 +264,23 @@ export class Container extends Logger {
   ): Promise<Container> {
     const instanceConfig = cloneDeep(config);
 
+    // subscribe to emit IdentityCreated(newIdentity, msg.sender);
+    const contractIdentities = await options.nameResolver.getAddress('contractidentities.evan');
+    const identitiesSubscription = await options.executor.eventHub.subscribe(
+      'IdentityHolder',
+      contractIdentities,
+      'IdentityCreated',
+      ({ returnValues: { identity }}) => {
+        if (!pendingIdentities.includes(identity)) {
+          pendingIdentities.push(identity);
+          return true;
+        } else {
+          return false;
+        }
+      },
+      () => {}
+    );
+
     // convert template properties to jsonSchema
     if (instanceConfig.plugin &&
         instanceConfig.plugin.template &&
@@ -270,21 +306,8 @@ export class Container extends Logger {
       throw new Error(`validation of description failed with: ${JSON.stringify(validation)}`);
     }
 
-    // subscribe to emit IdentityCreated(newIdentity, msg.sender);
-    const contractIdentities = await options.nameResolver.getAddress('contractidentities.evan');
-    const identityP = new Promise((s) => {
-      const cisContract = options.contractLoader.loadContract('IdentityHolder', contractIdentities);
-      options.executor.eventHub.once(
-        'IdentityHolder',
-        contractIdentities,
-        'IdentityCreated',
-        () => true,
-        ({ returnValues: { identity }}) => { s(identity); },
-      )
-    });
-
     // create contract
-    const contractP = options.dataContract.create(
+    const contract = await options.dataContract.create(
       instanceConfig.factoryAddress ||
         options.nameResolver.getDomainName(options.nameResolver.config.domains.containerFactory),
       instanceConfig.accountId,
@@ -294,14 +317,38 @@ export class Container extends Logger {
       '0x0000000000000000000000000000000000000000000000000000000000000000',
     );
 
-    const [ contract, identity ] = await Promise.all([ contractP, identityP ]);
-
     const contractId = contract.options.address;
     instanceConfig.address = contractId;
     const container = new Container(options, instanceConfig);
     await container.ensureContract();
 
-    envelope.public.identity = identity;
+    // now check all remaining identities if they match the new created contract
+    const identityHolderContract = options.contractLoader.loadContract(
+      'IdentityHolder',
+      contractIdentities
+    );
+
+    const resolvedIdentities = await Promise.all(pendingIdentities.map(async (pendingIdentity) => {
+      return {
+        identity: pendingIdentity,
+        contract: await options.executor.executeContractCall(
+          identityHolderContract,
+          'getLink',
+          pendingIdentity
+        )
+      }
+    }));
+    const targetIdentity = resolvedIdentities.find((resolvedIdentity) => {
+      return new RegExp(`${contractId.substr(2)}$`, 'i').test(resolvedIdentity.contract);
+    });
+
+    // after found the correct identity, stop the subscription
+    options.executor.eventHub.unsubscribe({
+      subscription: identitiesSubscription
+    });
+
+    pendingIdentities.splice(pendingIdentities.indexOf(targetIdentity.identity), 1);
+    envelope.public.identity = targetIdentity.identity;
 
     // write values from template to new contract
     await applyPlugin(options, instanceConfig, container, envelope);
@@ -766,9 +813,10 @@ export class Container extends Logger {
     }
 
     // check fields
+    const localShareConfig = cloneDeep(shareConfigs);
     const schemaProperties = (await this.toPlugin(false)).template.properties;
     const sharedProperties = Array.from(
-      new Set([].concat(...shareConfigs.map(shareConfig => [].concat(
+      new Set([].concat(...localShareConfig.map(shareConfig => [].concat(
         shareConfig.read, shareConfig.readWrite)))))
       .filter(property => property !== undefined);
     const missingProperties = sharedProperties
@@ -778,7 +826,7 @@ export class Container extends Logger {
         `tried to share properties, but missing one or more in schema: ${missingProperties}`);
     }
     // for all share configs
-    for (let { accountId, read = [], readWrite = [] } of shareConfigs) {
+    for (let { accountId, read = [], readWrite = [], removeListEntries = [] } of localShareConfig) {
       //////////////////////////////////////////////////// ensure that account is member in contract
       if (! await this.options.executor.executeContractCall(
           this.contract, 'isConsumer', accountId)) {
@@ -822,6 +870,57 @@ export class Container extends Logger {
             property,
             getPropertyType(schemaProperties[property].type),
             ModificationType.Set,
+            true,
+          );
+        }
+
+        // ensure that account has role
+        const hasRole = await this.options.executor.executeContractCall(
+          authority, 'hasUserRole', accountId, permittedRole);
+        if (!hasRole) {
+          await this.options.rightsAndRoles.addAccountToRole(
+            this.contract, this.config.accountId, accountId, permittedRole);
+        }
+      }
+
+
+      for (let property of removeListEntries) {
+        const propertyType = getPropertyType(schemaProperties[property].type);
+
+        // throw error if remove should be given on no list
+        if (propertyType !== PropertyType.ListEntry) {
+          throw new Error(`property "${property}" is no list. Can not give remove rights`);
+        }
+
+        // get permissions from contract
+        const hash = this.options.rightsAndRoles.getOperationCapabilityHash(
+          property,
+          propertyType,
+          ModificationType.Remove,
+        );
+        const rolesMap = await this.options.executor.executeContractCall(
+          authority,
+          'getOperationCapabilityRoles',
+          '0x0000000000000000000000000000000000000000',
+          hash,
+        );
+        const binary = (new BigNumber(rolesMap)).toString(2);
+        // search for role with permissions
+        let permittedRole = [...binary].reverse().join('').indexOf('1');
+        if (permittedRole < this.reservedRoles) {
+          // if not found or included in reserved roles, add new role
+          const roleCount = await this.options.executor.executeContractCall(authority, 'roleCount');
+          if (roleCount >= 256) {
+            throw new Error(`could not share property "${property}", maximum role count reached`);
+          }
+          permittedRole = Math.max(this.reservedRoles, roleCount);
+          await this.options.rightsAndRoles.setOperationPermission(
+            authority,
+            this.config.accountId,
+            permittedRole,
+            property,
+            propertyType,
+            ModificationType.Remove,
             true,
           );
         }
@@ -881,6 +980,42 @@ export class Container extends Logger {
         }
       });
     }
+  }
+
+  /**
+   * Store data to a container. This allows to
+   * - store data into already existing entries and/or list entries
+   * - implicitely create new entries and/or list entries (the same logic for deciding on their type
+   *   is applied as in `setEntry`/`addListEntries` is applied here)
+   * - in case of entries, their value is overwritten
+   * - in case of list entries, given values are added to the list
+   *
+   * @param      {any}  data      object with keys, that are names of lists or entries and values,
+   *                              that are the values to store to them
+   * @return     {Promise<void>}  resolved when done
+   */
+  public async storeData(data: { [id: string]: any }): Promise<void> {
+    await this.ensureContract();
+
+    // fetch description, for checking types
+    const description = await this.getDescription();
+
+    // create a task function for each field
+    const tasks = Object.keys(data).map((property) => async () => {
+      let type;
+      if (description.dataSchema && description.dataSchema[property]) {
+        type = description.dataSchema[property].type;
+      } else {
+        type = this.deriveSchema(data[property]).type;
+      }
+      // add field or entry, based on property type
+      await (type === 'array' ?
+        this.addListEntries(property, data[property]) :
+        this.setEntry(property, data[property])
+      );
+    });
+
+    await Throttle.all(tasks);
   }
 
   /**
@@ -961,6 +1096,216 @@ export class Container extends Logger {
   }
 
   /**
+   * Remove keys and/or permissions for a user; this also handles role permissions, role
+   * memberships.
+   *
+   * @param      {ContainerUnshareConfig[]}  unshareConfigs  list of account-field setups to remove
+   *                                                         permissions/keys for
+   */
+  public async unshareProperties(unshareConfigs: ContainerUnshareConfig[]): Promise<void> {
+    await this.ensureContract();
+    this.log(`unsharing properties`, 'debug');
+    ///////////////////////////////////////////////////////////////////////////// check requirements
+    // check ownership
+    const authority = this.options.contractLoader.loadContract(
+      'DSRolesPerContract',
+      await this.options.executor.executeContractCall(this.contract, 'authority'),
+    );
+    if (!await this.options.executor.executeContractCall(
+      authority, 'hasUserRole', this.config.accountId, 0)) {
+      throw new Error(`current account "${this.config.accountId}" is unable to unshare ` +
+        'properties, as it isn\'t owner of the underlying contract ' +
+        this.contract.options.address);
+    }
+
+    // check fields
+    const localUnshareConfigs = cloneDeep(unshareConfigs);
+    const schemaProperties = (await this.toPlugin(false)).template.properties;
+    const sharedProperties = Array.from(
+      new Set([].concat(...localUnshareConfigs.map(unshareConfig => [].concat(
+        unshareConfig.write, unshareConfig.readWrite)))))
+      .filter(property => property !== undefined);
+    const missingProperties = sharedProperties
+      .filter(property => !schemaProperties.hasOwnProperty(property));
+    if (missingProperties.length) {
+      throw new Error(
+        `tried to share properties, but missing one or more in schema: ${missingProperties}`);
+    }
+    // for all share configs
+    for (let { accountId, readWrite = [], removeListEntries = [], write = [] } of localUnshareConfigs) {
+      this.log(`checking unshare configs`, 'debug');
+      // remove write permissions for all in readWrite and write
+      for (let property of [...readWrite, ...write]) {
+        this.log(`removing write permissions for ${property}`, 'debug');
+        const propertyType = getPropertyType(schemaProperties[property].type);
+        // search for role with permissions
+        let permittedRole = await this.getPermittedRole(
+          authority, property, propertyType, ModificationType.Set);
+        if (permittedRole < this.reservedRoles) {
+          // if not found or included in reserved roles, exit
+          this.log('can not find a role that has write permissions for property ' + property);
+        } else {
+          // remove account from role
+          const hasRole = await this.options.executor.executeContractCall(
+            authority, 'hasUserRole', accountId, permittedRole);
+          if (hasRole) {
+            await this.options.rightsAndRoles.removeAccountFromRole(
+              this.contract, this.config.accountId, accountId, permittedRole);
+          }
+
+          // if no members are left, remove role
+          const memberCount = await this.options.executor.executeContractCall(
+            authority, 'role2userCount', permittedRole);
+          if (memberCount.eq(0)) {
+            this.log(`removing role for property "${property}"`, 'debug')
+            await this.options.rightsAndRoles.setOperationPermission(
+              authority,
+              this.config.accountId,
+              permittedRole,
+              property,
+              getPropertyType(schemaProperties[property].type),
+              ModificationType.Set,
+              false,
+            );
+          }
+        }
+      }
+
+      /////////////////////// check if only remaining property is 'type', cleanup if that's the case
+      const shareConfig = await this.getContainerShareConfigForAccount(accountId);
+      const remainingFields = Array.from(new Set([
+        ...(shareConfig.read ? shareConfig.read : []),
+        ...(shareConfig.readWrite ? shareConfig.readWrite : []),
+      ]));
+      if (remainingFields.length === 1 && remainingFields[0] === 'type') {
+        // remove property
+        let permittedRole = await this.getPermittedRole(
+          authority, 'type', PropertyType.Entry, ModificationType.Set);
+        await this.options.rightsAndRoles.removeAccountFromRole(
+          this.contract, this.config.accountId, accountId, permittedRole);
+
+        // remove read if applicable
+        readWrite.push('type');
+
+        // uninvite
+        this.options.dataContract.removeFromContract(
+          null, await this.getContractAddress(), this.config.accountId, accountId);
+      }
+
+      ///////////////////////////////////////////////////////////////// remove list entries handling
+      for (let property of removeListEntries) {
+        const propertyType = getPropertyType(schemaProperties[property].type);
+
+        // throw error if remove should be given on no list
+        if (propertyType !== PropertyType.ListEntry) {
+          throw new Error(`property "${property}" is no list. Can not give remove rights`);
+        }
+
+        // search for role with permissions
+        let permittedRole = await this.getPermittedRole(
+          authority, property, propertyType, ModificationType.Remove);
+        if (permittedRole < this.reservedRoles) {
+          // if not found or included in reserved roles, exit
+          throw new Error(`can not find a role that has remove permissions for list "${property}"`);
+        }
+
+        // remove account from role
+        const hasRole = await this.options.executor.executeContractCall(
+          authority, 'hasUserRole', accountId, permittedRole);
+        if (hasRole) {
+          await this.options.rightsAndRoles.removeAccountFromRole(
+            this.contract, this.config.accountId, accountId, permittedRole);
+        }
+
+        // if no members are left, remove role
+        const memberCount = await this.options.executor.executeContractCall(
+          authority, 'role2userCount', permittedRole);
+        if (memberCount.eq(0)) {
+          await this.options.rightsAndRoles.setOperationPermission(
+            authority,
+            this.config.accountId,
+            permittedRole,
+            property,
+            getPropertyType(schemaProperties[property].type),
+            ModificationType.Set,
+            false,
+          );
+        }
+      }
+
+      //////////////////////////////////////////////////////// ensure encryption keys for properties
+      // run with mutex to prevent breaking sharing info
+      await this.getMutex('sharing').runExclusive(async () => {
+        this.log(`checking read permisssions`, 'debug');
+        // checkout sharings
+        const sharings = await this.options.sharing.getSharingsFromContract(this.contract);
+
+        // check if account already has a hash key
+        const sha3 = (...args) => this.options.nameResolver.soliditySha3(...args);
+        const isShared = (section, block?) => {
+          if (!sharings[sha3(accountId)] ||
+              !sharings[sha3(accountId)][sha3(section)] ||
+              (typeof block !== 'undefined' && !sharings[sha3(accountId)][sha3(section)][block])) {
+            return false;
+          }
+          return true;
+        };
+        let modified = false;
+
+        // remove keys for readWrite
+        for (let property of readWrite) {
+          this.log(`checking read permissions for ${property}`, 'debug');
+          if (isShared(property)) {
+            this.log(`removing key for ${property}`, 'debug');
+            await this.options.sharing.trimSharings(sharings, accountId, property);
+            modified = true;
+          }
+        }
+        // cleanup sharings, this relies on a few conditions,
+        // that are met, when sharings are managed by Container API
+        if (sharings[sha3(accountId)] &&  // account has any sharing
+          Object.keys(sharings[sha3(accountId)]).length === 2 &&  // only 2 sections remain
+          sharings[sha3(accountId)][sha3('*')] &&  // * section remains
+          Object.keys(sharings[sha3(accountId)][sha3('*')]).length === 1 && // only 1 entry in *
+          sharings[sha3(accountId)][sha3('*')].hashKey &&  // only the hash key in *
+          sharings[sha3(accountId)][sha3('type')]) {  // type remains
+          this.log(`account from sharings`, 'debug');
+          await this.options.sharing.trimSharings(sharings, accountId);
+          modified = true;
+        }
+
+        if (modified) {
+          this.log(`sharings updated, saving sharings`, 'debug');
+          // store sharings
+          await this.options.sharing.saveSharingsToContract(
+            this.contract.options.address, sharings, this.config.accountId);
+        }
+
+        // inner mutex, as we also rely on sharings
+        await this.getMutex('description').runExclusive(async () => {
+          // check if field still exists in updated sharing, if not remove field schema
+          const description = await this.getDescription();
+          const propertyHashes = [];
+          for (let accountHash of Object.keys(sharings)) {
+            propertyHashes.push(...Object.keys(sharings[accountHash]));
+          }
+          modified = false;
+          for (let property of readWrite) {
+            if (!propertyHashes.includes(this.options.nameResolver.soliditySha3(property))) {
+              delete description.dataSchema[property];
+              modified = true;
+            }
+          }
+          if (modified) {
+
+          }
+          await this.setDescription(description);
+        });
+      });
+    }
+  }
+
+  /**
    * Helper function for encrypting and decrypting, checks if a given property requires file
    * encryption.
    *
@@ -1008,6 +1353,9 @@ export class Container extends Logger {
    * @param      {any}     value      (raw) value to analyze
    */
   private async decryptFilesIfRequired(propertyName: string, value: any): Promise<ContainerFile[]> {
+    if (value === '0x0000000000000000000000000000000000000000000000000000000000000000') {
+      return value;
+    }
     let result = value;
     const description = await this.getDescription();
     if (!description.dataSchema || !description.dataSchema[propertyName]) {
@@ -1015,6 +1363,12 @@ export class Container extends Logger {
     }
     const decrypt = async (toEncrypt) => {
       const encryptedFiles = await Throttle.all(toEncrypt.files.map(file => async () => {
+        try {
+          JSON.parse(file);
+        } catch (ex) {
+          this.log(`can't validate file ${file}, no valid JSON`, 'error');
+          return null;
+        }
         const decrypted = await this.options.dataContract.decrypt(
           file,
           this.contract,
@@ -1025,7 +1379,7 @@ export class Container extends Logger {
         return decrypted.private;
       }));
 
-      return { files: encryptedFiles };
+      return { files: encryptedFiles.filter((f) => f !== null) };
     };
     result = await this.applyIfEncrypted(description.dataSchema[propertyName], value, decrypt);
 
@@ -1221,6 +1575,33 @@ export class Container extends Logger {
       operationHash = '0x8dd27a19ebb249760a6490a8d33442a54b5c3c8504068964b74388bfe83458be';
     }
     return keccak256(keccak256(label, keccak256(name)), operationHash);
+  }
+
+  private async getPermittedRole(
+    authority: any, property: string, propertyType: PropertyType, modificationType: ModificationType
+  ): Promise<number> {
+    // get permissions from contract
+    const hash = this.options.rightsAndRoles.getOperationCapabilityHash(
+      property,
+      propertyType,
+      modificationType,
+    );
+    const rolesMap = await this.options.executor.executeContractCall(
+      authority,
+      'getOperationCapabilityRoles',
+      '0x0000000000000000000000000000000000000000',
+      hash,
+    );
+    // search for role with permissions
+    // build string with all roles and 1/0 depending on permissions
+    const binary = (new BigNumber(rolesMap)).toString(2);
+    // check index in group list, ignore reserved roles for this
+    let index = [...binary.substr(0, binary.length - this.reservedRoles)]
+      .reverse().join('').indexOf('1');
+    // if group was found, re-apply reserved roles count, result is group with permission
+    const permittedRole = (index === -1) ? index : (index + this.reservedRoles);
+
+    return permittedRole;
   }
 
   /**

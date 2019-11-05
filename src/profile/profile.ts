@@ -17,27 +17,22 @@
   the following URL: https://evan.network/license/
 */
 
-import * as Throttle from 'promise-parallel-throttle';
-import crypto = require('crypto');
-import { merge, cloneDeep, isEqual } from 'lodash';
-
 import {
   ContractLoader,
   DfsInterface,
   Executor,
   Logger,
   LoggerOptions,
-  NameResolver,
   obfuscate,
 } from '@evan.network/dbcp';
 
-
 import * as accountTypes from './types/types';
+import { Container } from '../contracts/digital-twin/container';
 import { CryptoProvider } from '../encryption/crypto-provider';
 import { DataContract } from '../contracts/data-contract/data-contract';
 import { Description } from '../shared-description';
 import { Ipld } from '../dfs/ipld';
-import { KeyExchange } from '../keyExchange';
+import { NameResolver } from '../name-resolver';
 import { RightsAndRoles, ModificationType, PropertyType } from '../contracts/rights-and-roles';
 import { Sharing } from '../contracts/sharing';
 
@@ -45,18 +40,19 @@ import { Sharing } from '../contracts/sharing';
  * parameters for Profile constructor
  */
 export interface ProfileOptions extends LoggerOptions {
-  accountId: string,
-  contractLoader: ContractLoader,
-  description: Description,
-  cryptoProvider: CryptoProvider,
-  dataContract: DataContract,
-  defaultCryptoAlgo: string,
-  dfs: DfsInterface,
-  executor: Executor,
-  ipld: Ipld,
-  nameResolver: NameResolver,
-  rightsAndRoles: RightsAndRoles,
-  sharing: Sharing,
+  accountId: string;
+  contractLoader: ContractLoader;
+  cryptoProvider: CryptoProvider;
+  dataContract: DataContract;
+  defaultCryptoAlgo: string;
+  description: Description;
+  dfs: DfsInterface;
+  executor: Executor;
+  ipld: Ipld;
+  nameResolver: NameResolver;
+  rightsAndRoles: RightsAndRoles;
+  sharing: Sharing;
+  profileOwner?: string;
 }
 
 
@@ -64,11 +60,11 @@ export interface ProfileOptions extends LoggerOptions {
  * bookmark to a dapp
  */
 export interface DappBookmark {
-  description: string,
-  img: string,
-  primaryColor: string,
-  secondaryColor?: string,
-  title: string,
+  description: string;
+  img: string;
+  primaryColor: string;
+  secondaryColor?: string;
+  title: string;
 }
 
 
@@ -78,33 +74,61 @@ export interface DappBookmark {
  * @class      Profile (name)
  */
 export class Profile extends Logger {
-  activeAccount: string;
-  contractLoader: ContractLoader;
-  dataContract: DataContract;
-  defaultCryptoAlgo: string;
-  executor: Executor;
-  ipld: Ipld;
-  nameResolver: NameResolver;
-  options: ProfileOptions;
-  profileContract: any;
-  trees: any;
-  treeLabels = {
+  public activeAccount: string;
+  public contractLoader: ContractLoader;
+  public dataContract: DataContract;
+  public defaultCryptoAlgo: string;
+  public executor: Executor;
+  public ipld: Ipld;
+  public nameResolver: NameResolver;
+  public options: ProfileOptions;
+  public profileContainer: Container;
+  public profileContract: any;
+  public profileOwner: string;
+  public trees: any;
+  public treeLabels = {
     activeVerifications: 'activeVerifications',
     addressBook: 'addressBook',
     bookmarkedDapps: 'bookmarkedDapps',
+    contacts: 'contacts',
     contracts: 'contracts',
     dtContainerPlugins: 'dtContainerPlugins',
     encryptionKeys: 'encryptionKeys',
+    profileOptions: 'profileOptions',
     publicKey: 'publicKey',
+    templates: 'templates',
   };
 
   /**
    * All available account types, mapped to it's data contract template specification. Each account
    * type is based on the uspecified type, so each type includes this data too.
    */
-  accountTypes = accountTypes;
+  public accountTypes = accountTypes;
 
-  constructor(options: ProfileOptions) {
+  /**
+   * Check if profile data is correct, according to a specific profile type. Throws, when the data
+   * is invalid.
+   *
+   * @param      {any}     data    profile data (accountDetails, registration, contact, ...)
+   * @param      {string}  type    profile type (user, company, device)
+   * @return     {booleaen}       true, when it's valid
+   */
+  public static checkCorrectProfileData(data: any, type: string) {
+    // build array with allowed fields (may include duplicates)
+    const allowedFields = [
+      ...Object.keys(accountTypes.user.template.properties),
+      ...Object.keys(accountTypes[type].template.properties),
+    ];
+    // look for properties, that are not allowed in allowed fields (aka forbidden)
+    const notAllowed = Object.keys(data).filter(key => !allowedFields.includes(key));
+    if (notAllowed.length) {
+      throw new Error(`one or more fields are not allowed in profile: ${notAllowed}`);
+    }
+
+    return true;
+  }
+
+  public constructor(options: ProfileOptions) {
     super(options);
     this.activeAccount = options.accountId;
     this.contractLoader = options.contractLoader;
@@ -113,8 +137,9 @@ export class Profile extends Logger {
     this.executor = options.executor;
     this.ipld = options.ipld;
     this.nameResolver = options.nameResolver;
-    this.trees = {};
     this.options = options;
+    this.profileOwner = options.profileOwner || this.activeAccount;
+    this.trees = {};
   }
 
   /**
@@ -125,7 +150,8 @@ export class Profile extends Logger {
    * @param      {any}            data     bookmark metadata
    * @return     {Promise<void>}  resolved when done
    */
-  async addBcContract(bc: string, address: string, data: any): Promise<void> {
+  public async addBcContract(bc: string, address: string, data: any): Promise<void> {
+    this.throwIfNotOwner('add a contract to a specific scope');
     this.ensureTree('contracts');
     const bcSet = await this.ipld.getLinkedGraph(this.trees['contracts'], bc);
     if (!bcSet) {
@@ -135,15 +161,18 @@ export class Profile extends Logger {
   }
 
   /**
-   * add a key for a contact to bookmarks
+   * add a key for a contact to address book
    *
    * @param      {string}         address  account key of the contact
    * @param      {string}         context  store key for this context, can be a contract, bc, etc.
    * @param      {string}         key      communication key to store
    * @return     {Promise<void>}  resolved when done
    */
-  async addContactKey(address: string, context: string, key: string): Promise<void> {
-    this.log(`add contact key: account "${address}", context "${context}", key "${obfuscate(key)}"`, 'debug');
+  public async addContactKey(address: string, context: string, key: string): Promise<void> {
+    this.log(
+      `add contact key: account "${address}", context "${context}", key "${obfuscate(key)}"`,
+      'debug');
+    this.throwIfNotOwner('add a key for a contact to address book');
     this.ensureTree('addressBook');
 
     let addressHash;
@@ -160,7 +189,8 @@ export class Profile extends Logger {
     if (!keysSet) {
       await this.ipld.set(this.trees['addressBook'], 'keys', {}, true);
     }
-    const contactSet = await this.ipld.getLinkedGraph(this.trees['addressBook'], `keys/${addressHash}`);
+    const contactSet = await this.ipld.getLinkedGraph(
+      this.trees['addressBook'], `keys/${addressHash}`);
     if (!contactSet) {
       await this.ipld.set(this.trees['addressBook'], `keys/${addressHash}`, {}, true);
     }
@@ -173,7 +203,8 @@ export class Profile extends Logger {
    * @param      {string}  address  contract address
    * @return     {any}     bookmark info
    */
-  async addContract(address: string, data: any): Promise<any> {
+  public async addContract(address: string, data: any): Promise<any> {
+    this.throwIfNotOwner('add a contract');
     this.ensureTree('contracts');
     await this.ipld.set(this.trees['contracts'], address, data, false);
   }
@@ -185,7 +216,8 @@ export class Profile extends Logger {
    * @param      {DappBookmark}   description  description for bookmark
    * @return     {Promise<void>}  resolved when done
    */
-  async addDappBookmark(address: string, description: DappBookmark): Promise<void> {
+  public async addDappBookmark(address: string, description: DappBookmark): Promise<void> {
+    this.throwIfNotOwner('add a dapp bookmark');
     this.ensureTree('bookmarkedDapps');
     if (!address || !description) {
       throw new Error('no valid description or address given!');
@@ -193,7 +225,8 @@ export class Profile extends Logger {
     await this.ipld.set(this.trees['bookmarkedDapps'], `bookmarkedDapps/${address}`, {}, true);
     const descriptionKeys = Object.keys(description);
     for (let key of descriptionKeys) {
-      await this.ipld.set(this.trees['bookmarkedDapps'], `bookmarkedDapps/${address}/${key}`, description[key], true);
+      await this.ipld.set(
+        this.trees['bookmarkedDapps'], `bookmarkedDapps/${address}/${key}`, description[key], true);
     }
   }
 
@@ -205,13 +238,15 @@ export class Profile extends Logger {
    * @param      {string}         value    value of the profile key
    * @return     {Promise<void>}  resolved when done
    */
-  async addProfileKey(address: string, key: string, value: string): Promise<void> {
+  public async addProfileKey(address: string, key: string, value: string): Promise<void> {
+    this.throwIfNotOwner('add a profile value to an account');
     this.ensureTree('addressBook');
     const profileSet = await this.ipld.getLinkedGraph(this.trees['addressBook'], `profile`);
     if (!profileSet) {
       await this.ipld.set(this.trees['addressBook'], `profile`, {}, true);
     }
-    const addressSet = await this.ipld.getLinkedGraph(this.trees['addressBook'], `profile/${address}`);
+    const addressSet = await this.ipld.getLinkedGraph(
+      this.trees['addressBook'], `profile/${address}`);
     if (!addressSet) {
       await this.ipld.set(this.trees['addressBook'], `profile/${address}`, {}, true);
     }
@@ -224,7 +259,8 @@ export class Profile extends Logger {
    * @param      {string}         key     public Diffie Hellman key part to store
    * @return     {Promise<void>}  resolved when done
    */
-  async addPublicKey(key: string): Promise<void> {
+  public async addPublicKey(key: string): Promise<void> {
+    this.throwIfNotOwner('set public key');
     this.ensureTree('publicKey');
     await this.ipld.set(this.trees['publicKey'], 'publicKey', key, true);
   }
@@ -235,17 +271,31 @@ export class Profile extends Logger {
    * @param      {string}         keys    communication key to store
    * @return     {Promise<void>}  resolved when done
    */
-  async createProfile(keys: any): Promise<void> {
+  public async createProfile(keys: any): Promise<void> {
+    if (this.activeAccount !== this.profileOwner) {
+      throw new Error('creating profiles for other accounts is not supported' +
+        `"${this.activeAccount}" tried to create a profile for "${this.profileOwner}"`);
+    }
     // create new profile contract and store in profile index
-    const factoryDomain = this.nameResolver.getDomainName(this.nameResolver.config.domains.profileFactory);
+    const factoryDomain = this.nameResolver.getDomainName(
+      this.nameResolver.config.domains.profileFactory);
     this.profileContract = await this.dataContract.create(factoryDomain, this.activeAccount);
+    this.profileContainer = new Container(
+      { ...this.options, verifications: null, web3: this.options.executor.web3 },
+      { accountId: this.activeAccount, address: this.profileContract.address },
+    );
     await Promise.all([
       (async () => {
         const ensName = this.nameResolver.getDomainName(this.nameResolver.config.domains.profile);
         const address = await this.nameResolver.getAddress(ensName);
-        const contract = this.nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
+        const contract = this.nameResolver.contractLoader.loadContract(
+          'ProfileIndexInterface', address);
         await this.executor.executeContractTransaction(
-          contract, 'setMyProfile', { from: this.activeAccount, autoGas: 1.1, }, this.profileContract.options.address);
+          contract,
+          'setMyProfile',
+          { from: this.activeAccount, autoGas: 1.1, },
+          this.profileContract.options.address,
+        );
       })(),
       (async () => {
         await this.addContactKey(this.activeAccount, 'dataKey', keys.privateKey.toString('hex'));
@@ -263,13 +313,14 @@ export class Profile extends Logger {
    *
    * @return     {Promise<boolean>}  true if a contract was registered, false if not
    */
-  async exists(): Promise<boolean> {
+  public async exists(): Promise<boolean> {
     try {
       const ensName = this.nameResolver.getDomainName(this.nameResolver.config.domains.profile);
       const address = await this.nameResolver.getAddress(ensName);
-      const indexContract = this.nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
+      const indexContract = this.nameResolver.contractLoader.loadContract(
+        'ProfileIndexInterface', address);
       const profileContractAddress = await this.executor.executeContractCall(
-        indexContract, 'getProfile', this.activeAccount, { from: this.activeAccount, });
+        indexContract, 'getProfile', this.profileOwner, { from: this.activeAccount, });
       return profileContractAddress !== '0x0000000000000000000000000000000000000000';
     } catch (ex) {
       this.log(`error occurred while checking if profile exists; ${ex.message || ex}`, 'debug');
@@ -282,7 +333,7 @@ export class Profile extends Logger {
    *
    * @return     {any}     bookmark info
    */
-  async getAddressBook(): Promise<any> {
+  public async getAddressBook(): Promise<any> {
     if (!this.trees[this.treeLabels.addressBook]) {
       await this.loadForAccount(this.treeLabels.addressBook);
     }
@@ -295,7 +346,7 @@ export class Profile extends Logger {
    * @param      {string}        address  contact address
    * @return     {Promise<any>}  bookmark info
    */
-  async getAddressBookAddress(address: string): Promise<any> {
+  public async getAddressBookAddress(address: string): Promise<any> {
     if (!this.trees[this.treeLabels.addressBook]) {
       await this.loadForAccount(this.treeLabels.addressBook);
     }
@@ -309,7 +360,7 @@ export class Profile extends Logger {
    * @param      {string}        address  contact address
    * @return     {Promise<any>}  bookmark info
    */
-  async getBcContract(bc: string, address: string): Promise<any> {
+  public async getBcContract(bc: string, address: string): Promise<any> {
     if (!this.trees[this.treeLabels.contracts]) {
       await this.loadForAccount(this.treeLabels.contracts);
     }
@@ -322,7 +373,7 @@ export class Profile extends Logger {
    * @param      {string}        bc      business center
    * @return     {Promise<any>}  bc contracts.
    */
-  async getBcContracts(bc: string): Promise<any> {
+  public async getBcContracts(bc: string): Promise<any> {
     if (!this.trees[this.treeLabels.contracts]) {
       await this.loadForAccount(this.treeLabels.contracts);
     }
@@ -334,7 +385,7 @@ export class Profile extends Logger {
    *
    * @return     {any}  all bookmarks for profile
    */
-  async getBookmarkDefinitions(): Promise<any> {
+  public async getBookmarkDefinitions(): Promise<any> {
     if (!this.trees[this.treeLabels.bookmarkedDapps]) {
       await this.loadForAccount(this.treeLabels.bookmarkedDapps);
     }
@@ -348,7 +399,8 @@ export class Profile extends Logger {
    * @param      {string}           context  store key for this context, can be a contract, bc, etc.
    * @return     {Promise<string>}  matching key
    */
-  async getContactKey(address: string, context: string): Promise<string> {
+  public async getContactKey(address: string, context: string): Promise<string> {
+    this.throwIfNotOwner('read a contact key');
     let addressHash;
     // check if address is already hashed
     if (address.length === 42) {
@@ -362,7 +414,8 @@ export class Profile extends Logger {
     if (!this.trees[this.treeLabels.addressBook]) {
       await this.loadForAccount(this.treeLabels.addressBook);
     }
-    return this.ipld.getLinkedGraph(this.trees[this.treeLabels.addressBook], `keys/${addressHash}/${context}`);
+    return this.ipld.getLinkedGraph(
+      this.trees[this.treeLabels.addressBook], `keys/${addressHash}/${context}`);
   }
 
   /**
@@ -371,7 +424,8 @@ export class Profile extends Logger {
    * @param      {string}        address  contact address
    * @return     {Promise<any>}  bookmark info
    */
-  async getContract(address: string): Promise<any> {
+  public async getContract(address: string): Promise<any> {
+    this.throwIfNotOwner('get a contract');
     if (!this.trees[this.treeLabels.contracts]) {
       await this.loadForAccount(this.treeLabels.contracts);
     }
@@ -383,11 +437,13 @@ export class Profile extends Logger {
    *
    * @return     {Promise<any>}  contracts info
    */
-  async getContracts(): Promise<any> {
+  public async getContracts(): Promise<any> {
+    this.throwIfNotOwner('get all contracts');
     if (!this.trees[this.treeLabels.contracts]) {
       await this.loadForAccount(this.treeLabels.contracts);
     }
-    return this.ipld.getLinkedGraph(this.trees[this.treeLabels.contracts], this.treeLabels.contracts);
+    return this.ipld.getLinkedGraph(
+      this.trees[this.treeLabels.contracts], this.treeLabels.contracts);
   }
 
   /**
@@ -396,11 +452,13 @@ export class Profile extends Logger {
    * @param      {string}        address  ENS name or contract address (if no ENS name is set)
    * @return     {Promise<any>}  bookmark info
    */
-  async getDappBookmark(address: string): Promise<any> {
+  public async getDappBookmark(address: string): Promise<any> {
+    this.throwIfNotOwner('get dapp bookmarks');
     if (!this.trees[this.treeLabels.bookmarkedDapps]) {
       await this.loadForAccount(this.treeLabels.bookmarkedDapps);
     }
-    return this.ipld.getLinkedGraph(this.trees[this.treeLabels.bookmarkedDapps], `bookmarkedDapps/${address}`);
+    return this.ipld.getLinkedGraph(
+      this.trees[this.treeLabels.bookmarkedDapps], `bookmarkedDapps/${address}`);
   }
 
   /**
@@ -409,12 +467,12 @@ export class Profile extends Logger {
    * @param      {string}            accountId  account id of a contact
    * @return     {Promise<boolean>}  true if known account
    */
-  async getContactKnownState(accountId: string): Promise<boolean> {
+  public async getContactKnownState(accountId: string): Promise<boolean> {
     const value = await this.dataContract.getMappingValue(
       this.profileContract,
       'contacts',
       accountId,
-      this.activeAccount,
+      this.profileOwner,
       false,
       false,
     );
@@ -426,7 +484,8 @@ export class Profile extends Logger {
    *
    * @param      {string}  context  key context
    */
-  async getEncryptionKey(context: string): Promise<any> {
+  public async getEncryptionKey(context: string): Promise<any> {
+    this.throwIfNotOwner('get an encryption key');
     if (!this.trees[this.treeLabels.encryptionKeys]) {
       await this.loadForAccount(this.treeLabels.encryptionKeys);
     }
@@ -439,111 +498,29 @@ export class Profile extends Logger {
 
   /**
    * Return the saved profile information according to the specified profile type. No type directly
-   * uses unspecified type.
+   * uses "user" type.
    *
-   * @param      {Array<string>}  properties  Restrict properties that should be loaded.
-   * @return     {Promise<any>}  Property keys mapped to it's values. When a property was not set, a
-   *                             empty object will be returned
+   * @param      {string}        property  Restrict properties that should be loaded.
+   * @return     {Promise<any>}  the wantet profile object data (e.g. accountDetails, registration)
    */
-  async getProfileProperties(properties?: Array<string>) {
-    const data: any = {  };
-    let ajvSpecs;
-
-    // try to resolve profiles dbcp and get it's data specification
-    try {
-      const description = await this.options.description
-        .getDescription(this.profileContract.address, this.activeAccount);
-
-      if (description && description.public && description.public.dataSchema) {
-        ajvSpecs = description.public.dataSchema;
-      }
-    } catch (ex) {
-      this.log(`Problem getting profile contract description: ${ ex.message }`, 'error');
+  public async getProfileProperty(property: string): Promise<any> {
+    // run loadAccount, when it's not runned before
+    if (!this.profileContainer) {
+      await this.loadForAccount();
     }
 
-    // if no dbcp data specification could be loaded, resolve it from the profile type and the
-    // latest templates
-    if (!ajvSpecs) {
-      // load account details and type that should be resolved
-      let accountDetails = (await this.dataContract.getEntry(this.profileContract, 'accountDetails',
-        this.activeAccount));
-      // fill empty details
-      if (!accountDetails ||
-          accountDetails === '0x0000000000000000000000000000000000000000000000000000000000000000') {
-        accountDetails = { profileType: 'unspecified' }
-      };
-      data.accountDetails = accountDetails;
+    const description = await this.profileContainer.getDescription();
 
-      // merge unspecified account specifications with the current selected one
-      ajvSpecs = merge(
-        cloneDeep(this.accountTypes.unspecified),
-        cloneDeep(this.accountTypes[accountDetails.profileType]),
-      ).template.properties;
+    if (!description.dataSchema || !description.dataSchema[property]) {
+      throw new Error(`property "${property}" not found in description of profile`);
     }
-
-    // load profile data
-    await Throttle.all(
-      Object.keys(ajvSpecs).map((propKey: string) => async () => {
-        // only load properties that should be loaded
-        if (!properties || properties.indexOf(propKey) !== -1) {
-          const prop = ajvSpecs[propKey];
-          const fields = prop.properties ? prop.properties : prop.dataSchema.properties;
-
-          switch (prop.type) {
-            case 'array': {
-              // TODO: load list entries
-              data[propKey] = [ ];
-              this.log('list entry loading for profile properties are not implemented!', 'warning');
-              break;
-            }
-            case 'entry':
-            default: {
-              data[propKey] = data[propKey] || (await this.dataContract.getEntry(
-                this.profileContract, propKey, this.activeAccount)) || { };
-            }
-          }
-
-          // check for file properties that should be decrypted
-          await Promise.all(Object.keys(fields).map(async (fieldKey: string) => {
-            if (fields[fieldKey].$comment &&
-                fields[fieldKey].$comment.indexOf('isEncryptedFile') !== -1) {
-              try {
-                // generate new keys
-                const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aesBlob');
-                const hashCryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aesEcb');
-
-                const hashKey = await this.options.sharing.getHashKey(
-                  this.profileContract.options.address,
-                  this.activeAccount
-                );
-                const contentKey = await this.options.sharing.getKey(
-                  this.profileContract.options.address,
-                  this.activeAccount,
-                  propKey
-                );
-
-                await Promise.all(data[propKey][fieldKey].files.map(async (file, index) => {
-                  const dencryptedHashBuffer = await hashCryptor.decrypt(
-                    Buffer.from(file.substr(2), 'hex'),
-                    { key: hashKey }
-                  );
-                  const retrieved = await (<any>this.options.dfs)
-                    .get('0x' + dencryptedHashBuffer.toString('hex'), true);
-                  const decrypted = await cryptor.decrypt(retrieved, { key: contentKey })
-                  decrypted.size = decrypted.file.length;
-                  data[propKey][fieldKey].files[index] = decrypted;
-                }));
-              } catch (ex) {
-                this.log(`could not decrypt files from profile property ${ propKey }.${ fieldKey }: ${ ex.message }`, 'warning');
-                data[propKey][fieldKey] = { files: [ ] };
-              }
-            }
-          }));
-        }
-      })
-    );
-
-    return data;
+    if (description.dataSchema[property].type === 'array') {
+      throw new Error(`property "${property}" is type "array", which is not supported`);
+    }
+    const value = await this.profileContainer.getEntry(property);
+    return value !== '0x0000000000000000000000000000000000000000000000000000000000000000' ?
+      value :
+      null;
   }
 
   /**
@@ -553,11 +530,13 @@ export class Profile extends Logger {
    * @param      {string}        key      type of key to get
    * @return     {Promise<any>}  key
    */
-  async getProfileKey(address: string, key: string): Promise<any> {
+  public async getProfileKey(address: string, key: string): Promise<any> {
+    this.throwIfNotOwner('get a profile value');
     if (!this.trees[this.treeLabels.addressBook]) {
       await this.loadForAccount(this.treeLabels.addressBook);
     }
-    return this.ipld.getLinkedGraph(this.trees[this.treeLabels.addressBook], `profile/${address}/${key}`);
+    return this.ipld.getLinkedGraph(
+      this.trees[this.treeLabels.addressBook], `profile/${address}/${key}`);
   }
 
   /**
@@ -565,7 +544,7 @@ export class Profile extends Logger {
    *
    * @return     {any}  public key
    */
-  async getPublicKey(): Promise<any> {
+  public async getPublicKey(): Promise<any> {
     if (!this.trees[this.treeLabels.publicKey]) {
       await this.loadForAccount(this.treeLabels.publicKey);
     }
@@ -575,7 +554,8 @@ export class Profile extends Logger {
   /**
    * get plugin from profile
    */
-  async getPlugins(): Promise<any> {
+  public async getPlugins(): Promise<any> {
+    this.throwIfNotOwner('get plugins');
     if (!this.trees[this.treeLabels.dtContainerPlugins]) {
       await this.loadForAccount(this.treeLabels.dtContainerPlugins);
     }
@@ -593,28 +573,39 @@ export class Profile extends Logger {
    * @param      {string}         tree    tree to load ('bookmarkedDapps', 'contracts', ...)
    * @return     {Promise<void>}  resolved when done
    */
-  async loadForAccount(tree?: string): Promise<void> {
+  public async loadForAccount(tree?: string): Promise<void> {
     // ensure profile contract
     if (!this.profileContract) {
       const ensName = this.nameResolver.getDomainName(this.nameResolver.config.domains.profile);
       const address = await this.nameResolver.getAddress(ensName);
-      const indexContract = this.nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
+      const indexContract =
+        this.nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
       const profileContractAddress = await this.executor.executeContractCall(
-        indexContract, 'getProfile', this.activeAccount, { from: this.activeAccount, });
+        indexContract, 'getProfile', this.profileOwner, { from: this.activeAccount, });
       if (profileContractAddress === '0x0000000000000000000000000000000000000000') {
-        throw new Error(`no profile found for account "${this.activeAccount}"`);
+        throw new Error(`no profile found for account "${this.profileOwner}"`);
       } else {
         const contractAddress = profileContractAddress.length === 66 ?
-          this.executor.web3.utils.toChecksumAddress(profileContractAddress.substr(0, 42)) : profileContractAddress;
-        this.profileContract = this.contractLoader.loadContract('DataContractInterface', contractAddress);
+          this.executor.web3.utils.toChecksumAddress(profileContractAddress.substr(0, 42)) :
+          profileContractAddress;
+        this.profileContract =
+          this.contractLoader.loadContract('DataContractInterface', contractAddress);
+        this.profileContainer = new Container(
+          { ...this.options, verifications: null, web3: this.options.executor.web3 },
+          { accountId: this.activeAccount, address: this.profileContract.address },
+        );
       }
     }
     if (tree) {
+      this.throwIfNotOwner('load secured profile data');
+
       let hash;
       if (tree === this.treeLabels.publicKey) {
-        hash = await this.dataContract.getEntry(this.profileContract, tree, this.activeAccount, false, false);
+        hash = await this.dataContract.getEntry(
+          this.profileContract, tree, this.activeAccount, false, false);
       } else {
-        hash = await this.dataContract.getEntry(this.profileContract, tree, this.activeAccount, false, true);
+        hash = await this.dataContract.getEntry(
+          this.profileContract, tree, this.activeAccount, false, true);
       }
       if (hash === '0x0000000000000000000000000000000000000000000000000000000000000000') {
         this.trees[tree] = {
@@ -638,10 +629,11 @@ export class Profile extends Logger {
    *                                               hash
    * @return     {Promise<Profile>}  this profile
    */
-  async loadFromIpld(tree: string, ipldIpfsHash: string): Promise<Profile> {
+  public async loadFromIpld(tree: string, ipldIpfsHash: string): Promise<Profile> {
+    this.throwIfNotOwner('load secured profile data');
     let loaded;
     try {
-     loaded = await this.ipld.getLinkedGraph(ipldIpfsHash);
+      loaded = await this.ipld.getLinkedGraph(ipldIpfsHash);
     } catch (e) {
       this.log(`could not load profile from ipld ${ e.message || e }`, 'error');
       loaded = {
@@ -661,7 +653,8 @@ export class Profile extends Logger {
    * @param      {string}         address  contact address
    * @return     {Promise<void>}  resolved when done
    */
-  async removeBcContract(bc: string, address: string): Promise<void> {
+  public async removeBcContract(bc: string, address: string): Promise<void> {
+    this.throwIfNotOwner('remove a contract from a specific scope');
     this.ensureTree('contracts');
     const bcSet = await this.ipld.getLinkedGraph(this.trees['contracts'], bc);
 
@@ -676,7 +669,8 @@ export class Profile extends Logger {
    * @param      {string}         address  account key of the contact
    * @return     {Promise<void>}  resolved when done
    */
-  async removeContact(address: string): Promise<void> {
+  public async removeContact(address: string): Promise<void> {
+    this.throwIfNotOwner('remove a contract');
     const addressHash = this.nameResolver.soliditySha3.apply(this.nameResolver, [
       this.nameResolver.soliditySha3(address),
       this.nameResolver.soliditySha3(this.activeAccount),
@@ -692,7 +686,8 @@ export class Profile extends Logger {
    * @param      {string}         address  address of the bookmark to remove
    * @return     {Promise<void>}  resolved when done
    */
-  async removeDappBookmark(address: string): Promise<void> {
+  public async removeDappBookmark(address: string): Promise<void> {
+    this.throwIfNotOwner('remove a dapp bookmark');
     if (!address ) {
       throw new Error('no valid address given!');
     }
@@ -706,7 +701,8 @@ export class Profile extends Logger {
    * @param      {any}            bookmarks  bookmarks to set
    * @return     {Promise<void>}  resolved when done
    */
-  async setDappBookmarks(bookmarks: any): Promise<void> {
+  public async setDappBookmarks(bookmarks: any): Promise<void> {
+    this.throwIfNotOwner('update a dapp bookmark');
     if (!bookmarks) {
       throw new Error('no valid bookmarks are given');
     }
@@ -722,9 +718,10 @@ export class Profile extends Logger {
   /**
    * Load all verifications that should be displayed for this profile within the ui.
    *
-   * @return     {Array<string>}  array of topics of verifications that should be displayed
+   * @return     {string[]}  array of topics of verifications that should be displayed
    */
-  async loadActiveVerifications() {
+  public async loadActiveVerifications(): Promise<string[]> {
+    this.throwIfNotOwner('get verifications');
     const defaultVerifications = [
       '/evan/onboarding/termsofuse',
     ];
@@ -743,7 +740,8 @@ export class Profile extends Logger {
    * @param      {any}            bookmarks  bookmarks to set
    * @return     {Promise<void>}  resolved when done
    */
-  async setActiveVerifications(verifications: Array<string>): Promise<void> {
+  public async setActiveVerifications(verifications: string[]): Promise<void> {
+    this.throwIfNotOwner('set verifications');
     if (!verifications) {
       throw new Error('no verifications are given');
     }
@@ -766,7 +764,8 @@ export class Profile extends Logger {
    * @param      {boolean}        contactKnown  true if known, false if not
    * @return     {Promise<void>}  resolved when done
    */
-  async setContactKnownState(accountId: string, contactKnown: boolean): Promise<void> {
+  public async setContactKnownState(accountId: string, contactKnown: boolean): Promise<void> {
+    this.throwIfNotOwner('set a contact known state');
     await this.dataContract.setMappingValue(
       this.profileContract,
       'contacts',
@@ -784,7 +783,8 @@ export class Profile extends Logger {
    * @param      {string}  context  key context
    * @param      {string}  key      key value
    */
-  async setEncryptionKey(context: string, key: string): Promise<void> {
+  public async setEncryptionKey(context: string, key: string): Promise<void> {
+    this.throwIfNotOwner('set an encryption key');
     this.ensureTree(this.treeLabels.encryptionKeys);
 
     await this.ipld.set(
@@ -800,7 +800,8 @@ export class Profile extends Logger {
    *
    * @param      {any}     plugin  entire collections of plugin to store in profile
    */
-  async setPlugins(plugins: any): Promise<void> {
+  public async setPlugins(plugins: any): Promise<void> {
+    this.throwIfNotOwner('set plugins value');
     this.ensureTree(this.treeLabels.dtContainerPlugins);
 
     await this.ipld.set(
@@ -812,140 +813,50 @@ export class Profile extends Logger {
   }
 
   /**
-   * Takes a set of profile properties and saves them into the profile data contract. If one
-   * property wasn't specified before, it will be permitted for writing.
+   * Takes a set of profile properties and saves them into the profile DataContainer. Throws errors,
+   * if not the correct properties are applied for the specified account type.
    *
-   * @param      {any}  payload  Object that should saved. Each entry will be saved as seperated
-   *                             entry.
+   * @param      {any}  data    Object that should saved. Each entry will be saved as seperated
+   *                            entry.
    */
-  async setProfileProperties(data: any) {
+  public async setProfileProperties(data: any): Promise<void> {
     await this.loadForAccount();
-    const profileAddress = this.profileContract.address;
-    let description;
-    let profileType;
 
-    // gt profile type
-    if (data.accountDetails && data.accountDetails.profileType) {
-      profileType = data.accountDetails.profileType;
-    } else {
-      profileType = (await this.getProfileProperties([ 'accountDetails' ])).profileType;
-    }
-
-    // try to resolve profiles dbcp and get it's data specification
+    // older profiles may have an invalid format in files, use these as user
+    let accountDetails;
     try {
-      description = await this.options.description
-        .getDescription(this.profileContract.address, this.activeAccount);
-    } catch (ex) { }
-
-    // fill empty dbcp entries
-    description = description || {
-      'public': {
-        'name': 'Profile Contract',
-        'description': 'Profile Contract',
-        'author': 'evan.network',
-        'tags': [
-          'profile'
-        ],
-        'version': '1.0.0',
-        'dbcpVersion': 2
-      }
-    };
-    description.public.dataSchema = description.public.dataSchema || { };
-
-    // latest profile type definition
-    const originDescription = cloneDeep(description);
-    const latestSpecification = merge(
-      cloneDeep(this.accountTypes.unspecified),
-      cloneDeep(this.accountTypes[profileType]),
-    );
-    const newFields = Object
-      .keys(latestSpecification.template.properties)
-      .filter((propKey: string) => !description.public.dataSchema[propKey]);
-
-    // apply latest specifications after new fields were checked
-    Object.keys(latestSpecification.template.properties).forEach((propKey: string) => {
-      description.public.dataSchema[propKey] = cloneDeep(latestSpecification.template
-        .properties[propKey].dataSchema);
-    });
-
-    // set new permissions
-    if (newFields.length > 0) {
-      const shared = this.options.contractLoader.loadContract('Shared', profileAddress);
-      const sharings = await this.options.sharing.getSharingsFromContract(shared);
-
-      await Throttle.all(newFields.map((propKey: string) => async () => {
-        // create unique keys for the new fields
-        const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aes');
-        const [contentKey, blockNr] = await Promise.all(
-          [cryptor.generateKey(), this.executor.web3.eth.getBlockNumber()])
-        await this.options.sharing.extendSharings(sharings, this.activeAccount,
-          this.activeAccount, propKey, blockNr, contentKey);
-        await this.options.rightsAndRoles.setOperationPermission(
-          profileAddress,            // contract to be updated
-          this.activeAccount,        // account, that can change permissions
-          0,                         // role id, uint8 value
-          propKey,                   // name of the object
-          PropertyType.Entry,        // what type of element is modified
-          ModificationType.Set,      // type of the modification
-          true,                      // grant this capability
-        );
-      }));
-
-      await this.options.sharing.saveSharingsToContract(profileAddress, sharings, this.activeAccount);
-      await this.options.sharing.getSharings(profileAddress);
+      accountDetails = await this.getProfileProperty('accountDetails');
+    } catch (ex) {
+      this.log('could not get account details, will use this profile as user; ' +
+        '${ex.message || ex}', 'warning');
     }
 
-    // if description has changed, save it
-    if (!isEqual(originDescription, description)) {
-      await this.options.description.setDescription(profileAddress, description, this.activeAccount);
+    // get profile type and forbid invalid type transitions
+    let profileType = (accountDetails && accountDetails.profileType) ?
+      accountDetails.profileType : 'user';
+    if (data.accountDetails &&
+        data.accountDetails.profileType &&
+        data.accountDetails.profileType !== profileType &&
+        profileType !== 'user') {
+      throw new Error(`invalid profile type change ${accountDetails.profileType} ` +
+        `--> ${data.accountDetails.profileType}, change not allowed`);
+    }
+    if (data.accountDetails &&
+        data.accountDetails.profileType &&
+        !Object.keys(accountTypes).includes(data.accountDetails.profileType)) {
+      throw new Error(`invalid profile type change ${accountDetails.profileType} ` +
+        `--> ${data.accountDetails.profileType}, target type not supported`);
+    }
+    if (data.accountDetails &&
+        data.accountDetails.profileType &&
+        data.accountDetails.profileType !== profileType) {
+      profileType = data.accountDetails.profileType;
     }
 
-    // save the data
-    await Throttle.all(Object.keys(data).map((propKey: string) => async () => {
-      const fields = description.public.dataSchema[propKey].properties;
+    // build array with allowed fields (may include duplicates)
+    Profile.checkCorrectProfileData(data, profileType);
 
-      // check for files
-      await Promise.all(Object.keys(fields).map(async (fieldKey) => {
-        if (fields[fieldKey].$comment &&
-            fields[fieldKey].$comment.indexOf('isEncryptedFile') !== -1) {
-          const files = data[propKey][fieldKey] && data[propKey][fieldKey].files ?
-            data[propKey][fieldKey].files : data[propKey][fieldKey];
-
-          // reject empty file list
-          if (!files || files.length === 0) {
-            return;
-          }
-
-          await Promise.all(files.map(async (control: any, index: number) => {
-            const toEncrypt = {
-              name: control.name,
-              fileType: control.fileType,
-              file: control.file
-            };
-
-            // generate new keys
-            const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aesBlob')
-            const hashCryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aesEcb')
-            const hashKey = await this.options.sharing.getHashKey(profileAddress, this.activeAccount);
-            const contentKey = await this.options.sharing.getKey(profileAddress, this.activeAccount,
-              propKey);
-            const encryptedFileBuffer = await cryptor.encrypt(toEncrypt, { key: contentKey })
-            const stateMd5 = crypto.createHash('md5').update(encryptedFileBuffer).digest('hex')
-            const fileHash = await this.options.dfs.add(stateMd5, encryptedFileBuffer)
-            const encryptedHashBuffer = await hashCryptor.encrypt(
-              Buffer.from(fileHash.substr(2), 'hex'), { key: hashKey });
-            files[index] = `0x${encryptedHashBuffer.toString('hex')}`;
-          }));
-        }
-      }));
-
-      await this.options.dataContract.setEntry(
-        this.profileContract,
-        propKey,
-        data[propKey],
-        this.activeAccount
-      );
-    }));
+    await this.profileContainer.storeData(data);
   }
 
   /**
@@ -955,23 +866,29 @@ export class Profile extends Logger {
    * @param      {string}   ipldHash  store this hash instead of the current tree for account
    * @return     {Promise}  resolved when done
    */
-  async storeForAccount(tree: string, ipldHash?: string): Promise<void> {
+  public async storeForAccount(tree: string, ipldHash?: string): Promise<void> {
+    this.throwIfNotOwner('store secured profile data');
     await this.ensurePropertyInProfile(tree);
     if (ipldHash) {
-      this.log(`store tree "${tree}" with given hash to profile contract for account "${this.activeAccount}"`);
+      this.log(`store tree "${tree}" with given hash to profile contract for account ` +
+        `"${this.activeAccount}"`);
       if (tree === this.treeLabels.publicKey) {
-        await this.dataContract.setEntry(this.profileContract, tree, ipldHash, this.activeAccount, false, false);
+        await this.dataContract.setEntry(
+          this.profileContract, tree, ipldHash, this.activeAccount, false, false);
       } else {
-        await this.dataContract.setEntry(this.profileContract, tree, ipldHash, this.activeAccount, false, false);
+        await this.dataContract.setEntry(
+          this.profileContract, tree, ipldHash, this.activeAccount, false, false);
       }
     } else {
-      this.log(`store tree "${tree}" to ipld and then to profile contract for account "${this.activeAccount}"`);
+      this.log(`store tree "${tree}" to ipld and then to profile contract for account ` +
+        `"${this.activeAccount}"`);
       const stored = await this.storeToIpld(tree);
-      let hash;
       if (tree === this.treeLabels.publicKey) {
-        await this.dataContract.setEntry(this.profileContract, tree, stored, this.activeAccount, false, false);
+        await this.dataContract.setEntry(
+          this.profileContract, tree, stored, this.activeAccount, false, false);
       } else {
-        await this.dataContract.setEntry(this.profileContract, tree, stored, this.activeAccount, false, true);
+        await this.dataContract.setEntry(
+          this.profileContract, tree, stored, this.activeAccount, false, true);
       }
       await this.loadForAccount(tree);
     }
@@ -983,8 +900,20 @@ export class Profile extends Logger {
    * @param      {string}           tree    tree to store ('bookmarkedDapps', 'contracts', ...)
    * @return     {Promise<string>}  hash of the ipfs file
    */
-  async storeToIpld(tree: string): Promise<string> {
+  public async storeToIpld(tree: string): Promise<string> {
     return await this.ipld.store(this.trees[tree]);
+  }
+
+  /**
+   * Throws an exception if a profile was loaded for another account.
+   *
+   * @param      {string}  action  description of the action that should be performed
+   */
+  private throwIfNotOwner(action: string) {
+    if (this.activeAccount !== this.profileOwner) {
+      throw new Error(`tried to ${action} on "${this.profileOwner}"s profile with ` +
+        `"${this.activeAccount}", this is only supported for the owner of a profile`);
+    }
   }
 
   /**
@@ -996,8 +925,8 @@ export class Profile extends Logger {
   private async ensurePropertyInProfile(tree: string): Promise<void> {
     const hash = this.options.rightsAndRoles.getOperationCapabilityHash(
       tree, PropertyType.Entry, ModificationType.Set);
-    if (! await this.options.rightsAndRoles.canCallOperation(
-        this.profileContract.options.address, this.activeAccount, hash)) {
+    if (!await this.options.rightsAndRoles.canCallOperation(
+      this.profileContract.options.address, this.activeAccount, hash)) {
       await this.options.rightsAndRoles.setOperationPermission(
         this.profileContract,
         this.activeAccount,

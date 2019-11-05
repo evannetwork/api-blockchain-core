@@ -702,11 +702,13 @@ export class DataContract extends BaseContract {
       toSet = value;
     } else {
       const [ description, blockNr ] = await Promise.all([
-        this.options.description.getDescriptionFromContract(contract.options.address, encryptionContext),
+        this.options.description.getDescriptionFromContract(
+          contract.options.address, encryptionContext),
         this.options.web3.eth.getBlockNumber(),
       ]);
       await this.validate(description, mappingName, value);
-      const encrypted = await this.encrypt({ private: value }, dataContract, accountId, mappingName, blockNr);
+      const encrypted = await this.encrypt(
+        { private: value }, dataContract, accountId, mappingName, blockNr);
       const stateMd5 = crypto.createHash('md5').update(encrypted).digest('hex');
       toSet = await this.options.dfs.add(stateMd5, Buffer.from(encrypted));
     }

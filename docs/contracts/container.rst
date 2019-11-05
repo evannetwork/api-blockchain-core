@@ -767,6 +767,54 @@ Example
 
 ------------------------------------------------------------------------------
 
+= Store multiple properties =
+=============================
+
+.. _container_storeData:
+
+storeData
+================================================================================
+
+.. code-block:: typescript
+
+  container.storeData(data);
+
+Store data to a container. This allows to
+   * - store data into already existing entries and/or list entries
+   * - implicitely create new entries and/or list entries (the same logic for deciding on their type is applied as in `setEntry`/`addListEntries` is applied here)
+   * - in case of entries, their value is overwritten
+   * - in case of list entries, given values are added to the list
+
+----------
+Parameters
+----------
+
+#. ``data`` - ``object``: object with keys, that are names of lists or entries and values, that are the values to store to them
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const sampleValue = 123;
+  await container.storeData({
+    'numberField': sampleValue,
+  });
+  console.log(await container.getEntry('numberField'));
+  // Output:
+  // 123
+
+
+
+------------------------------------------------------------------------------
+
 = Share Container Data =
 ========================
 
@@ -801,6 +849,16 @@ Share configurations are given per user, that receives gets data shared with. Th
     - additionally the following applies:
 
       - if not already done so, a role, that has ``Set`` permissions will be added for this field
+      - given ``accountId`` will be added to the group responsible for this field
+      - aforementioned roles roles start at role 64, the first 64 roles are system reserved for smart contract custom logic or in-detail role configurations
+      - possible roles can go up to 255, so it is possible to add up to 192 properties to a container
+
+- ``removeListEntries``:
+
+    - properties listed here will be threaded the same way as those in the field ``read``
+    - additionally the following applies:
+
+      - if not already done so, a role, that has ``Remove`` permissions will be added for this field
       - given ``accountId`` will be added to the group responsible for this field
       - aforementioned roles roles start at role 64, the first 64 roles are system reserved for smart contract custom logic or in-detail role configurations
       - possible roles can go up to 255, so it is possible to add up to 192 properties to a container
@@ -956,6 +1014,64 @@ Example
   //   read: [ 'testField2' ],
   //   readWrite: [ 'testField1' ] } ]
 
+
+
+--------------------------------------------------------------------------------
+
+.. _container_unshareProperties:
+
+unshareProperties
+================================================================================
+
+.. code-block:: typescript
+
+  container.unshareProperties(unshareConfigs);
+
+Remove keys and/or permissions for a user; this also handles role permissions, role memberships.
+
+----------
+Parameters
+----------
+
+#. ``unshareConfigs`` - ``ContainerUnshareConfig[]``: list of account-field setups to remove permissions/keys for
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+
+  const accountId1 = '0x0000000000000000000000000000000000000001';
+  const accountId2 = '0x0000000000000000000000000000000000000002';
+
+  // open container with accountId1
+  const container = new Container(options, { ...config, accountId: accountId1 });
+
+  // assuming, that entry 'myField' has been shared with accountId2
+  // unshare field from accountId1 to accountId2
+  await container.unshareProperties([{
+    accountId: accountId2,
+    read: ['myField'],
+  }]);
+
+  // fetch value with accountId2
+  const accountId2Container = new Container(options, { ...config, accountId: accountId2 });
+  let value;
+  try {
+    value = await accountId2Container.getEntry('myField');
+    console.log(value);
+  } catch (ex) {
+    console.error('could not get entry');
+  }
+  // Output:
+  // could not get entry
 
 
 --------------------------------------------------------------------------------

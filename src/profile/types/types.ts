@@ -17,12 +17,12 @@
   the following URL: https://evan.network/license/
 */
 
-import * as unspecified from './unspecified.json';
-import * as company from './company.json';
-import * as device from './device.json';
+import company from './company';
+import device from './device';
+import user from './user';
 
 export {
-  unspecified,
   company,
   device,
+  user
 }

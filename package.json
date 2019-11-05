@@ -1,7 +1,7 @@
 {
   "author": "evan GmbH",
   "dependencies": {
-    "@evan.network/dbcp": "^1.8.3",
+    "@evan.network/dbcp": "^1.8.4",
     "@evan.network/smart-contracts-core": "^2.6.2",
     "@types/node": "^12.6.8",
     "ajv": "^6.10.2",
@@ -21,13 +21,12 @@
     "lodash": "^4.17.15",
     "promise-parallel-throttle": "^3.3.0",
     "prottle": "^1.0.3",
-    "scrypt": "^6.0.3",
     "scrypt-async": "^2.0.1",
     "secp256k1": "^3.6.2",
     "small-request": "^2.1.0",
     "tweetnacl": "^1.0.1",
     "web3": "2.0.0-alpha",
-    "web3-eth-abi": "2.0.0-alpha",
+    "web3-eth-abi": "2.0.0-alpha.1",
     "xhr2": "^0.2.0"
   },
   "description": "blockchain interaction core library",
@@ -87,5 +86,5 @@
     "testunitcoverage": "env-cmd --fallback -f ./.env.local npm run build && nyc -r lcov -e .ts -x \"$TESTSPECS\" mocha --exit -r ts-node/register $TESTSPECS && nyc report --reporter=text-lcov | coveralls"
   },
   "types": "./dist/index.d.ts",
-  "version": "2.13.0"
+  "version": "2.14.0"
 }

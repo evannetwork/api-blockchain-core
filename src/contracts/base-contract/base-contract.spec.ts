@@ -103,6 +103,14 @@ describe('BaseContract', function() {
     expect(contractId).not.to.be.undefined;
   });
 
+  it('can not be created', async () => {
+    const contractPromise = baseContract.createUninitialized(
+      'testdatacontract',
+      accounts[0],
+      'testdatacontract.factory.testbc.evan');
+    expect(contractPromise).to.be.rejected;
+  });
+
   it('can have new members invited to it by the owner', async () => {
     const contractId = await baseContract.createUninitialized(
       'testdatacontract',

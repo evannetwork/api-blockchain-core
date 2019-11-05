@@ -20,23 +20,18 @@
 import 'mocha';
 import { expect } from 'chai';
 
-import { KeyProvider } from '@evan.network/dbcp';
 
 import { accounts } from './test/accounts';
 import { configTestcore as config } from './config-testcore';
 import { KeyExchange } from './keyExchange';
-import { Ipld } from './dfs/ipld';
-import { InvitationMail, Onboarding } from './onboarding';
+import { Onboarding } from './onboarding';
 import { Mailbox } from './mailbox';
-import { Profile } from './profile/profile';
 import { TestUtils } from './test/test-utils';
 
 describe('Onboarding helper', function() {
   this.timeout(600000);
   let ipfs;
-  let eventHub;
   let mailbox: Mailbox;
-  let nameResolver;
   let onboarding: Onboarding;
   let web3;
 
@@ -50,7 +45,6 @@ describe('Onboarding helper', function() {
     keyProvider.init(profile);
     keyProvider.currentAccount = accounts[0];
 
-    nameResolver = await TestUtils.getNameResolver(web3);
     mailbox = new Mailbox({
       mailboxOwner: accounts[0],
       nameResolver: await TestUtils.getNameResolver(web3),
@@ -86,7 +80,7 @@ describe('Onboarding helper', function() {
     expect(mnemonic).to.be.an('string');
   })
 
-  it('should create a new profile with a new mnemonic on the testcore', async () => {
+  it.skip('should create a new profile with a new mnemonic on the testcore', async () => {
     const mnemonic = Onboarding.createMnemonic();
     await Onboarding.createNewProfile(mnemonic, 'Test1234');
     expect(mnemonic).to.be.an('string');

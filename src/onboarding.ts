@@ -17,43 +17,38 @@
   the following URL: https://evan.network/license/
 */
 
+import KeyStore = require('../libs/eth-lightwallet/keystore');
+import Web3 = require('web3');
+import https = require('https');
+
 import {
-  ContractLoader,
   Logger,
   LoggerOptions,
-  NameResolver,
-  KeyProvider,
 } from '@evan.network/dbcp';
 
-import { CryptoProvider } from './encryption/crypto-provider';
-import { Ipfs } from './dfs/ipfs';
-import { Ipld } from './dfs/ipld';
-import { Mail, Mailbox } from './mailbox';
-import { promisify } from './common/utils';
 import { createDefaultRuntime } from './runtime';
-
-const KeyStore = require('../libs/eth-lightwallet/keystore');
-const Web3 = require('web3');
-const https = require('https');
+import { Ipfs } from './dfs/ipfs';
+import { Mail, Mailbox } from './mailbox';
+import { Profile } from './profile/profile';
 
 /**
  * mail that will be sent to invitee
  */
 export interface InvitationMail {
-  body: string,
-  subject: string,
-  to: string,
-  fromAlias?: string,
-  lang?: string,
+  body: string;
+  subject: string;
+  to: string;
+  fromAlias?: string;
+  lang?: string;
 }
 
 /**
  * parameters for Onboarding constructor
  */
 export interface OnboardingOptions extends LoggerOptions {
-  mailbox: Mailbox,
-  smartAgentId: string,
-  executor: any,
+  mailbox: Mailbox;
+  smartAgentId: string;
+  executor: any;
 }
 
 /**
@@ -62,8 +57,7 @@ export interface OnboardingOptions extends LoggerOptions {
  * @class      Mailbox (name)
  */
 export class Onboarding extends Logger {
-  options: OnboardingOptions;
-
+  public options: OnboardingOptions;
 
   /**
    * creates a new random mnemonic
@@ -81,8 +75,8 @@ export class Onboarding extends Logger {
    *
    * @return     {Promise<any>}   resolved when done
    */
-  public static async createNewProfile(mnemonic: string, password: string, network = 'testcore'): Promise<any> {
-
+  public static async createNewProfile(mnemonic: string, password: string, network = 'testcore'
+  ): Promise<any> {
     if (!mnemonic) {
       throw new Error(`mnemonic is a required parameter!`);
     }
@@ -96,12 +90,13 @@ export class Onboarding extends Logger {
     }
 
     const web3Provider = `wss://${network}.evan.network/ws`;
-    const web3 = new Web3(web3Provider, null, { transactionConfirmationBlocks: 1 });
+    // use Web3 without its typings to avoid issues with constructor typing
+    const web3 = new (Web3 as any)(web3Provider, null, { transactionConfirmationBlocks: 1 });
 
-    const runtimeConfig = await Onboarding.generateRuntimeConfig(mnemonic, password, web3);
+    const runtimeConfig: any = await Onboarding.generateRuntimeConfig(mnemonic, password, web3);
 
-    const accountId = Object.keys((<any>runtimeConfig).accountMap)[0];
-    const privateKey = (<any>runtimeConfig).accountMap[accountId];
+    const accountId = Object.keys((runtimeConfig).accountMap)[0];
+    const privateKey = (runtimeConfig).accountMap[accountId];
     const ipfs = new Ipfs({
       dfsConfig: {
         host: `ipfs${network === 'testcore' ? '.test' : ''}.evan.network`,
@@ -116,7 +111,8 @@ export class Onboarding extends Logger {
 
     const runtime = await createDefaultRuntime(web3, ipfs, runtimeConfig);
 
-    await Onboarding._createOfflineProfile(runtime, 'Generated via API', accountId, privateKey, network)
+    await Onboarding.createOfflineProfile(
+      runtime, 'Generated via API', accountId, privateKey, network)
 
     return {
       mnemonic,
@@ -134,7 +130,7 @@ export class Onboarding extends Logger {
    */
   public static async generateRuntimeConfig(mnemonic: string, password: string, web3: any) {
     // generate a new vault from the mnemnonic and the password
-    const vault = await new Promise((res) => {
+    const vault: any = await new Promise((res) => {
       KeyStore.createVault({
         seedPhrase: mnemonic,
         password: password,
@@ -145,13 +141,13 @@ export class Onboarding extends Logger {
     });
     // get the derived key
     const pwDerivedKey = await new Promise((res) => {
-      (<any>vault).keyFromPassword(password, (err, result) => res(result));
+      (vault).keyFromPassword(password, (err, result) => res(result));
     });
     // generate one initial address
-    (<any>vault).generateNewAddress(pwDerivedKey, 1);
+    (vault).generateNewAddress(pwDerivedKey, 1);
 
-    const accountId = web3.utils.toChecksumAddress((<any>vault).getAddresses()[0]);
-    const pKey = (<any>vault).exportPrivateKey(accountId.toLowerCase(), pwDerivedKey);
+    const accountId = web3.utils.toChecksumAddress((vault).getAddresses()[0]);
+    const pKey = (vault).exportPrivateKey(accountId.toLowerCase(), pwDerivedKey);
 
     const sha9Account = web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
       [web3.utils.soliditySha3(accountId), web3.utils.soliditySha3(accountId)].sort());
@@ -175,72 +171,193 @@ export class Onboarding extends Logger {
   /**
    * creates a complete profile and emits it to the given smart agent
    *
-   * @param      {any}     runtime    initialized runtime
-   * @param      {string}  alias      alias of the profile
-   * @param      {string}  accountId  accountId of the privateKey
-   * @param      {string}  pKey       private key
-   * @param      {string}  network    selected network (testcore/core) - defaults to testcore
+   * @param      {any}     runtime         initialized runtime
+   * @param      {any}     profileData     object that included profile data (accountDetails,
+   *                                       registration, contact, ...)
+   * @param      {string}  accountId       accountId of the privateKey
+   * @param      {string}  pKey            private key
+   * @param      {string}  recaptchaToken  recaptcha token
+   * @param      {string}  network         selected network (testcore/core) - defaults to testcore
    */
-  private static async _createOfflineProfile(
+  public static async createOfflineProfile(
     runtime: any,
-    alias: string,
+    profileData: any,
     accountId: string,
     pKey: string,
+    recaptchaToken: string,
     network = 'testcore'
   ) {
-    return new Promise(async (resolve, reject) => {
-      const profile = runtime.profile;
-      // disable pinning while profile files are being created
-      profile.ipld.ipfs.disablePin = true;
-      // clear hash log
-      profile.ipld.hashLog = [];
-      const dhKeys = runtime.keyExchange.getDiffieHellmanKeys();
-      await profile.addContactKey(runtime.activeAccount, 'dataKey', dhKeys.privateKey.toString('hex'));
-      await profile.addProfileKey(runtime.activeAccount, 'alias', alias);
-      await profile.addPublicKey(dhKeys.publicKey.toString('hex'));
-      const sharing = await runtime.dataContract.createSharing(runtime.activeAccount);
-      const fileHashes: any = {};
-      fileHashes[profile.treeLabels.addressBook] = await profile.storeToIpld(profile.treeLabels.addressBook);
-      fileHashes[profile.treeLabels.publicKey] = await profile.storeToIpld(profile.treeLabels.publicKey);
-      fileHashes.sharingsHash = sharing.sharingsHash;
-      const cryptor = runtime.cryptoProvider.getCryptorByCryptoAlgo('aesEcb');
-      fileHashes[profile.treeLabels.addressBook] = await cryptor.encrypt(
-        Buffer.from(fileHashes[profile.treeLabels.addressBook].substr(2), 'hex'),
-        { key: sharing.hashKey, }
-      )
-      fileHashes[profile.treeLabels.addressBook] = `0x${fileHashes[profile.treeLabels.addressBook].toString('hex')}`;
-      // keep only unique values, ignore addressbook (encrypted hash)
-      const addressBookHash = fileHashes[profile.treeLabels.addressBook];
-      fileHashes.ipfsHashes = [...profile.ipld.hashLog, ...Object.keys(fileHashes).map(key => fileHashes[key])];
-      fileHashes.ipfsHashes = (
-        (arrArg) => arrArg.filter(
-          (elem, pos, arr) => arr.indexOf(elem) === pos && elem !== addressBookHash)
-        )(fileHashes.ipfsHashes);
-      // clear hash log
-      profile.ipld.hashLog = [];
-      // re-enable pinning
-      profile.ipld.ipfs.disablePin = false;
+    // check for correct profile data
+    if (!profileData || !profileData.accountDetails || !profileData.accountDetails.accountName) {
+      throw new Error('No profile data specified or accountDetails missing');
+    }
+    profileData.accountDetails.profileType = profileData.accountDetails.profileType || 'user';
 
-      const pk = '0x' + pKey;
-      const signature = runtime.web3.eth.accounts.sign('Gimme Gimme Gimme!', pk).signature;
-      const data = JSON.stringify({
+    // fill empty container type
+    if (!profileData.type) {
+      profileData.type = 'profile';
+    }
+
+    // build array with allowed fields (may include duplicates)
+    Profile.checkCorrectProfileData(profileData, profileData.accountDetails.profileType);
+
+    const profile = runtime.profile;
+    // disable pinning while profile files are being created
+    profile.ipld.ipfs.disablePin = true;
+    // clear hash log
+    profile.ipld.hashLog = [];
+
+    const pk = '0x' + pKey;
+    const signature = runtime.web3.eth.accounts.sign('Gimme Gimme Gimme!', pk).signature;
+    // request a new profile contract
+
+    const requestedProfile = await new Promise((resolve) => {
+      const requestProfilePayload = JSON.stringify({
         accountId: accountId,
         signature: signature,
-        profileInfo: fileHashes,
-      })
-      const options = {
+        captchaToken: recaptchaToken
+      });
+
+      const reqOptions = {
         hostname: `agents${network === 'testcore' ? '.test' : ''}.evan.network`,
         port: 443,
-        path: '/api/smart-agents/faucet/handout',
+        path: '/api/smart-agents/profile/create',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Content-Length': data.length
+          'Content-Length': requestProfilePayload.length
         }
-      }
+      };
 
+      const reqProfileReq = https.request(reqOptions, function (res) {
+        const chunks = [];
+
+        res.on('data', function (chunk) {
+          chunks.push(chunk);
+        });
+
+        res.on('end', function () {
+          const body = Buffer.concat(chunks);
+          resolve(JSON.parse(body.toString()))
+        });
+      });
+      reqProfileReq.write(requestProfilePayload);
+      reqProfileReq.end();
+    })
+
+    const dhKeys = runtime.keyExchange.getDiffieHellmanKeys();
+    await profile.addContactKey(
+      runtime.activeAccount, 'dataKey', dhKeys.privateKey.toString('hex'));
+    await profile.addProfileKey(runtime.activeAccount, 'alias', profileData.accountDetails.accountName);
+    await profile.addPublicKey(dhKeys.publicKey.toString('hex'));
+
+    // set initial structure by creating addressbook structure and saving it to ipfs
+    const cryptor = runtime.cryptoProvider.getCryptorByCryptoAlgo('aesEcb');
+    const fileHashes: any = {};
+
+    const cryptorAes = runtime.cryptoProvider.getCryptorByCryptoAlgo(
+      runtime.dataContract.options.defaultCryptoAlgo);
+    const hashCryptor = runtime.cryptoProvider.getCryptorByCryptoAlgo(
+      runtime.dataContract.cryptoAlgorithHashes);
+    const [hashKey, blockNr] = await Promise.all([
+      hashCryptor.generateKey(),
+      runtime.web3.eth.getBlockNumber(),
+    ]);
+
+    // setup sharings for new profile
+    const sharings = {};
+    const profileKeys = Object.keys(profileData);
+    // add hashKey
+    await runtime.sharing.extendSharings(
+      sharings, accountId, accountId, '*', 'hashKey', hashKey);
+    // extend sharings for profile data
+    const dataContentKeys = await Promise.all(profileKeys.map(() => cryptorAes.generateKey()));
+    for (let i = 0; i < profileKeys.length; i++) {
+      await runtime.sharing.extendSharings(
+        sharings, accountId, accountId, profileKeys[i], blockNr, dataContentKeys[i]);
+    }
+    // upload sharings
+    let sharingsHash = await runtime.dfs.add(
+      'sharing', Buffer.from(JSON.stringify(sharings), runtime.dataContract.encodingUnencrypted));
+
+    // used to exclude encrypted hashes from fileHashes.ipfsHashes
+    const ipfsExcludeHashes = [ ];
+    // encrypt profileData
+    fileHashes.properties = { entries: { } };
+    await Promise.all(Object.keys(profileData).map(async (key: string, index: number) => {
+      const encrypted = await cryptorAes.encrypt(
+        profileData[key],
+        { key: dataContentKeys[index] }
+      );
+      const envelope = {
+        private: encrypted.toString('hex'),
+        cryptoInfo: cryptorAes.getCryptoInfo(
+          runtime.nameResolver.soliditySha3((requestedProfile as any).contractId)),
+      };
+      let ipfsHash = await runtime.dfs.add(key, Buffer.from(JSON.stringify(envelope)));
+      profile.ipld.hashLog.push(`${ ipfsHash.toString('hex') }`);
+
+      fileHashes.properties.entries[key] = await cryptor.encrypt(
+        Buffer.from(ipfsHash.substr(2), 'hex'),
+        { key: hashKey, }
+      );
+
+      fileHashes.properties.entries[key] = `0x${ fileHashes.properties.entries[key]
+        .toString('hex') }`;
+      ipfsExcludeHashes.push(fileHashes.properties.entries[key]);
+    }));
+
+    fileHashes.properties.entries[profile.treeLabels.addressBook] =
+      await profile.storeToIpld(profile.treeLabels.addressBook);
+    fileHashes.properties.entries[profile.treeLabels.publicKey] =
+      await profile.storeToIpld(profile.treeLabels.publicKey);
+    fileHashes.sharingsHash = sharingsHash;
+    fileHashes.properties.entries[profile.treeLabels.addressBook] = await cryptor.encrypt(
+      Buffer.from(fileHashes.properties.entries[profile.treeLabels.addressBook].substr(2), 'hex'),
+      { key: hashKey, }
+    )
+    fileHashes.properties.entries[profile.treeLabels.addressBook] =
+      `0x${fileHashes.properties.entries[profile.treeLabels.addressBook].toString('hex')}`;
+    // keep only unique values, ignore addressbook (encrypted hash)
+    fileHashes.ipfsHashes = [
+      ...profile.ipld.hashLog,
+      ...Object.keys(fileHashes.properties.entries)
+        .map(key => fileHashes.properties.entries[key]),
+    ];
+    fileHashes.ipfsHashes = (
+      (arrArg) => arrArg.filter(
+        (elem, pos, arr) =>
+          arr.indexOf(elem) === pos &&
+          (elem !== fileHashes.properties.entries[profile.treeLabels.addressBook] &&
+            ipfsExcludeHashes.indexOf(elem) === -1)
+      )
+    )(fileHashes.ipfsHashes);
+    // clear hash log
+    profile.ipld.hashLog = [];
+    // re-enable pinning
+    profile.ipld.ipfs.disablePin = false;
+
+    const data = JSON.stringify({
+      accountId: accountId,
+      signature: signature,
+      profileInfo: fileHashes,
+      accessToken: (requestedProfile as any).accessToken,
+      contractId: (requestedProfile as any).contractId,
+    })
+    const options = {
+      hostname: `agents${network === 'testcore' ? '.test' : ''}.evan.network`,
+      port: 443,
+      path: '/api/smart-agents/profile/fill',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': data.length
+      }
+    }
+
+    await new Promise(async (resolve, reject) => {
       const req = https.request(options, (res) => {
-        res.on('data', (d) => {
+        res.on('data', () => {
           resolve()
         })
       })
@@ -254,7 +371,7 @@ export class Onboarding extends Logger {
     });
   }
 
-  constructor(optionsInput: OnboardingOptions) {
+  public constructor(optionsInput: OnboardingOptions) {
     super(optionsInput);
     this.options = optionsInput;
   }
@@ -268,7 +385,7 @@ export class Onboarding extends Logger {
    *                                           [web3 >=1.0] / web.toWei(10, 'ether') [web3 < 1.0]
    * @return     {Promise<void>}   resolved when done
    */
-  async sendInvitation(invitation: InvitationMail, weiToSend: string): Promise<void> {
+  public async sendInvitation(invitation: InvitationMail, weiToSend: string): Promise<void> {
     // build bmail container
     const mail: Mail = {
       content: {
