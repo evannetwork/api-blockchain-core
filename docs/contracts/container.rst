@@ -1056,7 +1056,7 @@ Example
 
   // assuming, that entry 'myField' has been shared with accountId2
   // unshare field from accountId1 to accountId2
-  await container.shareProperties([{
+  await container.unshareProperties([{
     accountId: accountId2,
     read: ['myField'],
   }]);
