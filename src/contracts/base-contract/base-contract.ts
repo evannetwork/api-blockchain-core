@@ -120,7 +120,7 @@ export class BaseContract extends Logger {
         );
 
         try {
-          const returnedContract = await this.options.executor.executeContractCall(
+          await this.options.executor.executeContractCall(
             businessCenterContract,
             'joinSchema'
           );
