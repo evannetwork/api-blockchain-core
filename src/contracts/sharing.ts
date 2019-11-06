@@ -363,7 +363,7 @@ export class Sharing extends Logger {
         }
         sharingValue = JSON.parse(buffer.toString());
       } else {
-        this.hashCache[contract.options.address][sharingId] = {};
+        sharingValue = {};
       }
       if (!this.hashCache[contract.options.address]) {
         this.hashCache[contract.options.address] = {};
