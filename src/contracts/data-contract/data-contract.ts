@@ -436,6 +436,10 @@ export class DataContract extends BaseContract {
       this.options.web3.utils.sha3(mappingName),
       this.options.web3.utils.sha3(entryName),
     );
+    // if no entry / empty entry was returned, skip further processing
+    if (entryRaw === '0x0000000000000000000000000000000000000000000000000000000000000000') {
+      return entryRaw;
+    }
     let hash = entryRaw;
     if (encryptedHashes) {
       hash = await this.decryptHash(entryRaw, dataContract, accountId);
