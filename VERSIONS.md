@@ -8,6 +8,13 @@
 ### Deprecations
 
 
+## Version 2.14.1
+### Fixes
+- export missing `unshareProperties` from `index.ts`
+- fix handling of empty values in mappings of data contracts
+- fix racing condition issue in sharing
+
+
 ## Version 2.14.0
 ### Features
 - use container logic for profile management

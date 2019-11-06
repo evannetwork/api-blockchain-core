@@ -72,7 +72,7 @@ export {
 export { Votings, MemberOptions, ProposalInfo, ProposalInfos, ProposalOptions, VotingsContractOptions } from './votings/votings';
 export { Wallet } from './contracts/wallet';
 export { Container, ContainerConfig, ContainerFile, ContainerTemplate, ContainerPlugin, ContainerTemplateProperty,
-  ContainerShareConfig, ContainerOptions, } from './contracts/digital-twin/container';
+  ContainerShareConfig, ContainerUnshareConfig, ContainerOptions, } from './contracts/digital-twin/container';
 export { DigitalTwin, DigitalTwinEntryType, DigitalTwinConfig, DigitalTwinIndexEntry,
   DigitalTwinVerificationEntry, } from './contracts/digital-twin/digital-twin';
 import { getSmartAgentAuthHeaders } from './common/utils';

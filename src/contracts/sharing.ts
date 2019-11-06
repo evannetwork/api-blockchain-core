@@ -355,15 +355,20 @@ export class Sharing extends Logger {
           await this.options.executor.executeContractCall(contract, 'sharing');
       }
 
+      let sharingValue;
       if (sharingHash !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
         const buffer = await this.options.dfs.get(sharingHash);
         if (!buffer) {
           throw new Error(`could not get sharings from hash ${sharingHash}`);
         }
-        this.hashCache[contract.options.address][sharingId] = JSON.parse(buffer.toString());
+        sharingValue = JSON.parse(buffer.toString());
       } else {
-        this.hashCache[contract.options.address][sharingId] = {};
+        sharingValue = {};
       }
+      if (!this.hashCache[contract.options.address]) {
+        this.hashCache[contract.options.address] = {};
+      }
+      this.hashCache[contract.options.address][sharingId] = sharingValue;
     }
     return this.hashCache[contract.options.address][sharingId];
   }
