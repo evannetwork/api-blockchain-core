@@ -6,6 +6,7 @@
 ### Fixes
 - export missing `unshareProperties` from `index.ts`
 - fix handling of empty values in mappings of data contracts
+- fix racing condition issue in sharing
 
 ### Deprecations
 
