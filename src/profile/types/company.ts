@@ -32,11 +32,11 @@ export default JSON.parse(`{
       "contact": {
         "dataSchema": {
           "properties": {
-            "city": {
+            "country": {
               "default": "",
               "type": "string"
             },
-            "country": {
+            "streetAndNumber": {
               "default": "",
               "type": "string"
             },
@@ -44,7 +44,7 @@ export default JSON.parse(`{
               "default": "",
               "type": "string"
             },
-            "streetAndNumber": {
+            "city": {
               "default": "",
               "type": "string"
             },

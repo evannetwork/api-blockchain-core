@@ -4,6 +4,7 @@
 ### Features
 
 ### Fixes
+- export missing `unshareProperties` from `index.ts`
 
 ### Deprecations
 
