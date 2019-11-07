@@ -160,6 +160,8 @@ export interface VerificationsVerificationEntry {
     creationDate: number;
     /** ens address of description for this verification */
     ensAddress: string;
+    /** expiration date of verification (js timestamp) */
+    expirationDate?: number;
     /** id in verification holder / verifications registry */
     id: string;
     /** account id of verification issuer */
@@ -176,8 +178,6 @@ export interface VerificationsVerificationEntry {
     data?: any;
     /** only if actually set */
     description?: any;
-    /** expiration date of verification (js timestamp) */
-    expirationDate?: number;
     /** if applicable, reason for verification rejection */
     rejectReason?: string;
     /** status of verification, is optional during result computation and required when done */
@@ -2084,7 +2084,7 @@ export class Verifications extends Logger {
       }
       ['expirationDate', 'rejectReason'].map((property) => {
         if (nestedVerification[property]) {
-          verification[property] = nestedVerification[property];
+          verification.details[property] = nestedVerification[property];
         }
       });
       verifications.push(verification);
