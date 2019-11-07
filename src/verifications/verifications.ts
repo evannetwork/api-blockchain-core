@@ -160,6 +160,8 @@ export interface VerificationsVerificationEntry {
     creationDate: number;
     /** ens address of description for this verification */
     ensAddress: string;
+    /** expiration date of verification (js timestamp) */
+    expirationDate?: number;
     /** id in verification holder / verifications registry */
     id: string;
     /** account id of verification issuer */
@@ -183,8 +185,6 @@ export interface VerificationsVerificationEntry {
     /** subject accountId/contractId (if query was issued with ``isIdentity`` set to ``false``) */
     subject?: string;
   };
-  /** expiration date of verification (js timestamp) */
-  expirationDate?: number;
   /** raw data about verification from contract */
   raw?: {
     /** block in which verification was issued */
@@ -2084,7 +2084,7 @@ export class Verifications extends Logger {
       }
       ['expirationDate', 'rejectReason'].map((property) => {
         if (nestedVerification[property]) {
-          verification[property] = nestedVerification[property];
+          verification.details[property] = nestedVerification[property];
         }
       });
       verifications.push(verification);

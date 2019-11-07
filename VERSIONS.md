@@ -4,6 +4,7 @@
 ### Features
 
 ### Fixes
+- move `expirationDate` in `formatToV2` to details object 
 
 ### Deprecations
 
