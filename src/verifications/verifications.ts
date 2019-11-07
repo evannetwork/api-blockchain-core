@@ -176,8 +176,6 @@ export interface VerificationsVerificationEntry {
     data?: any;
     /** only if actually set */
     description?: any;
-    /** expiration date of verification (js timestamp) */
-    expirationDate?: number;
     /** if applicable, reason for verification rejection */
     rejectReason?: string;
     /** status of verification, is optional during result computation and required when done */
@@ -185,6 +183,8 @@ export interface VerificationsVerificationEntry {
     /** subject accountId/contractId (if query was issued with ``isIdentity`` set to ``false``) */
     subject?: string;
   };
+  /** expiration date of verification (js timestamp) */
+  expirationDate?: number;
   /** raw data about verification from contract */
   raw?: {
     /** block in which verification was issued */
