@@ -105,7 +105,9 @@ describe('Container', function() {
     });
 
     it('can create multiple new contracts in parallel without colliding identities', async () => {
-      const [container1, container2, container3] = await Promise.all([
+      const [container1, container2, container3, container4, container5] = await Promise.all([
+        Container.create(runtimes[owner], defaultConfig),
+        Container.create(runtimes[owner], defaultConfig),
         Container.create(runtimes[owner], defaultConfig),
         Container.create(runtimes[owner], defaultConfig),
         Container.create(runtimes[consumer], {
@@ -119,13 +121,19 @@ describe('Container', function() {
       const desc1 = await container1.getDescription();
       const desc2 = await container2.getDescription();
       const desc3 = await container3.getDescription();
+      const desc4 = await container4.getDescription();
+      const desc5 = await container5.getDescription();
 
       expect(desc1.identity).to.not.eq(desc2.identity);
       expect(desc2.identity).to.not.eq(desc3.identity);
       expect(desc1.identity).to.not.eq(desc3.identity)
+      expect(desc4.identity).to.not.eq(desc3.identity)
+      expect(desc5.identity).to.not.eq(desc3.identity)
       expect(await container1.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
       expect(await container2.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
       expect(await container3.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
+      expect(await container4.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
+      expect(await container5.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
 
 
       const verifications: ContainerVerificationEntry[] = [...Array(3)].map(
@@ -880,7 +888,7 @@ describe('Container', function() {
       consumerContainer = new Container(
         newConsumerRuntime,
         { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
-      );       
+      );
       ((consumerContainer as any).options as ContainerOptions).sharing.clearCache();
       consumerSharing = ((consumerContainer as any).options as ContainerOptions).sharing;
       shareConfig = await container.getContainerShareConfigForAccount(consumer);
@@ -937,7 +945,7 @@ describe('Container', function() {
       consumerContainer = new Container(
         newConsumerRuntime,
         { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
-      );       
+      );
       ((consumerContainer as any).options as ContainerOptions).sharing.clearCache();
       shareConfig = await container.getContainerShareConfigForAccount(consumer);
       await expect(consumerContainer.getEntry('testField'))
@@ -961,7 +969,7 @@ describe('Container', function() {
       consumerContainer = new Container(
         newConsumerRuntime,
         { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
-      );       
+      );
       ((consumerContainer as any).options as ContainerOptions).sharing.clearCache();
       consumerSharing = ((consumerContainer as any).options as ContainerOptions).sharing;
       shareConfig = await container.getContainerShareConfigForAccount(consumer);
@@ -1008,7 +1016,7 @@ describe('Container', function() {
       consumerContainer = new Container(
         newConsumerRuntime,
         { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
-      );       
+      );
       ((consumerContainer as any).options as ContainerOptions).sharing.clearCache();
       consumerSharing = ((consumerContainer as any).options as ContainerOptions).sharing;
       shareConfig = await container.getContainerShareConfigForAccount(consumer);
@@ -1065,7 +1073,7 @@ describe('Container', function() {
       consumerContainer = new Container(
         newConsumerRuntime,
         { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
-      );       
+      );
       ((consumerContainer as any).options as ContainerOptions).sharing.clearCache();
       shareConfig = await container.getContainerShareConfigForAccount(consumer);
       await expect(consumerContainer.getEntry('testField'))
@@ -1089,7 +1097,7 @@ describe('Container', function() {
       consumerContainer = new Container(
         newConsumerRuntime,
         { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
-      );       
+      );
       ((consumerContainer as any).options as ContainerOptions).sharing.clearCache();
       consumerSharing = ((consumerContainer as any).options as ContainerOptions).sharing;
       shareConfig = await container.getContainerShareConfigForAccount(consumer);
@@ -1136,7 +1144,7 @@ describe('Container', function() {
       consumerContainer = new Container(
         newConsumerRuntime,
         { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
-      );       
+      );
       ((consumerContainer as any).options as ContainerOptions).sharing.clearCache();
       consumerSharing = ((consumerContainer as any).options as ContainerOptions).sharing;
       shareConfig = await container.getContainerShareConfigForAccount(consumer);
