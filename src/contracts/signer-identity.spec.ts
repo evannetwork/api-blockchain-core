@@ -62,8 +62,8 @@ describe('signer-identity (identity based signer)', function() {
         web3,
       },
       {
-        activeIdentity: await verifications.getIdentityForAccount(accounts[0], true),
-        underlyingAccountId: accounts[0],
+        activeIdentity: await verifications.getIdentityForAccount(accounts[3], true),
+        underlyingAccountId: accounts[3],
         underlyingSigner,
       }
     );
@@ -77,17 +77,17 @@ describe('signer-identity (identity based signer)', function() {
     it('can create a new contract', async () => {
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       const contract = await executor.createContract(
-        'TestContract', [randomString], { from: accounts[0], gas: 1e6 });
+        'TestContract', [randomString], { from: accounts[3], gas: 1e6 });
       expect(await executor.executeContractCall(contract, 'data')).to.eq(randomString);
     });
 
     it('can make transactions on contracts', async () => {
       const contract = await executor.createContract(
-        'TestContract', [''], { from: accounts[0], gas: 1e6 });
+        'TestContract', [''], { from: accounts[3], gas: 1e6 });
 
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       await executor.executeContractTransaction(
-        contract, 'setData', { from: accounts[0] }, randomString);
+        contract, 'setData', { from: accounts[3] }, randomString);
       expect(await executor.executeContractCall(contract, 'data')).to.eq(randomString);
     });
 
@@ -95,7 +95,7 @@ describe('signer-identity (identity based signer)', function() {
       const amountToSend = Math.floor(Math.random() * 1_000);
       const balanceBefore = new BigNumber(await web3.eth.getBalance(accounts[1])); 
       await executor.executeSend(
-        { from: accounts[0], to: accounts[1], gas: 100_000, value: amountToSend });
+        { from: accounts[3], to: accounts[1], gas: 100_000, value: amountToSend });
       const balanceAfter = new BigNumber(await web3.eth.getBalance(accounts[1]));
       const diff = balanceAfter.minus(balanceBefore);
       expect(diff.eq(new BigNumber(amountToSend))).to.be.true;
@@ -103,9 +103,9 @@ describe('signer-identity (identity based signer)', function() {
 
     it('can sign messages', async () => {
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
-      const signed = await signer.signMessage(accounts[0], randomString);
+      const signed = await signer.signMessage(accounts[3], randomString);
       const recovered = web3.eth.accounts.recover(randomString, signed);
-      expect(recovered).to.eq(accounts[0]);
+      expect(recovered).to.eq(accounts[3]);
     });
   });
 
@@ -120,7 +120,7 @@ describe('signer-identity (identity based signer)', function() {
 
     it('can make transactions on contracts', async () => {
       const contract = await executor.createContract(
-        'TestContract', [''], { from: accounts[0], gas: 1e6 });
+        'TestContract', [''], { from: accounts[3], gas: 1e6 });
 
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       await executor.executeContractTransaction(
