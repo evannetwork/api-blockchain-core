@@ -1824,6 +1824,7 @@ export class Verifications extends Logger {
       event: { eventName: 'Approved', target: 'KeyHolderLibrary' },
       from: accountId,
       getEventResult: (event, eventArgs) => [eventArgs.executionId, event.blockNumber],
+      value,
     };
 
     // run tx
