@@ -133,11 +133,39 @@ describe('signer-identity (identity based signer)', function() {
         const contract = await executor.createContract(
           'TestContract', [''], { from: accounts[3], gas: 1e6 });
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
+        console.log(randomString)
         await executor.executeContractTransaction(
           contract, 'setData', { from: signer.activeIdentity }, randomString);
+        console.log(await executor.executeContractCall(contract, 'data') + 'This is await')
         expect(await executor.executeContractCall(contract, 'data')).to.eq(randomString);
       };
       await Promise.all([...Array(10)].map(() => runOneTest()));
+    });
+
+    it.skip(' [currently failing] can execute multiple transactions in parallel', async () => {
+      const runOneTest = async () => {
+        const contract = await executor.createContract(
+          'TestContract', [''], { from: accounts[3], gas: 1e6 });
+        const randomString = Math.floor(Math.random() * 1e12).toString(36);
+        console.log(randomString)
+        const executedContracts = await executor.executeContractTransaction(
+          contract, 'setData', { from: signer.activeIdentity }, randomString);
+        console.dir(executedContracts)
+      };
+      await Promise.all([...Array(10)].map(() => runOneTest()));
+    });
+
+    it('can make multiple contracts in parallel', async () => {
+      const runOneTest = async () => {
+        const contract = await executor.createContract(
+          'TestContract', [''], { from: accounts[3], gas: 1e6 });
+         //console.log(contract)
+        expect(contract).to.be.a('Object')
+        return contract
+      };
+      const contractList = await Promise.all([...Array(10)].map(() => runOneTest()));
+      console.log(contractList)      
+      expect(contractList).to.be.an('array')
     });
 
     it('can send funds', async () => {
