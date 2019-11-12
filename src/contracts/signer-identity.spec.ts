@@ -110,8 +110,7 @@ describe('signer-identity (identity based signer)', function() {
   });
 
   describe('when making transaction with given identity', () => {
-    it.skip('can create a new contract', async () => {
-      throw new Error('not implemented');
+    it('can create a new contract', async () => {
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       const contract = await executor.createContract(
         'TestContract', [randomString], { from: signer.activeIdentity, gas: 1e6 });
@@ -120,7 +119,7 @@ describe('signer-identity (identity based signer)', function() {
 
     it('can make transactions on contracts', async () => {
       const contract = await executor.createContract(
-        'TestContract', [''], { from: accounts[3], gas: 1e6 });
+        'TestContract', [''], { from: signer.activeIdentity, gas: 1e6 });
 
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       await executor.executeContractTransaction(

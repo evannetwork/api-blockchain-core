@@ -30,11 +30,10 @@ import {
   NameResolver,
   DfsInterface
 } from '@evan.network/dbcp';
+
 import { Ipfs } from '../dfs/ipfs';
+import { nullAddress, nullBytes32 } from '../common/utils';
 
-
-const nullAddress = '0x0000000000000000000000000000000000000000';
-const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
 /**
  * verification status from blockchain
@@ -1461,7 +1460,7 @@ export class Verifications extends Logger {
 
     const to = contract ?
       contract.options.address :
-      (options.to || null);
+      (options.to || nullAddress);
 
     const value = options.value || 0;
 
