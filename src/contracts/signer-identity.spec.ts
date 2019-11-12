@@ -155,7 +155,7 @@ describe('signer-identity (identity based signer)', function() {
       await Promise.all([...Array(10)].map(() => runOneTest()));
     });
 
-    it('can make multiple contracts in parallel', async () => {
+    it('can create multiple contracts in parallel', async () => {
       const runOneTest = async () => {
         const contract = await executor.createContract(
           'TestContract', [''], { from: accounts[3], gas: 1e6 });
@@ -177,6 +177,24 @@ describe('signer-identity (identity based signer)', function() {
       const diff = balanceAfter.minus(balanceBefore);
       expect(diff.eq(new BigNumber(amountToSend))).to.be.true;
     });
+
+    it('Should reject fund transfer to contract', async () => {
+      const randomString = Math.floor(Math.random() * 1e12).toString(36);
+      const contract = await executor.createContract(
+        'TestContract', [randomString], { from: signer.underlyingAccountId, gas: 1e6 });
+      expect(contract).to.be.a('Object')
+
+      const amountToSend = Math.floor(Math.random() * 1_000);
+      const balanceBefore = new BigNumber(await web3.eth.getBalance(accounts[1])); 
+      console.log(balanceBefore)
+      await expect( executor.executeSend(
+        { from: signer.activeIdentity, to: contract.options.address, gas: 100e3,
+         value: amountToSend })).to.rejected
+      
+      const balanceAfter = new BigNumber(await web3.eth.getBalance(accounts[1]));
+      console.log(balanceAfter)
+      expect(balanceAfter.eq(balanceBefore)).to.be.true;     
+    })
 
     it('cannot sign messages', async () => {
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
