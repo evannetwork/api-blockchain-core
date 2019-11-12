@@ -23,6 +23,7 @@ import {
   SignerInternalOptions,
 } from '@evan.network/dbcp';
 
+import { AbiCoder } from 'web3-eth-abi';
 import { Verifications } from '../verifications/verifications';
 
 
@@ -31,7 +32,7 @@ import { Verifications } from '../verifications/verifications';
  */
 export interface SignerIdentityConfig {
   activeIdentity: string;
-  underlyingAccountId: string;
+  underlyingAccount: string;
   underlyingSigner: SignerInterface;
 }
 
@@ -53,7 +54,8 @@ export interface SignerIdentityOptions extends LoggerOptions {
  */
 export class SignerIdentity extends Logger implements SignerInterface {
   public activeIdentity: string;
-  public underlyingAccountId: string;
+  public underlyingAccount: string;
+  private coder: any = new AbiCoder();
   private config: SignerIdentityConfig;
   private options: SignerIdentityOptions;
 
@@ -62,7 +64,7 @@ export class SignerIdentity extends Logger implements SignerInterface {
     this.options = options;
     this.config = config;
     this.activeIdentity = this.config.activeIdentity;
-    this.underlyingAccountId = this.config.underlyingAccountId;
+    this.underlyingAccount = this.config.underlyingAccount;
   }
 
   /**
@@ -79,10 +81,29 @@ export class SignerIdentity extends Logger implements SignerInterface {
     functionArguments: any[],
     options: any,
   ): Promise<any> {
-    if (options.from === this.config.underlyingAccountId) {
+    if (options.from === this.underlyingAccount) {
       return this.config.underlyingSigner.createContract(contractName, functionArguments, options);
     }
-    throw new Error('currently not fully implemented for identities');
+    // build input for contructror call
+    const compiledContract = this.options.contractLoader.getCompiledContract(contractName);
+    if (!compiledContract || !compiledContract.bytecode) {
+      throw new Error(`cannot find contract bytecode for contract "${contractName}"`);
+    }
+    // build bytecode and arguments for constructor
+    options.input = `0x${compiledContract.bytecode}` +
+      this.encodeConstructorParams(JSON.parse(compiledContract.interface), functionArguments);
+
+    const { blockNumber, transactionHash } = await this.handleIdentityTransaction(null, null, [], options);
+    const keyHolderLibrary = this.options.contractLoader.loadContract(
+      'KeyHolderLibrary', this.activeIdentity);
+    const events = await keyHolderLibrary.getPastEvents(
+        'ContractCreated', { fromBlock: blockNumber, toBlock: blockNumber });
+    const matches = events.filter(ev => ev.transactionHash === transactionHash);
+    if (matches.length !== 1) {
+      throw new Error('contract creation failed');
+    }
+    return this.options.contractLoader.loadContract(
+      contractName, matches[0].returnValues.contractId);
   }
 
   /**
@@ -97,7 +118,7 @@ export class SignerIdentity extends Logger implements SignerInterface {
     options: any,
     handleTxResult: Function,
   ): Promise<void> {
-    if (options.from === this.config.underlyingAccountId) {
+    if (options.from === this.underlyingAccount) {
       return this.config.underlyingSigner.signAndExecuteSend(options, handleTxResult);
     }
 
@@ -131,7 +152,7 @@ export class SignerIdentity extends Logger implements SignerInterface {
     options: any,
     handleTxResult: Function,
   ): Promise<void> {
-    if (options.from === this.config.underlyingAccountId) {
+    if (options.from === this.underlyingAccount) {
       return this.config.underlyingSigner.signAndExecuteTransaction(
         contract, functionName, functionArguments, options, handleTxResult);
     }
@@ -157,10 +178,32 @@ export class SignerIdentity extends Logger implements SignerInterface {
     accountId: string,
     message: string,
   ): Promise<string> {
-    if (accountId === this.config.underlyingAccountId) {
+    if (accountId === this.underlyingAccount) {
       return this.config.underlyingSigner.signMessage(accountId, message);
     } else {
       throw new Error('signing messages with identities is not supported');
+    }
+  }
+
+  /**
+   * Should be called to encode constructor params (taken from
+   * https://github.com/ethereum/web3.js/blob/develop/lib/web3/contract.js)
+   *
+   * @param      abi     The abi
+   * @param      params  The parameters
+   *
+   * @return     encoded params
+   */
+  private encodeConstructorParams(abi: any[], params: any[]) {
+    if (params.length) {
+      return abi
+        .filter(json => json.type === 'constructor' && json.inputs.length === params.length)
+        .map(json => json.inputs.map(input => input.type))
+        .map(types => this.coder.encodeParameters(types, params))
+        .map(encodedParams => encodedParams.replace(/^0x/, ''))[0] || ''
+      ;
+    } else {
+      return '';
     }
   }
 
@@ -181,7 +224,7 @@ export class SignerIdentity extends Logger implements SignerInterface {
   ): Promise<any> {
     // replace tx origin with underlying account
     const optionsClone = { ...options };
-    optionsClone.from = this.config.underlyingAccountId;
+    optionsClone.from = this.underlyingAccount;
 
     // sign identity tx for this account
     const txInfo = await this.options.verifications.signTransaction(
@@ -191,12 +234,12 @@ export class SignerIdentity extends Logger implements SignerInterface {
       ...functionArguments
     );
     const txResult = await this.options.verifications.executeTransaction(
-      this.config.underlyingAccountId,
+      this.underlyingAccount,
       txInfo,
       {
         event: {
           contract: this.options.contractLoader.loadContract(
-            'VerificationHolder', this.config.activeIdentity),
+            'VerificationHolder', this.activeIdentity),
           eventName: 'ExecutionRequested',
         },
         getEventResult: ({ transactionHash }) =>
