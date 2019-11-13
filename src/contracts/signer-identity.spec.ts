@@ -69,7 +69,7 @@ describe('signer-identity (identity based signer)', function() {
     );
     executor = new Executor(
       { config: { alwaysAutoGasLimit: 1.1 }, signer: signer, web3 });
-    await executor.init({});
+    await executor.init({ eventHub: await TestUtils.getEventHub(web3) });
 
   });
 
@@ -125,6 +125,52 @@ describe('signer-identity (identity based signer)', function() {
       await executor.executeContractTransaction(
         contract, 'setData', { from: signer.activeIdentity }, randomString);
       expect(await executor.executeContractCall(contract, 'data')).to.eq(randomString);
+    });
+
+    it('can handle events in contract transactions', async () => {
+      const contract = await executor.createContract(
+        'TestContractEvent', [''], { from: signer.activeIdentity, gas: 1e6 });
+
+      const randomString = Math.floor(Math.random() * 1e12).toString(36);
+      const eventValue = await executor.executeContractTransaction(
+        contract,
+        'fireStringEvent',
+        {
+          from: signer.activeIdentity,
+          event: {
+            target: 'TestContractEvent',
+            eventName: 'StringEvent',
+          },
+          getEventResult: (_, args) => args.text,
+        },
+        randomString,
+      );
+      expect(eventValue).to.eq(randomString);
+    });
+
+    it('can handle events in parallel transactions', async () => {
+      const runOneTest = async () => {
+        const contract = await executor.createContract(
+          'TestContractEvent', [''], { from: signer.activeIdentity, gas: 1e6 });
+
+        const randomString = Math.floor(Math.random() * 1e12).toString(36);
+        const eventValue = await executor.executeContractTransaction(
+          contract,
+          'fireStringEvent',
+          {
+            from: signer.activeIdentity,
+            event: {
+              target: 'TestContractEvent',
+              eventName: 'StringEvent',
+            },
+            getEventResult: (_, args) => args.text,
+          },
+          randomString,
+        );
+        expect(eventValue).to.eq(randomString);
+      };
+      expect(Promise.all([...Array(10)].map(() => runOneTest())))
+        .not.to.be.rejected;
     });
 
     it('can make transactions on multiple contracts', async () => {
