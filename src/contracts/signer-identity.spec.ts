@@ -154,16 +154,14 @@ describe('signer-identity (identity based signer)', function() {
       await Promise.all([...Array(10)].map(() => runOneTest()));
     });
 
-    it('can create multiple contracts in parallel', async () => {
+    it.skip('can create multiple contracts in parallel', async () => {
       const runOneTest = async () => {
         const contract = await executor.createContract(
-          'TestContract', [''], { from: accounts[3], gas: 1e6 });
-         //console.log(contract)
-        expect(contract).to.be.a('Object')
+          'TestContract', [''], { from: signer.activeIdentity, gas: 1e6 });
+        expect(contract).to.be.an('Object')
         return contract
       };
-      const contractList = await Promise.all([...Array(10)].map(() => runOneTest()));
-      console.log(contractList)      
+      const contractList = await Promise.all([...Array(10)].map(() => runOneTest()));     
       expect(contractList).to.be.an('array')
     });
 
@@ -177,23 +175,79 @@ describe('signer-identity (identity based signer)', function() {
       expect(diff.eq(new BigNumber(amountToSend))).to.be.true;
     });
 
-    it('Should reject fund transfer to contract', async () => {
+    it.only('Should reject transfer and balance of identity should remain same', async () => {
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       const contract = await executor.createContract(
-        'TestContract', [randomString], { from: signer.underlyingAccountId, gas: 1e6 });
+        'TestContract', [randomString], { from: signer.activeIdentity, gas: 1e6 });
       expect(contract).to.be.a('Object')
 
       const amountToSend = Math.floor(Math.random() * 1_000);
-      const balanceBefore = new BigNumber(await web3.eth.getBalance(accounts[1])); 
+      const balanceBefore = new BigNumber(await web3.eth.getBalance(signer.activeIdentity));
+      console.log(balanceBefore) 
+      await expect( executor.executeSend(
+        { from: signer.activeIdentity, to: contract.options.address, gas: 100e3,
+         value: amountToSend })).to.rejected
+      
+      const balanceAfter = new BigNumber(await web3.eth.getBalance(signer.activeIdentity));
+      console.log(balanceAfter)
+      expect(balanceAfter.eq(balanceBefore)).to.be.true;     
+    })  
+
+    it.only('Should reject transfer and funds should deduct transfer fee in underlaying account', async () => {
+      const randomString = Math.floor(Math.random() * 1e12).toString(36);
+      const contract = await executor.createContract(
+        'TestContract', [randomString], { from: signer.activeIdentity, gas: 1e6 });
+      expect(contract).to.be.a('Object')
+
+      const amountToSend = Math.floor(Math.random() * 1_000);
+
+      const balanceBefore = new BigNumber(await web3.eth.getBalance(signer.underlyingAccount));
+      console.log(balanceBefore) 
+
+      await expect( executor.executeSend(
+        { from: signer.activeIdentity, to: contract.options.address, gas: 100e3,
+         value: amountToSend })).to.rejected
+      
+      const balanceAfter = new BigNumber(await web3.eth.getBalance(signer.underlyingAccount));
+      console.log(balanceAfter)
+      expect(balanceAfter.eq(balanceBefore)).to.be.not.true     
+    })
+
+    it.only('Should reject fund transfer to contract', async () => {
+      const randomString = Math.floor(Math.random() * 1e12).toString(36);
+      const contract = await executor.createContract(
+        'TestContract', [randomString], { from: signer.activeIdentity, gas: 1e6 });
+      expect(contract).to.be.a('Object')
+
+      const amountToSend = Math.floor(Math.random() * 1_000);
+      const balanceBefore = new BigNumber(await web3.eth.getBalance(contract.options.address)); 
       console.log(balanceBefore)
       await expect( executor.executeSend(
         { from: signer.activeIdentity, to: contract.options.address, gas: 100e3,
          value: amountToSend })).to.rejected
       
-      const balanceAfter = new BigNumber(await web3.eth.getBalance(accounts[1]));
+      const balanceAfter = new BigNumber(await web3.eth.getBalance(contract.options.address));
       console.log(balanceAfter)
       expect(balanceAfter.eq(balanceBefore)).to.be.true;     
     })
+
+    it('Should reject fund transfer to new contract and funds should stay with identity ', async () => {
+      const randomString = Math.floor(Math.random() * 1e12).toString(36);
+      const contract = await executor.createContract(
+        'TestContract', [randomString], { from: signer.activeIdentity, gas: 1e6 });
+      expect(contract).to.be.a('Object')
+
+      const amountToSend = Math.floor(Math.random() * 1_000);
+      const balanceBefore = new BigNumber(await web3.eth.getBalance(signer.activeIdentity)); 
+      console.log(balanceBefore)
+      await expect( executor.executeSend(
+        { from: signer.activeIdentity, to: contract.options.address, gas: 100e3,
+         value: amountToSend })).to.rejected
+      
+      const balanceAfter = new BigNumber(await web3.eth.getBalance(signer.activeIdentity));
+      console.log(balanceAfter)
+      expect(balanceAfter.eq(balanceBefore)).to.be.true;     
+    })    
 
     it('cannot sign messages', async () => {
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
