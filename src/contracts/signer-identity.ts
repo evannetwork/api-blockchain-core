@@ -227,7 +227,7 @@ export class SignerIdentity extends Logger implements SignerInterface {
     optionsClone.from = this.underlyingAccount;
 
     // sign identity tx for this account
-    const txInfo = await this.options.verifications.signTransaction(
+    const txInfo = await this.options.verifications.getTransactionInfo(
       contract,
       functionName,
       optionsClone,

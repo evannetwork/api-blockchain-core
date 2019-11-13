@@ -127,34 +127,30 @@ describe('signer-identity (identity based signer)', function() {
       expect(await executor.executeContractCall(contract, 'data')).to.eq(randomString);
     });
 
-    it.skip('[currently failing] can make transactions on multiple contracts', async () => {
+    it('can make transactions on multiple contracts', async () => {
       const runOneTest = async () => {
         const contract = await executor.createContract(
-          'TestContract', [''], { from: accounts[3], gas: 1e6 });
+          'TestContract', [''], { from: signer.activeIdentity, gas: 1e6 });
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
-        console.log(randomString)
         await executor.executeContractTransaction(
           contract, 'setData', { from: signer.activeIdentity }, randomString);
-        console.log(await executor.executeContractCall(contract, 'data') + 'This is await')
         expect(await executor.executeContractCall(contract, 'data')).to.eq(randomString);
       };
-      await Promise.all([...Array(10)].map(() => runOneTest()));
+      await Promise.all([...Array(20)].map(() => runOneTest()));
     });
 
-    it.skip(' [currently failing] can execute multiple transactions in parallel', async () => {
+    it('can execute multiple transactions in parallel', async () => {
       const runOneTest = async () => {
         const contract = await executor.createContract(
           'TestContract', [''], { from: accounts[3], gas: 1e6 });
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
-        console.log(randomString)
         const executedContracts = await executor.executeContractTransaction(
           contract, 'setData', { from: signer.activeIdentity }, randomString);
-        console.dir(executedContracts)
       };
       await Promise.all([...Array(10)].map(() => runOneTest()));
     });
 
-    it.skip('can create multiple contracts in parallel', async () => {
+    it('can create multiple contracts in parallel', async () => {
       const runOneTest = async () => {
         const contract = await executor.createContract(
           'TestContract', [''], { from: signer.activeIdentity, gas: 1e6 });
@@ -216,6 +212,7 @@ describe('signer-identity (identity based signer)', function() {
     it.only('Should reject fund transfer to contract', async () => {
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       const contract = await executor.createContract(
+        'TestContract', [randomString], { from: signer.underlyingAccountId, gas: 1e6 });
         'TestContract', [randomString], { from: signer.activeIdentity, gas: 1e6 });
       expect(contract).to.be.a('Object')
 
