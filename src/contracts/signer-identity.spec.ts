@@ -208,7 +208,6 @@ describe('signer-identity (identity based signer)', function() {
     it('should reject fund transfer to contract', async () => {
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       const contract = await executor.createContract(
-        'TestContract', [randomString], { from: signer.underlyingAccountId, gas: 1e6 });
         'TestContract', [randomString], { from: signer.activeIdentity, gas: 1e6 });
       expect(contract).to.be.a('Object')
 
