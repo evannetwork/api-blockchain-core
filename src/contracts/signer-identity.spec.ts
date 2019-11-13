@@ -205,7 +205,24 @@ describe('signer-identity (identity based signer)', function() {
       expect(balanceAfter.eq(balanceBefore)).to.be.not.true     
     })
 
-    it('should reject fund transfer to contract', async () => {
+    it('should transfer fund to contract', async () => {
+      const amountToSend = Math.floor(Math.random() * 1e3);
+      const contract = await executor.createContract(
+        'TestContract', [], { from: signer.activeIdentity, gas: 1e6 });
+       expect(contract).to.be.a('Object')
+       console.log(contract)
+      const balanceBefore = new BigNumber(await web3.eth.getBalance(contract.options.address));
+      console.log(balanceBefore) 
+        const executedContracts = await executor.executeContractTransaction(
+          contract, 'chargeFunds', { from: signer.activeIdentity, value: amountToSend });       
+      const balanceAfter = new BigNumber(await web3.eth.getBalance(contract.options.address));
+      console.log(balanceAfter)
+      const diff = balanceAfter.minus(balanceBefore);
+      expect(diff.eq(new BigNumber(amountToSend))).to.be.true;      
+      expect(balanceAfter.eq(balanceBefore)).to.be.not.true;
+    })
+
+    it('should reject fund transfer to contract without a fallback function', async () => {
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       const contract = await executor.createContract(
         'TestContract', [randomString], { from: signer.activeIdentity, gas: 1e6 });
