@@ -80,6 +80,15 @@ describe('signer-identity (identity based signer)', function() {
       expect(await executor.executeContractCall(contract, 'data')).to.eq(randomString);
     });
 
+    it('can create expensive contracts', async () => {
+      const randomString = Math.floor(Math.random() * 1e12).toString(36);
+      const contractPromise = executor.createContract(
+        'HugeContract', [randomString], { from: signer.underlyingAccount, gas: 12e6 });
+      await expect(contractPromise).not.to.be.rejected;
+      expect(await executor.executeContractCall(await contractPromise, 'data')
+      ).to.eq(randomString);
+    });
+
     it('can make transactions on contracts', async () => {
       const contract = await executor.createContract(
         'TestContract', [''], { from: signer.underlyingAccount, gas: 1e6 });
@@ -115,6 +124,15 @@ describe('signer-identity (identity based signer)', function() {
         const contract = await executor.createContract(
           'TestContract', [randomString], { from: signer.activeIdentity, gas: 1e6 });
         expect(await executor.executeContractCall(contract, 'data')).to.eq(randomString);
+      });
+
+      it('can create expensive contracts', async () => {
+        const randomString = Math.floor(Math.random() * 1e12).toString(36);
+        const contractPromise = executor.createContract(
+          'HugeContract', [randomString], { from: signer.activeIdentity, gas: 1e6 });
+        await expect(contractPromise).not.to.be.rejected;
+        expect(await executor.executeContractCall(await contractPromise, 'data')
+        ).to.eq(randomString);
       });
 
       it('can make transactions on contracts', async () => {
