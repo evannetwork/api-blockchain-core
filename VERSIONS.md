@@ -6,6 +6,7 @@
 ### Fixes
 - move `expirationDate` in `formatToV2` to details object
 - fix profile type iot device specification
+- ensure that content keys, before they get shared, are added to the `Container` keys
 
 ### Deprecations
 

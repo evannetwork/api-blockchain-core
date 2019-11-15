@@ -934,6 +934,11 @@ export class Container extends Logger {
         }
       }
 
+      // ensure that content keys were created for all shared properties
+      await Promise.all([...read, ...readWrite].map(
+        property => this.ensureKeyInSharing(property)
+      ));
+
       //////////////////////////////////////////////////////// ensure encryption keys for properties
       // run with mutex to prevent breaking sharing info
       await this.getMutex('sharing').runExclusive(async () => {
