@@ -19,8 +19,6 @@ import {
   Logger,
   LoggerOptions,
   SignerInterface,
-  SignerInternal,
-  SignerInternalOptions,
 } from '@evan.network/dbcp';
 
 import { AbiCoder } from 'web3-eth-abi';
@@ -97,7 +95,7 @@ export class SignerIdentity extends Logger implements SignerInterface {
     const keyHolderLibrary = this.options.contractLoader.loadContract(
       'KeyHolderLibrary', this.activeIdentity);
     const events = await keyHolderLibrary.getPastEvents(
-        'ContractCreated', { fromBlock: blockNumber, toBlock: blockNumber });
+      'ContractCreated', { fromBlock: blockNumber, toBlock: blockNumber });
     const matches = events.filter(ev => ev.transactionHash === transactionHash);
     if (matches.length !== 1) {
       throw new Error('contract creation failed');
