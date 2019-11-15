@@ -35,7 +35,6 @@ describe('signer-identity (identity based signer)', function() {
   this.timeout(300000);
 
   let executor: Executor;
-  let identityAddress: string;
   let signer;
   let web3;
 
@@ -145,7 +144,7 @@ describe('signer-identity (identity based signer)', function() {
           const contract = await executor.createContract(
             'TestContract', [''], { from: signer.activeIdentity, gas: 1e6 });
           const randomString = Math.floor(Math.random() * 1e12).toString(36);
-          const executedContracts = await executor.executeContractTransaction(
+          await executor.executeContractTransaction(
             contract, 'setData', { from: signer.activeIdentity }, randomString);
         };
         await Promise.all([...Array(10)].map(() => runOneTest()));
@@ -230,9 +229,12 @@ describe('signer-identity (identity based signer)', function() {
 
         const amountToSend = Math.floor(Math.random() * 1e3);
         const balanceBefore = new BigNumber(await web3.eth.getBalance(signer.activeIdentity));
-        await expect( executor.executeSend(
-          { from: signer.activeIdentity, to: contract.options.address, gas: 100e3,
-           value: amountToSend })).to.rejected;
+        await expect( executor.executeSend({
+          from: signer.activeIdentity,
+          to: contract.options.address,
+          gas: 100e3,
+          value: amountToSend,
+        })).to.rejected;
 
         const balanceAfter = new BigNumber(await web3.eth.getBalance(signer.activeIdentity));
         expect(balanceAfter.eq(balanceBefore)).to.be.true;
@@ -248,9 +250,12 @@ describe('signer-identity (identity based signer)', function() {
 
         const balanceBefore = new BigNumber(await web3.eth.getBalance(signer.underlyingAccount));
 
-        await expect( executor.executeSend(
-          { from: signer.activeIdentity, to: contract.options.address, gas: 100e3,
-           value: amountToSend })).to.rejected;
+        await expect( executor.executeSend({
+          from: signer.activeIdentity,
+          to: contract.options.address,
+          gas: 100e3,
+          value: amountToSend,
+        })).to.rejected;
 
         const balanceAfter = new BigNumber(await web3.eth.getBalance(signer.underlyingAccount));
         expect(balanceAfter.eq(balanceBefore)).to.be.not.true;
@@ -262,8 +267,8 @@ describe('signer-identity (identity based signer)', function() {
           'TestContract', [], { from: signer.activeIdentity, gas: 1e6 });
         expect(contract).to.be.a('Object');
         const balanceBefore = new BigNumber(await web3.eth.getBalance(contract.options.address));
-          const executedContracts = await executor.executeContractTransaction(
-            contract, 'chargeFunds', { from: signer.activeIdentity, value: amountToSend });
+        executor.executeContractTransaction(
+          contract, 'chargeFunds', { from: signer.activeIdentity, value: amountToSend });
         const balanceAfter = new BigNumber(await web3.eth.getBalance(contract.options.address));
         const diff = balanceAfter.minus(balanceBefore);
         expect(diff.eq(new BigNumber(amountToSend))).to.be.true;
@@ -278,9 +283,12 @@ describe('signer-identity (identity based signer)', function() {
 
         const amountToSend = Math.floor(Math.random() * 1e3);
         const balanceBefore = new BigNumber(await web3.eth.getBalance(contract.options.address));
-        await expect( executor.executeSend(
-          { from: signer.activeIdentity, to: contract.options.address, gas: 100e3,
-           value: amountToSend })).to.rejected;
+        await expect( executor.executeSend({
+          from: signer.activeIdentity,
+          to: contract.options.address,
+          gas: 100e3,
+          value: amountToSend,
+        })).to.rejected;
 
         const balanceAfter = new BigNumber(await web3.eth.getBalance(contract.options.address));
         expect(balanceAfter.eq(balanceBefore)).to.be.true;
@@ -294,9 +302,12 @@ describe('signer-identity (identity based signer)', function() {
 
         const amountToSend = Math.floor(Math.random() * 1e3);
         const balanceBefore = new BigNumber(await web3.eth.getBalance(signer.activeIdentity));
-        await expect( executor.executeSend(
-          { from: signer.activeIdentity, to: contract.options.address, gas: 100e3,
-           value: amountToSend })).to.rejected;
+        await expect( executor.executeSend({
+          from: signer.activeIdentity,
+          to: contract.options.address,
+          gas: 100e3,
+          value: amountToSend,
+        })).to.rejected;
 
         const balanceAfter = new BigNumber(await web3.eth.getBalance(signer.activeIdentity));
         expect(balanceAfter.eq(balanceBefore)).to.be.true;
