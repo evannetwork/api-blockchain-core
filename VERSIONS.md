@@ -4,7 +4,8 @@
 ### Features
 
 ### Fixes
-- move `expirationDate` in `formatToV2` to details object 
+- move `expirationDate` in `formatToV2` to details object
+- fix profile type iot device specification
 
 ### Deprecations
 
