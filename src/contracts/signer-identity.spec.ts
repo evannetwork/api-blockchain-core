@@ -61,8 +61,8 @@ describe('signer-identity (identity based signer)', function() {
         web3,
       },
       {
-        activeIdentity: await verifications.getIdentityForAccount(accounts[3], true),
-        underlyingAccount: accounts[3],
+        activeIdentity: await verifications.getIdentityForAccount(accounts[0], true),
+        underlyingAccount: accounts[0],
         underlyingSigner,
       },
     );
