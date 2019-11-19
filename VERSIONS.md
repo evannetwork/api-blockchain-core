@@ -9,6 +9,7 @@
 - ensure that content keys, before they get shared, are added to the `Container` keys
 
 ### Deprecations
+- remove registration company name and use accountName for all
 
 
 ## Version 2.14.1
