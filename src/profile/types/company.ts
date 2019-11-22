@@ -65,11 +65,6 @@ export default JSON.parse(`{
       "registration": {
         "dataSchema": {
           "properties": {
-            "company": {
-              "default": "",
-              "minLength": 1,
-              "type": "string"
-            },
             "court": {
               "default": "",
               "type": "string"
