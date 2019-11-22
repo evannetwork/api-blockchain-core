@@ -2,6 +2,7 @@
 
 ## Next Version
 ### Features
+- add `setContainerShareConfigs` to `Container` API
 
 ### Fixes
 - move `expirationDate` in `formatToV2` to details object

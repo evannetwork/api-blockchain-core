@@ -761,6 +761,89 @@ export class Container extends Logger {
     );
   }
 
+  removeProperty() {
+    
+  }
+
+  /**
+   * Takes a full share configuration for a accountId (or a list of them), share newly added
+   * properties and unshare removed properties from the container. Also accepts a list / instance of
+   * the original sharing configurations duplicated loading can be avoided.
+   *
+   * @param      {ContainerShareConfig[]}  newConfigs       sharing configurations that should be
+   *                                                        persisted
+   * @param      {ContainerShareConfig[]}  originalConfigs  pass original share configurations, for
+   *                                                        that the sharing delta should be built
+   *                                                        (reduces load time)
+   */
+  async setContainerShareConfigs(
+    newConfigs: ContainerShareConfig | ContainerShareConfig[],
+    originalConfigs?: ContainerShareConfig | ContainerShareConfig[]
+  ) {
+    // collect all users that properties should be shared / unshared
+    const shareConfigs: Array<ContainerShareConfig> = [ ];
+    const unshareConfigs: Array<ContainerShareConfig> = [ ];
+
+    // ensure working with arrays
+    if (!Array.isArray(newConfigs)) {
+      newConfigs = [ newConfigs ];
+    }
+    if (!Array.isArray(originalConfigs)) {
+      originalConfigs = originalConfigs ? [ originalConfigs ] : [ ];
+    }
+
+    // iterate through all configurations and check for sharing updates
+    Promise.all((newConfigs).map(async (newConfig: ContainerShareConfig) => {
+      // objects to store sharing configuration delta (accountId, read, readWrite, removeListEntries)
+      const shareConfig: ContainerShareConfig = { accountId: newConfig.accountId };
+      const unshareConfig: ContainerShareConfig = { accountId: newConfig.accountId };
+      let originalConfig = (originalConfigs as ContainerShareConfig[])
+        .filter(orgConf => orgConf.accountId === newConfig.accountId)[0];
+
+      // load latest share configuration to buil delta against
+      if (!originalConfig) {
+        originalConfig = await this.getContainerShareConfigForAccount(newConfig.accountId);
+      }
+
+      // fill empty sharing types, so further checks will be easier
+      const shareConfigProperties = [ 'read', 'readWrite', 'removeListEntries' ];
+      shareConfigProperties.forEach(type => {
+        newConfig[type] = newConfig[type] || [ ];
+        originalConfig[type] = originalConfig[type] || [ ];
+        shareConfig[type] = shareConfig[type] || [ ];
+        unshareConfig[type] = unshareConfig[type] || [ ];
+      });
+
+      // iterate through all share config properties and detect changes
+      shareConfigProperties.forEach(type => {
+        // track new properties that should be shared
+        newConfig[type].forEach(property => {
+          if (originalConfig[type].indexOf(property) === -1) {
+            shareConfig[type].push(property);
+          }
+        });
+        // track properties that should be unshared
+        originalConfig[type].forEach(property => {
+          if (newConfig[type].indexOf(property) === -1) {
+            unshareConfig[type].push(property);
+          }
+        });
+      });
+
+      // transform unshare read permissions to readWrite permissions
+      unshareConfig.readWrite = unshareConfig.readWrite.concat(unshareConfig.read);
+      delete unshareConfig.read;
+
+      // apply them to the share configs arrays, so they can be processed afterwards
+      shareConfigs.push(shareConfig);
+      unshareConfigs.push(unshareConfig);
+    }));
+
+    // apply new sharings
+    await this.shareProperties(shareConfigs);
+    await this.unshareProperties(unshareConfigs]);
+  }
+
   /**
    * Write given description to containers DBCP.
    *
@@ -1302,9 +1385,8 @@ export class Container extends Logger {
             }
           }
           if (modified) {
-
+            await this.setDescription(description);
           }
-          await this.setDescription(description);
         });
       });
     }
