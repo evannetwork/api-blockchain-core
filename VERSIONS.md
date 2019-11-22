@@ -7,6 +7,7 @@
 - move `expirationDate` in `formatToV2` to details object
 - fix profile type iot device specification
 - ensure that content keys, before they get shared, are added to the `Container` keys
+- add `EncryptionWrapperCryptorType`, `EncryptionWrapperKeyType`, `EncryptionWrapperOptions`, `EncryptionWrapper` to `index.ts` exports
 
 ### Deprecations
 - remove registration company name and use accountName for all
