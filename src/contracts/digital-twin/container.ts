@@ -109,6 +109,9 @@ export interface ContainerUnshareConfig {
   removeListEntries?: string[];
   /** list of properties, for which write permissions should be removed */
   write?: string[];
+  /** Without force flag, removal of the owner will throw an error. By setting
+      to true, force will even remove the owner  **/
+  force?: boolean;
 }
 
 /**
@@ -761,8 +764,39 @@ export class Container extends Logger {
     );
   }
 
-  removeProperty() {
-    
+  /**
+   * Remove multiple properties from the container, including data keys and sharings. Can also pass
+   * a single property instead of an array.
+   *
+   * @param      {string}  properties  list of properties, that should be removed
+   */
+  async removeProperties(properties: string|string[]) {
+    // only allowed by owner, will be enforced by the unshareProperties function
+
+    // load accounts that are permitted to this contract
+    await this.ensureContract();
+    const roleMap = await this.options.rightsAndRoles.getMembers(this.contract);
+    const unique = Array.from(new Set([].concat(...Object.values(roleMap))));
+
+    // support short hand for removing a single property, ensure that properties variable is an
+    // array
+    if (!Array.isArray(properties)) {
+      properties = [ properties ];
+    }
+
+    // unshare all accounts from the specific roles
+    await this.unshareProperties(unique.map(accountId => {
+      return {
+        accountId,
+        readWrite: properties as string[],
+        removeListEntries: properties as string[],
+        write: properties as string[],
+        // force removement of the owner
+        force: true,
+      };
+    }));
+
+    // TODO: remove data ipfs hashes?
   }
 
   /**
@@ -793,7 +827,7 @@ export class Container extends Logger {
     }
 
     // iterate through all configurations and check for sharing updates
-    Promise.all((newConfigs).map(async (newConfig: ContainerShareConfig) => {
+    await Promise.all(newConfigs.map(async (newConfig: ContainerShareConfig) => {
       // objects to store sharing configuration delta (accountId, read, readWrite, removeListEntries)
       const shareConfig: ContainerShareConfig = { accountId: newConfig.accountId };
       const unshareConfig: ContainerShareConfig = { accountId: newConfig.accountId };
@@ -841,7 +875,7 @@ export class Container extends Logger {
 
     // apply new sharings
     await this.shareProperties(shareConfigs);
-    await this.unshareProperties(unshareConfigs]);
+    await this.unshareProperties(unshareConfigs);
   }
 
   /**
@@ -1203,6 +1237,15 @@ export class Container extends Logger {
       authority, 'hasUserRole', this.config.accountId, 0)) {
       throw new Error(`current account "${this.config.accountId}" is unable to unshare ` +
         'properties, as it isn\'t owner of the underlying contract ' +
+        this.contract.options.address);
+    }
+
+    // only allow owner removal when force attribute is set
+    const unpermittedOwnerRemoval = unshareConfigs.filter(
+      unshareConfig => unshareConfig.accountId === this.config.accountId && !unshareConfig.force);
+    if (unpermittedOwnerRemoval.length !==0) {
+      throw new Error(`current account "${this.config.accountId}" is owner of the contract ` +
+        'and cannot remove himself from sharing without force attribute' +
         this.contract.options.address);
     }
 

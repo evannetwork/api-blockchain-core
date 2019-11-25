@@ -3,6 +3,8 @@
 ## Next Version
 ### Features
 - add `setContainerShareConfigs` to `Container` API
+- add `removeProperties` to `Container` API
+- only allow `unshareProperties` for owner, if force attribute is set
 
 ### Fixes
 - move `expirationDate` in `formatToV2` to details object
