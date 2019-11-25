@@ -13,9 +13,9 @@ IPFS
    * - Extends
      - `Logger <../common/logger.html>`_
    * - Source
-     - `ipfs.ts <https://github.com/evannetwork/dbcp/tree/master/src/dfs/ipfs.ts>`_
+     - `ipfs.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/dfs/ipfs.ts>`_
    * - Examples
-     - `ipfs.spec.ts <https://github.com/evannetwork/dbcp/tree/master/src/dfs/ipfs.spec.ts>`_
+     - `ipfs.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/dfs/ipfs.spec.ts>`_
 
 
 This is `DfsInterface <dfs-interface.html>`_ implementation, that relies on the `IPFS <https://ipfs.io/>`_ framework.
