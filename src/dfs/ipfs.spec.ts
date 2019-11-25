@@ -63,8 +63,6 @@ describe('IPFS handler', function() {
   });
 
   it('should be able to unpin a file', async () => {
-    const randomContent = Math.random().toString();
-    fileHash = await ipfs.add('test', Buffer.from(randomContent, 'utf-8'));
     expect(fileHash).not.to.be.undefined;
     await ipfs.unPinFileHash(fileHash);
   });
