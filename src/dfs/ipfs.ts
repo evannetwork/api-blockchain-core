@@ -180,7 +180,8 @@ export class Ipfs extends Logger implements DfsInterface {
    */
   public async pinFileHash(file: any): Promise<any> {
     await this.checkAuthHeader();
-    await this.remoteNode.pin.add(file.hash);
+    const ipfsHash = file.hash.startsWith('Qm') ? file.hash : Ipfs.bytes32ToIpfsHash(file.hash);
+    await this.remoteNode.pin.add(ipfsHash);
   }
 
 
@@ -191,6 +192,7 @@ export class Ipfs extends Logger implements DfsInterface {
    */
   public async unPinFileHash(hash: any): Promise<any> {
     await this.checkAuthHeader();
+    const ipfsHash = hash.startsWith('Qm') ? hash : Ipfs.bytes32ToIpfsHash(hash);
     await this.remoteNode.pin.rm(hash);
   }
 
