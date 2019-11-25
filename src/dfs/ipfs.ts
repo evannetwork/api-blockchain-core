@@ -183,6 +183,17 @@ export class Ipfs extends Logger implements DfsInterface {
     await this.remoteNode.pin.add(file.hash);
   }
 
+
+  /**
+   * @brief unpins file hashes on ipfs cluster
+   *
+   * @param hash filehash of the pinned item
+   */
+  public async unPinFileHash(hash: any): Promise<any> {
+    await this.checkAuthHeader();
+    await this.remoteNode.pin.rm(hash);
+  }
+
   /**
    * @brief      get data from ipfs by ipfs hash
    *

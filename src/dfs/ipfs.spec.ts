@@ -54,6 +54,22 @@ describe('IPFS handler', function() {
     expect(fileContent).to.eq(randomContent);
   });
 
+  let fileHash;
+  it('should be able to pin a file', async () => {
+    const randomContent = Math.random().toString();
+    fileHash = await ipfs.add('test', Buffer.from(randomContent, 'utf-8'));
+    expect(fileHash).not.to.be.undefined;
+    await ipfs.pinFileHash({hash: fileHash});
+  });
+
+  it('should be able to unpin a file', async () => {
+    const randomContent = Math.random().toString();
+    fileHash = await ipfs.add('test', Buffer.from(randomContent, 'utf-8'));
+    expect(fileHash).not.to.be.undefined;
+    await ipfs.unPinFileHash(fileHash);
+  });
+
+
   it('should be able to add a file with special characters', async () => {
     const content = 'öäüßÖÄÜ';
     const encoding = 'binary';
