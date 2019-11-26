@@ -966,6 +966,64 @@ Example
   // 123
 
 
+--------------------------------------------------------------------------------
+
+.. _container_unshareProperties:
+
+unshareProperties
+================================================================================
+
+.. code-block:: typescript
+
+  container.unshareProperties(unshareConfigs);
+
+Remove keys and/or permissions for a user; this also handles role permissions, role memberships.
+
+**Please note: To prevent `dead` and inaccessible container entries, the API will throw an error by trying to unshare properties for an owner of a container. If you are sure and really want remove the owner from a property, you need to set the `force` attribute of the** :ref:`container_ContainerUnShareConfig` **for the owner to true. If you want to remove a property for all invited users, please use the** :ref:`container_removeEntries` **function.**
+
+----------
+Parameters
+----------
+
+#. ``unshareConfigs`` - :ref:`container_ContainerUnShareConfig`: list of account-field setups to remove permissions/keys for
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+
+  const accountId1 = '0x0000000000000000000000000000000000000001';
+  const accountId2 = '0x0000000000000000000000000000000000000002';
+
+  // open container with accountId1
+  const container = new Container(options, { ...config, accountId: accountId1 });
+
+  // assuming, that entry 'myField' has been shared with accountId2
+  // unshare field from accountId1 to accountId2
+  await container.unshareProperties([{
+    accountId: accountId2,
+    read: ['myField'],
+  }]);
+
+  // fetch value with accountId2
+  const accountId2Container = new Container(options, { ...config, accountId: accountId2 });
+  let value;
+  try {
+    value = await accountId2Container.getEntry('myField');
+    console.log(value);
+  } catch (ex) {
+    console.error('could not get entry');
+  }
+  // Output:
+  // could not get entry
 
 --------------------------------------------------------------------------------
 
@@ -1075,67 +1133,6 @@ Example
   // { accountId: '0x0000000000000000000000000000000000000002',
   //   read: [ 'testField2' ],
   //   readWrite: [ 'testField1' ] } ]
-
-
-
---------------------------------------------------------------------------------
-
-.. _container_unshareProperties:
-
-unshareProperties
-================================================================================
-
-.. code-block:: typescript
-
-  container.unshareProperties(unshareConfigs);
-
-Remove keys and/or permissions for a user; this also handles role permissions, role memberships.
-
-**Please note: To prevent `dead` and inaccessible container entries, the API will throw an error by trying to unshare properties for an owner of a container. If you are sure and really want remove the owner from a property, you need to set the `force` attribute of the :ref:`container_ContainerUnShareConfig` for the owner to true. If you want to remove a property for all invited users, please use the :ref:`container_removeProperties` function.**
-
-----------
-Parameters
-----------
-
-#. ``unshareConfigs`` - :ref:`container_ContainerUnShareConfig`: list of account-field setups to remove permissions/keys for
-
--------
-Returns
--------
-
-``Promise`` returns ``void``: resolved when done
-
--------
-Example
--------
-
-.. code-block:: typescript
-
-
-  const accountId1 = '0x0000000000000000000000000000000000000001';
-  const accountId2 = '0x0000000000000000000000000000000000000002';
-
-  // open container with accountId1
-  const container = new Container(options, { ...config, accountId: accountId1 });
-
-  // assuming, that entry 'myField' has been shared with accountId2
-  // unshare field from accountId1 to accountId2
-  await container.unshareProperties([{
-    accountId: accountId2,
-    read: ['myField'],
-  }]);
-
-  // fetch value with accountId2
-  const accountId2Container = new Container(options, { ...config, accountId: accountId2 });
-  let value;
-  try {
-    value = await accountId2Container.getEntry('myField');
-    console.log(value);
-  } catch (ex) {
-    console.error('could not get entry');
-  }
-  // Output:
-  // could not get entry
 
 
 --------------------------------------------------------------------------------

@@ -1116,7 +1116,7 @@ describe('Container', function() {
     });
     
     // // setContainerShareConfigs
-    it.only('can save a full share configuration for a user', async() => {
+    it('can save a full share configuration for a user', async() => {
       const { container, } = await createTestContainerWithProperties([ 'testField', 'testField2', 'testField3' ]);
 
       await container.shareProperties([{
@@ -1132,8 +1132,6 @@ describe('Container', function() {
       expect(shareConfig.read).to.not.include('testField3');
       expect(shareConfig.readWrite).to.not.include('testField3');
 
-      console.dir(shareConfig)
-
       shareConfig.readWrite = [ 'testField3' ];
       await container.setContainerShareConfigs(shareConfig);
 
@@ -1142,8 +1140,6 @@ describe('Container', function() {
       expect(shareConfig.read).to.not.include('testField2');
       expect(shareConfig.readWrite).to.not.include('testField2');
       expect(shareConfig.readWrite).to.include('testField3');
-      
-      console.dir(shareConfig)
     });
 
     it('can save share configurations for multiple users', async() => {
