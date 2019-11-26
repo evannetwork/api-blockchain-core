@@ -272,7 +272,7 @@ describe('signer-identity (identity based signer)', function() {
 
           const balanceBefore = new BigNumber(await web3.eth.getBalance(signer.underlyingAccount));
 
-          await expect( executor.executeSend({
+          await expect(executor.executeSend({
             from: signer.activeIdentity,
             to: contract.options.address,
             gas: 100e3,
