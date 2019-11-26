@@ -82,7 +82,7 @@ export class SignerIdentity extends Logger implements SignerInterface {
     if (options.from === this.underlyingAccount) {
       return this.config.underlyingSigner.createContract(contractName, functionArguments, options);
     }
-    // build input for contructror call
+    // build input for constructor call
     const compiledContract = this.options.contractLoader.getCompiledContract(contractName);
     if (!compiledContract || !compiledContract.bytecode) {
       throw new Error(`cannot find contract bytecode for contract "${contractName}"`);
