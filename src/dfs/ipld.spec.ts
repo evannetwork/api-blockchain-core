@@ -56,11 +56,6 @@ describe('IPLD handler', function() {
     ipld = await TestUtils.getIpld(ipfs);
   });
 
-  after(async () => {
-    // create new ipld handler on ipfs node
-    await ipfs.stop();
-  });
-
   describe('when creating a graph', () => {
     it('should return an IPFS file hash with 32 bytes length when storing', async() => {
       const sampleObject = {

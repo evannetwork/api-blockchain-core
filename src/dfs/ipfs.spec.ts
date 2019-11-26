@@ -36,10 +36,6 @@ describe('IPFS handler', function() {
     ipfs = await TestUtils.getIpfs();
   });
 
-  after(async () => {
-    await ipfs.stop();
-  });
-
   it('should add the auth header for every request', async () => {
     const randomContent = Math.random().toString();
     await ipfs.add('test', Buffer.from(randomContent, 'utf-8'));
@@ -52,6 +48,19 @@ describe('IPFS handler', function() {
     expect(hash).not.to.be.undefined;
     const fileContent = await ipfs.get(hash);
     expect(fileContent).to.eq(randomContent);
+  });
+
+  let fileHash;
+  it('should be able to pin a file', async () => {
+    const randomContent = Math.random().toString();
+    fileHash = await ipfs.add('test', Buffer.from(randomContent, 'utf-8'));
+    expect(fileHash).not.to.be.undefined;
+    await ipfs.pinFileHash({hash: fileHash});
+  });
+
+  it('should be able to unpin a file', async () => {
+    expect(fileHash).not.to.be.undefined;
+    await ipfs.remove(fileHash);
   });
 
   it('should be able to add a file with special characters', async () => {
