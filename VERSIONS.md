@@ -2,6 +2,7 @@
 
 ## Next Version
 ### Features
+- add `signer-identity` for making transactions via identity contract
 
 ### Fixes
 - move `expirationDate` in `formatToV2` to details object

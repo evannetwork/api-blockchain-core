@@ -20,6 +20,9 @@
 import { Runtime } from '../index'
 
 
+export const nullAddress = '0x0000000000000000000000000000000000000000';
+export const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
+
 /**
  * create auth header data to authenticate with current account against a smart agent server
  *

@@ -30,11 +30,10 @@ import {
   NameResolver,
   DfsInterface
 } from '@evan.network/dbcp';
+
 import { Ipfs } from '../dfs/ipfs';
+import { nullAddress, nullBytes32 } from '../common/utils';
 
-
-const nullAddress = '0x0000000000000000000000000000000000000000';
-const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
 /**
  * verification status from blockchain
@@ -105,7 +104,7 @@ export interface VerificationsDelegationInfo {
   /** abi encoded input for transaction */
   input: string;
   /** signed data from transaction */
-  signedTransactionInfo: string;
+  signedTransactionInfo?: string;
   /** source identity contract execution nonce for this transaction */
   nonce?: string;
   /** address of identity contract, that receives verification;
@@ -1105,6 +1104,57 @@ export class Verifications extends Logger {
     return this.formatToV2(nested, queryOptions || this.defaultQueryOptions);
   }
 
+   /**
+    * Builds required data for a transaction from an identity (offchain) and returns data, that can
+    * be used to submit it later on. Return value can be passed to ``executeTransaction``.
+    * Transaction information is not signed and therefore can only be submitted by an appropriate key
+    * hold of given identity.
+    *
+    * Note that, when creating multiple signed transactions, the ``nonce`` argument **has to be
+    * specified and incremented between calls**, as the nonce is included in transaction data and
+    * restricts the order of transactions, that can be made.
+    *
+    * @param      {any}     contract      target contract of transaction or ``null`` if just sending
+    *                                     funds
+    * @param      {string}  functionName  function for transaction or ``null`` if just sending funds
+    * @param      {any}     options       options for transaction, supports from, to, nonce, input,
+    *                                     value
+    * @param      {any[]}   args          arguments for function transaction
+    * @return     {VerificationsDelegationInfo}  prepared transaction for ``executeTransaction``
+    */
+  public async getTransactionInfo(
+    contract: any = null,
+    functionName: string = null,
+    options: any,
+    ...args
+  ): Promise<VerificationsDelegationInfo> {
+    // sign arguments for on-chain check
+    const sourceIdentity = await this.getIdentityForAccount(options.from, true);
+
+    // fetch nonce as late as possible
+    const nonce = (typeof options.nonce !== 'undefined' && options.nonce !== -1) ?
+      `${options.nonce}` : await this.getExecutionNonce(sourceIdentity, true);
+
+    const input = contract ?
+      contract.methods[functionName].apply(contract.methods, args).encodeABI() :
+      options.input;
+
+    const to = contract ?
+      contract.options.address :
+      (options.to || nullAddress);
+
+    const value = options.value || 0;
+
+    return {
+      sourceIdentity,
+      to,
+      value,
+      input,
+      nonce,
+    };
+  }
+
+
   /**
    * Map the topic of a verification to it's default ens domain
    *
@@ -1436,11 +1486,13 @@ export class Verifications extends Logger {
    * specified and incremented between calls**, as the nonce is included in transaction data and
    * restricts the order of transactions, that can be made.
    *
-   * @param      {any}     contract             target contract of transcation or ``null`` if just sending funds
-   * @param      {string}  functionName         function for transaction or ``null`` if just sending funds
-   * @param      {any}     options              options for transaction, supports from, to, nonce, input, value
-   * @param      {any[]}   args                 arguments for function transaction
-   * @returns    {VerificationsDelegationInfo}  prepared transaction for ``executeTransaction``
+   * @param      {any}     contract      target contract of transaction or ``null`` if just sending
+   *                                     funds
+   * @param      {string}  functionName  function for transaction or ``null`` if just sending funds
+   * @param      {any}     options       options for transaction, supports from, to, nonce, input,
+   *                                     value
+   * @param      {any[]}   args          arguments for function transaction
+   * @return     {VerificationsDelegationInfo}  prepared transaction for ``executeTransaction``
    */
   public async signTransaction(
     contract: any = null,
@@ -1448,28 +1500,18 @@ export class Verifications extends Logger {
     options: any,
     ...args
   ): Promise<VerificationsDelegationInfo> {
-    // sign arguments for on-chain check
-    const sourceIdentity = await this.getIdentityForAccount(options.from, true);
-
-    // fetch nonce as late as possible
-    const nonce = (typeof options.nonce !== 'undefined' && options.nonce !== -1) ?
-      `${options.nonce}` : await this.getExecutionNonce(sourceIdentity, true);
-
-    const input = contract ?
-      contract.methods[functionName].apply(contract.methods, args).encodeABI() :
-      options.input;
-
-    const to = contract ?
-      contract.options.address :
-      (options.to || null);
-
-    const value = options.value || 0;
+    const {
+      sourceIdentity,
+      to,
+      value,
+      input,
+      nonce,
+    } = await this.getTransactionInfo(contract, functionName, options, ...args);
 
     // note that issuer is given for signing, as this ACCOUNT is used to sign the message
     const signedTransactionInfo = await this.signPackedHash(
       options.from , [sourceIdentity, nonce, to, value, input]);
 
-    // executeDelegated(address _to, uint256 _value, bytes _data, bytes _signedTransactionInfo)
     return {
       sourceIdentity,
       to,
@@ -1824,6 +1866,7 @@ export class Verifications extends Logger {
       event: { eventName: 'Approved', target: 'KeyHolderLibrary' },
       from: accountId,
       getEventResult: (event, eventArgs) => [eventArgs.executionId, event.blockNumber],
+      value,
     };
 
     // run tx
