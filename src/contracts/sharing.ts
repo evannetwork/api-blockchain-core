@@ -573,8 +573,13 @@ export class Sharing extends Logger {
     }
 
     // remove the old hash
-    if (oldHash) {
-      await this.options.dfs.remove(oldHash);
+    if (oldHash &&
+        oldHash !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
+      try {
+        await this.options.dfs.remove(oldHash);
+      } catch (ex) {
+        this.log(`could not unpin old sharing hash: ${ ex.message }`, 'warning');
+      }
     }
 
     // clear the cache

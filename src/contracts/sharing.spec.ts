@@ -30,8 +30,9 @@ import {
 import { accounts } from '../test/accounts';
 import { configTestcore as config } from '../config-testcore';
 import { CryptoProvider } from '../encryption/crypto-provider';
-import { Sharing } from './sharing';
+import { Ipfs } from '../dfs/ipfs';
 import { sampleContext, TestUtils } from '../test/test-utils';
+import { Sharing } from './sharing';
 
 use(chaiAsPromised);
 
@@ -70,7 +71,7 @@ describe('Sharing handler', function() {
     const sharingId = !isMultiShared ?
       null : `0x${Math.floor(Math.random() * 255 * 255 * 255).toString(16).padStart(64, '0')}`;
 
-    it.only('should be able to add a sharing', async () => {
+    it('should be able to add a sharing', async () => {
       const randomSecret = `super secret; ${Math.random()}`;
       const contract = await executor.createContract(
         contractName, [], { from: accounts[0], gas: 500000, });
