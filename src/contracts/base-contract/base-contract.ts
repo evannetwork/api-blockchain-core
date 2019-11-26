@@ -125,7 +125,7 @@ export class BaseContract extends Logger {
             'joinSchema'
           );
         } catch (e) {
-          throw new Error("There is no Business Center domain exisiting");
+          throw new Error('There is no Business Center domain exisiting');
         }
       }
     } else {

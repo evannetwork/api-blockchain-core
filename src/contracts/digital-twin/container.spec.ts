@@ -1168,8 +1168,8 @@ describe('Container', function() {
       const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
       await container.unshareProperties([{ accountId: owner, readWrite: ['testField'] }]);
 
-      const description = await container.getDescription();
-      expect(description.dataSchema).not.to.haveOwnProperty('testField');
+      const containerDescription = await container.getDescription();
+      expect(containerDescription.dataSchema).not.to.haveOwnProperty('testField');
     });
 
     it('automatically removes field from description when last member of group is removed (2 members)', async() => {
@@ -1183,12 +1183,12 @@ describe('Container', function() {
       await container.shareProperties([{ accountId: consumer, read: ['testField'] }]);
       await container.unshareProperties([{ accountId: consumer, readWrite: ['testField'] }]);
 
-      let description = await container.getDescription();
-      expect(description.dataSchema).to.haveOwnProperty('testField');
+      let containerDescription = await container.getDescription();
+      expect(containerDescription.dataSchema).to.haveOwnProperty('testField');
       await container.unshareProperties([{ accountId: owner, readWrite: ['testField'] }]);
 
-      description = await container.getDescription();
-      expect(description.dataSchema).not.to.haveOwnProperty('testField');
+      containerDescription = await container.getDescription();
+      expect(containerDescription.dataSchema).not.to.haveOwnProperty('testField');
     });
   });
 

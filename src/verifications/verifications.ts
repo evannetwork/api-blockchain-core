@@ -1436,7 +1436,7 @@ export class Verifications extends Logger {
    * specified and incremented between calls**, as the nonce is included in transaction data and
    * restricts the order of transactions, that can be made.
    *
-   * @param      {any}     contract             target contract of transcation or ``null`` if just sending funds 
+   * @param      {any}     contract             target contract of transcation or ``null`` if just sending funds
    * @param      {string}  functionName         function for transaction or ``null`` if just sending funds
    * @param      {any}     options              options for transaction, supports from, to, nonce, input, value
    * @param      {any[]}   args                 arguments for function transaction
@@ -2149,8 +2149,7 @@ export class Verifications extends Logger {
       verificationData: string;
       verificationDataUrl: string;
       ensFullNodeHash: string;
-    }>
-  {
+    }> {
     await this.ensureStorage();
     const subjectType = await this.getSubjectType(subject, isIdentity);
     let targetIdentity;
