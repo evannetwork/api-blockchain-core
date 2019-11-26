@@ -18,13 +18,15 @@
 */
 
 import 'mocha';
-import { expect } from 'chai';
+import * as chaiAsPromised from 'chai-as-promised';
 import IpfsApi = require('ipfs-api');
+import { expect, use } from 'chai';
 
 import { Ipfs } from './ipfs'
 import { InMemoryCache } from './in-memory-cache'
 import { TestUtils } from '../test/test-utils'
 
+use(chaiAsPromised);
 
 
 let ipfs: Ipfs;
@@ -50,17 +52,26 @@ describe('IPFS handler', function() {
     expect(fileContent).to.eq(randomContent);
   });
 
-  let fileHash;
   it('should be able to pin a file', async () => {
     const randomContent = Math.random().toString();
-    fileHash = await ipfs.add('test', Buffer.from(randomContent, 'utf-8'));
+    const fileHash = await ipfs.add('test', Buffer.from(randomContent, 'utf-8'));
     expect(fileHash).not.to.be.undefined;
     await ipfs.pinFileHash({hash: fileHash});
   });
 
   it('should be able to unpin a file', async () => {
+    const randomContent = Math.random().toString();
+    const fileHash = await ipfs.add('test', Buffer.from(randomContent, 'utf-8'));
     expect(fileHash).not.to.be.undefined;
+    await ipfs.pinFileHash({hash: fileHash});
     await ipfs.remove(fileHash);
+  });
+
+  it('should throw an error when unpinning unknown hash', async () => {
+    const unkownHash = 'QmZYJJTAV8JgVoMggSuQSSdGU4PrZSvuuXckvqpnHfpR75';
+    const unpinUnkown = ipfs.remove(unkownHash);
+    expect(unpinUnkown).to.be.rejectedWith(`could not unpin hash "${ unkownHash }" for account ` +
+      `"${ ipfs.runtime.activeAccount }": hash not found`);
   });
 
   it('should be able to add a file with special characters', async () => {
