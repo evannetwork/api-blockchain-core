@@ -2,6 +2,8 @@
 
 ## Next Version
 ### Features
+- add `remove` function to `Ipfs`
+- implement unPinFileHash function in dfs
 - add `signer-identity` for making transactions via identity contract
 
 ### Fixes
@@ -11,6 +13,7 @@
 
 ### Deprecations
 - remove registration company name and use accountName for all
+- remove `stop` function from `Ipfs`
 
 
 ## Version 2.14.1

@@ -18,13 +18,15 @@
 */
 
 import 'mocha';
-import { expect } from 'chai';
+import * as chaiAsPromised from 'chai-as-promised';
 import IpfsApi = require('ipfs-api');
+import { expect, use } from 'chai';
 
 import { Ipfs } from './ipfs'
 import { InMemoryCache } from './in-memory-cache'
 import { TestUtils } from '../test/test-utils'
 
+use(chaiAsPromised);
 
 
 let ipfs: Ipfs;
@@ -34,10 +36,6 @@ describe('IPFS handler', function() {
 
   before(async () => {
     ipfs = await TestUtils.getIpfs();
-  });
-
-  after(async () => {
-    await ipfs.stop();
   });
 
   it('should add the auth header for every request', async () => {
@@ -52,6 +50,29 @@ describe('IPFS handler', function() {
     expect(hash).not.to.be.undefined;
     const fileContent = await ipfs.get(hash);
     expect(fileContent).to.eq(randomContent);
+  });
+
+  it('should be able to pin a file', async () => {
+    const randomContent = Math.random().toString();
+    const fileHash = await ipfs.add('test', Buffer.from(randomContent, 'utf-8'));
+    expect(fileHash).not.to.be.undefined;
+    await ipfs.pinFileHash({hash: fileHash});
+  });
+
+  it('should be able to unpin a file', async () => {
+    const randomContent = Math.random().toString();
+    const fileHash = await ipfs.add('test', Buffer.from(randomContent, 'utf-8'));
+    expect(fileHash).not.to.be.undefined;
+    await ipfs.pinFileHash({hash: fileHash});
+    await ipfs.remove(fileHash);
+  });
+
+  it('should throw an error when unpinning unknown hash', async () => {
+    const unkownHash = 'QmZYJJTAV8JgVoMggSuQSSdGU4PrZSvuuXckvqpnHfpR75';
+    const unpinUnkown = ipfs.remove(unkownHash);
+    await expect(unpinUnkown).to.be.rejectedWith(`problem with IPFS request: tried to remove hash ` +
+      `"${ unkownHash }" for account "${ ipfs.runtime.activeAccount }", but no matching ` +
+      `entries found in redis`);
   });
 
   it('should be able to add a file with special characters', async () => {
