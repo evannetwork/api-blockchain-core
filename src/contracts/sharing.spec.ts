@@ -70,7 +70,7 @@ describe('Sharing handler', function() {
     const sharingId = !isMultiShared ?
       null : `0x${Math.floor(Math.random() * 255 * 255 * 255).toString(16).padStart(64, '0')}`;
 
-    it('should be able to add a sharing', async () => {
+    it.only('should be able to add a sharing', async () => {
       const randomSecret = `super secret; ${Math.random()}`;
       const contract = await executor.createContract(
         contractName, [], { from: accounts[0], gas: 500000, });

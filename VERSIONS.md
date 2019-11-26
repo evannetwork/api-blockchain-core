@@ -6,7 +6,8 @@
 - add `removeEntries` to `Container` API
 - only allow `unshareProperties` for owner, if force attribute is set
 - add `remove` function to `Ipfs`
-- implement unPinFileHash function in dfs
+- implement `unPinFileHash` function in dfs
+- remove old sharing ipfs hash within `saveSharingsToContract`
 
 ### Fixes
 - move `expirationDate` in `formatToV2` to details object
@@ -15,7 +16,6 @@
 - add `EncryptionWrapperCryptorType`, `EncryptionWrapperKeyType`, `EncryptionWrapperOptions`, `EncryptionWrapper` to `index.ts` exports
 
 ### Deprecations
-- remove registration company name and use accountName for all
 - remove registration company name and use accountName for all
 - remove `stop` function from `Ipfs`
 
