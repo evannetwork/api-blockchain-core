@@ -765,12 +765,12 @@ export class Container extends Logger {
   }
 
   /**
-   * Remove multiple properties from the container, including data keys and sharings. Can also pass
+   * Remove multiple entries from the container, including data keys and sharings. Can also pass
    * a single property instead of an array.
    *
-   * @param      {string}  properties  list of properties, that should be removed
+   * @param      {string}  entries  list of entries, that should be removed
    */
-  async removeProperties(properties: string|string[]) {
+  public async removeEntries(entries: string|string[]) {
     // only allowed by owner, will be enforced by the unshareProperties function
 
     // load accounts that are permitted to this contract
@@ -778,19 +778,19 @@ export class Container extends Logger {
     const roleMap = await this.options.rightsAndRoles.getMembers(this.contract);
     const unique = Array.from(new Set([].concat(...Object.values(roleMap))));
 
-    // support short hand for removing a single property, ensure that properties variable is an
+    // support short hand for removing a single property, ensure that entries variable is an
     // array
-    if (!Array.isArray(properties)) {
-      properties = [ properties ];
+    if (!Array.isArray(entries)) {
+      entries = [ entries ];
     }
 
     // unshare all accounts from the specific roles
     await this.unshareProperties(unique.map(accountId => {
       return {
         accountId,
-        readWrite: properties as string[],
-        removeListEntries: properties as string[],
-        write: properties as string[],
+        readWrite: entries as string[],
+        removeListEntries: entries as string[],
+        write: entries as string[],
         // force removement of the owner
         force: true,
       };
@@ -810,7 +810,7 @@ export class Container extends Logger {
    *                                                        that the sharing delta should be built
    *                                                        (reduces load time)
    */
-  async setContainerShareConfigs(
+  public async setContainerShareConfigs(
     newConfigs: ContainerShareConfig | ContainerShareConfig[],
     originalConfigs?: ContainerShareConfig | ContainerShareConfig[]
   ) {

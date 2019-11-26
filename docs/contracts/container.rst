@@ -535,6 +535,68 @@ Entries can be retrieved with:
   // 123
 
 
+--------------------------------------------------------------------------------
+
+
+.. _container_removeEntries:
+
+removeEntries
+================================================================================
+
+.. code-block:: typescript
+
+  container.removeEntries(entries);
+
+Remove multiple entries from the container, including data keys and sharings. Can also pass a single property instead of an array. Retrieves dynamically all sharings for the passed entries and runs `unshareProperties` for them.
+
+----------
+Parameters
+----------
+
+#. ``entries`` - ``string`` / ``string[]``: name / list of entries, that should be removed
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const accountId1 = '0x0000000000000000000000000000000000000001';
+  const accountId2 = '0x0000000000000000000000000000000000000002';
+
+  // open container with accountId1
+  const container = new Container(options, { ...config, accountId: accountId1 });
+
+  // assuming, that entry 'myField' has been shared with accountId2
+  // remove the whole property from the container
+  await container.removeEntries(['myField']);
+
+  // fetch value with accountId2 and with accountId1
+  const accountId2Container = new Container(options, { ...config, accountId: accountId2 });
+  let value;
+  try {
+    value = await accountId2Container.getEntry('myField');
+    console.log(value);
+  } catch (ex) {
+    console.error('could not get entry');
+  }
+
+  // also the owner cannot get this entry anymore
+  try {
+    value = await container.getEntry('myField');
+    console.log(value);
+  } catch (ex) {
+    console.error('could not get entry');
+  }
+  // Output:
+  // could not get entry
+
 
 ------------------------------------------------------------------------------
 
@@ -1029,11 +1091,13 @@ unshareProperties
 
 Remove keys and/or permissions for a user; this also handles role permissions, role memberships.
 
+**Please note: To prevent `dead` and inaccessible container entries, the API will throw an error by trying to unshare properties for an owner of a container. If you are sure and really want remove the owner from a property, you need to set the `force` attribute of the :ref:`container_ContainerUnShareConfig` for the owner to true. If you want to remove a property for all invited users, please use the :ref:`container_removeProperties` function.**
+
 ----------
 Parameters
 ----------
 
-#. ``unshareConfigs`` - ``ContainerUnshareConfig[]``: list of account-field setups to remove permissions/keys for
+#. ``unshareConfigs`` - :ref:`container_ContainerUnShareConfig`: list of account-field setups to remove permissions/keys for
 
 -------
 Returns
@@ -1075,6 +1139,70 @@ Example
 
 
 --------------------------------------------------------------------------------
+
+.. _container_setContainerShareConfigs:
+
+setContainerShareConfigs
+================================================================================
+
+.. code-block:: typescript
+
+  container.setContainerShareConfigs(newConfigs, originalConfigs);
+
+Takes a full share configuration for a accountId (or a list of them), share newly added properties and unshare removed properties from the container. Also accepts a list / instance of the original sharing configurations duplicated loading can be avoided.
+
+----------
+Parameters
+----------
+
+#. ``newConfigs`` - :ref:`container_ContainerShareConfig` / :ref:`container_ContainerShareConfig`[]: sharing configurations that should be persisted
+#. ``unshareConfigs`` - :ref:`container_ContainerShareConfig` / :ref:`container_ContainerShareConfig`[]: pass original share configurations, for that the sharing delta should be built (reduces load time)
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+
+  const accountId1 = '0x0000000000000000000000000000000000000001';
+  const accountId2 = '0x0000000000000000000000000000000000000002';
+
+  // open container with accountId1
+  const container = new Container(options, { ...config, accountId: accountId1 });
+
+  await container.shareProperties([{
+    accountId: '0x0000000000000000000000000000000000000002',
+    read: [ 'testField', ],
+    readWrite: [ 'testField2', ]
+  }]);
+
+  console.dir(await container.getContainerShareConfigForAccount(accountId2))
+  // {
+  //   accountId: '0x0030C5e7394585400B1FB193DdbCb45a37Ab916E',
+  //   read: [ 'testField' ],
+  //   readWrite: [ 'testField2' ]
+  // }
+
+  shareConfig.readWrite = [ 'testField3' ];
+  await container.setContainerShareConfigs(shareConfig);
+
+  console.dir(await container.getContainerShareConfigForAccount(accountId2))
+  // {
+  //   accountId: '0x0030C5e7394585400B1FB193DdbCb45a37Ab916E',
+  //   read: [ 'testField' ],
+  //   readWrite: [ 'testField3' ]
+  // }
+
+
+--------------------------------------------------------------------------------
+
 
 = Validating Containers =
 =========================
@@ -1398,6 +1526,19 @@ config for sharing multiple fields to one account (read and/or readWrite access)
 #. ``read`` - ``string[]`` (optional): list of properties, that are shared read-only
 #. ``readWrite`` - ``string[]`` (optional): list of properties, that are shared readable and writable
 
+.. _container_ContainerUnShareConfig:
+
+----------------------
+ContainerUnshareConfig
+----------------------
+
+config for unsharing multiple fields from one account (write and/or readWrite access)
+
+#. ``accountId`` - ``string``: account, that gets properties unshared
+#. ``readWrite`` - ``string[]`` (optional): list of properties, that are unshared (read and write permissions)
+#. ``removeListEntries`` - ``string[]`` (optional): list of properties, that are losing the rights to remove listentries
+#. ``write`` - ``string[]`` (optional): list of properties, for which write permissions should be removed
+#. ``force`` - ``boolean`` (optional): Without force flag, removal of the owner will throw an error. By setting to true, force will even remove the owner
 
 .. _container_ContainerPlugin:
 

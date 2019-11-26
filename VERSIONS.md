@@ -3,7 +3,7 @@
 ## Next Version
 ### Features
 - add `setContainerShareConfigs` to `Container` API
-- add `removeProperties` to `Container` API
+- add `removeEntries` to `Container` API
 - only allow `unshareProperties` for owner, if force attribute is set
 
 ### Fixes

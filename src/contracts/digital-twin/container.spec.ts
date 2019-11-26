@@ -1116,7 +1116,7 @@ describe('Container', function() {
     });
     
     // // setContainerShareConfigs
-    it('can save a full share configuration for a user', async() => {
+    it.only('can save a full share configuration for a user', async() => {
       const { container, } = await createTestContainerWithProperties([ 'testField', 'testField2', 'testField3' ]);
 
       await container.shareProperties([{
@@ -1132,6 +1132,8 @@ describe('Container', function() {
       expect(shareConfig.read).to.not.include('testField3');
       expect(shareConfig.readWrite).to.not.include('testField3');
 
+      console.dir(shareConfig)
+
       shareConfig.readWrite = [ 'testField3' ];
       await container.setContainerShareConfigs(shareConfig);
 
@@ -1140,6 +1142,8 @@ describe('Container', function() {
       expect(shareConfig.read).to.not.include('testField2');
       expect(shareConfig.readWrite).to.not.include('testField2');
       expect(shareConfig.readWrite).to.include('testField3');
+      
+      console.dir(shareConfig)
     });
 
     it('can save share configurations for multiple users', async() => {
@@ -1286,7 +1290,7 @@ describe('Container', function() {
       expect(description.dataSchema).not.to.haveOwnProperty('testField');
     });
 
-    it.only('automatically removes field from description when last member of group is removed (2 members)', async() => {
+    it('automatically removes field from description when last member of group is removed (2 members)', async() => {
       const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
       plugin.template.properties.testField = {
         dataSchema: { type: 'string' },
@@ -1325,7 +1329,7 @@ describe('Container', function() {
         readWrite: [ 'testField2', ]
       }]);
 
-      await container.removeProperties('testField');
+      await container.removeEntries('testField');
 
       const description = await container.getDescription();
       expect(description.dataSchema).not.to.haveOwnProperty('testField');
@@ -1342,7 +1346,7 @@ describe('Container', function() {
         readWrite: [ 'testField2', ]
       }]);
 
-      await container.removeProperties([ 'testField', 'testField2' ]);
+      await container.removeEntries([ 'testField', 'testField2' ]);
 
       const description = await container.getDescription();
       expect(description.dataSchema).not.to.haveOwnProperty('testField');
@@ -1361,7 +1365,7 @@ describe('Container', function() {
         readWrite: [ 'testField2', ]
       }]);
 
-      expect(container.removeProperties('testField')).to.be.rejectedWith(new RegExp(`^current account "${ owner }" is owner of the contract and cannot remove himself from sharing without force attribute`, 'i'));
+      expect(container.removeEntries('testField')).to.be.rejectedWith(new RegExp(`^current account "${ owner }" is owner of the contract and cannot remove himself from sharing without force attribute`, 'i'));
     });
   });
 
