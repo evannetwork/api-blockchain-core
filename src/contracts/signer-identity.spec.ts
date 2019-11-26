@@ -154,7 +154,7 @@ describe('signer-identity (identity based signer)', function() {
             contract, 'setData', { from: signer.activeIdentity }, randomString);
           expect(await executor.executeContractCall(contract, 'data')).to.eq(randomString);
         };
-        await Promise.all([...Array(20)].map(() => runOneTest()));
+        await Promise.all([...Array(10)].map(() => runOneTest()));
       });
 
       it('can execute multiple transactions in parallel', async () => {
