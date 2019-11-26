@@ -70,8 +70,9 @@ describe('IPFS handler', function() {
   it('should throw an error when unpinning unknown hash', async () => {
     const unkownHash = 'QmZYJJTAV8JgVoMggSuQSSdGU4PrZSvuuXckvqpnHfpR75';
     const unpinUnkown = ipfs.remove(unkownHash);
-    expect(unpinUnkown).to.be.rejectedWith(`could not unpin hash "${ unkownHash }" for account ` +
-      `"${ ipfs.runtime.activeAccount }": hash not found`);
+    expect(unpinUnkown).to.be.rejectedWith(`problem with IPFS request: tried to remove hash` +
+      `"${ unkownHash }" for account "${ ipfs.runtime.activeAccount }", but no matching ` +
+      `entries found in redis`);
   });
 
   it('should be able to add a file with special characters', async () => {
