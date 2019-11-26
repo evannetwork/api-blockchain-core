@@ -4,6 +4,7 @@
 ### Features
 - add `remove` function to `Ipfs`
 - implement unPinFileHash function in dfs
+- add `signer-identity` for making transactions via identity contract
 
 ### Fixes
 - move `expirationDate` in `formatToV2` to details object
