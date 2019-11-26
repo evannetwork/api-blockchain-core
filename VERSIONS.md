@@ -13,7 +13,6 @@
 
 ### Deprecations
 - remove registration company name and use accountName for all
-- remove registration company name and use accountName for all
 - remove `stop` function from `Ipfs`
 
 
