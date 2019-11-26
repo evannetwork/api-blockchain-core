@@ -124,7 +124,6 @@ export class SignerIdentity extends Logger implements SignerInterface {
     }
 
     try {
-      debugger;
       handleTxResult(
         null,
         await this.handleIdentityTransaction(null, null, [], { ...options, input: '0x' }),
