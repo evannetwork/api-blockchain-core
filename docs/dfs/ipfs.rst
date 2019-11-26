@@ -249,15 +249,14 @@ Example
 
 ------------------------------------------------------------------------------
 
+.. _ipfs_remove:
 
-.. _ipfs_unPinFileHash:
-
-unPinFileHash
+remove
 ===================
 
 .. code-block:: javascript
 
-    dfs.pinFileHash(hash);
+    dfs.remove(hash);
 
 unpins file hashes on ipfs cluster
 
@@ -279,7 +278,41 @@ Example
 
 .. code-block:: javascript
 
-    const fileBuffer = await runtime.dfs.unPinFileHash('QmWmyoMoctfbAaiEs2G46gpeUmhqFRDW6KWo64y5r581Vz');
+  await runtime.dfs.remove('QmWmyoMoctfbAaiEs2G46gpeUmhqFRDW6KWo64y5r581Vz');
+
+------------------------------------------------------------------------------
+
+
+.. _ipfs_unPinFileHash:
+
+unPinFileHash
+===================
+
+.. code-block:: javascript
+
+    dfs.unPinFileHash(hash);
+
+unpins file hashes on ipfs cluster
+
+----------
+Parameters
+----------
+
+#. ``hash`` - ``string``: filehash of the pinned item
+
+-------
+Returns
+-------
+
+``Promise`` resolves to ``void``: resolved when done.
+
+-------
+Example
+-------
+
+.. code-block:: javascript
+
+  await runtime.dfs.unPinFileHash('QmWmyoMoctfbAaiEs2G46gpeUmhqFRDW6KWo64y5r581Vz');
 
 ------------------------------------------------------------------------------
 

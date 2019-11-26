@@ -2,15 +2,18 @@
 
 ## Next Version
 ### Features
+- add `remove` function to `Ipfs`
+- implement unPinFileHash function in dfs
 
 ### Fixes
 - move `expirationDate` in `formatToV2` to details object
 - fix profile type iot device specification
 - ensure that content keys, before they get shared, are added to the `Container` keys
-- implement unPinFileHash function in dfs
 
 ### Deprecations
 - remove registration company name and use accountName for all
+- remove registration company name and use accountName for all
+- remove `stop` function from `Ipfs`
 
 
 ## Version 2.14.1
