@@ -14,7 +14,7 @@ matrix:
       - TESTSPECS='src/verifications/*.spec.ts src/profile/*.spec.ts src/*.spec.ts src/votings/*.spec.ts src/contracts/digital-twin/*.spec.ts'
       - ENS_ADDRESS='0x9f8063ac44D23C99E943eA3DE3E1bb6Ab7678df0'
       - ENS_RESOLVER='0xc6b9F181BFa9eFA7679a3B3a786aB582AeE79dad'
-      - CHAIN_ENDPOINT='ws://localhost:8546'
+      - CHAIN_ENDPOINT='ws://localhost:8545'
     script:
       - npm run testunitcoverage -- --exclude src/name-resolver.spec.ts
 
@@ -25,7 +25,7 @@ matrix:
       - TESTSPECS="src/contracts/data-contract/*.spec.ts src/encryption/*.spec.ts src/dfs/*.spec.ts"
       - ENS_ADDRESS='0x9f8063ac44D23C99E943eA3DE3E1bb6Ab7678df0'
       - ENS_RESOLVER='0xc6b9F181BFa9eFA7679a3B3a786aB582AeE79dad'
-      - CHAIN_ENDPOINT='ws://localhost:8546'
+      - CHAIN_ENDPOINT='ws://localhost:8545'
     script:
       - npm run testunitcoverage
 
@@ -36,7 +36,7 @@ matrix:
       - TESTSPECS='src/contracts/*.spec.ts src/contracts/base-contract/*.spec.ts src/contracts/business-center/*.spec.ts src/contracts/service-contract/*.spec.ts'
       - ENS_ADDRESS='0x9f8063ac44D23C99E943eA3DE3E1bb6Ab7678df0'
       - ENS_RESOLVER='0xc6b9F181BFa9eFA7679a3B3a786aB582AeE79dad'
-      - CHAIN_ENDPOINT='ws://localhost:8546'
+      - CHAIN_ENDPOINT='ws://localhost:8545'
     script:
       - npm run testunitcoverage
 
@@ -54,13 +54,12 @@ addons:
 before_install:
   - export CXX="g++-4.8"
   - npm install -g npm@latest
-  - docker pull evannetwork/parity_testchain
-  - docker run -d -p 127.0.0.1:8546:8546 -p 127.0.0.1:8545:8545 -u root --entrypoint /home/parity/bin/parity evannetwork/parity_testchain --chain /root/parity/spec.json --jsonrpc-interface all --unsafe-expose --tx-gas-limit=16000000 --gas-floor-target=16000000
+  - npm install -g ganache-cli
+  - ganache-cli --allowUnlimitedContractSize --gasLimit 0xE4E1C0 -f https://testcore.evan.network -b 1 > /dev/null &
 install:
   - npm install
   - rm -rf node_modules/@evan.network/dbcp && git clone https://github.com/evannetwork/dbcp.git ../dbcp && cd ../dbcp && git checkout develop && npm i && npm run build && cd ../api-blockchain-core && mv ../dbcp ./node_modules/@evan.network
   - cd node_modules/@evan.network && rm -rf smart-contracts-core && git clone https://github.com/evannetwork/smart-contracts-core.git && cd smart-contracts-core && git checkout develop && npm i
-  - NODE_ENV='local' CHAIN_ENDPOINT='ws://localhost:8546' ACCOUNT_ID='0x001De828935e8c7e4cb56Fe610495cAe63fb2612' PRIVATE_KEY='01734663843202e2245e5796cb120510506343c67915eb4f9348ac0d8c2cf22a' node scripts/build-contracts.js && cd ../../../
   - rm -f node_modules/web3/*.d.ts
   - rm -f node_modules/web3/node_modules/web3-eth/types/*.d.ts
   - rm -f node_modules/web3-eth/types/*.d.ts
