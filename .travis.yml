@@ -60,6 +60,4 @@ install:
   - npm install
   - rm -rf node_modules/@evan.network/dbcp && git clone https://github.com/evannetwork/dbcp.git ../dbcp && cd ../dbcp && git checkout develop && npm i && npm run build && cd ../api-blockchain-core && mv ../dbcp ./node_modules/@evan.network
   - cd node_modules/@evan.network && rm -rf smart-contracts-core && git clone https://github.com/evannetwork/smart-contracts-core.git && cd smart-contracts-core && git checkout develop && npm i
-  - rm -f node_modules/web3/*.d.ts
-  - rm -f node_modules/web3/node_modules/web3-eth/types/*.d.ts
-  - rm -f node_modules/web3-eth/types/*.d.ts
+  - cd ../../../
