@@ -277,7 +277,7 @@ describe('signer-identity (identity based signer)', function() {
           })).to.rejected;
 
           const balanceAfter = new BigNumber(await web3.eth.getBalance(signer.underlyingAccount));
-          expect(balanceAfter.eq(balanceBefore)).to.be.not.true;
+          expect(balanceAfter.lt(balanceBefore)).to.be.true;
         }
       );
 
@@ -292,7 +292,7 @@ describe('signer-identity (identity based signer)', function() {
         const balanceAfter = new BigNumber(await web3.eth.getBalance(contract.options.address));
         const diff = balanceAfter.minus(balanceBefore);
         expect(diff.eq(new BigNumber(amountToSend))).to.be.true;
-        expect(balanceAfter.eq(balanceBefore)).to.be.not.true;
+        expect(balanceAfter.gt(balanceBefore)).to.be.true;
       });
 
       it('should reject fund transfer to contract without a fallback function', async () => {
