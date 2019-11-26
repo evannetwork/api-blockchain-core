@@ -54,7 +54,7 @@ addons:
 before_install:
   - export CXX="g++-4.8"
   - npm install -g npm@latest
-  - npm install -g ganache-cli
+  - npm install -g ganache-cli@beta
   - ganache-cli --allowUnlimitedContractSize --gasLimit 0xE4E1C0 -f https://testcore.evan.network -b 1 > /dev/null &
 install:
   - npm install
