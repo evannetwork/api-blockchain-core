@@ -70,7 +70,7 @@ describe('IPFS handler', function() {
   it('should throw an error when unpinning unknown hash', async () => {
     const unkownHash = 'QmZYJJTAV8JgVoMggSuQSSdGU4PrZSvuuXckvqpnHfpR75';
     const unpinUnkown = ipfs.remove(unkownHash);
-    expect(unpinUnkown).to.be.rejectedWith(`problem with IPFS request: tried to remove hash` +
+    expect(unpinUnkown).to.be.rejectedWith(`problem with IPFS request: tried to remove hash ` +
       `"${ unkownHash }" for account "${ ipfs.runtime.activeAccount }", but no matching ` +
       `entries found in redis`);
   });
