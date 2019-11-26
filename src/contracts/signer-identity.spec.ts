@@ -347,7 +347,7 @@ describe('signer-identity (identity based signer)', function() {
             to: contract.options.address,
             gas: 100e3,
             value: amountToSend,
-          })).to.rejected;
+          })).to.be.rejected;
 
           const balanceAfter = new BigNumber(await web3.eth.getBalance(signer.activeIdentity));
           expect(balanceAfter.eq(balanceBefore)).to.be.true;
