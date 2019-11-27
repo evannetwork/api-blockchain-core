@@ -226,7 +226,7 @@ describe('Container', function() {
       await container.shareProperties([{ accountId: consumer, readWrite: ['testField'] }]);
 
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
-      let consumerContainer = await getConsumerContainer(container);
+      const consumerContainer = await getConsumerContainer(container);
       await consumerContainer.setEntry('testField', randomString);
 
       expect(await container.getEntry('testField')).to.eq(randomString);
