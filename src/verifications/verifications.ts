@@ -2192,8 +2192,7 @@ export class Verifications extends Logger {
       verificationData: string;
       verificationDataUrl: string;
       ensFullNodeHash: string;
-    }>
-  {
+    }> {
     await this.ensureStorage();
     const subjectType = await this.getSubjectType(subject, isIdentity);
     let targetIdentity;
