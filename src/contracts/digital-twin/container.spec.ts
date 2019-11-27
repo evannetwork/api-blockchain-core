@@ -1407,7 +1407,7 @@ describe('Container', function() {
         { accountId: consumer, readWrite: ['testField1'] },
         { accountId: consumer, read: ['testField2'] },
       ]);
-      let consumerContainer = await getConsumerContainer(container);
+      const consumerContainer = await getConsumerContainer(container);
       expect(await consumerContainer.getEntry('testField1')).to.eq(randomString1);
       expect(await consumerContainer.getEntry('testField2')).to.eq(randomString2);
 
