@@ -186,10 +186,10 @@ describe('Container', function() {
         await container.addVerifications(verifications);
         const verificationsResults = await container.getVerifications();
         expect(verificationsResults.length).to.eq(3);
-        // all validation lists should have at least 1 valid verification
+        // all verification lists should have at least 1 valid verification
         const allValid = verificationsResults.every(vs => vs.some(v => v.valid));
         expect(allValid).to.be.true;
-        // all validations should be confirmed, as issuing account is owner
+        // all verification should be confirmed, as issuing account is owner
         const allConfirmed = verificationsResults.every(
           vs => vs.some(v => v.status === VerificationsStatus.Confirmed));
         expect(allConfirmed).to.be.true;
@@ -1373,10 +1373,10 @@ describe('Container', function() {
       await container.addVerifications(verifications);
       const verificationsResults = await container.getVerifications();
       expect(verificationsResults.length).to.eq(3);
-      // all validation lists should have at least 1 valid verification
+      // all verification lists should have at least 1 valid verification
       const allValid = verificationsResults.every(vs => vs.some(v => v.valid));
       expect(allValid).to.be.true;
-      // all validations should be confirmed, as issuing account is owner
+      // all verifications should be confirmed, as issuing account is owner
       const allConfirmed = verificationsResults.every(
         vs => vs.some(v => v.status === VerificationsStatus.Confirmed));
       expect(allConfirmed).to.be.true;

@@ -234,7 +234,7 @@ setFunctionPermission
 
 Allows or denies contract function for the accountId.
 
-"Function permissions" are granted or denying by allowing a certain role to execute a specific function. The function is specified as the unhashed `function selector <http://solidity.readthedocs.io/en/latest/abi-spec.html#function-selector>`_ and must follow its guidelines (no spaces, property typenames, etc.) for the function to be able to generate valid hashes for later validations. E.g. to grant the role "member" the permission to use the function `addListEntries`, that has two arguments (a ``bytes32`` array and a ``bytes32`` value), the function permission for ``addListEntries(bytes32[],bytes32[])`` has to be granted.
+"Function permissions" are granted or denied by allowing a certain role to execute a specific function. The function is specified as the unhashed `function selector <http://solidity.readthedocs.io/en/latest/abi-spec.html#function-selector>`_ and must follow its guidelines (no spaces, property typenames, etc.) for the function to be able to generate valid hashes for later validations. E.g. to grant the role "member" the permission to use the function `addListEntries`, that has two arguments (a ``bytes32`` array and a ``bytes32`` value), the function permission for ``addListEntries(bytes32[],bytes32[])`` has to be granted.
 
 ----------
 Parameters
@@ -242,7 +242,7 @@ Parameters
 
 #. ``contract`` - ``string|any``: contractId or contract instance
 #. ``accountId`` - ``string``: executing accountId
-#. ``role`` - ``number``: roleid
+#. ``role`` - ``number``: role id
 #. ``functionSignature`` - ``string``: 4 Bytes function signature
 #. ``allow`` - ``boolean``: allow or deny function
 
