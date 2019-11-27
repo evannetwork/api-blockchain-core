@@ -47,12 +47,12 @@ addons:
 
 before_install:
   - git clone https://github.com/evannetwork/testcore-config.git && cd testcore-config
-  - docker pull parity/parity:stable
-  - docker run -d -p 8546:8546 -p 8545:8545 -v /home/travis/build/evannetwork/api-blockchain-core/testcore-config/testcore.json:/root/parity/spec.json -u root parity/parity:stable --chain /root/parity/spec.json --jsonrpc-interface all --unsafe-expose --tx-gas-limit=16000000 --gas-floor-target=16000000
+  - docker pull evannetwork/testcore-snapshot
+  - docker run -d -p 8546:8546 -p 8545:8545 -v /home/travis/build/evannetwork/api-blockchain-core/testcore-config/testcore.json:/root/parity/spec.json -u root evannetwork/testcore-snapshot --chain /root/parity/spec.json --jsonrpc-interface all --unsafe-expose
   - export CXX="g++-4.8"
   - npm install -g npm@latest
   - npm install -g ganache-cli@beta
-  - ganache-cli --allowUnlimitedContractSize --gasLimit 0xE4E1C0 -p 7545 -f ws://localhost:8545 -b 1 > /dev/null &
+  - ganache-cli --allowUnlimitedContractSize --gasLimit 0xE4E1C0 -p 7545 -f http://localhost:8545 -b 1 > /dev/null &
   - cd ..
 install:
   - npm install
