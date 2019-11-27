@@ -1388,7 +1388,7 @@ describe('Container', function() {
       const { container, randomValues } = await createTestContainerWithProperties([ 'testField' ]);
 
       await container.shareProperties([{ accountId: consumer, read: ['testField'] }]);
-      let consumerContainer = await getConsumerContainer(container);
+      const consumerContainer = await getConsumerContainer(container);
       expect(await consumerContainer.getEntry('testField')).to.eq(randomValues['testField']);
 
       const shareConfig = await container.getContainerShareConfigForAccount(consumer);
