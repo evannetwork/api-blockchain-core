@@ -800,7 +800,7 @@ export class Container extends Logger {
   /**
    * Takes a full share configuration for a accountId (or a list of them), share newly added
    * properties and unshare removed properties from the container. Also accepts a list / instance of
-   * the original sharing configurations duplicated loading can be avoided.
+   * the original sharing configurations, so that duplicate loading can be avoided.
    *
    * @param      {ContainerShareConfig[]}  newConfigs       sharing configurations that should be
    *                                                        persisted
