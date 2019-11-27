@@ -795,7 +795,6 @@ export class Container extends Logger {
         force: true,
       };
     }));
-
     // TODO: remove data ipfs hashes?
   }
 
