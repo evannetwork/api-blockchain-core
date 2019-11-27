@@ -354,7 +354,7 @@ describe('Container', function() {
       await container.shareProperties([{ accountId: consumer, readWrite: ['testList'] }]);
 
       const randomStrings = [...Array(3)].map(() => Math.floor(Math.random() * 1e12).toString(36));
-      let consumerContainer = await getConsumerContainer(container);
+      const consumerContainer = await getConsumerContainer(container);
       await consumerContainer.addListEntries('testList', randomStrings);
 
       expect(await container.getListEntries('testList')).to.deep.eq(randomStrings);
