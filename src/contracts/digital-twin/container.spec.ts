@@ -1305,7 +1305,7 @@ describe('Container', function() {
       expect(description.dataSchema).not.to.haveOwnProperty('testField');
     });
 
-    it('do not allow owner removal without setting the force flag', async() => {
+    it('does not allow owner removal without setting the force flag', async() => {
       const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
       plugin.template.properties.testField = {
         dataSchema: { type: 'string' },
