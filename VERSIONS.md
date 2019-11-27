@@ -2,14 +2,19 @@
 
 ## Next Version
 ### Features
+- add `setContainerShareConfigs` to `Container` API
+- add `removeEntries` to `Container` API
+- only allow `unshareProperties` for owner, if force attribute is set
 - add `remove` function to `Ipfs`
-- implement unPinFileHash function in dfs
+- implement `unPinFileHash` function in dfs
+- remove old sharing ipfs hash within `saveSharingsToContract`
 - add `signer-identity` for making transactions via identity contract
 
 ### Fixes
 - move `expirationDate` in `formatToV2` to details object
 - fix profile type iot device specification
 - ensure that content keys, before they get shared, are added to the `Container` keys
+- add `EncryptionWrapperCryptorType`, `EncryptionWrapperKeyType`, `EncryptionWrapperOptions`, `EncryptionWrapper` to `index.ts` exports
 
 ### Deprecations
 - remove registration company name and use accountName for all

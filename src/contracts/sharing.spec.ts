@@ -30,8 +30,8 @@ import {
 import { accounts } from '../test/accounts';
 import { configTestcore as config } from '../config-testcore';
 import { CryptoProvider } from '../encryption/crypto-provider';
-import { Sharing } from './sharing';
 import { sampleContext, TestUtils } from '../test/test-utils';
+import { Sharing } from './sharing';
 
 use(chaiAsPromised);
 

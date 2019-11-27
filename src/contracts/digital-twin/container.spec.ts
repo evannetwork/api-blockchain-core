@@ -59,6 +59,49 @@ describe('Container', function() {
   let runtimes: { [id: string]: ContainerOptions } = {};
   let sha3: Function;
 
+  /**
+   * Returns the container instance for the consumer based on an existing container.
+   *
+   * @param      {Container}  container  container to setup the container runtime for
+   */
+  async function getConsumerContainer(container: Container) {
+    return new Container(
+      runtimes[consumer],
+      { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
+    );
+  }
+
+  /**
+   * Create a test container with the configured test accounts, adds applied properties and sets random values
+   *
+   * @param      {string}  properties  The properties
+   */
+  async function createTestContainerWithProperties(properties: string[]) {
+    const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+    const randomValues = { };
+
+    // setup custom properties
+    properties.forEach(property => {
+      plugin.template.properties[property] = {
+        dataSchema: { type: 'string' },
+        permissions: { 0: ['set'] },
+        type: 'entry',
+      };
+    });
+
+    // create the container with these properties      
+    const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+
+    // set random values
+    await Promise.all(properties.map(async (property: string) => {
+      randomValues[property] = Math.floor(Math.random() * 1e12).toString(36);
+      await container.setEntry(property, randomValues[property]);
+      expect(await container.getEntry(property)).to.eq(randomValues[property]);
+    }));
+    
+    return { container, randomValues, };
+  }
+
   before(async () => {
     dfs = await TestUtils.getIpfs();
     const web3 = await TestUtils.getWeb3();
@@ -183,10 +226,7 @@ describe('Container', function() {
       await container.shareProperties([{ accountId: consumer, readWrite: ['testField'] }]);
 
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
-      const consumerContainer = new Container(
-        runtimes[consumer],
-        { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
-      );
+      const consumerContainer = await getConsumerContainer(container);
       await consumerContainer.setEntry('testField', randomString);
 
       expect(await container.getEntry('testField')).to.eq(randomString);
@@ -194,16 +234,7 @@ describe('Container', function() {
     });
 
     it('can set and get entries for properties defined in (custom) plugin', async () => {
-      const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
-      plugin.template.properties.testField = {
-        dataSchema: { type: 'string' },
-        permissions: { 0: ['set'] },
-        type: 'entry',
-      };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
-      const randomString = Math.floor(Math.random() * 1e12).toString(36);
-      await container.setEntry('testField', randomString);
-      expect(await container.getEntry('testField')).to.eq(randomString);
+      const { container, randomValues } = await createTestContainerWithProperties([ 'testField' ]);
     });
 
     it('can set entries if not defined in plugin template (auto adds properties)', async () => {
@@ -323,10 +354,7 @@ describe('Container', function() {
       await container.shareProperties([{ accountId: consumer, readWrite: ['testList'] }]);
 
       const randomStrings = [...Array(3)].map(() => Math.floor(Math.random() * 1e12).toString(36));
-      const consumerContainer = new Container(
-        runtimes[consumer],
-        { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
-      );
+      const consumerContainer = await getConsumerContainer(container);
       await consumerContainer.addListEntries('testList', randomStrings);
 
       expect(await container.getListEntries('testList')).to.deep.eq(randomStrings);
@@ -487,19 +515,10 @@ describe('Container', function() {
     });
 
     it('can clone contracts', async () => {
-      const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
-      plugin.template.properties.testField = {
-        dataSchema: { type: 'string' },
-        permissions: { 0: ['set'] },
-        type: 'entry',
-      };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
-      const randomString = Math.floor(Math.random() * 1e12).toString(36);
-      await container.setEntry('testField', randomString);
-      expect(await container.getEntry('testField')).to.eq(randomString);
+      const { container, randomValues } = await createTestContainerWithProperties([ 'testField' ]);
 
       const clonedContainer = await Container.clone(runtimes[owner], defaultConfig, container, true);
-      expect(await clonedContainer.getEntry('testField')).to.eq(randomString);
+      expect(await clonedContainer.getEntry('testField')).to.eq(randomValues['testField']);
     });
 
     it('can save plugins to users profile', async () => {
@@ -855,24 +874,13 @@ describe('Container', function() {
   });
 
   describe('when unsharing properties', async () => {
+    // positive unshare
     it('can revoke read access of one property from owner to another user', async() => {
-      const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
-      plugin.template.properties.testField = {
-        dataSchema: { type: 'string' },
-        permissions: { 0: ['set'] },
-        type: 'entry',
-      };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
-      const randomString = Math.floor(Math.random() * 1e12).toString(36);
-      await container.setEntry('testField', randomString);
-      expect(await container.getEntry('testField')).to.eq(randomString);
-
+      const { container, randomValues } = await createTestContainerWithProperties([ 'testField' ]);
       await container.shareProperties([{ accountId: consumer, read: ['testField'] }]);
-      let consumerContainer = new Container(
-        runtimes[consumer],
-        { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
-      );
-      expect(await consumerContainer.getEntry('testField')).to.eq(randomString);
+
+      let consumerContainer = await getConsumerContainer(container);
+      expect(await consumerContainer.getEntry('testField')).to.eq(randomValues['testField']);
 
       let shareConfig = await container.getContainerShareConfigForAccount(consumer);
       expect(shareConfig).not.to.haveOwnProperty('readWrite');
@@ -903,33 +911,13 @@ describe('Container', function() {
     });
 
     it('can revoke read access of multiple properties from owner to another user', async() => {
-      const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
-      plugin.template.properties.testField = {
-        dataSchema: { type: 'string' },
-        permissions: { 0: ['set'] },
-        type: 'entry',
-      };
-      plugin.template.properties.anotherTestField = {
-        dataSchema: { type: 'string' },
-        permissions: { 0: ['set'] },
-        type: 'entry',
-      };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
-      const randomString = Math.floor(Math.random() * 1e12).toString(36);
-      await container.setEntry('testField', randomString);
-      expect(await container.getEntry('testField')).to.eq(randomString);
-      const anotherRandomString = Math.floor(Math.random() * 1e12).toString(36);
-      await container.setEntry('anotherTestField', anotherRandomString);
-      expect(await container.getEntry('anotherTestField')).to.eq(anotherRandomString);
+      const { container, randomValues } = await createTestContainerWithProperties([ 'testField', 'anotherTestField' ]);
 
       await container.shareProperties(
         [{ accountId: consumer, read: ['testField', 'anotherTestField'] }]);
-      let consumerContainer = new Container(
-        runtimes[consumer],
-        { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
-      );
-      expect(await consumerContainer.getEntry('testField')).to.eq(randomString);
-      expect(await consumerContainer.getEntry('anotherTestField')).to.eq(anotherRandomString);
+      let consumerContainer = await getConsumerContainer(container);
+      expect(await consumerContainer.getEntry('testField')).to.eq(randomValues['testField']);
+      expect(await consumerContainer.getEntry('anotherTestField')).to.eq(randomValues['anotherTestField']);
 
       let shareConfig = await container.getContainerShareConfigForAccount(consumer);
       expect(shareConfig).not.to.haveOwnProperty('readWrite');
@@ -984,23 +972,11 @@ describe('Container', function() {
     });
 
     it('can revoke readWrite access of one property from owner to another user', async() => {
-      const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
-      plugin.template.properties.testField = {
-        dataSchema: { type: 'string' },
-        permissions: { 0: ['set'] },
-        type: 'entry',
-      };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
-      const randomString = Math.floor(Math.random() * 1e12).toString(36);
-      await container.setEntry('testField', randomString);
-      expect(await container.getEntry('testField')).to.eq(randomString);
+      const { container, randomValues } = await createTestContainerWithProperties([ 'testField', ]);
 
       await container.shareProperties([{ accountId: consumer, readWrite: ['testField'] }]);
-      let consumerContainer = new Container(
-        runtimes[consumer],
-        { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
-      );
-      expect(await consumerContainer.getEntry('testField')).to.eq(randomString);
+      let consumerContainer = await getConsumerContainer(container);
+      expect(await consumerContainer.getEntry('testField')).to.eq(randomValues['testField']);
 
       let shareConfig = await container.getContainerShareConfigForAccount(consumer);
       expect(shareConfig).not.to.haveOwnProperty('read');
@@ -1031,33 +1007,13 @@ describe('Container', function() {
     });
 
     it('can revoke readWrite access of multiple properties from owner to another user', async() => {
-      const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
-      plugin.template.properties.testField = {
-        dataSchema: { type: 'string' },
-        permissions: { 0: ['set'] },
-        type: 'entry',
-      };
-      plugin.template.properties.anotherTestField = {
-        dataSchema: { type: 'string' },
-        permissions: { 0: ['set'] },
-        type: 'entry',
-      };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
-      const randomString = Math.floor(Math.random() * 1e12).toString(36);
-      await container.setEntry('testField', randomString);
-      expect(await container.getEntry('testField')).to.eq(randomString);
-      const anotherRandomString = Math.floor(Math.random() * 1e12).toString(36);
-      await container.setEntry('anotherTestField', anotherRandomString);
-      expect(await container.getEntry('anotherTestField')).to.eq(anotherRandomString);
+      const { container, randomValues } = await createTestContainerWithProperties([ 'testField', 'anotherTestField' ]);
 
       await container.shareProperties(
         [{ accountId: consumer, readWrite: ['testField', 'anotherTestField'] }]);
-      let consumerContainer = new Container(
-        runtimes[consumer],
-        { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
-      );
-      expect(await consumerContainer.getEntry('testField')).to.eq(randomString);
-      expect(await consumerContainer.getEntry('anotherTestField')).to.eq(anotherRandomString);
+      let consumerContainer = await getConsumerContainer(container);
+      expect(await consumerContainer.getEntry('testField')).to.eq(randomValues['testField']);
+      expect(await consumerContainer.getEntry('anotherTestField')).to.eq(randomValues['anotherTestField']);
 
       let shareConfig = await container.getContainerShareConfigForAccount(consumer);
       expect(shareConfig).not.to.haveOwnProperty('read');
@@ -1112,23 +1068,11 @@ describe('Container', function() {
     });
 
     it('can remove write permissions but keep read permissions', async() => {
-      const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
-      plugin.template.properties.testField = {
-        dataSchema: { type: 'string' },
-        permissions: { 0: ['set'] },
-        type: 'entry',
-      };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
-      const randomString = Math.floor(Math.random() * 1e12).toString(36);
-      await container.setEntry('testField', randomString);
-      expect(await container.getEntry('testField')).to.eq(randomString);
+      const { container, randomValues } = await createTestContainerWithProperties([ 'testField', ]);
 
       await container.shareProperties([{ accountId: consumer, readWrite: ['testField'] }]);
-      let consumerContainer = new Container(
-        runtimes[consumer],
-        { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
-      );
-      expect(await consumerContainer.getEntry('testField')).to.eq(randomString);
+      let consumerContainer = await getConsumerContainer(container);
+      expect(await consumerContainer.getEntry('testField')).to.eq(randomValues['testField']);
 
       let shareConfig = await container.getContainerShareConfigForAccount(consumer);
       expect(shareConfig).not.to.haveOwnProperty('read');
@@ -1149,7 +1093,7 @@ describe('Container', function() {
       consumerSharing = ((consumerContainer as any).options as ContainerOptions).sharing;
       shareConfig = await container.getContainerShareConfigForAccount(consumer);
       expect(await consumerContainer.getEntry('testField'))
-        .to.eq(randomString);
+        .to.eq(randomValues['testField']);
       expect(shareConfig).to.haveOwnProperty('read');
       expect(shareConfig).not.to.haveOwnProperty('readWrite');
       const contractSharings = await consumerSharing
@@ -1158,6 +1102,176 @@ describe('Container', function() {
       expect(contractSharings).to.haveOwnProperty(sha3(consumer));
     });
 
+    // negative unshare tests
+    it('cannot revoke access from another user to another user', async() => {
+      const { container, randomValues } = await createTestContainerWithProperties([ 'testField', 'anotherTestField' ]);
+
+      await container.shareProperties([{ accountId: consumer, readWrite: ['testField'] }]);
+
+      // now unshare
+      let consumerContainer = await getConsumerContainer(container);
+      const unshare = consumerContainer.unshareProperties([{
+        accountId: consumer, readWrite: ['testField'] }])
+      expect(unshare).to.be.rejectedWith(new RegExp(`^current account "${ consumer }" is unable to unshare properties, as it isn't owner of the underlying contract`, 'i'));
+    });
+    
+    // // setContainerShareConfigs
+    it('can save a full share configuration for a user', async() => {
+      const { container, } = await createTestContainerWithProperties([ 'testField', 'testField2', 'testField3' ]);
+
+      await container.shareProperties([{
+        accountId: consumer,
+        read: [ 'testField', ],
+        readWrite: [ 'testField2', ]
+      }]);
+
+      let shareConfig = await container.getContainerShareConfigForAccount(consumer);
+
+      expect(shareConfig.read).to.include('testField');
+      expect(shareConfig.readWrite).to.include('testField2');
+      expect(shareConfig.read).to.not.include('testField3');
+      expect(shareConfig.readWrite).to.not.include('testField3');
+
+      shareConfig.readWrite = [ 'testField3' ];
+      await container.setContainerShareConfigs(shareConfig);
+
+      shareConfig = await container.getContainerShareConfigForAccount(consumer);
+      expect(shareConfig.read).to.include('testField');
+      expect(shareConfig.read).to.not.include('testField2');
+      expect(shareConfig.readWrite).to.not.include('testField2');
+      expect(shareConfig.readWrite).to.include('testField3');
+    });
+
+    it('can save share configurations for multiple users', async() => {
+      const { container, } = await createTestContainerWithProperties([ 'testField', 'testField2', 'testField3' ]);
+
+      await container.shareProperties([{
+        accountId: consumer,
+        read: [ 'testField', ],
+        readWrite: [ 'testField2', ]
+      }]);
+
+      await container.shareProperties([{
+        accountId: otherUser,
+        read: [ ],
+        readWrite: [ 'testField3', ]
+      }]);
+
+      let shareConfig = await container.getContainerShareConfigForAccount(consumer);
+      expect(shareConfig.read).to.include('testField');
+      expect(shareConfig.readWrite).to.include('testField2');
+      expect(shareConfig.read).to.not.include('testField3');
+      expect(shareConfig.readWrite).to.not.include('testField3');
+
+      let otherShareConfig = await container.getContainerShareConfigForAccount(otherUser);
+      expect(otherShareConfig.read).to.be.eq(undefined);
+      expect(otherShareConfig.readWrite).to.include('testField3');
+
+      shareConfig.readWrite = [ 'testField3' ];
+      otherShareConfig.readWrite = [ 'testField2' ];
+      await container.setContainerShareConfigs([ shareConfig, otherShareConfig ]);
+
+      shareConfig = await container.getContainerShareConfigForAccount(consumer);
+      expect(shareConfig.read).to.include('testField');
+      expect(shareConfig.readWrite).to.not.include('testField2');
+      expect(shareConfig.readWrite).to.include('testField3');
+      expect(shareConfig.read).to.not.include('testField3');
+      expect(shareConfig.readWrite).to.include('testField3');
+
+      otherShareConfig = await container.getContainerShareConfigForAccount(otherUser);
+      expect(otherShareConfig.read).to.be.eq(undefined);
+      expect(otherShareConfig.readWrite).to.include('testField2');
+      expect(otherShareConfig.readWrite).to.not.include('testField3');
+    });
+
+    it('cannot save share configurations as another user', async() => {
+      const { container, } = await createTestContainerWithProperties([ 'testField', 'testField2', 'testField3' ]);
+
+      await container.shareProperties([{
+        accountId: consumer,
+        read: [ 'testField', ],
+        readWrite: [ 'testField2', ]
+      }]);
+
+      let shareConfig = await container.getContainerShareConfigForAccount(consumer);
+      const consumerContainer = getConsumerContainer(container);
+
+      shareConfig.readWrite = [ 'testField3' ];
+      const sharingProcess = container.setContainerShareConfigs(shareConfig);
+      expect(sharingProcess).to.be.rejectedWith(new RegExp(`^current account "${ consumer }" is unable to unshare properties, as it isn't owner of the underlying contract`, 'i'));
+    });
+
+    it('can apply the original sharing configuration by saving a full share configuration for a user', async() => {
+      const { container, } = await createTestContainerWithProperties([ 'testField', 'testField2', 'testField3' ]);
+
+      await container.shareProperties([{
+        accountId: consumer,
+        read: [ 'testField', ],
+        readWrite: [ 'testField2', ]
+      }]);
+
+      let shareConfig = await container.getContainerShareConfigForAccount(consumer);
+      let originalConfig = JSON.parse(JSON.stringify(shareConfig));
+
+      expect(shareConfig.read).to.include('testField');
+      expect(shareConfig.readWrite).to.include('testField2');
+      expect(shareConfig.read).to.not.include('testField3');
+      expect(shareConfig.readWrite).to.not.include('testField3');
+
+      shareConfig.readWrite = [ 'testField3' ];
+      await container.setContainerShareConfigs(shareConfig, originalConfig);
+
+      shareConfig = await container.getContainerShareConfigForAccount(consumer);
+      expect(shareConfig.read).to.include('testField');
+      expect(shareConfig.read).to.not.include('testField2');
+      expect(shareConfig.readWrite).to.not.include('testField2');
+      expect(shareConfig.readWrite).to.include('testField3');
+    });
+
+    it('can apply different original sharing configurations by saving a full share configuration for a user and the API will reload original ones', async() => {
+      const { container, } = await createTestContainerWithProperties([ 'testField', 'testField2', 'testField3' ]);
+
+      await container.shareProperties([{
+        accountId: consumer,
+        read: [ 'testField', ],
+        readWrite: [ 'testField2', ]
+      }]);
+
+      await container.shareProperties([{
+        accountId: otherUser,
+        read: [ ],
+        readWrite: [ 'testField3', ]
+      }]);
+
+      let shareConfig = await container.getContainerShareConfigForAccount(consumer);
+      let originalConfig = JSON.parse(JSON.stringify(shareConfig));
+      expect(shareConfig.read).to.include('testField');
+      expect(shareConfig.readWrite).to.include('testField2');
+      expect(shareConfig.read).to.not.include('testField3');
+      expect(shareConfig.readWrite).to.not.include('testField3');
+
+      let otherShareConfig = await container.getContainerShareConfigForAccount(otherUser);
+      expect(otherShareConfig.read).to.be.eq(undefined);
+      expect(otherShareConfig.readWrite).to.include('testField3');
+
+      shareConfig.readWrite = [ 'testField3' ];
+      otherShareConfig.readWrite = [ 'testField2' ];
+      await container.setContainerShareConfigs([ shareConfig, otherShareConfig ], [ originalConfig ]);
+
+      shareConfig = await container.getContainerShareConfigForAccount(consumer);
+      expect(shareConfig.read).to.include('testField');
+      expect(shareConfig.readWrite).to.not.include('testField2');
+      expect(shareConfig.readWrite).to.include('testField3');
+      expect(shareConfig.read).to.not.include('testField3');
+      expect(shareConfig.readWrite).to.include('testField3');
+
+      otherShareConfig = await container.getContainerShareConfigForAccount(otherUser);
+      expect(otherShareConfig.read).to.be.eq(undefined);
+      expect(otherShareConfig.readWrite).to.include('testField2');
+      expect(otherShareConfig.readWrite).to.not.include('testField3');
+    });
+
+    // cleanup properties
     it('automatically removes field from description when last member of group is removed (1 member)', async() => {
       const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
       plugin.template.properties.testField = {
@@ -1166,7 +1280,7 @@ describe('Container', function() {
         type: 'entry',
       };
       const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
-      await container.unshareProperties([{ accountId: owner, readWrite: ['testField'] }]);
+      await container.unshareProperties([{ accountId: owner, readWrite: ['testField'], force: true }]);
 
       const containerDescription = await container.getDescription();
       expect(containerDescription.dataSchema).not.to.haveOwnProperty('testField');
@@ -1181,14 +1295,73 @@ describe('Container', function() {
       };
       const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
       await container.shareProperties([{ accountId: consumer, read: ['testField'] }]);
-      await container.unshareProperties([{ accountId: consumer, readWrite: ['testField'] }]);
+      await container.unshareProperties([{ accountId: consumer, readWrite: ['testField'], force: true }]);
 
       let containerDescription = await container.getDescription();
       expect(containerDescription.dataSchema).to.haveOwnProperty('testField');
-      await container.unshareProperties([{ accountId: owner, readWrite: ['testField'] }]);
+      await container.unshareProperties([{ accountId: owner, readWrite: ['testField'], force: true }]);
 
       containerDescription = await container.getDescription();
       expect(containerDescription.dataSchema).not.to.haveOwnProperty('testField');
+    });
+
+    it('does not allow owner removal without setting the force flag', async() => {
+      const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+      plugin.template.properties.testField = {
+        dataSchema: { type: 'string' },
+        permissions: { 0: ['set'] },
+        type: 'entry',
+      };
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+      const unshare = container.unshareProperties([{ accountId: owner, readWrite: ['testField'], }]);
+      expect(unshare).to.be.rejectedWith(new RegExp(`^current account "${ owner }" is owner of the contract and cannot remove himself from sharing without force attribute`, 'i'));
+    });
+    it('can remove properties as owner', async() => {
+      const { container, } = await createTestContainerWithProperties([ 'testField', 'testField2', 'testField3' ]);
+
+      await container.shareProperties([{
+        accountId: consumer,
+        read: [ 'testField', ],
+        readWrite: [ 'testField2', ]
+      }]);
+
+      await container.removeEntries('testField');
+
+      const description = await container.getDescription();
+      expect(description.dataSchema).not.to.haveOwnProperty('testField');
+
+      const shareConfig = await container.getContainerShareConfigForAccount(consumer);
+      expect(shareConfig.read).to.be.eq(undefined);
+    });
+    it('can remove multiple properties as owner', async() => {
+      const { container, } = await createTestContainerWithProperties([ 'testField', 'testField2', 'testField3' ]);
+
+      await container.shareProperties([{
+        accountId: consumer,
+        read: [ 'testField', ],
+        readWrite: [ 'testField2', ]
+      }]);
+
+      await container.removeEntries([ 'testField', 'testField2' ]);
+
+      const description = await container.getDescription();
+      expect(description.dataSchema).not.to.haveOwnProperty('testField');
+      expect(description.dataSchema).not.to.haveOwnProperty('testField2');
+
+      const shareConfig = await container.getContainerShareConfigForAccount(consumer);
+      expect(shareConfig.read).to.be.eq(undefined);
+      expect(shareConfig.readWrite).to.be.eq(undefined);
+    });
+    it('cannot remove propertie as another user', async() => {
+      const { container, } = await createTestContainerWithProperties([ 'testField', 'testField2', 'testField3' ]);
+
+      await container.shareProperties([{
+        accountId: consumer,
+        read: [ 'testField', ],
+        readWrite: [ 'testField2', ]
+      }]);
+
+      expect(container.removeEntries('testField')).to.be.rejectedWith(new RegExp(`^current account "${ owner }" is owner of the contract and cannot remove himself from sharing without force attribute`, 'i'));
     });
   });
 
@@ -1212,23 +1385,11 @@ describe('Container', function() {
 
   describe('when fetching permissions from container', async() => {
     it('can fetch permissions for a single account', async() => {
-      const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
-      plugin.template.properties.testField = {
-        dataSchema: { type: 'string' },
-        permissions: { 0: ['set'] },
-        type: 'entry',
-      };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
-      const randomString = Math.floor(Math.random() * 1e12).toString(36);
-      await container.setEntry('testField', randomString);
-      expect(await container.getEntry('testField')).to.eq(randomString);
+      const { container, randomValues } = await createTestContainerWithProperties([ 'testField' ]);
 
       await container.shareProperties([{ accountId: consumer, read: ['testField'] }]);
-      const consumerContainer = new Container(
-        runtimes[consumer],
-        { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
-      );
-      expect(await consumerContainer.getEntry('testField')).to.eq(randomString);
+      const consumerContainer = await getConsumerContainer(container);
+      expect(await consumerContainer.getEntry('testField')).to.eq(randomValues['testField']);
 
       const shareConfig = await container.getContainerShareConfigForAccount(consumer);
       expect(shareConfig).to.haveOwnProperty('read');
@@ -1246,10 +1407,7 @@ describe('Container', function() {
         { accountId: consumer, readWrite: ['testField1'] },
         { accountId: consumer, read: ['testField2'] },
       ]);
-      const consumerContainer = new Container(
-        runtimes[consumer],
-        { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
-      );
+      const consumerContainer = await getConsumerContainer(container);
       expect(await consumerContainer.getEntry('testField1')).to.eq(randomString1);
       expect(await consumerContainer.getEntry('testField2')).to.eq(randomString2);
 
