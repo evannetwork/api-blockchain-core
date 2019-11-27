@@ -183,15 +183,6 @@ export class ExecutorWallet extends Executor {
     // strip unrelated option
     this.scrubOptions(options);
 
-    let autoGas;
-    if (inputOptions.autoGas) {
-      autoGas = inputOptions.autoGas;
-    } else if (this.config && this.config.alwaysAutoGasLimit) {
-      autoGas = this.config.alwaysAutoGasLimit;
-    } else {
-      autoGas = false;
-    }
-
     const initialArguments = functionArguments.slice(0);
     const logGas = (extraParams) => {
       const staticEntries = {
@@ -306,46 +297,16 @@ export class ExecutorWallet extends Executor {
           } else {
             // execute contract function
             // recover original from, as estimate converts from to lower case
-            // overwrite given gas with estimation plus autoGas factor
             if (inputOptions.timeout) {
               options.timeout = inputOptions.timeout;
             }
-            if (autoGas) {
-              this.web3.eth.getBlock('latest', (blockError, result) => {
-                if (blockError) {
-                  reject(`could not get latest block for ${functionName}: ${blockError}; ` +
-                    blockError.stack);
-                } else {
-                  const currentLimit = result.gasLimit;
-                  const gas = Math.floor(
-                    Math.min(gasEstimated * autoGas, currentLimit * (255 / 256)));
-                  logGas({
-                    status: 'autoGas.estimation',
-                    gasEstimated: gasEstimated,
-                    gasGiven: gas,
-                    message: `estimated with ${autoGas}`,
-                  });
-                  options.gas = gas;
-                  this.signAndExecuteTransactionViaWallet(
-                    contract,
-                    functionName,
-                    functionArguments.slice(0, -1),
-                    Object.assign({}, options),
-                    (...args) => {
-                      executeCallback.apply(this, args).catch((ex) => { reject(ex); });
-                    },
-                  );
-                }
-              });
-            } else {
-              this.signAndExecuteTransactionViaWallet(
-                contract,
-                functionName,
-                functionArguments.slice(0, -1),
-                Object.assign({}, options),
-                (...args) => { executeCallback.apply(this, args).catch((ex) => { reject(ex); }); },
-              );
-            }
+            this.signAndExecuteTransactionViaWallet(
+              contract,
+              functionName,
+              functionArguments.slice(0, -1),
+              Object.assign({}, options),
+              (...args) => { executeCallback.apply(this, args).catch((ex) => { reject(ex); }); },
+            );
           }
         };
 
@@ -380,16 +341,6 @@ export class ExecutorWallet extends Executor {
                   gasEstimated,
                   transactionHash,
                 });
-                // log autoGas entry
-                if (autoGas) {
-                  logGas({
-                    status: 'autoGas.success',
-                    gasEstimated,
-                    gasGiven: options.gas,
-                    gasUsed: receipt.gasUsed,
-                    message: `estimated with ${autoGas}`,
-                  });
-                }
                 // if no event to watch for was given, resolve promise here
                 if (!inputOptions.event || !this.eventHub) {
                   isPending = false;
@@ -409,16 +360,6 @@ export class ExecutorWallet extends Executor {
               } else {
                 const errorText = 'all gas used up';
                 this.log(`${functionName} failed: ${errorText}`, 'error');
-                // log autoGas entry
-                if (autoGas) {
-                  logGas({
-                    status: 'autoGas.error',
-                    gasEstimated,
-                    gasGiven: options.gas,
-                    gasUsed: receipt.gasUsed,
-                    message: `estimated with ${autoGas}`,
-                  });
-                }
                 if (inputOptions.event && this.eventHub) {
                   await stopWatching(true);
                 }
@@ -439,6 +380,8 @@ export class ExecutorWallet extends Executor {
         // estimate tx with wallet accountid instead of users account id
         const estimateOptions = Object.assign(
           {}, options, { from: this.options.wallet.walletAddress, });
+        console.dir(estimateOptions)
+        console.dir(initialArguments)
         contract.methods[functionName]
           .apply(contract.methods, initialArguments)
           .estimateGas(
