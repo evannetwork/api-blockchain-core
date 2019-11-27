@@ -60,7 +60,7 @@ describe('Container', function() {
   let sha3: Function;
 
   /**
-   * Returns the container instance for the consumer based on a existing container.
+   * Returns the container instance for the consumer based on an existing container.
    *
    * @param      {Container}  container  container to setup the container runtime for
    */
