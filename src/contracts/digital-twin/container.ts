@@ -772,7 +772,6 @@ export class Container extends Logger {
    */
   public async removeEntries(entries: string|string[]) {
     // only allowed by owner, will be enforced by the unshareProperties function
-
     // load accounts that are permitted to this contract
     await this.ensureContract();
     const roleMap = await this.options.rightsAndRoles.getMembers(this.contract);
