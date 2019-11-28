@@ -88,7 +88,7 @@ describe('Mailbox class', function() {
   });
 
   it('should be able to load anything', async () => {
-    const mails = await mailbox.getMails();
+    const mails = await mailbox.getMails(1, 0);
     expect(mails).not.to.be.undefined;
     expect(mails.totalResultCount).to.be.gte(0);
     expect(Object.keys(mails.mails).length).to.be.gte(0);

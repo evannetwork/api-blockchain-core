@@ -380,8 +380,6 @@ export class ExecutorWallet extends Executor {
         // estimate tx with wallet accountid instead of users account id
         const estimateOptions = Object.assign(
           {}, options, { from: this.options.wallet.walletAddress, });
-        console.dir(estimateOptions)
-        console.dir(initialArguments)
         contract.methods[functionName]
           .apply(contract.methods, initialArguments)
           .estimateGas(

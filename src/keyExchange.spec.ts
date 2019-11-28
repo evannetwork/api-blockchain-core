@@ -38,7 +38,7 @@ import { RightsAndRoles } from './contracts/rights-and-roles';
 import { TestUtils } from './test/test-utils';
 import { accounts } from './test/accounts';
 
-describe('KeyExchange class', function() {
+describe.skip('KeyExchange class', function() {
   this.timeout(600000);
   let ipfs: Ipfs;
   let mailbox: Mailbox;
