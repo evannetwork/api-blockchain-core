@@ -527,9 +527,27 @@ describe('signer-identity (identity based signer)', function() {
       expect(encrypted).to.haveOwnProperty('cryptoInfo');
       expect(encrypted).to.haveOwnProperty('private');
 
-      const decryptKey = encryptKey;
+      const decryptKey = await profile.getContactKey(contactIdentity, 'commKey');
       const decryptedObject = await cryptor.decrypt(Buffer.from(encrypted.private, 'hex'), { key: decryptKey, });
       expect(decryptedObject).to.deep.eq(sampleData);
+    });
+
+    it('should be to store data in an identity', async () => {
+      // generate with custom logic, e.g. with the aes cryptor
+      const cryptor = cryptoProvider.getCryptorByCryptoAlgo('aes');
+      const encryptKey = await cryptor.generateKey();
+
+      // store key in profile
+      const contactIdentity = await verifications.getIdentityForAccount(accounts[1], true);
+      await profile.loadForAccount(profile.treeLabels.addressBook);
+      await profile.addContactKey(contactIdentity, 'commKey', encryptKey);
+      await profile.storeForAccount(profile.treeLabels.addressBook);
+
+      // load from on-chain profile
+      await profile.loadForAccount(profile.treeLabels.addressBook);
+      const retrieved = await profile.getContactKey(contactIdentity, 'commKey');
+
+      expect(encryptKey).to.eq(retrieved);
     });
   });
 });
