@@ -70,17 +70,16 @@ describe('BaseContract', function() {
       log: TestUtils.getLogger(),
       nameResolver,
     });
-    businessCenterDomain = null;
-    /*nameResolver.getDomainName(config.nameResolver.domains.businessCenter);
+    businessCenterDomain = nameResolver.getDomainName(config.nameResolver.domains.businessCenter);
     const businessCenterAddress = await nameResolver.getAddress(businessCenterDomain);
-    const businessCenter = await loader.loadContract('BusinessCenter', businessCenterAddress);*/
+    const businessCenter = await loader.loadContract('BusinessCenter', businessCenterAddress);
     ipfs = await TestUtils.getIpfs();
     ipld = await TestUtils.getIpld(ipfs);
     ipld.originator = nameResolver.soliditySha3(accounts[1]);
     profile = await TestUtils.getProfile(web3, ipfs);
     await profile.loadForAccount();
     // await profile.setContactKnownState(accounts[0], true);
-    /*if (!await executor.executeContractCall(businessCenter, 'isMember', accounts[0], { from: accounts[0], })) {
+    if (!await executor.executeContractCall(businessCenter, 'isMember', accounts[0], { from: accounts[0], })) {
       await executor.executeContractTransaction(businessCenter, 'join', { from: accounts[0], autoGas: 1.1, });
     }
     if (!await executor.executeContractCall(businessCenter, 'isMember', accounts[1], { from: accounts[1], })) {
@@ -88,7 +87,7 @@ describe('BaseContract', function() {
     }
     if (!await executor.executeContractCall(businessCenter, 'isMember', accounts[2], { from: accounts[2], })) {
       await executor.executeContractTransaction(businessCenter, 'join', { from: accounts[2], autoGas: 1.1, });
-    }*/
+    }
   });
 
   it('can be created', async () => {
