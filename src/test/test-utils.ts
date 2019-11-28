@@ -81,6 +81,8 @@ sampleKeys[localWeb3.utils.soliditySha3('wulfwulf.test')] =
   '00000000000000000000000000000000000000000000000000000000005a3973';
 sampleKeys[localWeb3.utils.soliditySha3(accounts[2])] =
   '00d1267b27c3a80080f9e1b6ba01de313b53ab58000000000000000000000022';
+sampleKeys[localWeb3.utils.soliditySha3(accounts[3])] =
+  '483257531bc9456ea783e44d325f8a384a4b89da81dac00e589409431692f218';
 
 // commKeys
 sampleKeys[localWeb3.utils.soliditySha3.apply(localWeb3.utils.soliditySha3,
@@ -101,6 +103,9 @@ sampleKeys[localWeb3.utils.soliditySha3.apply(localWeb3.utils.soliditySha3,
 sampleKeys[localWeb3.utils.soliditySha3.apply(localWeb3.utils.soliditySha3,
   [localWeb3.utils.soliditySha3(accounts[2]), localWeb3.utils.soliditySha3(accounts[2])].sort())] =
     '00d1267b27c3a80080f9e1b6ba01de313b53ab58000000000000000000000022';
+sampleKeys[localWeb3.utils.soliditySha3.apply(localWeb3.utils.soliditySha3,
+  [localWeb3.utils.soliditySha3(accounts[3]), localWeb3.utils.soliditySha3(accounts[3])].sort())] =
+    '483257531bc9456ea783e44d325f8a384a4b89da81dac00e589409431692f218';
 
 
 export class TestUtils {

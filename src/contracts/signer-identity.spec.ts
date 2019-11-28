@@ -23,13 +23,20 @@ import chaiAsPromised = require('chai-as-promised');
 import { expect, use } from 'chai';
 import {
   ContractLoader,
+  CryptoInfo,
   Executor,
   SignerInternal,
 } from '@evan.network/dbcp';
 
 import { accounts } from '../test/accounts';
+import { CryptoProvider } from '../encryption/crypto-provider';
+import { Ipfs } from '../dfs/ipfs';
+import { Ipld } from '../dfs/ipld';
+import { NameResolver } from '../name-resolver';
+import { Profile } from '../profile/profile';
 import { SignerIdentity } from './signer-identity';
 import { TestUtils } from '../test/test-utils';
+import { Verifications } from '../verifications/verifications';
 
 
 use(chaiAsPromised);
@@ -64,8 +71,8 @@ describe('signer-identity (identity based signer)', function() {
         web3,
       },
       {
-        activeIdentity: await verifications.getIdentityForAccount(accounts[0], true),
-        underlyingAccount: accounts[0],
+        activeIdentity: await verifications.getIdentityForAccount(accounts[3], true),
+        underlyingAccount: accounts[3],
         underlyingSigner,
       },
     );
@@ -362,6 +369,167 @@ describe('signer-identity (identity based signer)', function() {
         await expect(signPromise)
           .to.be.rejectedWith('signing messages with identities is not supported');
       });
+    });
+  });
+
+  describe('when dealing with encryption for identity based accounts', async () => {
+    let cryptoProvider: CryptoProvider;
+    let identityAddress: string;
+    let nameResolver: NameResolver;
+    let profile: Profile;
+    let verifications: Verifications;
+    let web3: any;
+
+    before(async () => {
+      web3 = await TestUtils.getWeb3();
+      nameResolver = await TestUtils.getNameResolver(web3);
+      const dfs = await TestUtils.getIpfs();
+      verifications = await TestUtils.getVerifications(web3, dfs);
+      cryptoProvider = TestUtils.getCryptoProvider(dfs);
+
+      identityAddress = await verifications.getIdentityForAccount(accounts[3], true);
+
+      const sha9Key = nameResolver.soliditySha3(
+        ...(await Promise.all(
+          [identityAddress, identityAddress].map(accountId =>
+            nameResolver.soliditySha3(accountId))
+        )));
+      const keyProvider = await TestUtils.getKeyProvider();
+      (keyProvider as any).keys[sha9Key] = '483257531bc9456ea783e44d325f8a384a4b89da81dac00e589409431692f218';
+      (keyProvider as any).keys[nameResolver.soliditySha3(identityAddress)] = '483257531bc9456ea783e44d325f8a384a4b89da81dac00e589409431692f218';
+      const ipld = new Ipld({
+        ipfs: dfs as Ipfs,
+        keyProvider,
+        cryptoProvider,
+        defaultCryptoAlgo: 'aes',
+        originator: nameResolver.soliditySha3(accounts[3]),
+        nameResolver,
+      });
+
+      // create profile instance, that is bound to identity
+      const contractLoader = await TestUtils.getContractLoader(web3);
+      const dataContract = await TestUtils.getDataContract(web3, dfs);
+      (dataContract as any).options.executor = executor;
+      executor.eventHub = await TestUtils.getEventHub(web3);
+      profile = new Profile({
+        accountId: identityAddress,
+        contractLoader,
+        cryptoProvider,
+        dataContract,
+        defaultCryptoAlgo: 'aes',
+        dfs,
+        description: await TestUtils.getDescription(web3),
+        executor,
+        ipld: ipld,
+        nameResolver,
+        rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
+        sharing: await TestUtils.getSharing(web3),
+      });
+
+      // keep code here as long as identity based profiles cannot be created in a more easy way...
+      // console.log('sharing')
+      // const ensName = nameResolver.getDomainName((nameResolver as any).config.domains.profile);
+      // const address = await nameResolver.getAddress(ensName);
+      // const indexContract =
+      //   contractLoader.loadContract('ProfileIndexInterface', address);
+      // const profileContractAddress = await executor.executeContractCall(
+      //   indexContract, 'getProfile', identityAddress, { from: accounts[3], });
+      // const profileDataContract = await contractLoader.loadContract(
+      //   'DataContract', profileContractAddress);
+      // const sharingsHash = await executor.executeContractCall(profileDataContract, 'sharing');
+      // console.dir(sharingsHash);
+      // const sharingData = await dfs.get(sharingsHash);
+      // console.log(require('util').inspect(sharingData, { colors: true, depth: 16 }));
+      // const updatedSharingData = '{"0x2f17103a20c21c65c8f6330761b93af4a72ad7faea76cba6aa8048783e942129":{"0x04994f67dc55b09e814ab7ffc8df3686b4afb2bb53e60eae97ef043fe03fb829":{"hashKey":{"private":"688c841f01db6d2995ea02139bf301cb360362a327294c0e995c2dcf0bf3f530ea04b671b2c4d1f1f289f74dbcade0e3357317a32a89bf5a39f85a70ce81c4c3f4580caf67520bbf99319950f0235b3bcb7a456ee9697f25fc4cc429676c0c48","cryptoInfo":{"originator":"0xd42644616207e5816e2de3ab153837db6148bd036794c06f73763074df41d2b5","keyLength":256,"algorithm":"aes-256-cbc"}}},"0x31c56d8d629ac68792a621f2f85af22618d00b5e5e5f228574590211bde67302":{"335193":{"private":"e5dbbe8f077bd60b7e320e86269e862a8833100bce405a56535350725870cff6dcf00f28a67a45befde886631e09ff722c4060915e6fbe11344e97e433e13b52c7cca0670e0cdfaa47c2cce2d0ac80d16969430c4276f609aa09b9f3dd0eaa67","cryptoInfo":{"originator":"0xd42644616207e5816e2de3ab153837db6148bd036794c06f73763074df41d2b5","keyLength":256,"algorithm":"aes-256-cbc"}}},"0xa05e33768da60583875bb5256189397d790c6a14f448460d366d44805586c6ee":{"335193":{"private":"f027a1585e8c520e4172dd3c9bc7bd92347e633666819fde09ed8483f03be02852c2775a495c32d10374861e8b8781ec3da76bda24264da92c30cf373abb731c238b9f126a0a6193b124be0f55ceb59bad4a78769febd3639dc0bfa7416f71c0","cryptoInfo":{"originator":"0xd42644616207e5816e2de3ab153837db6148bd036794c06f73763074df41d2b5","keyLength":256,"algorithm":"aes-256-cbc"}}}}}';
+      // const updatedSharingHash = await dfs.add('sharing', Buffer.from(updatedSharingData, 'utf8'));
+      // console.log('/sharing')
+      // await executor.executeContractTransaction(
+      //   profileDataContract, 'setSharing', { from: signer.activeIdentity }, updatedSharingHash);
+    });
+
+    it('should be able to encrypt and decrypt data', async () => {
+      const sampleData = {
+        foo: TestUtils.getRandomBytes32(),
+        bar: Math.random(),
+      };
+
+      // build edge key for data shared between identity[0] and identity[1]
+      const keyContext = nameResolver.soliditySha3(
+        ...(await Promise.all(
+          [accounts[3], accounts[1]].map(accountId =>
+            verifications.getIdentityForAccount(accountId, true)))
+        ).sort()
+      );
+      const cryptoInfo: CryptoInfo = {
+        algorithm: 'aes-256-cbc',
+        block: await web3.eth.getBlockNumber(),
+        originator: keyContext,
+      };
+
+      // generate with custom logic, e.g. with the aes cryptor
+      const cryptor = cryptoProvider.getCryptorByCryptoAlgo('aes');
+      const encryptKey = await cryptor.generateKey();
+
+      // encrypt files (key is pulled from profile)
+      const encryptedData: Buffer = await cryptor.encrypt(sampleData, { key: encryptKey, });
+      const encrypted = {
+        cryptoInfo,
+        private: encryptedData.toString('hex'),
+      };
+
+      expect(encrypted).to.haveOwnProperty('cryptoInfo');
+      expect(encrypted).to.haveOwnProperty('private');
+
+      const decryptKey = encryptKey;
+      const decryptedObject = await cryptor.decrypt(Buffer.from(encrypted.private, 'hex'), { key: decryptKey, });
+      expect(decryptedObject).to.deep.eq(sampleData);
+    });
+
+    it('should be able to encrypt and bound to a comm key', async () => {
+      const sampleData = {
+        foo: TestUtils.getRandomBytes32(),
+        bar: Math.random(),
+      };
+
+      // build edge key for data shared between identity[0] and identity[1]
+      const keyContext = nameResolver.soliditySha3(
+        ...(await Promise.all(
+          [accounts[3], accounts[1]].map(accountId =>
+            verifications.getIdentityForAccount(accountId, true)))
+        ).sort()
+      );
+      const cryptoInfo: CryptoInfo = {
+        algorithm: 'aes-256-cbc',
+        block: await web3.eth.getBlockNumber(),
+        originator: keyContext,
+      };
+
+      // generate with custom logic, e.g. with the aes cryptor
+      const cryptor = cryptoProvider.getCryptorByCryptoAlgo('aes');
+      const encryptKey = await cryptor.generateKey();
+
+      // store key in profile
+      const contactIdentity = await verifications.getIdentityForAccount(accounts[1], true);
+      // profile.activeAccount = accounts[3];
+      await profile.loadForAccount(profile.treeLabels.addressBook);
+      await profile.addContactKey(contactIdentity, 'commKey', encryptKey);
+      // profile.activeAccount = identityAddress;
+      await profile.storeForAccount(profile.treeLabels.addressBook);
+      await profile.loadForAccount(profile.treeLabels.addressBook);
+
+      // encrypt files (key is pulled from profile)
+      const encryptedData: Buffer = await cryptor.encrypt(sampleData, { key: encryptKey, });
+      const encrypted = {
+        cryptoInfo,
+        private: encryptedData.toString('hex'),
+      };
+
+      expect(encrypted).to.haveOwnProperty('cryptoInfo');
+      expect(encrypted).to.haveOwnProperty('private');
+
+      const decryptKey = encryptKey;
+      const decryptedObject = await cryptor.decrypt(Buffer.from(encrypted.private, 'hex'), { key: decryptKey, });
+      expect(decryptedObject).to.deep.eq(sampleData);
     });
   });
 });
