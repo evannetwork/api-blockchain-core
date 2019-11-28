@@ -67,6 +67,6 @@ install:
   - rm -rf node_modules/@evan.network/dbcp && git clone https://github.com/evannetwork/dbcp.git ../dbcp && cd ../dbcp && git checkout develop && npm i && npm run build && cd ../api-blockchain-core && mv ../dbcp ./node_modules/@evan.network
   - cd node_modules/@evan.network && rm -rf smart-contracts-core && git clone https://github.com/evannetwork/smart-contracts-core.git && cd smart-contracts-core && git checkout develop && npm i
   - cd ../../../
-  - cd ganache-cli && node cli.js --allowUnlimitedContractSize --gasLimit 0xE4E1C0 -p 7545 -f http://localhost:8545 -b 1 > /dev/null &
+  - cd ganache-cli && node cli.js --allowUnlimitedContractSize --gasLimit 0xE4E1C0 -p 7545 -f http://localhost:8545 -b 1 &
   - cd /home/travis/build/evannetwork/api-blockchain-core
 
