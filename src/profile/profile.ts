@@ -26,6 +26,8 @@ import {
   obfuscate,
 } from '@evan.network/dbcp';
 
+import { cloneDeep, merge } from 'lodash';
+
 import * as accountTypes from './types/types';
 import { Container } from '../contracts/digital-twin/container';
 import { CryptoProvider } from '../encryption/crypto-provider';
@@ -35,6 +37,7 @@ import { Ipld } from '../dfs/ipld';
 import { NameResolver } from '../name-resolver';
 import { RightsAndRoles, ModificationType, PropertyType } from '../contracts/rights-and-roles';
 import { Sharing } from '../contracts/sharing';
+import * as AccountType from '../profile/types/types';
 
 /**
  * parameters for Profile constructor
@@ -76,6 +79,7 @@ export interface DappBookmark {
 export class Profile extends Logger {
   public activeAccount: string;
   public contractLoader: ContractLoader;
+  public cryptoProvider: CryptoProvider;
   public dataContract: DataContract;
   public defaultCryptoAlgo: string;
   public executor: Executor;
@@ -85,6 +89,7 @@ export class Profile extends Logger {
   public profileContainer: Container;
   public profileContract: any;
   public profileOwner: string;
+  public sharing: Sharing;
   public trees: any;
   public treeLabels = {
     activeVerifications: 'activeVerifications',
@@ -132,13 +137,15 @@ export class Profile extends Logger {
     super(options);
     this.activeAccount = options.accountId;
     this.contractLoader = options.contractLoader;
+    this.cryptoProvider = options.cryptoProvider;
     this.dataContract = options.dataContract;
     this.defaultCryptoAlgo = options.defaultCryptoAlgo;
     this.executor = options.executor;
     this.ipld = options.ipld;
     this.nameResolver = options.nameResolver;
     this.options = options;
-    this.profileOwner = options.profileOwner || this.activeAccount;
+    this.profileOwner = options.profileOwner;
+    this.sharing = options.sharing;
     this.trees = {};
   }
 
@@ -263,49 +270,6 @@ export class Profile extends Logger {
     this.throwIfNotOwner('set public key');
     this.ensureTree('publicKey');
     await this.ipld.set(this.trees['publicKey'], 'publicKey', key, true);
-  }
-
-  /**
-   * create new profile, store it to profile index initialize addressBook and publicKey
-   *
-   * @param      {string}         keys    communication key to store
-   * @return     {Promise<void>}  resolved when done
-   */
-  public async createProfile(keys: any): Promise<void> {
-    if (this.activeAccount !== this.profileOwner) {
-      throw new Error('creating profiles for other accounts is not supported' +
-        `"${this.activeAccount}" tried to create a profile for "${this.profileOwner}"`);
-    }
-    // create new profile contract and store in profile index
-    const factoryDomain = this.nameResolver.getDomainName(
-      this.nameResolver.config.domains.profileFactory);
-    this.profileContract = await this.dataContract.create(factoryDomain, this.activeAccount);
-    this.profileContainer = new Container(
-      { ...this.options, verifications: null, web3: this.options.executor.web3 },
-      { accountId: this.activeAccount, address: this.profileContract.address },
-    );
-    await Promise.all([
-      (async () => {
-        const ensName = this.nameResolver.getDomainName(this.nameResolver.config.domains.profile);
-        const address = await this.nameResolver.getAddress(ensName);
-        const contract = this.nameResolver.contractLoader.loadContract(
-          'ProfileIndexInterface', address);
-        await this.executor.executeContractTransaction(
-          contract,
-          'setMyProfile',
-          { from: this.activeAccount, autoGas: 1.1, },
-          this.profileContract.options.address,
-        );
-      })(),
-      (async () => {
-        await this.addContactKey(this.activeAccount, 'dataKey', keys.privateKey.toString('hex'));
-        await this.addPublicKey(keys.publicKey.toString('hex'));
-        await Promise.all([
-          this.storeForAccount('addressBook'),
-          this.storeForAccount('publicKey')
-        ]);
-      })(),
-    ]);
   }
 
   /**
