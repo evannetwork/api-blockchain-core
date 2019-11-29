@@ -94,7 +94,7 @@ describe('KeyExchange class', function() {
     await Onboarding.createProfile(profile2Runtime, {
       accountDetails: {
         profileType: 'company',
-        accountName: 'test account'
+        accountName: 'test account',
       }
     })
 
