@@ -78,7 +78,7 @@ describe('Onboarding helper', function() {
   });
 
   it('should NOT create a new profile directly onchain if profile data is incorrect', async () => {
-    const originRuntime = await TestUtils.getRuntime(accounts[0])
+    const originRuntime = await TestUtils.getRuntime(accounts[0]);
     const password = 'Test1234';
     const mnemonicNew = Onboarding.createMnemonic();
     const profilePromise = Onboarding.createNewProfile(originRuntime, mnemonicNew, password, {
