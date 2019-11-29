@@ -26,8 +26,6 @@ import {
   obfuscate,
 } from '@evan.network/dbcp';
 
-import { cloneDeep, merge } from 'lodash';
-
 import * as accountTypes from './types/types';
 import { Container } from '../contracts/digital-twin/container';
 import { CryptoProvider } from '../encryption/crypto-provider';
@@ -37,7 +35,6 @@ import { Ipld } from '../dfs/ipld';
 import { NameResolver } from '../name-resolver';
 import { RightsAndRoles, ModificationType, PropertyType } from '../contracts/rights-and-roles';
 import { Sharing } from '../contracts/sharing';
-import * as AccountType from '../profile/types/types';
 
 /**
  * parameters for Profile constructor
@@ -79,7 +76,6 @@ export interface DappBookmark {
 export class Profile extends Logger {
   public activeAccount: string;
   public contractLoader: ContractLoader;
-  public cryptoProvider: CryptoProvider;
   public dataContract: DataContract;
   public defaultCryptoAlgo: string;
   public executor: Executor;
@@ -89,7 +85,6 @@ export class Profile extends Logger {
   public profileContainer: Container;
   public profileContract: any;
   public profileOwner: string;
-  public sharing: Sharing;
   public trees: any;
   public treeLabels = {
     activeVerifications: 'activeVerifications',
@@ -137,15 +132,13 @@ export class Profile extends Logger {
     super(options);
     this.activeAccount = options.accountId;
     this.contractLoader = options.contractLoader;
-    this.cryptoProvider = options.cryptoProvider;
     this.dataContract = options.dataContract;
     this.defaultCryptoAlgo = options.defaultCryptoAlgo;
     this.executor = options.executor;
     this.ipld = options.ipld;
     this.nameResolver = options.nameResolver;
     this.options = options;
-    this.profileOwner = options.profileOwner;
-    this.sharing = options.sharing;
+    this.profileOwner = options.profileOwner || this.activeAccount;
     this.trees = {};
   }
 

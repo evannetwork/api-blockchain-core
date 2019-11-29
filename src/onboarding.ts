@@ -78,7 +78,6 @@ export class Onboarding extends Logger {
    * @return     {Promise<any>}   resolved when done
    */
 
-   //add the runtime 
   public static async createNewProfile(runtime: Runtime, mnemonic: string, password: string, profileProperties: any
   ): Promise<any> {
     if (!mnemonic) {
@@ -89,39 +88,35 @@ export class Onboarding extends Logger {
       throw new Error(`password is a required parameter!`);
     }
 
-    const network = runtime.environment
-    const web3Provider = `wss://${network}.evan.network/ws`;
-    const web3 = new (Web3 as any)(web3Provider, null, { transactionConfirmationBlocks: 1 });
-    const runtimeConfig: any = await Onboarding.generateRuntimeConfig(mnemonic, password, web3);
-    const accountId = Object.keys((runtimeConfig).accountMap)[0];
-    const privateKey = (runtimeConfig).accountMap[accountId];
-    const ipfs = new Ipfs({
-      dfsConfig: {
-        host: `ipfs${network === 'testcore' ? '.test' : ''}.evan.network`,
-        port: '443',
-        protocol: 'https'
-      },
-      disablePin: true,
-      accountId: accountId,
-      privateKey: `0x${privateKey}`,
-      web3
-    });
-    const runtimeNew = await createDefaultRuntime(web3, ipfs, runtimeConfig);
+    const runtimeConfig: any = await Onboarding.generateRuntimeConfig(mnemonic, password, runtime.web3);
+    const runtimeNew = await createDefaultRuntime(runtime.web3, runtime.dfs, runtimeConfig);
+
+    // check if the source runtime has enough funds
+    const profileCost = runtime.web3.utils.toWei('1.0097');
+    const runtimeFunds = await runtime.web3.eth.getBalance(runtime.activeAccount);
+    console.log(runtimeFunds)
+    const BN = runtime.web3.utils.BN;
+    if ((new BN(runtimeFunds)).lt(new BN(profileCost))) {
+      throw new Error(`The account ${runtime.activeAccount} has less than 1.0097 EVE to create a new profile`);
+    }
 
     try {
-      const parameterCheck = await Profile.checkCorrectProfileData(profileProperties, 
-        profileProperties.accountDetails.profileType)
+      await Profile.checkCorrectProfileData(
+        profileProperties,
+        profileProperties.accountDetails.profileType
+      );
     } catch (ex) {
-      throw new Error("The parameters passed are incorrect, profile properties need to be reconfigured")
+      throw new Error('The parameters passed are incorrect, profile properties need to be reconfigured')
     }
 
     await runtime.executor.executeSend({
       from: runtime.activeAccount,
       to: runtimeNew.activeAccount,
-      value: runtime.web3.utils.toWei('1.0097')
-    })    
+      value: profileCost
+    })
 
     await Onboarding.createProfile(runtimeNew, profileProperties)
+
     return {
       mnemonic,
       password,
@@ -138,7 +133,7 @@ export class Onboarding extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public static async createProfile(runtime, profileData: any): Promise<void> {
- 
+
     const factoryDomain = runtime.nameResolver.getDomainName(
       runtime.nameResolver.config.domains.profileFactory);
     const factoryAddress = await runtime.nameResolver.getAddress(factoryDomain);

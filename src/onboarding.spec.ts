@@ -44,8 +44,8 @@ describe('Onboarding helper', function() {
     const keyProvider = await TestUtils.getKeyProvider();
     const ipld = await TestUtils.getIpld(ipfs, keyProvider);
     const profile = await TestUtils.getProfile(web3, ipfs, ipld);
-    //console.dir(accounts)
-   /* await profile.loadForAccount(accounts[0]);
+    console.dir(profile)
+    await profile.loadForAccount();
     keyProvider.init(profile);
     keyProvider.currentAccount = accounts[0];
 
@@ -76,7 +76,6 @@ describe('Onboarding helper', function() {
 
     const commKey = await keyExchange.generateCommKey();
     await profile.addContactKey(config.smartAgents.onboarding.accountId, 'commKey', commKey);
-*/
   });
 
   it('should NOT create a new profile directly onchain if profile data is incorrect', async () => {
@@ -89,7 +88,7 @@ describe('Onboarding helper', function() {
           accountName: 'test account'
       }})
     await expect(profilePromise).to.
-    be.rejectedWith('The parameters passed are incorrect, profile properties need to be reconfigured') 
+    be.rejectedWith('The parameters passed are incorrect, profile properties need to be reconfigured')
 
   })
 
@@ -121,11 +120,11 @@ describe('Onboarding helper', function() {
 
     const newProfile = await Onboarding.createNewProfile(originRuntime, mnemonicNew, password, {
       accountDetails: {
-          profileType: 'company',
-          accountName: 'test account'
+        profileType: 'company',
+        accountName: 'test account'
       }});
     expect(newProfile).to.be.exist
-    expect(newProfile.runtimeConfig).to.be.deep.eq(runtimeConfig)   
+    expect(newProfile.runtimeConfig).to.be.deep.eq(runtimeConfig)
   })
 
   it('should create a new profile from a different account', async () => {
@@ -136,34 +135,14 @@ describe('Onboarding helper', function() {
 
     const newProfile = await Onboarding.createNewProfile(originRuntime, mnemonicNew, password, {
       accountDetails: {
-          profileType: 'company',
-          accountName: 'test account'
-      }});
+        profileType: 'company',
+        accountName: 'test account'
+      }
+    });
 
-    expect(newProfile.runtimeConfig).to.be.deep.eq(runtimeConfig) 
+    expect(newProfile.runtimeConfig).to.be.deep.eq(runtimeConfig)
   })
 
-  it('should create a new profile with a new mnemonic on the testcore', async () => {
-    const originRuntime = await TestUtils.getRuntime(accounts[0])
-    const mnemonicNew = Onboarding.createMnemonic();
-    await Onboarding.createNewProfile(originRuntime, mnemonicNew, 'Test1234', {
-      accountDetails: {
-          profileType: 'company',
-          accountName: 'test account'
-      }});
-    expect(mnemonicNew).to.be.an('string');
-  })
-
-  it('should create a new profile with a new mnemonic on the core', async () => {
-    const originRuntime = await TestUtils.getRuntime(accounts[0])
-    const mnemonicNew = Onboarding.createMnemonic();
-    await Onboarding.createNewProfile(originRuntime, mnemonicNew, 'Test1234', {
-      accountDetails: {
-          profileType: 'company',
-          accountName: 'test account'
-      }});
-    expect(mnemonicNew).to.be.an('string');
-  })
   it.skip('should be able to send an invitation via smart agent', async () => {
     await onboarding.sendInvitation({
       fromAlias: 'example inviter',
