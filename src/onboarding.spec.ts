@@ -44,7 +44,6 @@ describe('Onboarding helper', function() {
     const keyProvider = await TestUtils.getKeyProvider();
     const ipld = await TestUtils.getIpld(ipfs, keyProvider);
     const profile = await TestUtils.getProfile(web3, ipfs, ipld);
-    console.dir(profile)
     await profile.loadForAccount();
     keyProvider.init(profile);
     keyProvider.currentAccount = accounts[0];
