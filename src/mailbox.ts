@@ -19,6 +19,7 @@
 
 import {
   ContractLoader,
+  Executor,
   Logger,
   LoggerOptions,
   NameResolver,
@@ -68,6 +69,7 @@ export interface MailboxOptions extends LoggerOptions {
   keyProvider: KeyProvider;
   mailboxOwner: string;
   nameResolver: NameResolver;
+  executor?: Executor;
 }
 
 /**
@@ -79,6 +81,7 @@ export class Mailbox extends Logger {
   public contractLoader: ContractLoader;
   public cryptoProvider: CryptoProvider;
   public defaultCryptoAlgo: string;
+  public executor: Executor;
   public initialized: boolean;
   public ipfs: Ipfs;
   public keyProvider: KeyProvider;
@@ -95,6 +98,7 @@ export class Mailbox extends Logger {
     this.keyProvider = options.keyProvider;
     this.mailboxOwner = options.mailboxOwner;
     this.nameResolver = options.nameResolver;
+    this.executor = options.executor || options.executor;
   }
 
   /**
@@ -112,13 +116,12 @@ export class Mailbox extends Logger {
       totalResultCount: 0,
     };
 
-    const executor = this.nameResolver.executor;
-    const listAddressHash = await executor.executeContractCall(
+    const listAddressHash = await this.executor.executeContractCall(
       this.mailboxContract, 'getAnswersForMail', mailId, { from: this.mailboxOwner, });
     if (listAddressHash !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
       const listAddress = this.nameResolver.bytes32ToAddress(listAddressHash);
       const listContract = this.contractLoader.loadContract('DataStoreList', listAddress);
-      const listLength = await executor.executeContractCall(listContract, 'length');
+      const listLength = await this.executor.executeContractCall(listContract, 'length');
       results.totalResultCount = parseInt(listLength, 10);
       if (results.totalResultCount) {
         let ipld: Ipld;
@@ -135,7 +138,7 @@ export class Mailbox extends Logger {
         });
         for (let answerId of mailIds) {
           try {
-            const mailResult = await executor.executeContractCall(this.mailboxContract, 'getMail', answerId);
+            const mailResult = await this.executor.executeContractCall(this.mailboxContract, 'getMail', answerId);
             const mail = await ipld.getLinkedGraph(mailResult.data);
             const hashedSender = this.nameResolver.soliditySha3(mail.content.from);
             if (hashedSender !== mailResult.sender) {
@@ -164,7 +167,7 @@ export class Mailbox extends Logger {
   public async getBalanceFromMail(mailId: string): Promise<string> {
     await this.init();
     // mailboxOwner
-    return this.nameResolver.executor.executeContractCall(
+    return this.executor.executeContractCall(
       this.mailboxContract,
       'getBalanceFromMail',
       mailId,
@@ -180,7 +183,6 @@ export class Mailbox extends Logger {
    */
   public async getMail(mail: string): Promise<Mail> {
     await this.init();
-    const executor = this.nameResolver.executor;
     let ipld: Ipld;
     const originator = this.nameResolver.soliditySha3.apply(this.nameResolver, [
       this.nameResolver.soliditySha3(this.mailboxOwner), this.nameResolver.soliditySha3(this.mailboxOwner), ].sort());
@@ -197,7 +199,7 @@ export class Mailbox extends Logger {
       if (mail.startsWith('Qm')) {
         return await ipld.getLinkedGraph(mail);
       } else {
-        const mailResult = await executor.executeContractCall(this.mailboxContract, 'getMail', mail);
+        const mailResult = await this.executor.executeContractCall(this.mailboxContract, 'getMail', mail);
         const mailItem = await ipld.getLinkedGraph(mailResult.data);
         const hashedSender = this.nameResolver.soliditySha3(mailItem.content.from);
         if (hashedSender !== mailResult.sender) {
@@ -227,13 +229,12 @@ export class Mailbox extends Logger {
       totalResultCount: 0,
     };
 
-    const executor = this.nameResolver.executor;
-    const listAddressHash = await executor.executeContractCall(
+    const listAddressHash = await this.executor.executeContractCall(
       this.mailboxContract, `getMy${type}Mails`, { from: this.mailboxOwner, });
     if (listAddressHash !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
       const listAddress = this.nameResolver.bytes32ToAddress(listAddressHash);
       const listContract = this.contractLoader.loadContract('DataStoreList', listAddress);
-      const listLength = await executor.executeContractCall(listContract, 'length');
+      const listLength = await this.executor.executeContractCall(listContract, 'length');
       results.totalResultCount = parseInt(listLength.toString(), 10);
       if (results.totalResultCount) {
         let ipld: Ipld;
@@ -250,7 +251,7 @@ export class Mailbox extends Logger {
         });
         for (let mailId of mailIds) {
           try {
-            const mailResult = await executor.executeContractCall(this.mailboxContract, 'getMail', mailId);
+            const mailResult = await this.executor.executeContractCall(this.mailboxContract, 'getMail', mailId);
             const mail = await ipld.getLinkedGraph(mailResult.data);
             const hashedSender = this.nameResolver.soliditySha3(mail.content.from);
             if (hashedSender !== mailResult.sender) {
@@ -324,7 +325,7 @@ export class Mailbox extends Logger {
     });
     const parentId = mail.parentId;
     const hash = await ipld.store(mail);
-    await this.nameResolver.executor.executeContractTransaction(
+    await this.executor.executeContractTransaction(
       this.mailboxContract,
       'sendAnswer',
       { from, autoGas: 1.1, value, },
@@ -361,7 +362,7 @@ export class Mailbox extends Logger {
       nameResolver: this.nameResolver,
     });
     const hash = await ipld.store(mail);
-    await this.nameResolver.executor.executeContractTransaction(
+    await this.executor.executeContractTransaction(
       this.mailboxContract,
       'sendMail',
       { from, autoGas: 1.1, value, },
@@ -380,7 +381,7 @@ export class Mailbox extends Logger {
   public async withdrawFromMail(mailId: string, recipient: string): Promise<void> {
     await this.init();
     // mailboxOwner
-    await this.nameResolver.executor.executeContractTransaction(
+    await this.executor.executeContractTransaction(
       this.mailboxContract,
       'withdrawFromMail',
       { from: this.mailboxOwner, autoGas: 1.1, },

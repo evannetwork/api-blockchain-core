@@ -24,19 +24,24 @@ import { expect, use } from 'chai';
 import {
   ContractLoader,
   CryptoInfo,
+  DfsInterface,
   Executor,
+  KeyProvider,
   SignerInternal,
 } from '@evan.network/dbcp';
 
 import { accounts } from '../test/accounts';
-import { CryptoProvider } from '../encryption/crypto-provider';
-import { Ipfs } from '../dfs/ipfs';
-import { Ipld } from '../dfs/ipld';
-import { NameResolver } from '../name-resolver';
-import { Profile } from '../profile/profile';
-import { SignerIdentity } from './signer-identity';
 import { TestUtils } from '../test/test-utils';
-import { Verifications } from '../verifications/verifications';
+import {
+  CryptoProvider,
+  Ipfs,
+  Ipld,
+  Mailbox,
+  NameResolver,
+  Profile,
+  SignerIdentity,
+  Verifications,
+} from '../index';
 
 
 use(chaiAsPromised);
@@ -44,15 +49,17 @@ use(chaiAsPromised);
 describe('signer-identity (identity based signer)', function() {
   this.timeout(300000);
 
+  let contractLoader: ContractLoader;
+  let dfs: DfsInterface;
   let executor: Executor;
-  let signer;
-  let web3;
+  let signer: SignerIdentity;
+  let web3: any;
 
   before(async () => {
     web3 = TestUtils.getWeb3();
 
     const contracts = await TestUtils.getContracts();
-    const contractLoader =  new ContractLoader({
+    contractLoader =  new ContractLoader({
       contracts,
       web3,
     });
@@ -375,6 +382,7 @@ describe('signer-identity (identity based signer)', function() {
   describe('when dealing with encryption for identity based accounts', async () => {
     let cryptoProvider: CryptoProvider;
     let identityAddress: string;
+    let keyProvider: KeyProvider;
     let nameResolver: NameResolver;
     let profile: Profile;
     let verifications: Verifications;
@@ -383,7 +391,7 @@ describe('signer-identity (identity based signer)', function() {
     before(async () => {
       web3 = await TestUtils.getWeb3();
       nameResolver = await TestUtils.getNameResolver(web3);
-      const dfs = await TestUtils.getIpfs();
+      dfs = await TestUtils.getIpfs();
       verifications = await TestUtils.getVerifications(web3, dfs);
       cryptoProvider = TestUtils.getCryptoProvider(dfs);
 
@@ -394,7 +402,7 @@ describe('signer-identity (identity based signer)', function() {
           [identityAddress, identityAddress].map(accountId =>
             nameResolver.soliditySha3(accountId))
         )));
-      const keyProvider = await TestUtils.getKeyProvider();
+      keyProvider = await TestUtils.getKeyProvider();
       (keyProvider as any).keys[sha9Key] = '483257531bc9456ea783e44d325f8a384a4b89da81dac00e589409431692f218';
       (keyProvider as any).keys[nameResolver.soliditySha3(identityAddress)] = '483257531bc9456ea783e44d325f8a384a4b89da81dac00e589409431692f218';
       const ipld = new Ipld({
@@ -548,6 +556,44 @@ describe('signer-identity (identity based signer)', function() {
       const retrieved = await profile.getContactKey(contactIdentity, 'commKey');
 
       expect(encryptKey).to.eq(retrieved);
+    });
+
+    it('should be able to send a mail', async () => {
+      const random = Math.random();
+      const getTestMail = () =>({
+        content: {
+          from: signer.activeIdentity,
+          to: signer.activeIdentity,
+          title: 'talking to myself',
+          body: `hi, me. I like random numbers, for example ${random}`,
+          attachments: [
+            {
+              type: 'sharedExchangeKey',
+              key: ''
+            }
+          ]
+        },
+      });
+      const startTime = Date.now();
+      const mailbox: Mailbox = new Mailbox({
+        contractLoader,
+        cryptoProvider,
+        defaultCryptoAlgo: 'aes',
+        executor,
+        ipfs: dfs as Ipfs,
+        keyProvider,
+        mailboxOwner: signer.activeIdentity,
+        nameResolver,
+      });
+      await mailbox.sendMail(getTestMail(), signer.activeIdentity, signer.activeIdentity);
+      const result = await mailbox.getMails(1, 0);
+      const keys = Object.keys(result.mails);
+      expect(keys.length).to.eq(1);
+      expect(result.mails[keys[0]].content.sent).to.be.ok;
+      expect(result.mails[keys[0]].content.sent).to.be.gt(startTime);
+      expect(result.mails[keys[0]].content.sent).to.be.lt(Date.now());
+      delete result.mails[keys[0]].content.sent;
+      expect(result.mails[keys[0]].content).to.deep.eq(getTestMail().content);
     });
   });
 });
