@@ -51,10 +51,6 @@ describe('Blob Encryption', function() {
     ipfs = await TestUtils.getIpfs();
   });
 
-  after(async () => {
-    await ipfs.stop();
-  });
-
 
   it('should be able to be created', () => {
     const aes = new AesBlob({dfs: ipfs});

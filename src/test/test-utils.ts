@@ -64,8 +64,8 @@ export const publicMailBoxExchange = 'mailboxKeyExchange';
 export const sampleContext = 'context sample';
 
 const web3Provider = <any>process.env.CHAIN_ENDPOINT || 'wss://testcore.evan.network/ws';
-//const wsp = new Web3.providers.WebsocketProvider(
-     //web3Provider, { clientConfig: { keepalive: true, keepaliveInterval: 5000 } });
+// const wsp = new Web3.providers.WebsocketProvider(
+//   web3Provider, { clientConfig: { keepalive: true, keepaliveInterval: 5000 } });
 const localWeb3 = new Web3(web3Provider, null, { transactionConfirmationBlocks: 1 });
 const sampleKeys = {};
 // dataKeys
@@ -322,7 +322,7 @@ export class TestUtils {
       dfsConfig: {host: 'ipfs.test.evan.network', port: '443', protocol: 'https'},
       disablePin: true
     });
-    ipfs.setRuntime({signer, activeAccount:accounts[0], web3:this.getWeb3()});
+    ipfs.setRuntime({ signer, activeAccount: accounts[0], web3: this.getWeb3() });
     return ipfs;
   }
 

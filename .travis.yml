@@ -55,7 +55,7 @@ before_install:
   - export CXX="g++-4.8"
   - npm install -g npm@latest
   - docker pull evannetwork/parity_testchain
-  - docker run -d -p 127.0.0.1:8546:8546 -p 127.0.0.1:8545:8545 -u root --entrypoint /home/parity/bin/parity evannetwork/parity_testchain --chain /root/parity/spec.json --jsonrpc-interface all --unsafe-expose
+  - docker run -d -p 127.0.0.1:8546:8546 -p 127.0.0.1:8545:8545 -u root --entrypoint /home/parity/bin/parity evannetwork/parity_testchain --chain /root/parity/spec.json --jsonrpc-interface all --unsafe-expose --tx-gas-limit=16000000 --gas-floor-target=16000000
 install:
   - npm install
   - rm -rf node_modules/@evan.network/dbcp && git clone https://github.com/evannetwork/dbcp.git ../dbcp && cd ../dbcp && git checkout develop && npm i && npm run build && cd ../api-blockchain-core && mv ../dbcp ./node_modules/@evan.network

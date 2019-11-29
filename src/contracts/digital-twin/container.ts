@@ -109,6 +109,9 @@ export interface ContainerUnshareConfig {
   removeListEntries?: string[];
   /** list of properties, for which write permissions should be removed */
   write?: string[];
+  /** Without force flag, removal of the owner will throw an error. By setting
+      to true, force will even remove the owner  **/
+  force?: boolean;
 }
 
 /**
@@ -762,6 +765,117 @@ export class Container extends Logger {
   }
 
   /**
+   * Remove multiple entries from the container, including data keys and sharings. Can also pass
+   * a single property instead of an array.
+   *
+   * @param      {string}  entries  list of entries, that should be removed
+   */
+  public async removeEntries(entries: string|string[]) {
+    // only allowed by owner, will be enforced by the unshareProperties function
+    // load accounts that are permitted to this contract
+    await this.ensureContract();
+    const roleMap = await this.options.rightsAndRoles.getMembers(this.contract);
+    const unique = Array.from(new Set([].concat(...Object.values(roleMap))));
+
+    // support short hand for removing a single property, ensure that entries variable is an
+    // array
+    if (!Array.isArray(entries)) {
+      entries = [ entries ];
+    }
+
+    // unshare all accounts from the specific roles
+    await this.unshareProperties(unique.map(accountId => {
+      return {
+        accountId,
+        readWrite: entries as string[],
+        removeListEntries: entries as string[],
+        write: entries as string[],
+        // force removement of the owner
+        force: true,
+      };
+    }));
+  }
+
+  /**
+   * Takes a full share configuration for an accountId (or a list of them), share newly added
+   * properties and unshare removed properties from the container. Also accepts a list / instance of
+   * the original sharing configurations, so that duplicate loading can be avoided.
+   *
+   * @param      {ContainerShareConfig[]}  newConfigs       sharing configurations that should be
+   *                                                        persisted
+   * @param      {ContainerShareConfig[]}  originalConfigs  pass original share configurations, for
+   *                                                        that the sharing delta should be built
+   *                                                        (reduces load time)
+   */
+  public async setContainerShareConfigs(
+    newConfigs: ContainerShareConfig | ContainerShareConfig[],
+    originalConfigs?: ContainerShareConfig | ContainerShareConfig[]
+  ) {
+    // collect all users that properties should be shared / unshared
+    const shareConfigs: Array<ContainerShareConfig> = [ ];
+    const unshareConfigs: Array<ContainerShareConfig> = [ ];
+
+    // ensure working with arrays
+    if (!Array.isArray(newConfigs)) {
+      newConfigs = [ newConfigs ];
+    }
+    if (!Array.isArray(originalConfigs)) {
+      originalConfigs = originalConfigs ? [ originalConfigs ] : [ ];
+    }
+
+    // iterate through all configurations and check for sharing updates
+    await Promise.all(newConfigs.map(async (newConfig: ContainerShareConfig) => {
+      // objects to store sharing configuration delta (accountId, read, readWrite, removeListEntries)
+      const shareConfig: ContainerShareConfig = { accountId: newConfig.accountId };
+      const unshareConfig: ContainerShareConfig = { accountId: newConfig.accountId };
+      let originalConfig = (originalConfigs as ContainerShareConfig[])
+        .filter(orgConf => orgConf.accountId === newConfig.accountId)[0];
+
+      // load latest share configuration to buil delta against
+      if (!originalConfig) {
+        originalConfig = await this.getContainerShareConfigForAccount(newConfig.accountId);
+      }
+
+      // fill empty sharing types, so further checks will be easier
+      const shareConfigProperties = [ 'read', 'readWrite', 'removeListEntries' ];
+      shareConfigProperties.forEach(type => {
+        newConfig[type] = newConfig[type] || [ ];
+        originalConfig[type] = originalConfig[type] || [ ];
+        shareConfig[type] = shareConfig[type] || [ ];
+        unshareConfig[type] = unshareConfig[type] || [ ];
+      });
+
+      // iterate through all share config properties and detect changes
+      shareConfigProperties.forEach(type => {
+        // track new properties that should be shared
+        newConfig[type].forEach(property => {
+          if (originalConfig[type].indexOf(property) === -1) {
+            shareConfig[type].push(property);
+          }
+        });
+        // track properties that should be unshared
+        originalConfig[type].forEach(property => {
+          if (newConfig[type].indexOf(property) === -1) {
+            unshareConfig[type].push(property);
+          }
+        });
+      });
+
+      // transform unshare read permissions to readWrite permissions
+      unshareConfig.readWrite = unshareConfig.readWrite.concat(unshareConfig.read);
+      delete unshareConfig.read;
+
+      // apply them to the share configs arrays, so they can be processed afterwards
+      shareConfigs.push(shareConfig);
+      unshareConfigs.push(unshareConfig);
+    }));
+
+    // apply new sharings
+    await this.shareProperties(shareConfigs);
+    await this.unshareProperties(unshareConfigs);
+  }
+
+  /**
    * Write given description to containers DBCP.
    *
    * @param      {any}  description  description (public part)
@@ -1123,6 +1237,15 @@ export class Container extends Logger {
         this.contract.options.address);
     }
 
+    // only allow owner removal when force attribute is set
+    const unpermittedOwnerRemoval = unshareConfigs.filter(
+      unshareConfig => unshareConfig.accountId === this.config.accountId && !unshareConfig.force);
+    if (unpermittedOwnerRemoval.length !==0) {
+      throw new Error(`current account "${this.config.accountId}" is owner of the contract ` +
+        'and cannot remove himself from sharing without force attribute' +
+        this.contract.options.address);
+    }
+
     // check fields
     const localUnshareConfigs = cloneDeep(unshareConfigs);
     const schemaProperties = (await this.toPlugin(false)).template.properties;
@@ -1302,9 +1425,8 @@ export class Container extends Logger {
             }
           }
           if (modified) {
-
+            await this.setDescription(description);
           }
-          await this.setDescription(description);
         });
       });
     }
