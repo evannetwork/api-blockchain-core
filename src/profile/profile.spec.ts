@@ -442,7 +442,7 @@ describe('Profile helper', function() {
       await Onboarding.createNewProfile(initRuntime, newMnemonic, 'Test1234', {
         accountDetails: {
           profileType: 'user',
-          accountName: 'test account'
+          accountName: 'test account',
         }
       });
       const runtime = await getProfileRuntime(newMnemonic);
