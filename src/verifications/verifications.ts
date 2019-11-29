@@ -1389,6 +1389,10 @@ export class Verifications extends Logger {
    *                                                         'example.verifications.evan'
    * @param      {boolean}          disableSubVerifications  if true, verifications created under
    *                                                         this path are invalid
+   * @param      {boolean}          isIdentity               if true, the subject is already a
+   *                                                         identity
+   * @param      {string}           uri                      when given this uri will be stored on
+   *                                                         the new verification
    * @return     {Promise<string>}  verificationId
    */
   public async setVerification(
@@ -1400,6 +1404,7 @@ export class Verifications extends Logger {
     descriptionDomain?: string,
     disableSubVerifications = false,
     isIdentity = false,
+    uri = '',
   ): Promise<string> {
     await this.ensureStorage();
 
@@ -1421,6 +1426,7 @@ export class Verifications extends Logger {
       descriptionDomain,
       disableSubVerifications,
       isIdentity,
+      uri
     );
 
     // clear cache for this verification
@@ -1546,10 +1552,12 @@ export class Verifications extends Logger {
    *                                                 are invalid
    * @param      {boolean}  isIdentity               (optional) true if given subject is an identity, defaults to ``false``
    *                                                 are invalid
-   * @param      {number} nonce                      issuer identities execution nonce, will be
+   * @param      {number}   nonce                    issuer identities execution nonce, will be
    *                                                 automatically retrieved if if omitted or set to
    *                                                 -1, if set to -1 will automatically retrieve
    *                                                 latest nonce from chain
+   * @param      {string}   uri                      when given this uri will be stored on
+   *                                                 the new verification
    * @return     {Promise<VerificationsDelegationInfo>}  information for executing transaction with
    *                                                     another account
    */
@@ -1563,6 +1571,7 @@ export class Verifications extends Logger {
     disableSubVerifications = false,
     isIdentity = false,
     executionNonce: string | number = -1,
+    uri = '',
   ): Promise<VerificationsDelegationInfo> {
     await this.ensureStorage();
     // get input arguments
@@ -1583,6 +1592,7 @@ export class Verifications extends Logger {
       descriptionDomain,
       disableSubVerifications,
       isIdentity,
+      uri,
     );
 
     // sign arguments for on-chain check
@@ -2172,6 +2182,8 @@ export class Verifications extends Logger {
    *                                                 to 'example.verifications.evan'
    * @param      {boolean}  disableSubVerifications  if true, verifications created under this path
    *                                                 are invalid
+   * @param      {string}   uri                      when given this uri will be stored on
+   *                                                 the new verification
    * @return     {any}      data for setting verifications
    */
   private async getSetVerificationData(
@@ -2183,6 +2195,7 @@ export class Verifications extends Logger {
     descriptionDomain?: string,
     disableSubVerifications = false,
     isIdentity = false,
+    uri = ''
   ): Promise<{
       targetIdentity: string;
       subjectType: string;
@@ -2230,7 +2243,7 @@ export class Verifications extends Logger {
     const uint256VerificationName = new BigNumber(sha3VerificationName).toString(10);
 
     let verificationData = nullBytes32;
-    let verificationDataUrl = '';
+    let verificationDataUrl = uri;
     if (verificationValue) {
       try {
         const stringified = JSON.stringify(verificationValue);

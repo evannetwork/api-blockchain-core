@@ -268,6 +268,8 @@ Parameters
 #. ``verificationValue`` - ``any`` (optional): json object which will be stored in the verification
 #. ``descriptionDomain`` - ``string`` (optional): domain of the verification, this is a subdomain under 'verifications.evan', so passing 'example' will link verifications description to 'example.verifications.evan', unset if omitted
 #. ``disableSubVerifications`` - ``boolean`` (optional): invalidate all verifications that gets issued as children of this verification (warning will include the disableSubVerifications warning)
+#. ``isIdentity`` - ``boolean`` (optional): boolean value if the subject is already a identity address (default false)
+#. ``uri`` - ``string`` (optional): adds a specific URI to the verification
 
 -------
 Returns

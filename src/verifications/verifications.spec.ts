@@ -192,6 +192,28 @@ describe('Verifications handler', function() {
       expect(verificationsForAccount[oldLength]).to.have.property('expirationDate', now.toString());
     });
 
+    it('can add a verification with a special verification uri', async () => {
+      const oldLength = (await verifications.getVerifications(
+        accounts[1], '/company')).length;
+      await verifications.setVerification(
+        accounts[0],
+        accounts[1],
+        '/company',
+        0,
+        null,
+        null,
+        false,
+        false,
+        'http://google.de'
+      );
+      const verificationsForAccount = await verifications.getVerifications(
+        accounts[1], '/company');
+      expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
+      expect(verificationsForAccount[oldLength])
+        .to.have.property('uri', 'http://google.de');
+    });
+
+
     it('can add a verification and validate the integrity', async () => {
       const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
       await timeout(1000);
@@ -769,6 +791,28 @@ describe('Verifications handler', function() {
         expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
         expect(verificationsForAccount[oldLength])
           .to.have.property('expirationDate', now.toString());
+      });
+
+      it('can add a verification with a special verification uri', async () => {
+        const identityCheck = subject.length === 66;
+        const oldLength = (await verifications.getVerifications(
+          subject, '/company', identityCheck)).length;
+        await verifications.setVerification(
+          accounts[0],
+          subject,
+          '/company',
+          0,
+          null,
+          null,
+          false,
+          identityCheck,
+          'http://google.de'
+        );
+        const verificationsForAccount = await verifications.getVerifications(
+          subject, '/company', identityCheck);
+        expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
+        expect(verificationsForAccount[oldLength])
+          .to.have.property('uri', 'http://google.de');
       });
 
       it('can add a verification and validate the integrity', async () => {
