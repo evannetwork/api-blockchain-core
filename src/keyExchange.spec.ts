@@ -98,7 +98,7 @@ describe('KeyExchange class', function() {
       }
     });
 
-    profile = profile1Runtime.profile
+    profile = profile1Runtime.profile;
     profile2 = profile2Runtime.profile
     await profile.loadForAccount();
     await profile2.loadForAccount();
