@@ -89,7 +89,7 @@ describe('Onboarding helper', function() {
     await expect(profilePromise)
       .to.be.rejectedWith('The parameters passed are incorrect, profile properties need to be reconfigured');
 
-  })
+  });
 
   it('should create a new random mnemonic', () => {
     const mnemonic = Onboarding.createMnemonic();
