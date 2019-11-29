@@ -87,7 +87,7 @@ describe('Onboarding helper', function() {
           accountName: 'test account'
       }})
     await expect(profilePromise).to.
-    be.rejectedWith('The parameters passed are incorrect, profile properties need to be reconfigured')
+      .to.be.rejectedWith('The parameters passed are incorrect, profile properties need to be reconfigured');
 
   })
 
