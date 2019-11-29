@@ -28,7 +28,6 @@ help:
 	wget  -P common -N "$(dbcpDocsUrl)common/validator.rst"
 	wget  -P contracts -N "$(dbcpDocsUrl)contracts/contract-loader.rst"
 	wget  -P dfs -N "$(dbcpDocsUrl)dfs/dfs-interface.rst"
-	wget  -P dfs -N "$(dbcpDocsUrl)dfs/ipfs.rst"
 	wget  -P encryption -N "$(dbcpDocsUrl)encryption/cryptor-unencrypted.rst"
 
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)

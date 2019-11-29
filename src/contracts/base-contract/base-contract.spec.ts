@@ -90,11 +90,6 @@ describe('BaseContract', function() {
     }
   });
 
-  after(async() => {
-    // create new ipld handler on ipfs node
-    await ipfs.stop();
-  });
-
   it('can be created', async () => {
     const contractId = await baseContract.createUninitialized(
       'testdatacontract',

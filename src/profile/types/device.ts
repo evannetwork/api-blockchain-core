@@ -31,7 +31,7 @@ export default JSON.parse(`{
       "deviceDetails": {
         "dataSchema": {
           "properties": {
-            "dataStreamSettings": {
+            "type": {
               "default": "",
               "type": "string"
             },
@@ -70,7 +70,7 @@ export default JSON.parse(`{
               ],
               "type": "object"
             },
-            "type": {
+            "dataStreamSettings": {
               "$comment": "{\\"isEncryptedFile\\": true}",
               "default": {
                 "files": []

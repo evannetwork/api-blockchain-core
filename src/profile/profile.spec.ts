@@ -442,7 +442,6 @@ describe('Profile helper', function() {
     const dateString = Date.now().toString();
     const companyProfileProperties = {
       registration: {
-        company: `Company ${ dateString }`,
         court: `trst ${ dateString }`,
         register: 'hra',
         registerNumber: `qwer ${ dateString }`,

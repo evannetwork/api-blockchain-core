@@ -431,7 +431,7 @@ describe('Verifications handler', function() {
         await verifications.setVerification(accounts[0], accounts[1], topic);
 
         await new Promise(s => setTimeout(s, 1000));
-        const validationOptions: VerificationsValidationOptions = {
+        const localValidationOptions: VerificationsValidationOptions = {
           disableSubVerifications: VerificationsStatusV2.Red,
           expired:                 VerificationsStatusV2.Red,
           invalid:                 VerificationsStatusV2.Red,
@@ -444,11 +444,11 @@ describe('Verifications handler', function() {
           rejected:                VerificationsStatusV2.Red,
           selfIssued:              VerificationsStatusV2.Yellow,
         };
-        const queryOptions: VerificationsQueryOptions = {
-          validationOptions: validationOptions,
+        const localQueryOptions: VerificationsQueryOptions = {
+          validationOptions: localValidationOptions,
         };
 
-        const nested = await verifications.getNestedVerificationsV2(accounts[1], topic, false, queryOptions);
+        const nested = await verifications.getNestedVerificationsV2(accounts[1], topic, false, localQueryOptions);
         expect(nested).to.haveOwnProperty('verifications');
         expect(nested.verifications).to.have.length(1);
         expect(nested).to.haveOwnProperty('levelComputed');
