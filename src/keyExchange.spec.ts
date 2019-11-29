@@ -96,7 +96,7 @@ describe('KeyExchange class', function() {
         profileType: 'company',
         accountName: 'test account',
       }
-    })
+    });
 
     profile = profile1Runtime.profile
     profile2 = profile2Runtime.profile
