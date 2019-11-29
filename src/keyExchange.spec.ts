@@ -37,6 +37,7 @@ import { Profile } from './profile/profile';
 import { RightsAndRoles } from './contracts/rights-and-roles';
 import { TestUtils } from './test/test-utils';
 import { accounts } from './test/accounts';
+import { Onboarding } from './onboarding';
 
 describe('KeyExchange class', function() {
   this.timeout(600000);
@@ -78,51 +79,33 @@ describe('KeyExchange class', function() {
     ipfs = await TestUtils.getIpfs();
     ipld = await TestUtils.getIpld(ipfs);
 
-    profile = await TestUtils.getProfile(web3, null, ipld, accounts[0]);
-    profile2 = await TestUtils.getProfile(web3, null, ipld, accounts[1]);
-
-    mailbox = new Mailbox({
-      mailboxOwner: accounts[0],
-      nameResolver: await TestUtils.getNameResolver(web3),
-      ipfs,
-      contractLoader: await TestUtils.getContractLoader(web3),
-      cryptoProvider:  TestUtils.getCryptoProvider(),
-      keyProvider:  TestUtils.getKeyProvider(),
-      defaultCryptoAlgo: 'aes',
-    });
-
-    // mailbox user 2
-    mailbox2 = new Mailbox({
-      mailboxOwner: accounts[1],
-      nameResolver: await TestUtils.getNameResolver(web3),
-      ipfs,
-      contractLoader: await TestUtils.getContractLoader(web3),
-      cryptoProvider:  TestUtils.getCryptoProvider(),
-      keyProvider:  TestUtils.getKeyProvider(),
-      defaultCryptoAlgo: 'aes',
-    });
-
-    const keyExchangeOptions = {
-      mailbox,
-      cryptoProvider:  TestUtils.getCryptoProvider(),
-      defaultCryptoAlgo: 'aes',
-      account: accounts[0],
-      keyProvider: TestUtils.getKeyProvider(),
-    }
-    const keyExchangeOptions2 = {
-      mailbox: mailbox2,
-      cryptoProvider:  TestUtils.getCryptoProvider(),
-      defaultCryptoAlgo: 'aes',
-      account: accounts[1],
-      keyProvider: TestUtils.getKeyProvider(),
-    }
-    keyExchange1 = new KeyExchange(keyExchangeOptions);
-    keyExchange2 = new KeyExchange(keyExchangeOptions2);
-
     // create profile 1
-    await profile.createProfile(keyExchange1.getDiffieHellmanKeys());
+    const profile1Runtime = await TestUtils.getRuntime(accounts[0]);
+    profile1Runtime.profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
+    await Onboarding.createProfile(profile1Runtime, {
+      accountDetails: {
+        profileType: 'company',
+        accountName: 'test account'
+      }
+    })
     // create profile 2
-    await profile2.createProfile(keyExchange2.getDiffieHellmanKeys());
+    const profile2Runtime = await TestUtils.getRuntime(accounts[1]);
+    profile2Runtime.profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[1]);
+    await Onboarding.createProfile(profile2Runtime, {
+      accountDetails: {
+        profileType: 'company',
+        accountName: 'test account'
+      }
+    })
+
+    profile = profile1Runtime.profile
+    profile2 = profile2Runtime.profile
+    await profile.loadForAccount();
+    await profile2.loadForAccount();
+    mailbox = profile1Runtime.mailbox;
+    mailbox2 = profile2Runtime.mailbox;
+    keyExchange1 = profile1Runtime.keyExchange;
+    keyExchange2 = profile2Runtime.keyExchange;
   });
 
   it('should be able to send an invitation mail and store new commKey', async () => {
