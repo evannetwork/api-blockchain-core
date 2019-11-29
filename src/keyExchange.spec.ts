@@ -87,7 +87,7 @@ describe('KeyExchange class', function() {
         profileType: 'company',
         accountName: 'test account'
       }
-    })
+    });
     // create profile 2
     const profile2Runtime = await TestUtils.getRuntime(accounts[1]);
     profile2Runtime.profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[1]);
