@@ -89,7 +89,7 @@ describe('Business Center', function() {
     nameResolver = await TestUtils.getNameResolver(web3);
     ensDomain = nameResolver.getDomainName(config.nameResolver.domains.businessCenter);
     const bcAddress = await nameResolver.getAddress(ensDomain);
-    businessCenter =await createBusinessCenter(0);
+    businessCenter = await createBusinessCenter(0);
     let isMember = await executor.executeContractCall(
       businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
     if (!isMember) {
