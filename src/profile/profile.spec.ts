@@ -42,7 +42,7 @@ import { TestUtils } from '../test/test-utils';
 
 use(chaiAsPromised);
 
-describe.skip('Profile helper', function() {
+describe('Profile helper', function() {
   this.timeout(600000);
   let ipfs;
   let ipld;
