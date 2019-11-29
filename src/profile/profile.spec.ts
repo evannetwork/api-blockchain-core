@@ -334,7 +334,7 @@ describe('Profile helper', function() {
     expect(await profile.getContactKnownState(accounts[1])).to.be.false;
   });
 
-  describe('Handle data contract entries in profile', function() {
+  describe('Handle data contract entries in profile', () => {
     const mnemonics = {
       company: 'place connect elite pigeon toilet song suggest primary endless science lizard tomato',
       device: 'cement fatal hybrid wing always amateur top good maximum snake screen first',
