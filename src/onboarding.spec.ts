@@ -104,7 +104,7 @@ describe('Onboarding helper', function() {
     const balance = await web3.eth.getBalance(originRuntime.activeAccount)
     const minimumAmount = web3.utils.toWei('1.0097');
 
-    expect(Number(balance)).to.be.gt(Number(minimumAmount))
+    expect(Number(balance)).to.be.gt(Number(minimumAmount));
   })
 
   it('should be able to create new profile if enough funds are available', async () => {
