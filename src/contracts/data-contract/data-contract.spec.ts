@@ -96,7 +96,8 @@ describe('DataContract', function() {
       web3: TestUtils.getWeb3(),
       description: await TestUtils.getDescription(web3, dfs),
     });
-    businessCenterDomain = nameResolver.getDomainName(config.nameResolver.domains.businessCenter);
+    businessCenterDomain = null;
+    /* nameResolver.getDomainName(config.nameResolver.domains.businessCenter);
 
     const businessCenterAddress = await nameResolver.getAddress(businessCenterDomain);
     const businessCenter = await loader.loadContract('BusinessCenter', businessCenterAddress);
@@ -114,7 +115,7 @@ describe('DataContract', function() {
       businessCenter, 'isMember', accounts[2], { from: accounts[2], })) {
       await executor.executeContractTransaction(
         businessCenter, 'join', { from: accounts[2], autoGas: 1.1, });
-    }
+    }*/
   });
 
   async function createContract(addSharing = false, schema?) {
