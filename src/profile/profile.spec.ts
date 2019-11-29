@@ -187,12 +187,12 @@ describe('Profile helper', function() {
       { from, autoGas: 1.1, },
       valueToSet,
     );
-    const newHash = await nameResolver.executor.executeContractCall(contract, 'getProfile', from, { from, });
+    const newHash = await nameResolver.executor.executeContractCall(contract, 'getProfile', from, { from });
     expect(newHash).to.eq(valueToSet);
     await nameResolver.executor.executeContractTransaction(
       contract,
       'setMyProfile',
-      { from, autoGas: 1.1, },
+      { from, autoGas: 1.1 },
       hash,
     );
   });
@@ -204,7 +204,7 @@ describe('Profile helper', function() {
     await Onboarding.createProfile(initRuntime, {
       accountDetails: {
         profileType: 'company',
-        accountName: 'test account'
+        accountName: 'test account',
       }
     })
     let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
@@ -214,7 +214,6 @@ describe('Profile helper', function() {
     await profile.addContactKey(accounts[1], 'context b', 'key 0x02_b');
     await profile.addDappBookmark('sample1.test', sampleDesc);
 
-    console.log('store')
     // store
     await profile.storeForAccount(profile.treeLabels.addressBook);
 
@@ -278,9 +277,9 @@ describe('Profile helper', function() {
     await Onboarding.createProfile(initRuntime, {
       accountDetails: {
         profileType: 'company',
-        accountName: 'test account'
+        accountName: 'test account',
       }
-    })
+    });
 
     // simulate a different account with a different keyStore
     const originalKeyStore = ipld.keyProvider;
@@ -306,9 +305,9 @@ describe('Profile helper', function() {
     await Onboarding.createProfile(initRuntime, {
       accountDetails: {
         profileType: 'company',
-        accountName: 'test account'
+        accountName: 'test account',
       }
-    })
+    });
 
     await profile.loadForAccount();
     expect(await profile.getContactKnownState(accounts[1])).to.be.false;
@@ -322,9 +321,9 @@ describe('Profile helper', function() {
     await Onboarding.createProfile(initRuntime, {
       accountDetails: {
         profileType: 'company',
-        accountName: 'test account'
+        accountName: 'test account',
       }
-    })
+    });
 
     await profile.loadForAccount();
     expect(await profile.getContactKnownState(accounts[1])).to.be.false;

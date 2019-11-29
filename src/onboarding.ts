@@ -94,7 +94,6 @@ export class Onboarding extends Logger {
     // check if the source runtime has enough funds
     const profileCost = runtime.web3.utils.toWei('1.0097');
     const runtimeFunds = await runtime.web3.eth.getBalance(runtime.activeAccount);
-    console.log(runtimeFunds)
     const BN = runtime.web3.utils.BN;
     if ((new BN(runtimeFunds)).lt(new BN(profileCost))) {
       throw new Error(`The account ${runtime.activeAccount} has less than 1.0097 EVE to create a new profile`);
@@ -103,19 +102,19 @@ export class Onboarding extends Logger {
     try {
       await Profile.checkCorrectProfileData(
         profileProperties,
-        profileProperties.accountDetails.profileType
+        profileProperties.accountDetails.profileType,
       );
     } catch (ex) {
-      throw new Error('The parameters passed are incorrect, profile properties need to be reconfigured')
+      throw new Error('The parameters passed are incorrect, profile properties need to be reconfigured');
     }
 
     await runtime.executor.executeSend({
       from: runtime.activeAccount,
       to: runtimeNew.activeAccount,
-      value: profileCost
+      value: profileCost,
     })
 
-    await Onboarding.createProfile(runtimeNew, profileProperties)
+    await Onboarding.createProfile(runtimeNew, profileProperties);
 
     return {
       mnemonic,

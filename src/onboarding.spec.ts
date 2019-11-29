@@ -97,37 +97,37 @@ describe('Onboarding helper', function() {
   })
 
   it('should check if an account has enough amount of eves to create new profile', async () => {
-    const originRuntime = await TestUtils.getRuntime(accounts[0])
+    const originRuntime = await TestUtils.getRuntime(accounts[0]);
     const password = 'Test1234';
     const mnemonicNew = Onboarding.createMnemonic();
     const runtimeConfig: any = await Onboarding.generateRuntimeConfig(mnemonicNew, password, web3);
-    const balance = await web3.eth.getBalance(originRuntime.activeAccount)
+    const balance = await web3.eth.getBalance(originRuntime.activeAccount);
     const minimumAmount = web3.utils.toWei('1.0097');
 
     expect(Number(balance)).to.be.gt(Number(minimumAmount));
-  })
+  });
 
   it('should be able to create new profile if enough funds are available', async () => {
-    const originRuntime = await TestUtils.getRuntime(accounts[0])
+    const originRuntime = await TestUtils.getRuntime(accounts[0]);
     const password = 'Test1234';
     const mnemonicNew = Onboarding.createMnemonic();
     const runtimeConfig: any = await Onboarding.generateRuntimeConfig(mnemonicNew, password, web3);
-    const balance = await web3.eth.getBalance(originRuntime.activeAccount)
-    const minimumAmount = web3.utils.toWei('1.0097')
+    const balance = await web3.eth.getBalance(originRuntime.activeAccount);
+    const minimumAmount = web3.utils.toWei('1.0097');
 
-    expect(Number(balance)).to.be.gt(Number(minimumAmount))
+    expect(Number(balance)).to.be.gt(Number(minimumAmount));
 
     const newProfile = await Onboarding.createNewProfile(originRuntime, mnemonicNew, password, {
       accountDetails: {
         profileType: 'company',
-        accountName: 'test account'
+        accountName: 'test account',
       }});
-    expect(newProfile).to.be.exist
-    expect(newProfile.runtimeConfig).to.be.deep.eq(runtimeConfig)
+    expect(newProfile).to.be.exist;
+    expect(newProfile.runtimeConfig).to.be.deep.eq(runtimeConfig);
   })
 
   it('should create a new profile from a different account', async () => {
-    const originRuntime = await TestUtils.getRuntime(accounts[0])
+    const originRuntime = await TestUtils.getRuntime(accounts[0]);
     const password = 'Test1234';
     const mnemonicNew = Onboarding.createMnemonic();
     const runtimeConfig: any = await Onboarding.generateRuntimeConfig(mnemonicNew, password, web3);
@@ -135,12 +135,12 @@ describe('Onboarding helper', function() {
     const newProfile = await Onboarding.createNewProfile(originRuntime, mnemonicNew, password, {
       accountDetails: {
         profileType: 'company',
-        accountName: 'test account'
+        accountName: 'test account',
       }
     });
 
-    expect(newProfile.runtimeConfig).to.be.deep.eq(runtimeConfig)
-  })
+    expect(newProfile.runtimeConfig).to.be.deep.eq(runtimeConfig);
+  });
 
   it.skip('should be able to send an invitation via smart agent', async () => {
     await onboarding.sendInvitation({
