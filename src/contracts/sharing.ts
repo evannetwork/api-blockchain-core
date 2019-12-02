@@ -555,8 +555,20 @@ export class Sharing extends Logger {
     }
 
     // backup previous hash to be able to remove it afterwards
-    const oldHash = await this.options.executor.executeContractCall(shareContract,
-      sharingId ? 'multiSharings' : 'sharing', sharingId);
+    let oldHash
+    if (sharingId) {
+      oldHash = await this.options.executor.executeContractCall(
+        shareContract,
+        'multiSharings',
+        sharingId
+      );
+    } else {
+      oldHash = await this.options.executor.executeContractCall(
+        shareContract,
+        'sharing'
+      );
+    }
+
     // upload to ipfs and hash
     const updatedHash = await this.options.dfs.add(
       'sharing', Buffer.from(JSON.stringify(sharings), this.encodingUnencrypted));
