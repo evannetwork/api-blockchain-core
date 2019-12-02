@@ -252,26 +252,6 @@ describe('Profile helper', function() {
   });
 
   it('should read a public part of a profile (e.g. public key)', async () => {
-    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
-
-    const customMailbopx = new Mailbox({
-      mailboxOwner: accounts[0],
-      nameResolver: await TestUtils.getNameResolver(web3),
-      ipfs: ipld.ipfs,
-      contractLoader: await TestUtils.getContractLoader(web3),
-      cryptoProvider:  TestUtils.getCryptoProvider(),
-      keyProvider:  TestUtils.getKeyProvider(),
-      defaultCryptoAlgo: 'aes',
-    });
-    const keyExchangeOptions = {
-      mailbox: customMailbopx,
-      cryptoProvider:  TestUtils.getCryptoProvider(),
-      defaultCryptoAlgo: 'aes',
-      account: accounts[0],
-      keyProvider: TestUtils.getKeyProvider(),
-    };
-    const customKeyExchange = new KeyExchange(keyExchangeOptions);
-
     const initRuntime = await TestUtils.getRuntime(accounts[0]);
     initRuntime.profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await Onboarding.createProfile(initRuntime, {

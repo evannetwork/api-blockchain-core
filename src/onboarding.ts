@@ -18,7 +18,6 @@
 */
 
 import KeyStore = require('../libs/eth-lightwallet/keystore');
-import Web3 = require('web3');
 import https = require('https');
 import { cloneDeep, merge } from 'lodash';
 
@@ -28,7 +27,6 @@ import {
 } from '@evan.network/dbcp';
 
 import { createDefaultRuntime, Runtime } from './runtime';
-import { Ipfs } from './dfs/ipfs';
 import { Mail, Mailbox } from './mailbox';
 import { Profile } from './profile/profile';
 import * as AccountType from './profile/types/types';
@@ -198,13 +196,7 @@ export class Onboarding extends Logger {
       false,
     );
 
-
-   // set initial structure by creating addressbook structure and saving it to ipfs
-    const cryptor = runtime.cryptoProvider.getCryptorByCryptoAlgo('aesEcb');
-    const fileHashes: any = {};
     const encodingUnencrypted = 'utf-8';
-    const encodingEncrypted = 'hex';
-    const encodingUnencryptedHash = 'hex';
     const cryptoAlgorithHashes = 'aesEcb';
     const cryptorAes = runtime.cryptoProvider.getCryptorByCryptoAlgo(
       'aes');

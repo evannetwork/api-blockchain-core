@@ -83,8 +83,8 @@ describe('Onboarding helper', function() {
     const mnemonicNew = Onboarding.createMnemonic();
     const profilePromise = Onboarding.createNewProfile(originRuntime, mnemonicNew, password, {
       accountDetails: {
-          profileType: 'dumb dumb',
-          accountName: 'test account',
+        profileType: 'dumb dumb',
+        accountName: 'test account',
       }});
     await expect(profilePromise)
       .to.be.rejectedWith('The parameters passed are incorrect, profile properties need to be reconfigured');
@@ -98,9 +98,6 @@ describe('Onboarding helper', function() {
 
   it('should check if an account has enough amount of eves to create new profile', async () => {
     const originRuntime = await TestUtils.getRuntime(accounts[0]);
-    const password = 'Test1234';
-    const mnemonicNew = Onboarding.createMnemonic();
-    const runtimeConfig: any = await Onboarding.generateRuntimeConfig(mnemonicNew, password, web3);
     const balance = await web3.eth.getBalance(originRuntime.activeAccount);
     const minimumAmount = web3.utils.toWei('1.0097');
 
