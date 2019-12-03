@@ -15,6 +15,7 @@
 - fix profile type iot device specification
 - ensure that content keys, before they get shared, are added to the `Container` keys
 - add `EncryptionWrapperCryptorType`, `EncryptionWrapperKeyType`, `EncryptionWrapperOptions`, `EncryptionWrapper` to `index.ts` exports
+- update naming of verifications (replace older occurrences of "validations" with "verifications")
 
 ### Deprecations
 - remove registration company name and use accountName for all

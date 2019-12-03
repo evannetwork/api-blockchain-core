@@ -317,7 +317,7 @@ Validating Verifications
 
 Verifications can be retrieved with two different functions:
 
-- :ref:`getVerifications <verifications_getVerifications>`: simple "fetch all" verifications for a topic, returns all validations and detailed validity checks have to be made by hand
+- :ref:`getVerifications <verifications_getVerifications>`: simple "fetch all" verifications for a topic, returns all verifications and detailed validity checks have to be made by hand
 - :ref:`getNestedVerification <verifications_getNestedVerifications>`: return verifications with default checks and inspects parent verifications as well, used for verifications, that should be traced back to a trusted root verifier
 
 

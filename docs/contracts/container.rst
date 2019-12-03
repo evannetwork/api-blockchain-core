@@ -25,7 +25,7 @@ To reduce complexity the most common usage patterns from :doc:`DataContract <./d
 - each entry gets an own key for encryption
 - each entry get an own role for granting write permissions
 - an identity always is created for the container
-- adding validations adds the validation topic to the contract description to allow listing of all validations
+- adding verifications adds the verification topic to the contract description to allow listing of all verifications of this container
 - a property called ``type`` is added to the ``Container`` at creation type and marks its template type
 
 
@@ -182,7 +182,7 @@ Cloning containers:
     - a new sharing with new keys is generated for this container
     - only the owner of the container receives keys shared to it for this container
 
-- does not copy validations
+- does not copy verifications
 - does not copy the description
 
     - ``config.description`` is used for the cloned contract
@@ -1201,7 +1201,7 @@ Example
 --------------------------------------------------------------------------------
 
 
-= Validating Containers =
+= Verifying Containers =
 =========================
 
 .. _container_addVerifications:
@@ -1585,11 +1585,11 @@ ContainerVerificationEntry
 
 data for verifications for containers
 
-#. ``topic`` - ``string``: validation path
-#. ``descriptionDomain`` - ``string`` (optional): domain, where the description of this validation is stored
-#. ``disableSubverifications`` - ``boolean`` (optional): if set, validations created in a sub-path are invalid by default, defaults to ``false``
-#. ``expirationDate`` - ``number`` (optional): expiration date, validations do not expire if omitted, defaults to ``0``
-#. ``verificationValue`` - ``string`` (optional): reference to additional validation details
+#. ``topic`` - ``string``: verification path
+#. ``descriptionDomain`` - ``string`` (optional): domain, where the description of this verification is stored
+#. ``disableSubverifications`` - ``boolean`` (optional): if set, verification created in a sub-path are invalid by default, defaults to ``false``
+#. ``expirationDate`` - ``number`` (optional): expiration date, verifications do not expire if omitted, defaults to ``0``
+#. ``verificationValue`` - ``string`` (optional): reference to additional verification details
 
 
 

@@ -149,18 +149,18 @@ export interface ContainerTemplateProperty {
 }
 
 /**
- * data for verifications for containers, see ``Validation`` documentation for details
+ * data for verifications for containers, see ``Verification`` documentation for details
  */
 export interface ContainerVerificationEntry {
-  /** validation path */
+  /** verification path */
   topic: string;
-  /** domain, where the description of this validation is stored */
+  /** domain, where the description of this verification is stored */
   descriptionDomain?: string;
-  /** if set, validations created in a sub-path are invalid by default */
+  /** if set, verifications created in a sub-path are invalid by default */
   disableSubverifications?: boolean;
-  /** expiration date, validations do not expire if omitted */
+  /** expiration date, verifications do not expire if omitted */
   expirationDate?: number;
-  /** reference to additional validation details */
+  /** reference to additional verification details */
   verificationValue?: string;
 }
 
