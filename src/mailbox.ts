@@ -98,7 +98,7 @@ export class Mailbox extends Logger {
     this.keyProvider = options.keyProvider;
     this.mailboxOwner = options.mailboxOwner;
     this.nameResolver = options.nameResolver;
-    this.executor = options.executor || options.executor;
+    this.executor = options.executor || options.nameResolver.executor;
   }
 
   /**
