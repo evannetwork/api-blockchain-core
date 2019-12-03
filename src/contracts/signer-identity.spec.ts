@@ -415,7 +415,6 @@ describe('signer-identity (identity based signer)', function() {
       });
 
       // create profile instance, that is bound to identity
-      const contractLoader = await TestUtils.getContractLoader(web3);
       const dataContract = await TestUtils.getDataContract(web3, dfs);
       (dataContract as any).options.executor = executor;
       executor.eventHub = await TestUtils.getEventHub(web3);
