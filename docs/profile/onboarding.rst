@@ -161,7 +161,7 @@ createNewProfile
 
 .. code-block:: typescript
 
-  Onboarding.createNewProfile(mnemnonic, password, network);
+  Onboarding.createNewProfile(mnemnonic, password, profileProperties);
 
 (static class function)
 
@@ -174,7 +174,7 @@ Parameters
 
 #. ``mnemnonic`` - ``string``: 12 word mnemnonic as string
 #. ``password`` - ``string``: password of the new created profile
-#. ``network`` - ``string``: target network for the profile (testcore/core)
+#. ``profileProperties`` - ``any``: Properties for the profile to be created
 
 -------
 Returns
@@ -186,12 +186,16 @@ Returns
 Example
 -------
 
-To show the difference, without purging:
 
 .. code-block:: typescript
 
+  const originRuntime = await TestUtils.getRuntime(accounts[0]);
   const mnemonic = Onboarding.createMnemonic();
-  await Onboarding.createNewProfile(mnemonic, 'Test1234');
+  await Onboarding.createNewProfile(originRuntime, mnemonicNew, 'Test1234', {
+      accountDetails: {
+          profileType: 'company',
+          accountName: 'test account'
+      }});
 
 .. required for building markup
 
