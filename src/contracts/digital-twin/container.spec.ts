@@ -1112,7 +1112,7 @@ describe('Container', function() {
       let consumerContainer = await getConsumerContainer(container);
       const unshare = consumerContainer.unshareProperties([{
         accountId: consumer, readWrite: ['testField'] }])
-      expect(unshare).to.be.rejectedWith(new RegExp(`^current account "${ consumer }" is unable to unshare properties, as it isn't owner of the underlying contract`, 'i'));
+      await expect(unshare).to.be.rejectedWith(new RegExp(`^current account "${ consumer }" is unable to unshare properties, as it isn't owner of the underlying contract`, 'i'));
     });
     
     // // setContainerShareConfigs
@@ -1198,7 +1198,7 @@ describe('Container', function() {
 
       shareConfig.readWrite = [ 'testField3' ];
       const sharingProcess = container.setContainerShareConfigs(shareConfig);
-      expect(sharingProcess).to.be.rejectedWith(new RegExp(`^current account "${ consumer }" is unable to unshare properties, as it isn't owner of the underlying contract`, 'i'));
+      await expect(sharingProcess).to.be.rejectedWith(new RegExp(`^current account "${ consumer }" is unable to unshare properties, as it isn't owner of the underlying contract`, 'i'));
     });
 
     it('can apply the original sharing configuration by saving a full share configuration for a user', async() => {
@@ -1410,7 +1410,6 @@ describe('Container', function() {
       const consumerContainer = await getConsumerContainer(container);
       expect(await consumerContainer.getEntry('testField1')).to.eq(randomString1);
       expect(await consumerContainer.getEntry('testField2')).to.eq(randomString2);
-
 
       const expected = [
         { accountId: owner, readWrite: ['testField1', 'testField2'] },
