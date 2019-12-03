@@ -1352,7 +1352,7 @@ describe('Container', function() {
       expect(shareConfig.read).to.be.eq(undefined);
       expect(shareConfig.readWrite).to.be.eq(undefined);
     });
-    it('cannot remove propertie as another user', async() => {
+    it('cannot remove properties as another user', async() => {
       const { container, } = await createTestContainerWithProperties([ 'testField', 'testField2', 'testField3' ]);
 
       await container.shareProperties([{
@@ -1362,8 +1362,11 @@ describe('Container', function() {
       }]);
 
       const consumerContainer = await getConsumerContainer(container);
-
-      await expect(consumerContainer.removeEntries('testField')).to.be.rejectedWith(new RegExp(`^current account "${ owner }" is owner of the contract and cannot remove himself from sharing without force attribute`, 'i'));
+      await expect(consumerContainer.removeEntries('testField')).to.be.rejectedWith(
+        new RegExp(`^current account "${ consumer }" is unable to unshare properties,` +
+          ` as it isn\'t owner of the underlying contract ` +
+          `${ await container.getContractAddress() }`, 'i')
+      );
     });
   });
 
