@@ -10,7 +10,6 @@ docs/common/logger.rst
 docs/common/validator.rst
 docs/contracts/contract-loader.rst
 docs/dfs/dfs-interface.rst
-docs/dfs/ipfs.rst
 docs/encryption/cryptor-unencrypted.rst
 node_modules/*
 .env.local

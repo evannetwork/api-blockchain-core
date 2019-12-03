@@ -112,11 +112,6 @@ export class Ipfs extends Logger implements DfsInterface {
     } else {
       this.log('No IPFS config of ipfs remotenode are given', 'error');
     }
-
-  }
-
-  public async stop(): Promise<any> {
-    return true;
   }
 
   /**
@@ -171,16 +166,6 @@ export class Ipfs extends Logger implements DfsInterface {
       await prottle(requestWindowSize, remoteFiles.map((fileHash) => () => this.pinFileHash(fileHash)));
     }
     return remoteFiles.map(remoteFile => Ipfs.ipfsHashToBytes32(remoteFile.hash));
-  }
-
-  /**
-   * @brief      pins file hashes on ipfs cluster
-   *
-   * @param      hash  filehash of the pinned item
-   */
-  public async pinFileHash(file: any): Promise<any> {
-    await this.checkAuthHeader();
-    await this.remoteNode.pin.add(file.hash);
   }
 
   /**
@@ -244,6 +229,26 @@ export class Ipfs extends Logger implements DfsInterface {
   };
 
   /**
+   * @brief      pins file hashes on ipfs cluster
+   *
+   * @param      hash  filehash of the pinned item
+   */
+  public async pinFileHash(file: any): Promise<any> {
+    await this.checkAuthHeader();
+    const ipfsHash = file.hash.startsWith('Qm') ? file.hash : Ipfs.bytes32ToIpfsHash(file.hash);
+    await this.remoteNode.pin.add(ipfsHash);
+  }
+
+  /**
+   * removes a hash from the IPFS
+   *
+   * @param      {any}  hash    filehash of the pinned item
+   */
+  public async remove(hash: any) {
+    await this.unPinFileHash(hash);
+  }
+
+  /**
    * Sets the account identifier and accountstore, also generates a new ipfs instance.
    *
    * @param      {string}        accountId     The account identifier
@@ -261,6 +266,17 @@ export class Ipfs extends Logger implements DfsInterface {
    */
   public setRuntime(runtime: Runtime) {
     this.runtime = runtime;
+  }
+
+  /**
+   * unpins file hashes on ipfs cluster
+   *
+   * @param      {any}  hash    filehash of the pinned item
+   */
+  public async unPinFileHash(hash: any): Promise<any> {
+    await this.checkAuthHeader();
+    const ipfsHash = hash.startsWith('Qm') ? hash : Ipfs.bytes32ToIpfsHash(hash);
+    await this.remoteNode.pin.rm(ipfsHash);
   }
 
   /**

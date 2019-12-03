@@ -548,26 +548,55 @@ export class Sharing extends Logger {
       contract: string, sharings: any, originator: string, sharingId?: string): Promise<void> {
     let shareContract;
     if (typeof contract === 'string') {
-      if (sharingId) {
-        shareContract = this.options.contractLoader.loadContract('MultiShared', contract);
-      } else {
-        shareContract = this.options.contractLoader.loadContract('Shared', contract);
-      }
+      shareContract = this.options.contractLoader.loadContract(sharingId ? 'MultiShared' : 'Shared',
+        contract);
     } else {
       shareContract = contract;
     }
+
+    // backup previous hash to be able to remove it afterwards
+    let oldHash
+    if (sharingId) {
+      oldHash = await this.options.executor.executeContractCall(
+        shareContract,
+        'multiSharings',
+        sharingId
+      );
+    } else {
+      oldHash = await this.options.executor.executeContractCall(
+        shareContract,
+        'sharing'
+      );
+    }
+
     // upload to ipfs and hash
     const updatedHash = await this.options.dfs.add(
       'sharing', Buffer.from(JSON.stringify(sharings), this.encodingUnencrypted));
+
     // save to contract
     if (sharingId) {
-      await this.options.executor.executeContractTransaction(
-        shareContract, 'setMultiSharing', { from: originator, autoGas: 1.1, }, sharingId, updatedHash);
+      // set new hash
+      await this.options.executor.executeContractTransaction(shareContract, 'setMultiSharing',
+        { from: originator, autoGas: 1.1, }, sharingId, updatedHash);
     } else {
-      await this.options.executor.executeContractTransaction(
-        shareContract, 'setSharing', { from: originator, autoGas: 1.1, }, updatedHash);
+      // set new hash
+      await this.options.executor.executeContractTransaction(shareContract, 'setSharing',
+        { from: originator, autoGas: 1.1, }, updatedHash);
     }
-    if (this.hashCache[shareContract.options.address] && this.hashCache[shareContract.options.address][sharingId]) {
+
+    // remove the old hash
+    if (oldHash &&
+        oldHash !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
+      try {
+        await this.options.dfs.remove(oldHash);
+      } catch (ex) {
+        this.log(`could not unpin old sharing hash: ${ ex.message }`, 'warning');
+      }
+    }
+
+    // clear the cache
+    if (this.hashCache[shareContract.options.address] &&
+        this.hashCache[shareContract.options.address][sharingId]) {
       delete this.hashCache[shareContract.options.address][sharingId];
     }
     this.clearCache();

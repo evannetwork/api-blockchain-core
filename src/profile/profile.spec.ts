@@ -99,25 +99,6 @@ describe('Profile helper', function() {
     rightsAndRoles = await TestUtils.getRightsAndRoles(web3);
   });
 
-  it('should create a new Profile', async () => {
-    // create new profile helper instance
-    const from = Object.keys(accountMap)[0];
-    ipld.originator = nameResolver.soliditySha3(from);
-    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
-
-    // create new profile, set private key and keyexchange partial key
-    await profile.createProfile(keyExchange.getDiffieHellmanKeys());
-
-    // add a bookmark
-    await profile.addDappBookmark('sample1.test', sampleDesc);
-
-    // store tree to contract
-    await profile.storeForAccount(profile.treeLabels.bookmarkedDapps);
-
-    // test contacts
-    expect(await profile.getDappBookmark('sample1.test')).to.deep.eq(sampleDesc);
-  });
-
   it('should be able to be add contact keys', async () => {
     let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await profile.addContactKey(accounts[0], 'context a', 'key 0x01_a');
@@ -206,14 +187,28 @@ describe('Profile helper', function() {
       { from, autoGas: 1.1, },
       valueToSet,
     );
-    hash = await nameResolver.executor.executeContractCall(contract, 'getProfile', from, { from, });
-    expect(hash).to.eq(valueToSet);
+    const newHash = await nameResolver.executor.executeContractCall(contract, 'getProfile', from, { from });
+    expect(newHash).to.eq(valueToSet);
+    await nameResolver.executor.executeContractTransaction(
+      contract,
+      'setMyProfile',
+      { from, autoGas: 1.1 },
+      hash,
+    );
   });
 
   it('should be able to set and load a profile for a given user from the blockchain shorthand', async () => {
     // create profile
+    const initRuntime = await TestUtils.getRuntime(accounts[0]);
+    initRuntime.profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
+    await Onboarding.createProfile(initRuntime, {
+      accountDetails: {
+        profileType: 'company',
+        accountName: 'test account',
+      }
+    })
     let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
-    await profile.createProfile(keyExchange.getDiffieHellmanKeys());
+    await profile.loadForAccount();
     await profile.addContactKey(accounts[0], 'context a', 'key 0x01_a');
     await profile.addContactKey(accounts[1], 'context a', 'key 0x02_a');
     await profile.addContactKey(accounts[1], 'context b', 'key 0x02_b');
@@ -236,7 +231,7 @@ describe('Profile helper', function() {
   });
 
   it('allow to check if a profile exists', async () => {
-    let profile = await TestUtils.getProfile(web3, ipfs, ipld, '0xbbF5029Fd710d227630c8b7d338051B8E76d50B3');
+    let profile = await TestUtils.getProfile(web3, ipfs, ipld, '0x000000000000000000000000000000000000beef');
     expect(await profile.exists()).to.be.false;
 
     profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
@@ -257,27 +252,14 @@ describe('Profile helper', function() {
   });
 
   it('should read a public part of a profile (e.g. public key)', async () => {
-    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
-
-    const customMailbopx = new Mailbox({
-      mailboxOwner: accounts[0],
-      nameResolver: await TestUtils.getNameResolver(web3),
-      ipfs: ipld.ipfs,
-      contractLoader: await TestUtils.getContractLoader(web3),
-      cryptoProvider:  TestUtils.getCryptoProvider(),
-      keyProvider:  TestUtils.getKeyProvider(),
-      defaultCryptoAlgo: 'aes',
+    const initRuntime = await TestUtils.getRuntime(accounts[0]);
+    initRuntime.profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
+    await Onboarding.createProfile(initRuntime, {
+      accountDetails: {
+        profileType: 'company',
+        accountName: 'test account',
+      }
     });
-    const keyExchangeOptions = {
-      mailbox: customMailbopx,
-      cryptoProvider:  TestUtils.getCryptoProvider(),
-      defaultCryptoAlgo: 'aes',
-      account: accounts[0],
-      keyProvider: TestUtils.getKeyProvider(),
-    };
-    const customKeyExchange = new KeyExchange(keyExchangeOptions);
-
-    await profile.createProfile(customKeyExchange.getDiffieHellmanKeys());
 
     // simulate a different account with a different keyStore
     const originalKeyStore = ipld.keyProvider;
@@ -296,10 +278,16 @@ describe('Profile helper', function() {
     ipld.keyProvider = originalKeyStore;
   });
 
-  it('should be able to set a contact as known', async () => {
-    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
+  it.skip('should be able to set a contact as known', async () => {
 
-    await profile.createProfile(keyExchange.getDiffieHellmanKeys());
+    const initRuntime = await TestUtils.getRuntime(accounts[0]);
+    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
+    await Onboarding.createProfile(initRuntime, {
+      accountDetails: {
+        profileType: 'company',
+        accountName: 'test account',
+      }
+    });
 
     await profile.loadForAccount();
     expect(await profile.getContactKnownState(accounts[1])).to.be.false;
@@ -307,9 +295,15 @@ describe('Profile helper', function() {
     expect(await profile.getContactKnownState(accounts[1])).to.be.true;
   });
 
-  it('should be able to set a contact as unknown', async () => {
+  it.skip('should be able to set a contact as unknown', async () => {
+    const initRuntime = await TestUtils.getRuntime(accounts[0]);
     let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
-    await profile.createProfile(keyExchange.getDiffieHellmanKeys());
+    await Onboarding.createProfile(initRuntime, {
+      accountDetails: {
+        profileType: 'company',
+        accountName: 'test account',
+      }
+    });
 
     await profile.loadForAccount();
     expect(await profile.getContactKnownState(accounts[1])).to.be.false;
@@ -319,121 +313,7 @@ describe('Profile helper', function() {
     expect(await profile.getContactKnownState(accounts[1])).to.be.false;
   });
 
-  it('should allow to create profile profile and propfile data with separate accounts', async () => {
-    const [ profileReceiver, profileCreator, profileTestUser, ] = accounts;
-    const getKeyIpld = async (accountId) => {
-      const defaultKeys = TestUtils.getKeys();
-      const keys = {};
-      const dataKeyKeys = [
-        nameResolver.soliditySha3('mailboxKeyExchange'),
-        nameResolver.soliditySha3(accountId),
-        nameResolver.soliditySha3(
-          nameResolver.soliditySha3(accountId), nameResolver.soliditySha3(accountId)),
-      ];
-      dataKeyKeys.forEach((key) => { keys[key] = defaultKeys[key]; });
-      const keyProvider = new KeyProvider({ keys, });
-      const accountIpld = await TestUtils.getIpld(ipfs, keyProvider);
-      accountIpld.originator = nameResolver.soliditySha3(accountId);
-      return accountIpld;
-    };
-    // separate profiles (with separate key providers for ipld)
-    const profile1 = await TestUtils.getProfile(web3, ipfs, await getKeyIpld(profileReceiver), profileReceiver);
-
-    // create profile data with profileReceiver (profileReceiver is the account, that will own the profile)
-    const dhKeys = keyExchange.getDiffieHellmanKeys();
-    await profile1.addContactKey(profileReceiver, 'dataKey', dhKeys.privateKey.toString('hex'));
-    await profile1.addProfileKey(profileReceiver, 'alias', 'sample user 1');
-    await profile1.addPublicKey(dhKeys.publicKey.toString('hex'));
-    const sharing = await dataContract.createSharing(profileReceiver);
-    const fileHashes: any = {};
-    fileHashes[profile1.treeLabels.addressBook] = await profile1.storeToIpld(profile1.treeLabels.addressBook);
-    fileHashes[profile1.treeLabels.publicKey] = await profile1.storeToIpld(profile1.treeLabels.publicKey);
-    fileHashes.sharingsHash = sharing.sharingsHash;
-    const cryptor = cryptoProvider.getCryptorByCryptoAlgo('aesEcb');
-    fileHashes[profile1.treeLabels.addressBook] = await cryptor.encrypt(
-      Buffer.from(fileHashes[profile1.treeLabels.addressBook].substr(2), 'hex'),
-      { key: sharing.hashKey, }
-    );
-    fileHashes[profile1.treeLabels.addressBook] = `0x${fileHashes[profile1.treeLabels.addressBook].toString('hex')}`;
-
-    // store it with profileCreator
-    const factoryDomain = nameResolver.getDomainName(nameResolver.config.domains.profileFactory);
-    const profileContract = await dataContract.create(
-      factoryDomain,
-      profileCreator,
-      null,
-      '0x0000000000000000000000000000000000000000000000000000000000000000',
-      true,
-      '0x0000000000000000000000000000000000000000000000000000000000000000',
-    );
-    await dataContract.setEntry(
-      profileContract,
-      profile1.treeLabels.publicKey,
-      fileHashes[profile1.treeLabels.publicKey],
-      profileCreator,
-      false,
-      false,
-    );
-    await dataContract.setEntry(
-      profileContract,
-      profile1.treeLabels.addressBook,
-      fileHashes[profile1.treeLabels.addressBook],
-      profileCreator,
-      false,
-      false,
-    );
-    await executor.executeContractTransaction(
-      profileContract,
-      'setSharing',
-      { from: profileCreator, autoGas: 1.1, },
-      fileHashes.sharingsHash,
-    );
-
-    // profileCreator hands contract over to profileReceiver
-    await dataContract.inviteToContract(null, profileContract.options.address, profileCreator, profileReceiver);
-    // grand admin role
-    await rightsAndRoles.addAccountToRole(profileContract, profileCreator, profileReceiver, 0);
-    // cancel own member role
-    await rightsAndRoles.removeAccountFromRole(profileContract, profileCreator, profileCreator, 1);
-    // cancel own admin role
-    await rightsAndRoles.removeAccountFromRole(profileContract, profileCreator, profileCreator, 0);
-    // transfer ownership
-    await rightsAndRoles.transferOwnership(profileContract, profileCreator, profileReceiver);
-
-
-    // user profile with account 1
-    // stores profile (atm still done as receiver, as this is msg.sender relative)
-    const profileIndexDomain = nameResolver.getDomainName(nameResolver.config.domains.profile);
-    const address = await nameResolver.getAddress(profileIndexDomain);
-    const contract = nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
-    await executor.executeContractTransaction(
-      contract, 'setMyProfile', { from: profileReceiver, autoGas: 1.1, }, profileContract.options.address);
-    // can read own keys
-    const profile2 = await TestUtils.getProfile(web3, ipfs, await getKeyIpld(profileReceiver), profileReceiver);
-
-    // can read public key
-    await profile2.loadForAccount(profile2.treeLabels.publicKey);
-    expect(await profile2.getPublicKey()).to.eq(dhKeys.publicKey.toString('hex'));
-
-    // can read private key and alias (==> has access to data)
-    await profile2.loadForAccount(profile2.treeLabels.addressBook);
-    expect(await profile2.getContactKey(profileReceiver, 'dataKey')).to.eq(dhKeys.privateKey.toString('hex'));
-    expect(await profile2.getProfileKey(profileReceiver, 'alias')).to.eq('sample user 1');
-
-    // could transfer it to another user (==> has smart contract permissions)
-    // profileCreator hands contract over to profileReceiver
-    await dataContract.inviteToContract(null, profileContract.options.address, profileReceiver, profileTestUser);
-    // grand admin role
-    await rightsAndRoles.addAccountToRole(profileContract, profileReceiver, profileTestUser, 0);
-    // // cancel own member role
-    await rightsAndRoles.removeAccountFromRole(profileContract, profileReceiver, profileReceiver, 1);
-    // cancel own admin role
-    await rightsAndRoles.removeAccountFromRole(profileContract, profileReceiver, profileReceiver, 0);
-    // transfer ownership
-    await rightsAndRoles.transferOwnership(profileContract, profileReceiver, profileTestUser);
-  });
-
-  describe.skip('Handle data contract entries in profile', function() {
+  describe('Handle data contract entries in profile', () => {
     const mnemonics = {
       company: 'place connect elite pigeon toilet song suggest primary endless science lizard tomato',
       device: 'cement fatal hybrid wing always amateur top good maximum snake screen first',
@@ -442,7 +322,6 @@ describe('Profile helper', function() {
     const dateString = Date.now().toString();
     const companyProfileProperties = {
       registration: {
-        company: `Company ${ dateString }`,
         court: `trst ${ dateString }`,
         register: 'hra',
         registerNumber: `qwer ${ dateString }`,
@@ -484,7 +363,14 @@ describe('Profile helper', function() {
 
     it('can transform user profile to company profile', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      await Onboarding.createNewProfile(newMnemonic, 'Test1234');
+      const initRuntime = await TestUtils.getRuntime(accounts[0]);
+
+      await Onboarding.createNewProfile(initRuntime, newMnemonic, 'Test1234', {
+        accountDetails: {
+          profileType: 'user',
+          accountName: 'test account',
+        }
+      });
       const runtime = await getProfileRuntime(newMnemonic);
 
       await runtime.profile.setProfileProperties({
@@ -499,7 +385,14 @@ describe('Profile helper', function() {
 
     it('cannot transform specified profile to another profile type', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      await Onboarding.createNewProfile(newMnemonic, 'Test1234');
+      const initRuntime = await TestUtils.getRuntime(accounts[0]);
+
+      await Onboarding.createNewProfile(initRuntime, newMnemonic, 'Test1234', {
+        accountDetails: {
+          profileType: 'user',
+          accountName: 'test account',
+        }
+      });
       const runtime = await getProfileRuntime(newMnemonic);
 
       await runtime.profile.setProfileProperties({
@@ -523,7 +416,14 @@ describe('Profile helper', function() {
 
     it('can transform user profile to device profile', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      await Onboarding.createNewProfile(newMnemonic, 'Test1234');
+      const initRuntime = await TestUtils.getRuntime(accounts[0]);
+
+      await Onboarding.createNewProfile(initRuntime, newMnemonic, 'Test1234', {
+        accountDetails: {
+          profileType: 'user',
+          accountName: 'test account',
+        }
+      });
       const runtime = await getProfileRuntime(newMnemonic);
 
       await runtime.profile.setProfileProperties({
@@ -538,7 +438,14 @@ describe('Profile helper', function() {
 
     it('can transform user profile to type that does not exists', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      await Onboarding.createNewProfile(newMnemonic, 'Test1234');
+      const initRuntime = await TestUtils.getRuntime(accounts[0]);
+
+      await Onboarding.createNewProfile(initRuntime, newMnemonic, 'Test1234', {
+        accountDetails: {
+          profileType: 'user',
+          accountName: 'test account',
+        }
+      });
       const runtime = await getProfileRuntime(newMnemonic);
 
       const promise = runtime.profile.setProfileProperties({

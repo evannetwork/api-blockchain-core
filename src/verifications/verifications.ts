@@ -30,11 +30,10 @@ import {
   NameResolver,
   DfsInterface
 } from '@evan.network/dbcp';
+
 import { Ipfs } from '../dfs/ipfs';
+import { nullAddress, nullBytes32 } from '../common/utils';
 
-
-const nullAddress = '0x0000000000000000000000000000000000000000';
-const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
 /**
  * verification status from blockchain
@@ -105,7 +104,7 @@ export interface VerificationsDelegationInfo {
   /** abi encoded input for transaction */
   input: string;
   /** signed data from transaction */
-  signedTransactionInfo: string;
+  signedTransactionInfo?: string;
   /** source identity contract execution nonce for this transaction */
   nonce?: string;
   /** address of identity contract, that receives verification;
@@ -160,6 +159,8 @@ export interface VerificationsVerificationEntry {
     creationDate: number;
     /** ens address of description for this verification */
     ensAddress: string;
+    /** expiration date of verification (js timestamp) */
+    expirationDate?: number;
     /** id in verification holder / verifications registry */
     id: string;
     /** account id of verification issuer */
@@ -176,8 +177,6 @@ export interface VerificationsVerificationEntry {
     data?: any;
     /** only if actually set */
     description?: any;
-    /** expiration date of verification (js timestamp) */
-    expirationDate?: number;
     /** if applicable, reason for verification rejection */
     rejectReason?: string;
     /** status of verification, is optional during result computation and required when done */
@@ -1105,6 +1104,57 @@ export class Verifications extends Logger {
     return this.formatToV2(nested, queryOptions || this.defaultQueryOptions);
   }
 
+   /**
+    * Builds required data for a transaction from an identity (offchain) and returns data, that can
+    * be used to submit it later on. Return value can be passed to ``executeTransaction``.
+    * Transaction information is not signed and therefore can only be submitted by an appropriate key
+    * hold of given identity.
+    *
+    * Note that, when creating multiple signed transactions, the ``nonce`` argument **has to be
+    * specified and incremented between calls**, as the nonce is included in transaction data and
+    * restricts the order of transactions, that can be made.
+    *
+    * @param      {any}     contract      target contract of transaction or ``null`` if just sending
+    *                                     funds
+    * @param      {string}  functionName  function for transaction or ``null`` if just sending funds
+    * @param      {any}     options       options for transaction, supports from, to, nonce, input,
+    *                                     value
+    * @param      {any[]}   args          arguments for function transaction
+    * @return     {VerificationsDelegationInfo}  prepared transaction for ``executeTransaction``
+    */
+  public async getTransactionInfo(
+    contract: any = null,
+    functionName: string = null,
+    options: any,
+    ...args
+  ): Promise<VerificationsDelegationInfo> {
+    // sign arguments for on-chain check
+    const sourceIdentity = await this.getIdentityForAccount(options.from, true);
+
+    // fetch nonce as late as possible
+    const nonce = (typeof options.nonce !== 'undefined' && options.nonce !== -1) ?
+      `${options.nonce}` : await this.getExecutionNonce(sourceIdentity, true);
+
+    const input = contract ?
+      contract.methods[functionName].apply(contract.methods, args).encodeABI() :
+      options.input;
+
+    const to = contract ?
+      contract.options.address :
+      (options.to || nullAddress);
+
+    const value = options.value || 0;
+
+    return {
+      sourceIdentity,
+      to,
+      value,
+      input,
+      nonce,
+    };
+  }
+
+
   /**
    * Map the topic of a verification to it's default ens domain
    *
@@ -1339,6 +1389,10 @@ export class Verifications extends Logger {
    *                                                         'example.verifications.evan'
    * @param      {boolean}          disableSubVerifications  if true, verifications created under
    *                                                         this path are invalid
+   * @param      {boolean}          isIdentity               if true, the subject is already a
+   *                                                         identity
+   * @param      {string}           uri                      when given this uri will be stored on
+   *                                                         the new verification
    * @return     {Promise<string>}  verificationId
    */
   public async setVerification(
@@ -1350,6 +1404,7 @@ export class Verifications extends Logger {
     descriptionDomain?: string,
     disableSubVerifications = false,
     isIdentity = false,
+    uri = '',
   ): Promise<string> {
     await this.ensureStorage();
 
@@ -1371,6 +1426,7 @@ export class Verifications extends Logger {
       descriptionDomain,
       disableSubVerifications,
       isIdentity,
+      uri
     );
 
     // clear cache for this verification
@@ -1436,11 +1492,13 @@ export class Verifications extends Logger {
    * specified and incremented between calls**, as the nonce is included in transaction data and
    * restricts the order of transactions, that can be made.
    *
-   * @param      {any}     contract             target contract of transcation or ``null`` if just sending funds 
-   * @param      {string}  functionName         function for transaction or ``null`` if just sending funds
-   * @param      {any}     options              options for transaction, supports from, to, nonce, input, value
-   * @param      {any[]}   args                 arguments for function transaction
-   * @returns    {VerificationsDelegationInfo}  prepared transaction for ``executeTransaction``
+   * @param      {any}     contract      target contract of transaction or ``null`` if just sending
+   *                                     funds
+   * @param      {string}  functionName  function for transaction or ``null`` if just sending funds
+   * @param      {any}     options       options for transaction, supports from, to, nonce, input,
+   *                                     value
+   * @param      {any[]}   args          arguments for function transaction
+   * @return     {VerificationsDelegationInfo}  prepared transaction for ``executeTransaction``
    */
   public async signTransaction(
     contract: any = null,
@@ -1448,28 +1506,18 @@ export class Verifications extends Logger {
     options: any,
     ...args
   ): Promise<VerificationsDelegationInfo> {
-    // sign arguments for on-chain check
-    const sourceIdentity = await this.getIdentityForAccount(options.from, true);
-
-    // fetch nonce as late as possible
-    const nonce = (typeof options.nonce !== 'undefined' && options.nonce !== -1) ?
-      `${options.nonce}` : await this.getExecutionNonce(sourceIdentity, true);
-
-    const input = contract ?
-      contract.methods[functionName].apply(contract.methods, args).encodeABI() :
-      options.input;
-
-    const to = contract ?
-      contract.options.address :
-      (options.to || null);
-
-    const value = options.value || 0;
+    const {
+      sourceIdentity,
+      to,
+      value,
+      input,
+      nonce,
+    } = await this.getTransactionInfo(contract, functionName, options, ...args);
 
     // note that issuer is given for signing, as this ACCOUNT is used to sign the message
     const signedTransactionInfo = await this.signPackedHash(
       options.from , [sourceIdentity, nonce, to, value, input]);
 
-    // executeDelegated(address _to, uint256 _value, bytes _data, bytes _signedTransactionInfo)
     return {
       sourceIdentity,
       to,
@@ -1504,10 +1552,12 @@ export class Verifications extends Logger {
    *                                                 are invalid
    * @param      {boolean}  isIdentity               (optional) true if given subject is an identity, defaults to ``false``
    *                                                 are invalid
-   * @param      {number} nonce                      issuer identities execution nonce, will be
+   * @param      {number}   nonce                    issuer identities execution nonce, will be
    *                                                 automatically retrieved if if omitted or set to
    *                                                 -1, if set to -1 will automatically retrieve
    *                                                 latest nonce from chain
+   * @param      {string}   uri                      when given this uri will be stored on
+   *                                                 the new verification
    * @return     {Promise<VerificationsDelegationInfo>}  information for executing transaction with
    *                                                     another account
    */
@@ -1521,6 +1571,7 @@ export class Verifications extends Logger {
     disableSubVerifications = false,
     isIdentity = false,
     executionNonce: string | number = -1,
+    uri = '',
   ): Promise<VerificationsDelegationInfo> {
     await this.ensureStorage();
     // get input arguments
@@ -1541,6 +1592,7 @@ export class Verifications extends Logger {
       descriptionDomain,
       disableSubVerifications,
       isIdentity,
+      uri,
     );
 
     // sign arguments for on-chain check
@@ -1824,6 +1876,7 @@ export class Verifications extends Logger {
       event: { eventName: 'Approved', target: 'KeyHolderLibrary' },
       from: accountId,
       getEventResult: (event, eventArgs) => [eventArgs.executionId, event.blockNumber],
+      value,
     };
 
     // run tx
@@ -2084,7 +2137,7 @@ export class Verifications extends Logger {
       }
       ['expirationDate', 'rejectReason'].map((property) => {
         if (nestedVerification[property]) {
-          verification[property] = nestedVerification[property];
+          verification.details[property] = nestedVerification[property];
         }
       });
       verifications.push(verification);
@@ -2129,6 +2182,8 @@ export class Verifications extends Logger {
    *                                                 to 'example.verifications.evan'
    * @param      {boolean}  disableSubVerifications  if true, verifications created under this path
    *                                                 are invalid
+   * @param      {string}   uri                      when given this uri will be stored on
+   *                                                 the new verification
    * @return     {any}      data for setting verifications
    */
   private async getSetVerificationData(
@@ -2140,6 +2195,7 @@ export class Verifications extends Logger {
     descriptionDomain?: string,
     disableSubVerifications = false,
     isIdentity = false,
+    uri = ''
   ): Promise<{
       targetIdentity: string;
       subjectType: string;
@@ -2149,8 +2205,7 @@ export class Verifications extends Logger {
       verificationData: string;
       verificationDataUrl: string;
       ensFullNodeHash: string;
-    }>
-  {
+    }> {
     await this.ensureStorage();
     const subjectType = await this.getSubjectType(subject, isIdentity);
     let targetIdentity;
@@ -2188,7 +2243,7 @@ export class Verifications extends Logger {
     const uint256VerificationName = new BigNumber(sha3VerificationName).toString(10);
 
     let verificationData = nullBytes32;
-    let verificationDataUrl = '';
+    let verificationDataUrl = uri;
     if (verificationValue) {
       try {
         const stringified = JSON.stringify(verificationValue);

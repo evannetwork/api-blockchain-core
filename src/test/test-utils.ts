@@ -64,8 +64,8 @@ export const publicMailBoxExchange = 'mailboxKeyExchange';
 export const sampleContext = 'context sample';
 
 const web3Provider = <any>process.env.CHAIN_ENDPOINT || 'wss://testcore.evan.network/ws';
-//const wsp = new Web3.providers.WebsocketProvider(
-     //web3Provider, { clientConfig: { keepalive: true, keepaliveInterval: 5000 } });
+// const wsp = new Web3.providers.WebsocketProvider(
+//   web3Provider, { clientConfig: { keepalive: true, keepaliveInterval: 5000 } });
 const localWeb3 = new Web3(web3Provider, null, { transactionConfirmationBlocks: 1 });
 const sampleKeys = {};
 // dataKeys
@@ -101,6 +101,9 @@ sampleKeys[localWeb3.utils.soliditySha3.apply(localWeb3.utils.soliditySha3,
 sampleKeys[localWeb3.utils.soliditySha3.apply(localWeb3.utils.soliditySha3,
   [localWeb3.utils.soliditySha3(accounts[2]), localWeb3.utils.soliditySha3(accounts[2])].sort())] =
     '00d1267b27c3a80080f9e1b6ba01de313b53ab58000000000000000000000022';
+sampleKeys[localWeb3.utils.soliditySha3.apply(localWeb3.utils.soliditySha3,
+  [localWeb3.utils.soliditySha3('0xA1d67A22eA4B4B3e46741E86f1007A5082D99842'), localWeb3.utils.soliditySha3('0xA1d67A22eA4B4B3e46741E86f1007A5082D99842')].sort())] =
+    '676d0c639099a29b9dd21fe3af7a4c159df73b7068394393524c13679218f29f';
 
 
 export class TestUtils {
@@ -315,7 +318,7 @@ export class TestUtils {
       dfsConfig: {host: 'ipfs.test.evan.network', port: '443', protocol: 'https'},
       disablePin: true
     });
-    ipfs.setRuntime({signer, activeAccount:accounts[0], web3:this.getWeb3()});
+    ipfs.setRuntime({ signer, activeAccount: accounts[0], web3: this.getWeb3() });
     return ipfs;
   }
 
@@ -367,6 +370,7 @@ export class TestUtils {
       contractLoader: await TestUtils.getContractLoader(web3),
       executor,
     });
+    payments.startBlock = await web3.eth.getBlockNumber();
     return payments;
   }
 

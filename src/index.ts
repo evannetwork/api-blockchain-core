@@ -37,12 +37,13 @@ export {
 export { Aes } from './encryption/aes';
 export { AesBlob } from './encryption/aes-blob';
 export { AesEcb } from './encryption/aes-ecb';
-export { BusinessCenterProfile } from './profile/business-center-profile';
 export { BaseContract, ContractState } from './contracts/base-contract/base-contract';
+export { BusinessCenterProfile } from './profile/business-center-profile';
 export { createDefaultRuntime, Runtime } from './runtime';
 export { CryptoProvider } from './encryption/crypto-provider';
 export { DataContract } from './contracts/data-contract/data-contract';
 export { Description } from './shared-description';
+export { EncryptionWrapperCryptorType, EncryptionWrapperKeyType, EncryptionWrapperOptions, EncryptionWrapper } from './encryption/encryption-wrapper';
 export { ExecutorAgent } from './contracts/executor-agent';
 export { ExecutorWallet } from './contracts/executor-wallet';
 export { Ipfs } from './dfs/ipfs';

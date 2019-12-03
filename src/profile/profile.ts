@@ -266,49 +266,6 @@ export class Profile extends Logger {
   }
 
   /**
-   * create new profile, store it to profile index initialize addressBook and publicKey
-   *
-   * @param      {string}         keys    communication key to store
-   * @return     {Promise<void>}  resolved when done
-   */
-  public async createProfile(keys: any): Promise<void> {
-    if (this.activeAccount !== this.profileOwner) {
-      throw new Error('creating profiles for other accounts is not supported' +
-        `"${this.activeAccount}" tried to create a profile for "${this.profileOwner}"`);
-    }
-    // create new profile contract and store in profile index
-    const factoryDomain = this.nameResolver.getDomainName(
-      this.nameResolver.config.domains.profileFactory);
-    this.profileContract = await this.dataContract.create(factoryDomain, this.activeAccount);
-    this.profileContainer = new Container(
-      { ...this.options, verifications: null, web3: this.options.executor.web3 },
-      { accountId: this.activeAccount, address: this.profileContract.address },
-    );
-    await Promise.all([
-      (async () => {
-        const ensName = this.nameResolver.getDomainName(this.nameResolver.config.domains.profile);
-        const address = await this.nameResolver.getAddress(ensName);
-        const contract = this.nameResolver.contractLoader.loadContract(
-          'ProfileIndexInterface', address);
-        await this.executor.executeContractTransaction(
-          contract,
-          'setMyProfile',
-          { from: this.activeAccount, autoGas: 1.1, },
-          this.profileContract.options.address,
-        );
-      })(),
-      (async () => {
-        await this.addContactKey(this.activeAccount, 'dataKey', keys.privateKey.toString('hex'));
-        await this.addPublicKey(keys.publicKey.toString('hex'));
-        await Promise.all([
-          this.storeForAccount('addressBook'),
-          this.storeForAccount('publicKey')
-        ]);
-      })(),
-    ]);
-  }
-
-  /**
    * check if a profile has been stored for current account
    *
    * @return     {Promise<boolean>}  true if a contract was registered, false if not

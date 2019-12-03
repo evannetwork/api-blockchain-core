@@ -81,11 +81,11 @@ describe('Signer Wallet', function() {
         testContract, 'transferOwnership', { from: accounts[0], }, wallet0.walletAddress);
       expect(await executor.executeContractCall(
         testContract, 'owner')).to.eq(wallet0.walletAddress);
-
+      await TestUtils.nextBlock(executor, accounts[0]);
       await executorWallet0.executeContractTransaction(
         testContract,
         'transferOwnership',
-        { from: wallet0.walletAddress, autoGas: 1.1, },
+        { from: wallet0.walletAddress },
         accounts[1],
       );
       expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[1]);

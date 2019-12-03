@@ -354,7 +354,7 @@ decrypt
 
 .. code-block:: typescript
 
-  encryptionHandler.encrypt(toEncrypt, cryptoInfo[, artifacts]);
+  encryptionHandler.decrypt(toDecrypt[, artifacts]);
 
 Decrypt given ``Envelope``.
 
@@ -362,7 +362,7 @@ Decrypt given ``Envelope``.
 Parameters
 ----------
 
-#. ``toEncrypt`` - ``any``: encrypted envelop
+#. ``toDecrypt`` - ``any``: encrypted envelop
 #. ``artifacts`` - ``any``: (optional) additional information for decrypting
 
 artifacts
