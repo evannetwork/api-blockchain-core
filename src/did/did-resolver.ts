@@ -17,10 +17,6 @@
   the following URL: https://evan.network/license/
 */
 
-import * as Throttle from 'promise-parallel-throttle';
-import BigNumber from 'bignumber.js';
-import { Mutex } from 'async-mutex';
-import { cloneDeep } from 'lodash';
 import {
   ContractLoader,
   DfsInterface,
@@ -126,10 +122,24 @@ export class DidResolver extends Logger {
     return identity;
   }
 
+  /**
+   * Converts given evan.network identity hash to DID.
+   *
+   * @param      {string}  identity  evan.network identity like "0x1234"
+   * @return     {Promise<string>}  DID like "did:evan:0x1234"
+   */
   public async convertIdentityToDid(identity: string): Promise<string> {
     return `did:evan:${await this.getDidInfix()}${identity}`;
   }
 
+  /**
+   * Gets a DID document for currently configured account/identity pair. Notice, that this document
+   * may a complete DID document for currently configured active identity, a part of it or not
+   * matching it at all. You can use the result of this function to build a new DID document but
+   * should extend it or an existing DID document, if your details derive from default format.
+   *
+   * @return     {Promise<DidDocumentTemplate>}  a DID document template
+   */
   public async getDidDocumentTemplate(): Promise<DidDocumentTemplate> {
     const identity = this.options.signerIdentity.activeIdentity;
     const [ didInfix, publicKey ] = await Promise.all([
@@ -153,6 +163,12 @@ export class DidResolver extends Logger {
     }`);
   }
 
+  /**
+   * Get DID document for given DID or for currently configured active identity.
+   *
+   * @param      {string}  did     (optional) DID to fetch DID document for
+   * @return     {Promise<any>}   a DID document that MAY resemble `DidDocumentTemplate` format
+   */
   public async getDidDocument(did?: string): Promise<any> {
     let result = null;
     const identity = this.padIdentity(did ?
@@ -170,6 +186,13 @@ export class DidResolver extends Logger {
     return result;
   }
 
+  /**
+   * Store given DID document for given DID or for currently configured active identity.
+   *
+   * @param      {any}     document  DID document to store
+   * @param      {string}  did       (optional) DID to store DID document for
+   * @return     {Promise<void>}  resolved when done
+   */
   public async setDidDocument(document: any, did?: string): Promise<void> {
     const identity = this.padIdentity(did ?
       await this.convertDidToIdentity(did) :
@@ -186,6 +209,11 @@ export class DidResolver extends Logger {
     );
   }
 
+  /**
+   * Get environment dependent DID infix ('testnet:' || ''). Result is cached.
+   * 
+   * @return     {Promise<string>}  DID infix
+   */
   private async getDidInfix(): Promise<string> {
     if (typeof this.cached.didInfix === 'undefined') {
       this.cached.didInfix =
@@ -194,6 +222,11 @@ export class DidResolver extends Logger {
     return this.cached.didInfix;
   }
 
+  /**
+   * Get current environment ('testnet:' || 'core'). Result is cached.
+   * 
+   * @return     {Promise<string>}  current environment
+   */
   private async getEnvironment(): Promise<string> {
     if (!this.cached.environment) {
       this.cached.environment = await getEnvironment(this.options.web3);
@@ -201,6 +234,11 @@ export class DidResolver extends Logger {
     return this.cached.environment;
   }
 
+  /**
+   * Get web3 contract instance for DID registry contract via ENS. Result is cached.
+   * 
+   * @return     {Promise<any>}  DID registry contract
+   */
   private async getRegistryContract(): Promise<any> {
     if (!this.cached.didRegistryContract) {
       const didRegistryDomain = this.options.nameResolver.getDomainName(
@@ -212,6 +250,13 @@ export class DidResolver extends Logger {
     return this.cached.didRegistryContract;
   }
 
+  /**
+   * Pad leading zeroes to 20B identity, required for addressing 32B identity references in
+   * registry.
+   *
+   * @param      {string}  identity  identity contract/hash to pad
+   * @return     {string}  padded identity value
+   */
   private padIdentity(identity: string): string {
     return identity.length !== 66 ?
       `0x${identity.replace(/^0x/, '').padStart(64, '0')}` :
