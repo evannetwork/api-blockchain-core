@@ -10,6 +10,7 @@
 - remove old sharing ipfs hash within `saveSharingsToContract`
 - add `signer-identity` for making transactions via identity contract
 - add `getPublicKey` implementation to `SignerIdentity`
+- add `DidResolver` module for managing DID documents
 
 ### Fixes
 - move `expirationDate` in `formatToV2` to details object

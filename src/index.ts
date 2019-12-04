@@ -43,6 +43,7 @@ export { createDefaultRuntime, Runtime } from './runtime';
 export { CryptoProvider } from './encryption/crypto-provider';
 export { DataContract } from './contracts/data-contract/data-contract';
 export { Description } from './shared-description';
+export { DidResolver } from './did/did-resolver';
 export { EncryptionWrapperCryptorType, EncryptionWrapperKeyType, EncryptionWrapperOptions, EncryptionWrapper } from './encryption/encryption-wrapper';
 export { ExecutorAgent } from './contracts/executor-agent';
 export { ExecutorWallet } from './contracts/executor-wallet';
@@ -57,6 +58,7 @@ export { Profile } from './profile/profile';
 export { RightsAndRoles, ModificationType, PropertyType } from './contracts/rights-and-roles';
 export { ServiceContract, Answer, AnswerResult, Call, CallResult } from './contracts/service-contract/service-contract';
 export { Sharing } from './contracts/sharing';
+export { SignerIdentity } from './contracts/signer-identity';
 export {
   Verifications,
   VerificationsDelegationInfo,

@@ -44,6 +44,7 @@ import { Verifications } from '../verifications/verifications';
 import { configTestcore as config } from './../config-testcore';
 import { CryptoProvider } from '../encryption/crypto-provider';
 import { DataContract } from '../contracts/data-contract/data-contract';
+import { DidResolver } from '../did/did-resolver';
 import { EncryptionWrapper } from '../encryption/encryption-wrapper';
 import { ExecutorWallet } from '../contracts/executor-wallet';
 import { Ipld } from '../dfs/ipld';
@@ -53,6 +54,7 @@ import { Payments } from '../payments';
 import { Profile } from '../profile/profile';
 import { RightsAndRoles } from '../contracts/rights-and-roles';
 import { ServiceContract } from '../contracts/service-contract/service-contract';
+import { SignerIdentity } from '../contracts/signer-identity';
 import { setTimeout } from 'timers';
 import { Description } from '../shared-description';
 import { Sharing } from '../contracts/sharing';
@@ -215,7 +217,23 @@ export class TestUtils {
     });
   }
 
-  static async getEncryptionWrapper(web3: any, dfs: DfsInterface, requestedKeys?: string[]
+  public static async getDidResolver(web3: any, dfs?): Promise<DidResolver> {
+    const signerIdentity = await this.getSignerIdentity(web3);
+    const executor = new Executor(
+      { config: { alwaysAutoGasLimit: 1.1 }, signer: signerIdentity, web3 });
+    await executor.init({ eventHub: await TestUtils.getEventHub(web3) });
+
+    return new DidResolver({
+      contractLoader: await this.getContractLoader(web3),
+      dfs: dfs || (await this.getIpfs()),
+      executor,
+      nameResolver: await this.getNameResolver(web3),
+      signerIdentity,
+      web3,
+    });
+  }
+
+  public static async getEncryptionWrapper(web3: any, dfs: DfsInterface, requestedKeys?: string[]
   ): Promise<EncryptionWrapper> {
     return new EncryptionWrapper({
       cryptoProvider: this.getCryptoProvider(),
@@ -465,7 +483,35 @@ export class TestUtils {
     });
   }
 
-  static async getVotings(web3): Promise<Votings> {
+  public static async getSignerIdentity(web3: any): Promise<SignerIdentity> {
+    const contracts = await TestUtils.getContracts();
+    const contractLoader =  new ContractLoader({
+      contracts,
+      web3,
+    });
+    const accountStore = TestUtils.getAccountStore({});
+    const verifications = await TestUtils.getVerifications(web3, await TestUtils.getIpfs());
+    const underlyingSigner = new SignerInternal({
+      accountStore,
+      contractLoader,
+      config: {},
+      web3,
+    });
+    return new SignerIdentity(
+      {
+        contractLoader,
+        verifications,
+        web3,
+      },
+      {
+        activeIdentity: await verifications.getIdentityForAccount(accounts[0], true),
+        underlyingAccount: accounts[0],
+        underlyingSigner,
+      },
+    );
+  }
+
+  public static async getVotings(web3): Promise<Votings> {
     const executor = await TestUtils.getExecutor(web3);
     executor.eventHub = await TestUtils.getEventHub(web3);
     return new Votings({
