@@ -4,6 +4,7 @@
 ### Features
 
 ### Fixes
+- fix `Container` documentation links and add warning to `ContainerUnshareConfig` documentation 
 
 ### Deprecations
 
