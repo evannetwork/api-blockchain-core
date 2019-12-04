@@ -65,7 +65,7 @@ import { Wallet } from '../contracts/wallet';
 export const publicMailBoxExchange = 'mailboxKeyExchange';
 export const sampleContext = 'context sample';
 
-const web3Provider = <any>process.env.CHAIN_ENDPOINT || 'wss://testcore.evan.network/ws';
+const web3Provider = (process.env.CHAIN_ENDPOINT as any) || 'wss://testcore.evan.network/ws';
 // const wsp = new Web3.providers.WebsocketProvider(
 //   web3Provider, { clientConfig: { keepalive: true, keepaliveInterval: 5000 } });
 const localWeb3 = new Web3(web3Provider, null, { transactionConfirmationBlocks: 1 });
@@ -109,7 +109,7 @@ sampleKeys[localWeb3.utils.soliditySha3.apply(localWeb3.utils.soliditySha3,
 
 
 export class TestUtils {
-  public static getAccountStore(options): AccountStore {
+  public static getAccountStore(): AccountStore {
     return new AccountStore({ accounts: accountMap, });
   }
 
@@ -153,7 +153,6 @@ export class TestUtils {
     const cryptor = new Aes();
     const unencryptedCryptor = new Unencrypted();
     const cryptoConfig = {};
-    const cryptoInfo = cryptor.getCryptoInfo(localWeb3.utils.soliditySha3(accounts[0]));
     cryptoConfig['aes'] = cryptor;
     cryptoConfig['aesEcb'] = new AesEcb();
     cryptoConfig['unencrypted'] = unencryptedCryptor;
@@ -185,7 +184,6 @@ export class TestUtils {
 
   public static async getDescription(web3, dfsParam?: DfsInterface, requestedKeys?: string[]): Promise<Description> {
     const executor = await this.getExecutor(web3);
-    const contracts = await this.getContracts();
     const contractLoader = await this.getContractLoader(web3);
     const dfs = dfsParam || await this.getIpfs();
     const nameResolver =  await this.getNameResolver(web3);
@@ -247,7 +245,7 @@ export class TestUtils {
         contracts,
         web3,
       });
-      const accountStore = this.getAccountStore({});
+      const accountStore = this.getAccountStore();
       const signer = new SignerInternal({
         accountStore,
         contractLoader,
@@ -261,13 +259,13 @@ export class TestUtils {
     }
   }
 
-  public static async getExecutorWallet(web3, wallet, accountId, dfsParam?: DfsInterface): Promise<ExecutorWallet> {
+  public static async getExecutorWallet(web3, wallet, accountId): Promise<ExecutorWallet> {
     const contracts = await this.getContracts();
     const contractLoader =  new ContractLoader({
       contracts,
       web3,
     });
-    const accountStore = this.getAccountStore({});
+    const accountStore = this.getAccountStore();
     const signer = new SignerInternal({
       accountStore,
       contractLoader,
@@ -282,7 +280,7 @@ export class TestUtils {
 
   public static async getIpfs(): Promise<Ipfs> {
     const contracts = await this.getContracts();
-    const accountStore = this.getAccountStore({});
+    const accountStore = this.getAccountStore();
     const contractLoader =  new ContractLoader({
       contracts,
       web3: this.getWeb3(),
@@ -302,14 +300,10 @@ export class TestUtils {
   }
 
   public static async getIpld(_ipfs?: Ipfs, _keyProvider?: KeyProvider): Promise<Ipld> {
-    const cryptor = new Aes();
-    const key = await cryptor.generateKey();
     const ipfs = _ipfs ? _ipfs : await this.getIpfs();
     const nameResolver = await this.getNameResolver(await this.getWeb3());
     return new Promise<Ipld>((resolve) => {
       // crypto provider
-      const cryptoConfig = {};
-      const cryptoInfo = cryptor.getCryptoInfo(localWeb3.utils.soliditySha3(accounts[0]));
       const cryptoProvider = this.getCryptoProvider();
       // key provider
       const keyProvider = _keyProvider ||  (new KeyProvider({ keys: sampleKeys, }));
@@ -367,13 +361,13 @@ export class TestUtils {
     await executor.executeSend({ from: accoutId, value: 0, to: accoutId });
   }
 
-  public static async getPayments(web3, accountId): Promise<Payments> {
+  public static async getPayments(web3): Promise<Payments> {
     const executor = await TestUtils.getExecutor(web3);
     const eventHub = await TestUtils.getEventHub(web3);
     executor.eventHub = eventHub;
     const payments = new Payments({
       web3,
-      accountStore: this.getAccountStore({}),
+      accountStore: this.getAccountStore(),
       contractLoader: await TestUtils.getContractLoader(web3),
       executor,
     });
@@ -478,7 +472,7 @@ export class TestUtils {
       contracts,
       web3,
     });
-    const accountStore = TestUtils.getAccountStore({});
+    const accountStore = TestUtils.getAccountStore();
     const verifications = await TestUtils.getVerifications(web3, await TestUtils.getIpfs());
     const underlyingSigner = new SignerInternal({
       accountStore,
@@ -510,7 +504,7 @@ export class TestUtils {
       description: await TestUtils.getDescription(web3, dfs, requestedKeys),
       executor,
       nameResolver: await this.getNameResolver(web3),
-      accountStore: this.getAccountStore({}),
+      accountStore: this.getAccountStore(),
       dfs
     });
   }
@@ -538,7 +532,7 @@ export class TestUtils {
     });
   }
 
-  public static getWeb3(provider = web3Provider) {
+  public static getWeb3() {
     // connect to web3
     return localWeb3;
   }

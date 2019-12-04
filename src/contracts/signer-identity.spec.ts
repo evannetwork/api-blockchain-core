@@ -49,7 +49,7 @@ describe('signer-identity (identity based signer)', function() {
       contracts,
       web3,
     });
-    const accountStore = TestUtils.getAccountStore({});
+    const accountStore = TestUtils.getAccountStore();
     const verifications = await TestUtils.getVerifications(web3, await TestUtils.getIpfs());
     const underlyingSigner = new SignerInternal({
       accountStore,

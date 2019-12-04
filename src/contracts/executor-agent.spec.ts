@@ -51,7 +51,7 @@ describe.skip('Executor handler', function() {
 
   before(async () => {
     web3 = TestUtils.getWeb3();
-    const accountStore = TestUtils.getAccountStore({});
+    const accountStore = TestUtils.getAccountStore();
     contractLoader = await TestUtils.getContractLoader(web3);
     const signer = new SignerInternal({
       accountStore,
