@@ -123,21 +123,6 @@ export class TestUtils {
       log: Logger.getDefaultLog(),
       nameResolver: await TestUtils.getNameResolver(web3),
     });
-  };
-
-  public static async getVerifications(web3, dfs, requestedKeys?: string[]): Promise<Verifications> {
-    const eventHub = await this.getEventHub(web3);
-    const executor = await this.getExecutor(web3);
-    executor.eventHub = eventHub;
-    return new Verifications({
-      config,
-      contractLoader: await TestUtils.getContractLoader(web3),
-      description: await TestUtils.getDescription(web3, dfs, requestedKeys),
-      executor,
-      nameResolver: await this.getNameResolver(web3),
-      accountStore: this.getAccountStore({}),
-      dfs
-    });
   }
 
   public static getConfig(): any {
@@ -295,6 +280,27 @@ export class TestUtils {
     return executor;
   }
 
+  public static async getIpfs(): Promise<Ipfs> {
+    const contracts = await this.getContracts();
+    const accountStore = this.getAccountStore({});
+    const contractLoader =  new ContractLoader({
+      contracts,
+      web3: this.getWeb3(),
+    });
+    const signer = new SignerInternal({
+      accountStore,
+      contractLoader,
+      config: {},
+      web3: this.getWeb3(),
+    });
+    const ipfs = new Ipfs({
+      dfsConfig: {host: 'ipfs.test.evan.network', port: '443', protocol: 'https'},
+      disablePin: true
+    });
+    ipfs.setRuntime({ signer, activeAccount: accounts[0], web3: this.getWeb3() });
+    return ipfs;
+  }
+
   public static async getIpld(_ipfs?: Ipfs, _keyProvider?: KeyProvider): Promise<Ipld> {
     const cryptor = new Aes();
     const key = await cryptor.generateKey();
@@ -317,27 +323,6 @@ export class TestUtils {
         nameResolver,
       }))
     });
-  }
-
-  public static async getIpfs(): Promise<Ipfs> {
-    const contracts = await this.getContracts();
-    const accountStore = this.getAccountStore({});
-    const contractLoader =  new ContractLoader({
-      contracts,
-      web3: this.getWeb3(),
-    });
-    const signer = new SignerInternal({
-      accountStore,
-      contractLoader,
-      config: {},
-      web3: this.getWeb3(),
-    });
-    const ipfs = new Ipfs({
-      dfsConfig: {host: 'ipfs.test.evan.network', port: '443', protocol: 'https'},
-      disablePin: true
-    });
-    ipfs.setRuntime({ signer, activeAccount: accounts[0], web3: this.getWeb3() });
-    return ipfs;
   }
 
   public static getKeyProvider(requestedKeys?: string[]) {
@@ -376,6 +361,10 @@ export class TestUtils {
     });
 
     return nameResolver;
+  }
+
+  public static async nextBlock(executor: Executor, accoutId: string): Promise<void> {
+    await executor.executeSend({ from: accoutId, value: 0, to: accoutId });
   }
 
   public static async getPayments(web3, accountId): Promise<Payments> {
@@ -423,6 +412,15 @@ export class TestUtils {
     return `0x${crypto.randomBytes(32).toString('hex')}`;
   }
 
+  public static async getRightsAndRoles(web3) {
+    return new RightsAndRoles({
+      contractLoader: await TestUtils.getContractLoader(web3),
+      executor: await TestUtils.getExecutor(web3) ,
+      nameResolver: await TestUtils.getNameResolver(web3),
+      web3,
+    });
+  }
+
   public static async getRuntime(accountId, requestedKeys?): Promise<Runtime> {
     let keys;
     if (!requestedKeys) {
@@ -441,15 +439,6 @@ export class TestUtils {
         keyConfig: keys,
       }
     );
-  }
-
-  public static async getRightsAndRoles(web3) {
-    return new RightsAndRoles({
-      contractLoader: await TestUtils.getContractLoader(web3),
-      executor: await TestUtils.getExecutor(web3) ,
-      nameResolver: await TestUtils.getNameResolver(web3),
-      web3,
-    });
   }
 
   public static async getServiceContract(web3, ipfs?: Ipfs, keyProvider?: KeyProvider) {
@@ -511,6 +500,21 @@ export class TestUtils {
     );
   }
 
+  public static async getVerifications(web3, dfs, requestedKeys?: string[]): Promise<Verifications> {
+    const eventHub = await this.getEventHub(web3);
+    const executor = await this.getExecutor(web3);
+    executor.eventHub = eventHub;
+    return new Verifications({
+      config,
+      contractLoader: await TestUtils.getContractLoader(web3),
+      description: await TestUtils.getDescription(web3, dfs, requestedKeys),
+      executor,
+      nameResolver: await this.getNameResolver(web3),
+      accountStore: this.getAccountStore({}),
+      dfs
+    });
+  }
+
   public static async getVotings(web3): Promise<Votings> {
     const executor = await TestUtils.getExecutor(web3);
     executor.eventHub = await TestUtils.getEventHub(web3);
@@ -538,10 +542,6 @@ export class TestUtils {
     // connect to web3
     return localWeb3;
   }
-
-  public static async nextBlock(executor: Executor, accoutId: string): Promise<void> {
-    await executor.executeSend({ from: accoutId, value: 0, to: accoutId });
-  };
 
   public static async sleep(ms): Promise<void> {
     await new Promise(s => setTimeout(() => s(), ms));
