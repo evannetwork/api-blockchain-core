@@ -108,6 +108,19 @@ export class SignerIdentity extends Logger implements SignerInterface {
   }
 
   /**
+   * get public key for given account
+   *
+   * @param      {string}  accountId  account to get public key for
+   */
+  public async getPublicKey(accountId: string): Promise<string> {
+    if (accountId !== this.underlyingAccount) {
+      throw new Error('getting public key is only supported for \'underlyingAccount\'');
+    }
+    
+    return this.config.underlyingSigner.getPublicKey(accountId);
+  }
+
+  /**
    * Performs a value transfer transaction. This will send specified funds to identity, which will
    * send it to target. Funds are returned if transaction fails.
    *
@@ -178,11 +191,10 @@ export class SignerIdentity extends Logger implements SignerInterface {
     accountId: string,
     message: string,
   ): Promise<string> {
-    if (accountId === this.underlyingAccount) {
-      return this.config.underlyingSigner.signMessage(accountId, message);
-    } else {
-      throw new Error('signing messages with identities is not supported');
+    if (accountId !== this.underlyingAccount) {
+      throw new Error('signing messages with identities is only supported for \'underlyingAccount\'');
     }
+    return this.config.underlyingSigner.signMessage(accountId, message);
   }
 
   /**

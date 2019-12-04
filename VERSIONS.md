@@ -9,6 +9,7 @@
 - implement `unPinFileHash` function in dfs
 - remove old sharing ipfs hash within `saveSharingsToContract`
 - add `signer-identity` for making transactions via identity contract
+- add `getPublicKey` implementation to `SignerIdentity`
 
 ### Fixes
 - move `expirationDate` in `formatToV2` to details object
