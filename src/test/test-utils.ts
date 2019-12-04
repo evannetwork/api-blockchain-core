@@ -109,11 +109,11 @@ sampleKeys[localWeb3.utils.soliditySha3.apply(localWeb3.utils.soliditySha3,
 
 
 export class TestUtils {
-  static getAccountStore(options): AccountStore {
+  public static getAccountStore(options): AccountStore {
     return new AccountStore({ accounts: accountMap, });
   }
 
-  static async getBaseContract(web3): Promise<BaseContract> {
+  public static async getBaseContract(web3): Promise<BaseContract> {
     const eventHub = await this.getEventHub(web3);
     const executor = await this.getExecutor(web3);
     executor.eventHub = eventHub;
@@ -125,7 +125,7 @@ export class TestUtils {
     });
   };
 
-  static async getVerifications(web3, dfs, requestedKeys?: string[]): Promise<Verifications> {
+  public static async getVerifications(web3, dfs, requestedKeys?: string[]): Promise<Verifications> {
     const eventHub = await this.getEventHub(web3);
     const executor = await this.getExecutor(web3);
     executor.eventHub = eventHub;
@@ -140,11 +140,11 @@ export class TestUtils {
     });
   }
 
-  static getConfig(): any {
+  public static getConfig(): any {
     return config;
   }
 
-  static async getContractLoader(web3): Promise<ContractLoader> {
+  public static async getContractLoader(web3): Promise<ContractLoader> {
     const contracts = await this.getContracts();
     return new ContractLoader({
       contracts,
@@ -152,7 +152,7 @@ export class TestUtils {
     });
   }
 
-  static async getContracts() {
+  public static async getContracts() {
 
     const solc = new smartContract.Solc({
       log: Logger.getDefaultLog(),
@@ -164,7 +164,7 @@ export class TestUtils {
     return contracts;
   }
 
-  static getCryptoProvider(dfs?: any) {
+  public static getCryptoProvider(dfs?: any) {
     const cryptor = new Aes();
     const unencryptedCryptor = new Unencrypted();
     const cryptoConfig = {};
@@ -178,7 +178,7 @@ export class TestUtils {
     return new CryptoProvider(cryptoConfig);
   }
 
-  static async getDataContract(web3, dfs, requestedKeys?: string[]) {
+  public static async getDataContract(web3, dfs, requestedKeys?: string[]) {
     const sharing = await this.getSharing(web3, dfs, requestedKeys);
     const description = await this.getDescription(web3, dfs, requestedKeys);
     description.sharing = sharing;
@@ -198,7 +198,7 @@ export class TestUtils {
     });
   }
 
-  static async getDescription(web3, dfsParam?: DfsInterface, requestedKeys?: string[]): Promise<Description> {
+  public static async getDescription(web3, dfsParam?: DfsInterface, requestedKeys?: string[]): Promise<Description> {
     const executor = await this.getExecutor(web3);
     const contracts = await this.getContracts();
     const contractLoader = await this.getContractLoader(web3);
@@ -244,7 +244,7 @@ export class TestUtils {
     });
   }
 
-  static async getEventHub(web3): Promise<EventHub> {
+  public static async getEventHub(web3): Promise<EventHub> {
     return new EventHub({
       config: config.nameResolver,
       contractLoader: await this.getContractLoader(web3),
@@ -253,7 +253,7 @@ export class TestUtils {
     });
   }
 
-  static async getExecutor(web3, isReadonly?): Promise<Executor> {
+  public static async getExecutor(web3: any, isReadonly = false): Promise<Executor> {
     if (isReadonly) {
       return new Executor({});
     } else {
@@ -276,7 +276,7 @@ export class TestUtils {
     }
   }
 
-  static async getExecutorWallet(web3, wallet, accountId, dfsParam?: DfsInterface): Promise<ExecutorWallet> {
+  public static async getExecutorWallet(web3, wallet, accountId, dfsParam?: DfsInterface): Promise<ExecutorWallet> {
     const contracts = await this.getContracts();
     const contractLoader =  new ContractLoader({
       contracts,
@@ -295,7 +295,7 @@ export class TestUtils {
     return executor;
   }
 
-  static async getIpld(_ipfs?: Ipfs, _keyProvider?: KeyProvider): Promise<Ipld> {
+  public static async getIpld(_ipfs?: Ipfs, _keyProvider?: KeyProvider): Promise<Ipld> {
     const cryptor = new Aes();
     const key = await cryptor.generateKey();
     const ipfs = _ipfs ? _ipfs : await this.getIpfs();
@@ -319,7 +319,7 @@ export class TestUtils {
     });
   }
 
-  static async getIpfs(): Promise<Ipfs> {
+  public static async getIpfs(): Promise<Ipfs> {
     const contracts = await this.getContracts();
     const accountStore = this.getAccountStore({});
     const contractLoader =  new ContractLoader({
@@ -340,7 +340,7 @@ export class TestUtils {
     return ipfs;
   }
 
-  static getKeyProvider(requestedKeys?: string[]) {
+  public static getKeyProvider(requestedKeys?: string[]) {
     let keys;
     if (!requestedKeys) {
       keys = sampleKeys;
@@ -353,15 +353,15 @@ export class TestUtils {
     return new KeyProvider({ keys, });
   }
 
-  static getKeys(): any {
+  public static getKeys(): any {
     return sampleKeys;
   }
 
-  static getLogger(): Function {
+  public static getLogger(): Function {
     return Logger.getDefaultLog();
   }
 
-  static async getNameResolver(web3): Promise<NameResolver> {
+  public static async getNameResolver(web3): Promise<NameResolver> {
     const contracts = await this.getContracts();
     const contractLoader =  new ContractLoader({
       contracts,
@@ -378,7 +378,7 @@ export class TestUtils {
     return nameResolver;
   }
 
-  static async getPayments(web3, accountId): Promise<Payments> {
+  public static async getPayments(web3, accountId): Promise<Payments> {
     const executor = await TestUtils.getExecutor(web3);
     const eventHub = await TestUtils.getEventHub(web3);
     executor.eventHub = eventHub;
@@ -392,7 +392,7 @@ export class TestUtils {
     return payments;
   }
 
-  static async getProfile(web3, ipfs?, ipld?, accountId?): Promise<Profile> {
+  public static async getProfile(web3, ipfs?, ipld?, accountId?): Promise<Profile> {
     const executor = await TestUtils.getExecutor(web3);
     const dfs = ipfs || await TestUtils.getIpfs();
     executor.eventHub = await TestUtils.getEventHub(web3);
@@ -415,11 +415,11 @@ export class TestUtils {
     return profile;
   }
 
-  static getRandomAddress(): string {
+  public static getRandomAddress(): string {
     return localWeb3.utils.toChecksumAddress(`0x${crypto.randomBytes(20).toString('hex')}`);
   }
 
-  static getRandomBytes32(): string {
+  public static getRandomBytes32(): string {
     return `0x${crypto.randomBytes(32).toString('hex')}`;
   }
 
@@ -443,7 +443,7 @@ export class TestUtils {
     );
   }
 
-  static async getRightsAndRoles(web3) {
+  public static async getRightsAndRoles(web3) {
     return new RightsAndRoles({
       contractLoader: await TestUtils.getContractLoader(web3),
       executor: await TestUtils.getExecutor(web3) ,
@@ -452,7 +452,7 @@ export class TestUtils {
     });
   }
 
-  static async getServiceContract(web3, ipfs?: Ipfs, keyProvider?: KeyProvider) {
+  public static async getServiceContract(web3, ipfs?: Ipfs, keyProvider?: KeyProvider) {
     const executor = await TestUtils.getExecutor(web3);
     executor.eventHub = await TestUtils.getEventHub(web3);
     const dfs = ipfs || await TestUtils.getIpfs();
@@ -469,7 +469,7 @@ export class TestUtils {
     });
   }
 
-  static async getSharing(web3, dfsParam?: DfsInterface, requestedKeys?: string[]): Promise<Sharing> {
+  public static async getSharing(web3, dfsParam?: DfsInterface, requestedKeys?: string[]): Promise<Sharing> {
     const dfs = dfsParam ? dfsParam : await TestUtils.getIpfs();
     return new Sharing({
       contractLoader: await TestUtils.getContractLoader(web3),
@@ -521,7 +521,7 @@ export class TestUtils {
     });
   }
 
-  static async getWallet(web3, dfsParam?: DfsInterface): Promise<Wallet> {
+  public static async getWallet(web3, dfsParam?: DfsInterface): Promise<Wallet> {
     const dfs = dfsParam ? dfsParam : await TestUtils.getIpfs();
     const executor = await TestUtils.getExecutor(web3);
     executor.eventHub = await TestUtils.getEventHub(web3);
@@ -534,16 +534,16 @@ export class TestUtils {
     });
   }
 
-  static getWeb3(provider = web3Provider) {
+  public static getWeb3(provider = web3Provider) {
     // connect to web3
     return localWeb3;
   }
 
-  static async nextBlock(executor: Executor, accoutId: string): Promise<void> {
+  public static async nextBlock(executor: Executor, accoutId: string): Promise<void> {
     await executor.executeSend({ from: accoutId, value: 0, to: accoutId });
   };
 
-  static async sleep(ms): Promise<void> {
+  public static async sleep(ms): Promise<void> {
     await new Promise(s => setTimeout(() => s(), ms));
   }
 }
