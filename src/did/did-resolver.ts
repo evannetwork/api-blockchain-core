@@ -38,6 +38,8 @@ import {
   SignerIdentity,
 } from '../index';
 
+const didRegEx = /^did:evan:(?:(testnet|mainnet):)?(0x[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$/;
+
 export interface DidDocumentTemplate {
   '@context': string;
   id: string;
@@ -115,12 +117,16 @@ export class DidResolver extends Logger {
     }`);
   }
 
-  public async getDidDocument(identity?: string): Promise<any> {
+  public async getDidDocument(did?: string): Promise<any> {
     let result = null;
+    const identity = this.padIdentity(did ?
+      await this.convertDidToIdentity(did) :
+      this.options.signerIdentity.activeIdentity
+    );
     const documentHash = await this.options.executor.executeContractCall(
       await this.getRegistryContract(),
       'didDocuments',
-      this.padIdentity(identity || this.options.signerIdentity.activeIdentity),
+      identity,
     );
     if (documentHash !== nullBytes32) {
       result = JSON.parse(await this.options.dfs.get(documentHash) as any);
@@ -128,24 +134,54 @@ export class DidResolver extends Logger {
     return result;
   }
 
-  public async setDidDocument(document: any, identity?: string): Promise<void> {
+  public async setDidDocument(document: any, did?: string): Promise<void> {
+    const identity = this.padIdentity(did ?
+      await this.convertDidToIdentity(did) :
+      this.options.signerIdentity.activeIdentity
+    );
     const documentHash = await this.options.dfs.add(
       'did-document', Buffer.from(JSON.stringify(document), 'utf8'));
     await this.options.executor.executeContractTransaction(
       await this.getRegistryContract(),
       'setDidDocument',
       { from: this.options.signerIdentity.activeIdentity },
-      this.padIdentity(identity || this.options.signerIdentity.activeIdentity),
+      identity,
       documentHash,
     );
+  }
+
+  private async convertDidToIdentity(did: string): Promise<string> {
+    const groups = didRegEx.exec(did);
+    if (!groups) {
+      throw new Error(`given did ("${did}") is no valid evan DID`);
+    }
+    const [ , didEnvironment = 'mainnet', identity ] = groups;
+    const environment = await this.getEnvironment();
+    if (environment === 'testcore' && didEnvironment !== 'testnet' ||
+        environment === 'core' && didEnvironment !== 'mainnet') {
+      throw new Error(`DIDs environment "${environment} does not match ${didEnvironment}`);
+    }
+
+    return identity;
+  }
+
+  private async convertIdentityToDid(identity: string): Promise<string> {
+    return `did:evan:${await this.getDidInfix()}${identity}`;
   }
 
   private async getDidInfix(): Promise<string> {
     if (typeof this.cached.didInfix === 'undefined') {
       this.cached.didInfix =
-        (await getEnvironment(this.options.web3)) === 'testcore' ? 'testnet:' : '';
+        (await this.getEnvironment()) === 'testcore' ? 'testnet:' : '';
     }
     return this.cached.didInfix;
+  }
+
+  private async getEnvironment(): Promise<string> {
+    if (!this.cached.environment) {
+      this.cached.environment = await getEnvironment(this.options.web3);
+    }
+    return this.cached.environment;
   }
 
   private async getRegistryContract(): Promise<any> {
