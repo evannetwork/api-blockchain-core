@@ -2,6 +2,14 @@
 
 ## Next Version
 ### Features
+
+### Fixes
+
+### Deprecations
+
+
+## Version 2.15.0
+### Features
 - add `setContainerShareConfigs` to `Container` API
 - add `removeEntries` to `Container` API
 - only allow `unshareProperties` for owner, if force attribute is set
@@ -16,6 +24,7 @@
 - fix profile type iot device specification
 - ensure that content keys, before they get shared, are added to the `Container` keys
 - add `EncryptionWrapperCryptorType`, `EncryptionWrapperKeyType`, `EncryptionWrapperOptions`, `EncryptionWrapper` to `index.ts` exports
+- update naming of verifications (replace older occurrences of "validations" with "verifications")
 
 ### Deprecations
 - remove registration company name and use accountName for all

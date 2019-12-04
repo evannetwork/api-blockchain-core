@@ -18,18 +18,18 @@
 */
 
 import KeyStore = require('../libs/eth-lightwallet/keystore');
-import Web3 = require('web3');
 import https = require('https');
+import { cloneDeep, merge } from 'lodash';
 
 import {
   Logger,
   LoggerOptions,
 } from '@evan.network/dbcp';
 
-import { createDefaultRuntime } from './runtime';
-import { Ipfs } from './dfs/ipfs';
+import { createDefaultRuntime, Runtime } from './runtime';
 import { Mail, Mailbox } from './mailbox';
 import { Profile } from './profile/profile';
+import * as AccountType from './profile/types/types';
 
 /**
  * mail that will be sent to invitee
@@ -69,13 +69,14 @@ export class Onboarding extends Logger {
   /**
    * Creates a new profile for a given mnemonic, and password
    *
-   * @param      {string}  mnemonic  given mnemonic for the new profile
-   * @param      {string}  password  password for the given profile
-   * @param      {string}  network   selected network (testcore/core) - defaults to testcore
+   * @param      {string}  mnemonic            given mnemonic for the new profile
+   * @param      {string}  password            password for the given profile
+   * @param      {any}     profileProperties   Properties for the profile to be created
    *
    * @return     {Promise<any>}   resolved when done
    */
-  public static async createNewProfile(mnemonic: string, password: string, network = 'testcore'
+
+  public static async createNewProfile(runtime: Runtime, mnemonic: string, password: string, profileProperties: any
   ): Promise<any> {
     if (!mnemonic) {
       throw new Error(`mnemonic is a required parameter!`);
@@ -85,40 +86,192 @@ export class Onboarding extends Logger {
       throw new Error(`password is a required parameter!`);
     }
 
-    if (network !== 'testcore' && network !== 'core') {
-      throw new Error(`a valid network (testcore/core) must be specified`);
+    const runtimeConfig: any = await Onboarding.generateRuntimeConfig(mnemonic, password, runtime.web3);
+    const runtimeNew = await createDefaultRuntime(runtime.web3, runtime.dfs, runtimeConfig);
+
+    // check if the source runtime has enough funds
+    const profileCost = runtime.web3.utils.toWei('1.0097');
+    const runtimeFunds = await runtime.web3.eth.getBalance(runtime.activeAccount);
+    const BN = runtime.web3.utils.BN;
+    if ((new BN(runtimeFunds)).lt(new BN(profileCost))) {
+      throw new Error(`The account ${runtime.activeAccount} has less than 1.0097 EVE to create a new profile`);
     }
 
-    const web3Provider = `wss://${network}.evan.network/ws`;
-    // use Web3 without its typings to avoid issues with constructor typing
-    const web3 = new (Web3 as any)(web3Provider, null, { transactionConfirmationBlocks: 1 });
+    try {
+      await Profile.checkCorrectProfileData(
+        profileProperties,
+        profileProperties.accountDetails.profileType,
+      );
+    } catch (ex) {
+      throw new Error('The parameters passed are incorrect, profile properties need to be reconfigured');
+    }
 
-    const runtimeConfig: any = await Onboarding.generateRuntimeConfig(mnemonic, password, web3);
+    await runtime.executor.executeSend({
+      from: runtime.activeAccount,
+      to: runtimeNew.activeAccount,
+      value: profileCost,
+    })
 
-    const accountId = Object.keys((runtimeConfig).accountMap)[0];
-    const privateKey = (runtimeConfig).accountMap[accountId];
-    const ipfs = new Ipfs({
-      dfsConfig: {
-        host: `ipfs${network === 'testcore' ? '.test' : ''}.evan.network`,
-        port: '443',
-        protocol: 'https'
-      },
-      disablePin: true,
-      accountId: accountId,
-      privateKey: `0x${privateKey}`,
-      web3
-    });
-
-    const runtime = await createDefaultRuntime(web3, ipfs, runtimeConfig);
-
-    await Onboarding.createOfflineProfile(
-      runtime, 'Generated via API', accountId, privateKey, network)
+    await Onboarding.createProfile(runtimeNew, profileProperties);
 
     return {
       mnemonic,
       password,
       runtimeConfig
     }
+  }
+
+
+
+  /**
+   * create new profile, store it to profile index initialize addressBook and publicKey
+   *
+   * @param      {string}         keys    communication key to store
+   * @return     {Promise<void>}  resolved when done
+   */
+  public static async createProfile(runtime, profileData: any): Promise<void> {
+
+    const factoryDomain = runtime.nameResolver.getDomainName(
+      runtime.nameResolver.config.domains.profileFactory);
+    const factoryAddress = await runtime.nameResolver.getAddress(factoryDomain);
+
+    const combinedDataSchema = merge(
+        ...Object.keys(AccountType).map(accountType => cloneDeep(AccountType[accountType])))
+    const properties = combinedDataSchema.template.properties
+    const ajvProperties = {}
+    for (let key of Object.keys(properties)) {
+      ajvProperties[key] = properties[key].dataSchema
+    }
+    const dataSchemaEntries =
+      Object.keys(ajvProperties).filter(property => ajvProperties[property].type !== 'array')
+    const dataSchemaLists =
+      Object.keys(ajvProperties).filter(property => ajvProperties[property].type === 'array')
+
+    const description = {
+      public: {
+        name: 'Container Contract (DataContract)',
+        description: 'Container for Digital Twin Data',
+        author: '',
+        version: '0.1.0',
+        dbcpVersion: 2,
+        abis: {
+          own: JSON.parse(runtime.contractLoader.contracts.DataContract.interface),
+        },
+        dataSchema: ajvProperties,
+      },
+    };
+    const descriptionHash = await runtime.dfs.add(
+      'description', Buffer.from(JSON.stringify(description), 'binary'));
+
+    const factory = runtime.contractLoader.loadContract(
+      'ProfileDataContractFactoryInterface', factoryAddress)
+    const contractId = await runtime.executor.executeContractTransaction(
+      factory,
+      'createContract',
+      {
+        from: runtime.activeAccount,
+        autoGas: 1.1,
+        event: { target: 'BaseContractFactoryInterface', eventName: 'ContractCreated', },
+        getEventResult: (event, args) => args.newAddress,
+      },
+      '0x'.padEnd(42, '0'),
+      runtime.activeAccount,
+      descriptionHash,
+      runtime.nameResolver.config.ensAddress,
+      [...Object.values(runtime.profile.treeLabels), ...dataSchemaEntries]
+        .map(name => runtime.nameResolver.soliditySha3(name)),
+      dataSchemaLists
+        .map(name => runtime.nameResolver.soliditySha3(name)),
+    );
+    const contractInterface =
+      runtime.contractLoader.loadContract('DataContractInterface', contractId);
+    const rootDomain = runtime.nameResolver.namehash(
+      runtime.nameResolver.getDomainName(
+        runtime.nameResolver.config.domains.root));
+    await runtime.executor.executeContractTransaction(
+      contractInterface,
+      'init',
+      { from: runtime.activeAccount, autoGas: 1.1, },
+      rootDomain,
+      false,
+    );
+
+    const encodingUnencrypted = 'utf-8';
+    const cryptoAlgorithHashes = 'aesEcb';
+    const cryptorAes = runtime.cryptoProvider.getCryptorByCryptoAlgo(
+      'aes');
+    const hashCryptor = runtime.cryptoProvider.getCryptorByCryptoAlgo(cryptoAlgorithHashes);
+    const [hashKey, blockNr] = await Promise.all([
+      hashCryptor.generateKey(),
+      runtime.web3.eth.getBlockNumber(),
+    ]);
+
+    // setup sharings for new profile
+    const sharings = {};
+    const profileKeys = Object.keys(profileData);
+    // add hashKey
+    await runtime.sharing.extendSharings(
+      sharings, runtime.activeAccount, runtime.activeAccount, '*', 'hashKey', hashKey);
+    // extend sharings for profile data
+    const dataContentKeys = await Promise.all(profileKeys.map(() => cryptorAes.generateKey()));
+    for (let i = 0; i < profileKeys.length; i++) {
+      await runtime.sharing.extendSharings(
+        sharings, runtime.activeAccount, runtime.activeAccount, profileKeys[i], blockNr, dataContentKeys[i]);
+    }
+    // upload sharings
+    let sharingsHash = await runtime.dfs.add(
+      'sharing', Buffer.from(JSON.stringify(sharings), encodingUnencrypted));
+
+
+
+
+    runtime.profile.profileOwner = runtime.activeAccount;
+    runtime.profile.profileContract = runtime.contractLoader.loadContract('DataContract', contractId)
+
+    await runtime.executor.executeContractTransaction(
+      runtime.profile.profileContract,
+      'setSharing',
+      { from: runtime.activeAccount, autoGas: 1.1, },
+      sharingsHash
+    );
+    const dhKeys = runtime.keyExchange.getDiffieHellmanKeys();
+    await Promise.all([
+      // call `setEntry` for each pre-build entry value
+      ...((profileData ?  Object.keys(profileData) : [])
+        .map(entry =>
+          runtime.dataContract.setEntry(
+            runtime.profile.profileContract,
+            entry,
+            profileData[entry],
+            runtime.activeAccount,
+          )
+        )
+      ),
+      (async () => {
+        await runtime.profile.addContactKey(
+          runtime.activeAccount, 'dataKey', dhKeys.privateKey.toString('hex'));
+        await runtime.profile.addProfileKey(runtime.activeAccount, 'alias', profileData.accountDetails.accountName);
+        await runtime.profile.addPublicKey(dhKeys.publicKey.toString('hex'));
+        await runtime.profile.storeForAccount(runtime.profile.treeLabels.addressBook);
+        await runtime.profile.storeForAccount(runtime.profile.treeLabels.publicKey);
+      })(),
+      (async () => {
+        const profileIndexDomain = runtime.nameResolver.getDomainName(
+          runtime.nameResolver.config.domains.profile);
+
+        const profileIndexAddress = await runtime.nameResolver.getAddress(profileIndexDomain);
+        // register profile for user
+        const profileIndexContract = runtime.contractLoader.loadContract(
+          'ProfileIndexInterface', profileIndexAddress);
+        await runtime.executor.executeContractTransaction(
+          profileIndexContract,
+          'setMyProfile',
+          { from: runtime.activeAccount, autoGas: 1.1, },
+          runtime.profile.profileContract.options.address,
+        );
+      })()
+    ])
+
   }
 
   /**

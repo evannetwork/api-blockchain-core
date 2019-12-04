@@ -372,6 +372,7 @@ export class TestUtils {
       contractLoader: await TestUtils.getContractLoader(web3),
       executor,
     });
+    payments.startBlock = await web3.eth.getBlockNumber();
     return payments;
   }
 
