@@ -200,8 +200,8 @@ export class TestUtils {
     });
   }
 
-  public static async getDidResolver(web3: any, dfs?): Promise<DidResolver> {
-    const signerIdentity = await this.getSignerIdentity(web3);
+  public static async getDidResolver(web3: any, accountId?: string, dfs?: any): Promise<DidResolver> {
+    const signerIdentity = await this.getSignerIdentity(web3, accountId);
     const executor = new Executor(
       { config: { alwaysAutoGasLimit: 1.1 }, signer: signerIdentity, web3 });
     await executor.init({ eventHub: await TestUtils.getEventHub(web3) });
@@ -466,7 +466,7 @@ export class TestUtils {
     });
   }
 
-  public static async getSignerIdentity(web3: any): Promise<SignerIdentity> {
+  public static async getSignerIdentity(web3: any, accountId = accounts[0]): Promise<SignerIdentity> {
     const contracts = await TestUtils.getContracts();
     const contractLoader =  new ContractLoader({
       contracts,
@@ -487,14 +487,14 @@ export class TestUtils {
         web3,
       },
       {
-        activeIdentity: await verifications.getIdentityForAccount(accounts[0], true),
-        underlyingAccount: accounts[0],
+        activeIdentity: await verifications.getIdentityForAccount(accountId, true),
+        underlyingAccount: accountId,
         underlyingSigner,
       },
     );
   }
 
-  public static async getVerifications(web3, dfs, requestedKeys?: string[]): Promise<Verifications> {
+  public static async getVerifications(web3, dfs?, requestedKeys?: string[]): Promise<Verifications> {
     const eventHub = await this.getEventHub(web3);
     const executor = await this.getExecutor(web3);
     executor.eventHub = eventHub;
@@ -505,7 +505,7 @@ export class TestUtils {
       executor,
       nameResolver: await this.getNameResolver(web3),
       accountStore: this.getAccountStore(),
-      dfs
+      dfs: dfs || (await this.getIpfs())
     });
   }
 

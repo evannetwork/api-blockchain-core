@@ -81,17 +81,53 @@ export interface DidResolverOptions extends LoggerOptions {
   web3: any;
 }
 
-
+/**
+ * module for working with did resolver registry
+ *
+ * @class      DidResolver (name)
+ */
 export class DidResolver extends Logger {
   private cached: any;
   private config: DidResolverConfig;
   private options: DidResolverOptions;
 
+  /**
+   * Creates a new `DidResolver` instance
+   *
+   * @param      {DidResolverOptions}  options  runtime like options for `DidResolver`
+   * @param      {DidResolverCOnfig}   config   (optional) custom connfig for resolver, maybe
+   *                                            removed later on
+   */
   public constructor(options: DidResolverOptions, config: DidResolverConfig = {}) {
     super(options as LoggerOptions);
     this.options = options;
     this.config = config;
     this.cached = {};
+  }
+
+  /**
+   * Converts given DID to a evan.network identity.
+   *
+   * @param      {string}  did     DID like "did:evan:0x1234"
+   * @return     {Promise<string>}   evan.network identity like "0x1234"
+   */
+  public async convertDidToIdentity(did: string): Promise<string> {
+    const groups = didRegEx.exec(did);
+    if (!groups) {
+      throw new Error(`given did ("${did}") is no valid evan DID`);
+    }
+    const [ , didEnvironment = 'mainnet', identity ] = groups;
+    const environment = await this.getEnvironment();
+    if (environment === 'testcore' && didEnvironment !== 'testnet' ||
+        environment === 'core' && didEnvironment !== 'mainnet') {
+      throw new Error(`DIDs environment "${environment} does not match ${didEnvironment}`);
+    }
+
+    return identity;
+  }
+
+  public async convertIdentityToDid(identity: string): Promise<string> {
+    return `did:evan:${await this.getDidInfix()}${identity}`;
   }
 
   public async getDidDocumentTemplate(): Promise<DidDocumentTemplate> {
@@ -148,25 +184,6 @@ export class DidResolver extends Logger {
       identity,
       documentHash,
     );
-  }
-
-  private async convertDidToIdentity(did: string): Promise<string> {
-    const groups = didRegEx.exec(did);
-    if (!groups) {
-      throw new Error(`given did ("${did}") is no valid evan DID`);
-    }
-    const [ , didEnvironment = 'mainnet', identity ] = groups;
-    const environment = await this.getEnvironment();
-    if (environment === 'testcore' && didEnvironment !== 'testnet' ||
-        environment === 'core' && didEnvironment !== 'mainnet') {
-      throw new Error(`DIDs environment "${environment} does not match ${didEnvironment}`);
-    }
-
-    return identity;
-  }
-
-  private async convertIdentityToDid(identity: string): Promise<string> {
-    return `did:evan:${await this.getDidInfix()}${identity}`;
   }
 
   private async getDidInfix(): Promise<string> {
