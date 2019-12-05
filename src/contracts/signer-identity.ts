@@ -60,12 +60,19 @@ export class SignerIdentity extends Logger implements SignerInterface {
   private config: SignerIdentityConfig;
   private options: SignerIdentityOptions;
 
-  public constructor(options: SignerIdentityOptions, config: SignerIdentityConfig) {
+  /**
+   * Creates a new `SignerInternal` instance. `config` can be set up later on with `updateConfig`,
+   * if required (e.g. when initializing a circular structure)
+   *
+   * @param      {SignerIdentityOptions}  options  runtime like object
+   * @param      {SignerIdentityConfig}  config    (optional) config for `SignerInternal`
+   */
+  public constructor(options: SignerIdentityOptions, config: SignerIdentityConfig = null) {
     super(options);
     this.options = options;
-    this.config = config;
-    this.activeIdentity = this.config.activeIdentity;
-    this.underlyingAccount = this.config.underlyingAccount;
+    if (config) {
+      this.updateConfig(options, config);
+    }
   }
 
   /**
@@ -195,6 +202,24 @@ export class SignerIdentity extends Logger implements SignerInterface {
       throw new Error('signing messages with identities is only supported for \'underlyingAccount\'');
     }
     return this.config.underlyingSigner.signMessage(accountId, message);
+  }
+
+  /**
+   * Update config of `SignerInternal` can also be used to setup verifications and accounts after
+   * initial setup and linking with other modules.
+   *
+   * @param      {{ verifications: Verifications }}  partialOptions  object with `verifications`
+   *                                                                 property, e.g. a runtime
+   * @param      {SignerIdentityConfig}              config          signer identity config
+   */
+  public updateConfig(
+    partialOptions: { verifications: Verifications },
+    config: SignerIdentityConfig,
+  ): void {
+    this.options.verifications = partialOptions.verifications;
+    this.config = config;
+    this.activeIdentity = this.config.activeIdentity;
+    this.underlyingAccount = this.config.underlyingAccount;
   }
 
   /**
