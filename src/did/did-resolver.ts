@@ -39,17 +39,17 @@ const didRegEx = /^did:evan:(?:(testnet|mainnet):)?(0x(?:[0-9a-fA-F]{40}|[0-9a-f
 export interface DidDocumentTemplate {
   '@context': string;
   id: string;
-  publicKey: {
-    id: string;
-    type: string[];
-    publicKeyHex: string;
-  }[];
   authentication: {
     type: string;
     publicKey: string;
   } | {
     type: string;
     publicKey: string;
+  }[];
+  publicKey?: {
+    id: string;
+    type: string[];
+    publicKeyHex: string;
   }[];
   service?: {
     id: string;
@@ -138,29 +138,47 @@ export class DidResolver extends Logger {
    * matching it at all. You can use the result of this function to build a new DID document but
    * should extend it or an existing DID document, if your details derive from default format.
    *
+   * @param      {string}  did                contract DID
+   * @param      {string}  controllerDid      controller of contracts identity (DID)
+   * @param      {string}  authenticationKey  authentication key used for contract
    * @return     {Promise<DidDocumentTemplate>}  a DID document template
    */
-  public async getDidDocumentTemplate(): Promise<DidDocumentTemplate> {
-    const identity = this.options.signerIdentity.activeIdentity;
-    const [ didInfix, publicKey ] = await Promise.all([
-      this.getDidInfix(),
-      this.options.signerIdentity.getPublicKey(
-        this.options.signerIdentity.underlyingAccount),
-    ]);
+  public async getDidDocumentTemplate(
+    did?: string, controllerDid?: string, authenticationKey?: string
+  ): Promise<DidDocumentTemplate> {
+    if (did && controllerDid && authenticationKey) {
+      // use given key to create a contract DID document
+      return JSON.parse(`{
+        "@context": "https://w3id.org/did/v1",
+        "id": "${did}",
+        "controller": "${controllerDid}",
+        "authentication": [
+          "${authenticationKey}"
+        ]
+      }`);
+    } else if (!(did || controllerDid || authenticationKey)) {
+      const identity = this.options.signerIdentity.activeIdentity;
+      const [ didInfix, publicKey ] = await Promise.all([
+        this.getDidInfix(),
+        this.options.signerIdentity.getPublicKey(
+          this.options.signerIdentity.underlyingAccount),
+      ]);
 
-    return JSON.parse(`{
-      "@context": "https://w3id.org/did/v1",
-      "is": "did:evan:${didInfix}${identity}",
-      "publicKey": [{
-        "id": "did:evan:${didInfix}${identity}#key-1",
-        "type": ["Secp256k1SignatureVerificationKey2018", "ERC725ManagementKey"],
-        "publicKeyHex": "${publicKey}"
-      }],
-      "authentication": {
-        "type": "Secp256k1SignatureAuthentication2018",
-        "publicKey": "did:evan:${didInfix}${identity}#key-1"
-      }
-    }`);
+      return JSON.parse(`{
+        "@context": "https://w3id.org/did/v1",
+        "id": "did:evan:${didInfix}${identity}",
+        "publicKey": [{
+          "id": "did:evan:${didInfix}${identity}#key-1",
+          "type": ["Secp256k1SignatureVerificationKey2018", "ERC725ManagementKey"],
+          "publicKeyHex": "${publicKey}"
+        }],
+        "authentication": [
+          "did:evan:${didInfix}${identity}#key-1"
+        ]
+      }`);
+    } else {
+      throw new Error('invalid config for template document');
+    }
   }
 
   /**

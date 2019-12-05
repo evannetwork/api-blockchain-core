@@ -107,7 +107,11 @@ describe('DID Resolver', function() {
         await twin.getContractAddress(), true);
       const twinDid = await runtimes[0].didResolver.convertIdentityToDid(twinIdentity);
 
-      const document = {};
+      const controllerDid = await runtimes[0].didResolver.convertIdentityToDid(
+        runtimes[0].activeIdentity);
+      const controllerDidDocument = await runtimes[0].didResolver.getDidDocument();
+      const document = await runtimes[0].didResolver.getDidDocumentTemplate(
+        twinDid, controllerDid, controllerDidDocument.authentication[0]);
       const promise = runtimes[0].didResolver.setDidDocument(document, twinDid);
       await expect(promise).not.to.be.rejected;
     });
@@ -126,7 +130,11 @@ describe('DID Resolver', function() {
         await twin.getContractAddress(), true);
       const twinDid = await runtimes[0].didResolver.convertIdentityToDid(twinIdentity);
 
-      const document = {};
+      const controllerDid = await runtimes[0].didResolver.convertIdentityToDid(
+        runtimes[0].activeIdentity);
+      const controllerDidDocument = await runtimes[0].didResolver.getDidDocument();
+      const document = await runtimes[0].didResolver.getDidDocumentTemplate(
+        twinDid, controllerDid, controllerDidDocument.authentication[0]);
       await runtimes[0].didResolver.setDidDocument(document, twinDid);
       const retrieved = await runtimes[0].didResolver.getDidDocument(twinDid);
       expect(retrieved).to.deep.eq(document);
@@ -146,7 +154,11 @@ describe('DID Resolver', function() {
         await twin.getContractAddress(), true);
       const twinDid = await runtimes[0].didResolver.convertIdentityToDid(twinIdentity);
 
-      const document = {};
+      const controllerDid = await runtimes[0].didResolver.convertIdentityToDid(
+        runtimes[0].activeIdentity);
+      const controllerDidDocument = await runtimes[0].didResolver.getDidDocument();
+      const document = await runtimes[0].didResolver.getDidDocumentTemplate(
+        twinDid, controllerDid, controllerDidDocument.authentication[0]);
       await runtimes[0].didResolver.setDidDocument(document, twinDid);
 
       const retrieved = await runtimes[1].didResolver.getDidDocument(twinDid);
@@ -168,7 +180,11 @@ describe('DID Resolver', function() {
         await twin.getContractAddress(), true);
       const twinDid = await runtimes[0].didResolver.convertIdentityToDid(twinIdentity);
 
-      const document = {};
+      const controllerDid = await runtimes[0].didResolver.convertIdentityToDid(
+        runtimes[0].activeIdentity);
+      const controllerDidDocument = await runtimes[0].didResolver.getDidDocument();
+      const document = await runtimes[0].didResolver.getDidDocumentTemplate(
+        twinDid, controllerDid, controllerDidDocument.authentication[0]);
       const runtime1 = runtimes[1];
       const promise = runtime1.didResolver.setDidDocument(document, twinDid);
       await expect(promise).to.be.rejectedWith(/^could not estimate gas usage for setDidDocument/);
