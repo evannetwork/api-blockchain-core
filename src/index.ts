@@ -29,6 +29,7 @@ export {
   Logger,
   LogLevel,
   SignerExternal,
+  SignerInterface,
   SignerInternal,
   Unencrypted,
   Validator,
@@ -76,13 +77,13 @@ export { Votings, MemberOptions, ProposalInfo, ProposalInfos, ProposalOptions, V
 export { Wallet } from './contracts/wallet';
 export { Container, ContainerConfig, ContainerFile, ContainerTemplate, ContainerPlugin, ContainerTemplateProperty,
   ContainerShareConfig, ContainerUnshareConfig, ContainerOptions, } from './contracts/digital-twin/container';
-export { DigitalTwin, DigitalTwinEntryType, DigitalTwinConfig, DigitalTwinIndexEntry,
+export { DigitalTwin, DigitalTwinEntryType, DigitalTwinConfig, DigitalTwinIndexEntry, DigitalTwinOptions,
   DigitalTwinVerificationEntry, } from './contracts/digital-twin/digital-twin';
 import { getSmartAgentAuthHeaders } from './common/utils';
 const utils = { getSmartAgentAuthHeaders };
 export { utils };
 
-/******** export these libraries to be able to build the blockchain-core into an umd bundle ********/
+/******** export these libraries to be able to build the blockchain-core into a umd bundle ********/
 import * as AccountType from './profile/types/types';
 import Web3 = require('web3');
 import crypto = require('crypto');
