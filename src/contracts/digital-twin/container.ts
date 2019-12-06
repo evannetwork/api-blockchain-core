@@ -783,7 +783,7 @@ export class Container extends Logger {
       entries = [ entries ];
     }
 
-    // check for list entries, removeListEntries permissions only form them 
+    // check for list entries, removeListEntries permissions only form them
     const schemaProperties = (await this.toPlugin(false)).template.properties;
     const listEntries = entries.filter(entry => schemaProperties[entry].type === 'list');
 

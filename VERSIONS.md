@@ -2,8 +2,15 @@
 
 ## Next Version
 ### Features
+- add `getPublicKey` implementation to `SignerIdentity`
+- add `DidResolver` module for managing DID documents
+- add possiblity to instantiate a new `SignerIdentity` in two steps
+  - can be used to create circular structures if required
+  - first call constructor, you can omit `config` argument
+  - when rest (e.g. verifications) has been set up you can call `updateConfig` to finalize `SignerIdenty` instantiation
 
 ### Fixes
+- add interfaces used in exported classes to export list
 
 ### Deprecations
 
@@ -17,12 +24,6 @@
 - implement `unPinFileHash` function in dfs
 - remove old sharing ipfs hash within `saveSharingsToContract`
 - add `signer-identity` for making transactions via identity contract
-- add `getPublicKey` implementation to `SignerIdentity`
-- add `DidResolver` module for managing DID documents
-- add possiblity to instantiate a new `SignerIdentity` in two steps
-  - can be used to create circular structures if required
-  - first call constructor, you can omit `config` argument
-  - when rest (e.g. verifications) has been set up you can call `updateConfig` to finalize `SignerIdenty` instantiation
 
 ### Fixes
 - move `expirationDate` in `formatToV2` to details object
@@ -30,7 +31,6 @@
 - ensure that content keys, before they get shared, are added to the `Container` keys
 - add `EncryptionWrapperCryptorType`, `EncryptionWrapperKeyType`, `EncryptionWrapperOptions`, `EncryptionWrapper` to `index.ts` exports
 - update naming of verifications (replace older occurrences of "validations" with "verifications")
-- add interfaces used in exported classes to export list
 
 ### Deprecations
 - remove registration company name and use accountName for all
