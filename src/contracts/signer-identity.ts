@@ -123,7 +123,7 @@ export class SignerIdentity extends Logger implements SignerInterface {
     if (accountId !== this.underlyingAccount) {
       throw new Error('getting public key is only supported for \'underlyingAccount\'');
     }
-    
+
     return this.config.underlyingSigner.getPublicKey(accountId);
   }
 

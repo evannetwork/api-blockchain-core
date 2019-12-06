@@ -1240,7 +1240,7 @@ export class Container extends Logger {
     // only allow owner removal when force attribute is set
     const unpermittedOwnerRemoval = unshareConfigs.filter(
       unshareConfig => unshareConfig.accountId === this.config.accountId && !unshareConfig.force);
-    if (unpermittedOwnerRemoval.length !==0) {
+    if (unpermittedOwnerRemoval.length !== 0) {
       throw new Error(`current account "${this.config.accountId}" is owner of the contract ` +
         'and cannot remove himself from sharing without force attribute' +
         this.contract.options.address);

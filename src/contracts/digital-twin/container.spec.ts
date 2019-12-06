@@ -89,7 +89,7 @@ describe('Container', function() {
       };
     });
 
-    // create the container with these properties      
+    // create the container with these properties
     const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
 
     // set random values
@@ -98,7 +98,7 @@ describe('Container', function() {
       await container.setEntry(property, randomValues[property]);
       expect(await container.getEntry(property)).to.eq(randomValues[property]);
     }));
-    
+
     return { container, randomValues, };
   }
 
@@ -1114,7 +1114,7 @@ describe('Container', function() {
         accountId: consumer, readWrite: ['testField'] }])
       expect(unshare).to.be.rejectedWith(new RegExp(`^current account "${ consumer }" is unable to unshare properties, as it isn't owner of the underlying contract`, 'i'));
     });
-    
+
     // // setContainerShareConfigs
     it('can save a full share configuration for a user', async() => {
       const { container, } = await createTestContainerWithProperties([ 'testField', 'testField2', 'testField3' ]);
@@ -1327,8 +1327,8 @@ describe('Container', function() {
 
       await container.removeEntries('testField');
 
-      const description = await container.getDescription();
-      expect(description.dataSchema).not.to.haveOwnProperty('testField');
+      const currentDescription = await container.getDescription();
+      expect(currentDescription.dataSchema).not.to.haveOwnProperty('testField');
 
       const shareConfig = await container.getContainerShareConfigForAccount(consumer);
       expect(shareConfig.read).to.be.eq(undefined);
@@ -1344,9 +1344,9 @@ describe('Container', function() {
 
       await container.removeEntries([ 'testField', 'testField2' ]);
 
-      const description = await container.getDescription();
-      expect(description.dataSchema).not.to.haveOwnProperty('testField');
-      expect(description.dataSchema).not.to.haveOwnProperty('testField2');
+      const currentDescription = await container.getDescription();
+      expect(currentDescription.dataSchema).not.to.haveOwnProperty('testField');
+      expect(currentDescription.dataSchema).not.to.haveOwnProperty('testField2');
 
       const shareConfig = await container.getContainerShareConfigForAccount(consumer);
       expect(shareConfig.read).to.be.eq(undefined);

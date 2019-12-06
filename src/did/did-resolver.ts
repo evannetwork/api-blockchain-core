@@ -229,7 +229,7 @@ export class DidResolver extends Logger {
 
   /**
    * Get environment dependent DID infix ('testcore:' || ''). Result is cached.
-   * 
+   *
    * @return     {Promise<string>}  DID infix
    */
   private async getDidInfix(): Promise<string> {
@@ -242,7 +242,7 @@ export class DidResolver extends Logger {
 
   /**
    * Get current environment ('testcore:' || 'core'). Result is cached.
-   * 
+   *
    * @return     {Promise<string>}  current environment
    */
   private async getEnvironment(): Promise<string> {
@@ -254,7 +254,7 @@ export class DidResolver extends Logger {
 
   /**
    * Get web3 contract instance for DID registry contract via ENS. Result is cached.
-   * 
+   *
    * @return     {Promise<any>}  DID registry contract
    */
   private async getRegistryContract(): Promise<any> {
