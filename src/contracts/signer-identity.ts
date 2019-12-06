@@ -62,7 +62,7 @@ export class SignerIdentity extends Logger implements SignerInterface {
 
   /**
    * Creates a new `SignerInternal` instance. `config` can be set up later on with `updateConfig`,
-   * if required (e.g. when initializing a circular structure)
+   * if required (e.g. when initializing a circular structure).
    *
    * @param      {SignerIdentityOptions}  options  runtime like object
    * @param      {SignerIdentityConfig}  config    (optional) config for `SignerInternal`

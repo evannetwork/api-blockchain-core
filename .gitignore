@@ -5,7 +5,7 @@ docs/_build/*
 docs/blockchain/account-store.rst
 docs/blockchain/event-hub.rst
 docs/blockchain/executor.rst
-docs/blockchain/signer.rst
+docs/blockchain/signer-internal.rst
 docs/common/logger.rst
 docs/common/validator.rst
 docs/contracts/contract-loader.rst
