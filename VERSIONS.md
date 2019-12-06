@@ -2,6 +2,14 @@
 
 ## Next Version
 ### Features
+
+### Fixes
+
+### Deprecations
+
+
+## Version 2.15.0
+### Features
 - add `setContainerShareConfigs` to `Container` API
 - add `removeEntries` to `Container` API
 - only allow `unshareProperties` for owner, if force attribute is set

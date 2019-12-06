@@ -783,12 +783,16 @@ export class Container extends Logger {
       entries = [ entries ];
     }
 
+    // check for list entries, removeListEntries permissions only form them 
+    const schemaProperties = (await this.toPlugin(false)).template.properties;
+    const listEntries = entries.filter(entry => schemaProperties[entry].type === 'list');
+
     // unshare all accounts from the specific roles
     await this.unshareProperties(unique.map(accountId => {
       return {
         accountId,
         readWrite: entries as string[],
-        removeListEntries: entries as string[],
+        removeListEntries: listEntries as string[],
         write: entries as string[],
         // force removement of the owner
         force: true,
@@ -1259,6 +1263,27 @@ export class Container extends Logger {
       throw new Error(
         `tried to share properties, but missing one or more in schema: ${missingProperties}`);
     }
+
+    // ensure if removeListEntries can be removed correctly beforehand
+    for (let { removeListEntries = [], } of localUnshareConfigs) {
+      for (let property of removeListEntries) {
+        const propertyType = getPropertyType(schemaProperties[property].type);
+
+        // throw error if remove should be given on no list
+        if (propertyType !== PropertyType.ListEntry) {
+          throw new Error(`property "${property}" is no list. Can not give remove rights`);
+        }
+
+        // search for role with permissions
+        let permittedRole = await this.getPermittedRole(
+          authority, property, propertyType, ModificationType.Remove);
+        if (permittedRole < this.reservedRoles) {
+          // if not found or included in reserved roles, exit
+          throw new Error(`can not find a role that has remove permissions for list "${property}"`);
+        }
+      }
+    }
+
     // for all share configs
     for (let { accountId, readWrite = [], removeListEntries = [], write = [] } of localUnshareConfigs) {
       this.log(`checking unshare configs`, 'debug');
@@ -1323,19 +1348,8 @@ export class Container extends Logger {
       ///////////////////////////////////////////////////////////////// remove list entries handling
       for (let property of removeListEntries) {
         const propertyType = getPropertyType(schemaProperties[property].type);
-
-        // throw error if remove should be given on no list
-        if (propertyType !== PropertyType.ListEntry) {
-          throw new Error(`property "${property}" is no list. Can not give remove rights`);
-        }
-
-        // search for role with permissions
         let permittedRole = await this.getPermittedRole(
           authority, property, propertyType, ModificationType.Remove);
-        if (permittedRole < this.reservedRoles) {
-          // if not found or included in reserved roles, exit
-          throw new Error(`can not find a role that has remove permissions for list "${property}"`);
-        }
 
         // remove account from role
         const hasRole = await this.options.executor.executeContractCall(

@@ -878,6 +878,7 @@ Parameters
 #. ``disableSubVerifications`` - ``boolean`` (optional): invalidate all verifications that gets issued as children of this verification (warning will include the disableSubVerifications warning)
 #. ``isIdentity`` - ``boolean`` (optional): true if given subject is identity, defaults to ``false``
 #. ``executionNonce`` - ``number`` (optional): current execution nonce of issuer identity contract, defaults to ``-1`` (fetch dynamically)
+#. ``uri`` - ``string`` (optional): adds a specific URI to the verification
 
 -------
 Returns
