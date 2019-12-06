@@ -34,7 +34,7 @@ import {
   SignerIdentity,
 } from '../index';
 
-const didRegEx = /^did:evan:(?:(testnet|mainnet):)?(0x(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64}))$/;
+const didRegEx = /^did:evan:(?:(testcore|core):)?(0x(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64}))$/;
 
 export interface DidDocumentTemplate {
   '@context': string;
@@ -112,10 +112,10 @@ export class DidResolver extends Logger {
     if (!groups) {
       throw new Error(`given did ("${did}") is no valid evan DID`);
     }
-    const [ , didEnvironment = 'mainnet', identity ] = groups;
+    const [ , didEnvironment = 'core', identity ] = groups;
     const environment = await this.getEnvironment();
-    if (environment === 'testcore' && didEnvironment !== 'testnet' ||
-        environment === 'core' && didEnvironment !== 'mainnet') {
+    if (environment === 'testcore' && didEnvironment !== 'testcore' ||
+        environment === 'core' && didEnvironment !== 'core') {
       throw new Error(`DIDs environment "${environment} does not match ${didEnvironment}`);
     }
 
@@ -228,20 +228,20 @@ export class DidResolver extends Logger {
   }
 
   /**
-   * Get environment dependent DID infix ('testnet:' || ''). Result is cached.
+   * Get environment dependent DID infix ('testcore:' || ''). Result is cached.
    * 
    * @return     {Promise<string>}  DID infix
    */
   private async getDidInfix(): Promise<string> {
     if (typeof this.cached.didInfix === 'undefined') {
       this.cached.didInfix =
-        (await this.getEnvironment()) === 'testcore' ? 'testnet:' : '';
+        (await this.getEnvironment()) === 'testcore' ? 'testcore:' : '';
     }
     return this.cached.didInfix;
   }
 
   /**
-   * Get current environment ('testnet:' || 'core'). Result is cached.
+   * Get current environment ('testcore:' || 'core'). Result is cached.
    * 
    * @return     {Promise<string>}  current environment
    */
