@@ -496,7 +496,6 @@ export async function createDefaultRuntime(
   return {
     accountStore,
     activeAccount,
-    activeIdentity,
     baseContract,
     contractLoader,
     contracts,
@@ -504,7 +503,6 @@ export async function createDefaultRuntime(
     dataContract,
     description,
     dfs,
-    didResolver,
     encryptionWrapper,
     environment,
     eventHub,
@@ -522,9 +520,12 @@ export async function createDefaultRuntime(
     serviceContract,
     sharing,
     signer,
-    underlyingAccount,
     verifications,
     votings,
     web3,
+    // optional properties
+    ...(activeIdentity && {activeIdentity}),
+    ...(didResolver && {didResolver}),
+    ...(underlyingAccount && {underlyingAccount}),
   };
 };
