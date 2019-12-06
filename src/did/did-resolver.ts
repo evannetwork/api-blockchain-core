@@ -36,7 +36,7 @@ import {
 
 const didRegEx = /^did:evan:(?:(testcore|core):)?(0x(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64}))$/;
 
-export interface DidDocumentTemplate {
+export interface DidResolverDocumentTemplate {
   '@context': string;
   id: string;
   authentication: {
@@ -59,13 +59,6 @@ export interface DidDocumentTemplate {
 }
 
 /**
- * config properties, specific to `DidResolver` instances
- */
-export interface DidResolverConfig {
-
-}
-
-/**
  * options for DidResolver constructor
  */
 export interface DidResolverOptions extends LoggerOptions {
@@ -84,28 +77,26 @@ export interface DidResolverOptions extends LoggerOptions {
  */
 export class DidResolver extends Logger {
   private cached: any;
-  private config: DidResolverConfig;
   private options: DidResolverOptions;
 
   /**
-   * Creates a new `DidResolver` instance
+   * Creates a new `DidResolver` instance.
    *
    * @param      {DidResolverOptions}  options  runtime like options for `DidResolver`
-   * @param      {DidResolverCOnfig}   config   (optional) custom connfig for resolver, maybe
-   *                                            removed later on
    */
-  public constructor(options: DidResolverOptions, config: DidResolverConfig = {}) {
+  public constructor(options: DidResolverOptions) {
     super(options as LoggerOptions);
     this.options = options;
-    this.config = config;
     this.cached = {};
   }
 
   /**
    * Converts given DID to a evan.network identity.
    *
-   * @param      {string}  did     DID like "did:evan:0x1234"
-   * @return     {Promise<string>}   evan.network identity like "0x1234"
+   * @param      {string}  did      a DID like
+   *                                "did:evan:testcore:0x000000000000000000000000000000000000001234"
+   * @return     {Promise<string>}  evan.network identity like
+   *                                "0x000000000000000000000000000000000000001234"
    */
   public async convertDidToIdentity(did: string): Promise<string> {
     const groups = didRegEx.exec(did);
@@ -125,8 +116,10 @@ export class DidResolver extends Logger {
   /**
    * Converts given evan.network identity hash to DID.
    *
-   * @param      {string}  identity  evan.network identity like "0x1234"
-   * @return     {Promise<string>}  DID like "did:evan:0x1234"
+   * @param      {string}  identity  evan.network identity like
+   *                                 "0x000000000000000000000000000000000000001234"
+   * @return     {Promise<string>}   DID like
+   *                                 "did:evan:testcore:0x000000000000000000000000000000000000001234"
    */
   public async convertIdentityToDid(identity: string): Promise<string> {
     return `did:evan:${await this.getDidInfix()}${identity}`;
@@ -138,14 +131,18 @@ export class DidResolver extends Logger {
    * matching it at all. You can use the result of this function to build a new DID document but
    * should extend it or an existing DID document, if your details derive from default format.
    *
-   * @param      {string}  did                contract DID
-   * @param      {string}  controllerDid      controller of contracts identity (DID)
-   * @param      {string}  authenticationKey  authentication key used for contract
-   * @return     {Promise<DidDocumentTemplate>}  a DID document template
+   * All three arguments are optional. When they are used, all of them have to be given and the
+   * result then describes a contracts DID document. If all of them are omitted the result describes
+   * an accounts DID document.
+   *
+   * @param      {string}  did                   (optional) contract DID
+   * @param      {string}  controllerDid         (optional) controller of contracts identity (DID)
+   * @param      {string}  authenticationKey     (optional) authentication key used for contract
+   * @return     {Promise<DidResolverDocumentTemplate>}  a DID document template
    */
-  public async getDidDocumentTemplate(
+  public async getDidResolverDocumentTemplate(
     did?: string, controllerDid?: string, authenticationKey?: string
-  ): Promise<DidDocumentTemplate> {
+  ): Promise<DidResolverDocumentTemplate> {
     if (did && controllerDid && authenticationKey) {
       // use given key to create a contract DID document
       return JSON.parse(`{
@@ -185,7 +182,7 @@ export class DidResolver extends Logger {
    * Get DID document for given DID or for currently configured active identity.
    *
    * @param      {string}  did     (optional) DID to fetch DID document for
-   * @return     {Promise<any>}   a DID document that MAY resemble `DidDocumentTemplate` format
+   * @return     {Promise<any>}    a DID document that MAY resemble `DidResolverDocumentTemplate` format
    */
   public async getDidDocument(did?: string): Promise<any> {
     let result = null;
