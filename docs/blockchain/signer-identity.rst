@@ -31,7 +31,7 @@ Public Properties
 ================================================================================
 
 #. ``activeIdentity`` - ``string``: identity used for transactions, usually controlled by `underlyingAccount`
-#. ``underlyingAccount`` - ``string``: account, that pays for transactions used for transactions, usually controlled by `underlyingAccount`
+#. ``underlyingAccount`` - ``string``: account, that pays for transactions used for transactions, usually controlling `activeIdentity`
 
 
 
