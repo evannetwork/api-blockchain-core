@@ -1153,7 +1153,7 @@ Parameters
 ----------
 
 #. ``newConfigs`` - :ref:`container_ContainerShareConfig` / :ref:`container_ContainerShareConfig` []: sharing configurations that should be persisted
-#. ``originalConfigs`` - :ref:`container_ContainerShareConfig` / :ref:`container_ContainerShareConfig` []: pass original share configurations, for that the sharing delta should be built (reduces load time)
+#. ``originalConfigs`` - :ref:`container_ContainerShareConfig` / :ref:`container_ContainerShareConfig` [] (optional): pass original share configurations to check differences; better performance if provided, automatically fetched if omitted
 
 -------
 Returns
