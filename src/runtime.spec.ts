@@ -84,7 +84,6 @@ describe('Runtime', function() {
       mnemonic: 'annual lyrics orbit slight object space jeans ethics broccoli umbrella entry couch',
       accountMap: { }
     });
-    await expect(runtimePromise).to.be.ok;
     await expect(runtimePromise).to.be.rejected;
   });
 
@@ -92,7 +91,6 @@ describe('Runtime', function() {
     const runtimePromise = createDefaultRuntime(web3, dfs, {
       accountMap: { }
     });
-    await expect(runtimePromise).to.be.ok;
     await expect(runtimePromise).to.be.rejectedWith('accountMap invalid');
   });
 });
