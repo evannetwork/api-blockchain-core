@@ -238,7 +238,7 @@ updateConfig
 
   signer.updateConfig(partialOptions, config);
 
-Update config of `SignerInternal` can also be used to setup verifications and accounts after initial setup and linking with other modules.
+Update config of `SignerIdentity` can also be used to setup verifications and accounts after initial setup and linking with other modules.
 
 ----------
 Parameters
@@ -274,7 +274,7 @@ Example
     // use instance, e.g. reference it in other components like `verifications`
     // ...
 
-    // now set verfications instance and accountn in signer
+    // now set verfications instance and account in signer
     signer.updateConfig(
       { verifications },
       {
