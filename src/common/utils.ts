@@ -24,6 +24,18 @@ export const nullAddress = '0x0000000000000000000000000000000000000000';
 export const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
 /**
+ * retrieves chain name from web3's connected networks id, testcore is 508674158, core is 49262, if
+ * not matching any of both, chain is threaded as testcore
+ *
+ * @param      {any}  web3    connected web3 instance
+ * @return     {Promise<string>}  name of current chain
+ */
+export async function getEnvironment(web3: any): Promise<string> {
+  const chainId = await web3.eth.net.getId();
+  return chainId === 49262 ? 'core' : 'testcore';
+}
+
+/**
  * create auth header data to authenticate with current account against a smart agent server
  *
  * @param      {Runtime}  runtime    an initialized runtime
@@ -44,25 +56,15 @@ export async function getSmartAgentAuthHeaders(runtime: Runtime, message?: strin
 }
 
 /**
- * retrieves chain name from web3's connected networks id, testcore is 508674158, core is 49262, if
- * not matching any of both, chain is threaded as testcore
- *
- * @param      {any}  web3    connected web3 instance
- * @return     {Promise<string>}  name of current chain
- */
-export async function getEnvironment(web3: any): Promise<string> {
-  const chainId = await web3.eth.net.getId();
-  return chainId === 49262 ? 'core' : 'testcore';
-}
-
-/**
  * obfuscates strings by replacing each character but the last two with 'x'
  *
  * @param      {string}  text    text to obfuscate
  * @return     {string}  obfuscated text
  */
 export function obfuscate(text: string): string {
-  return text ? `${[...Array(text.length - 2)].map(() => 'x').join('')}${text.substr(text.length - 2)}` : text;
+  return text
+    ? `${[...Array(text.length - 2)].map(() => 'x').join('')}${text.substr(text.length - 2)}`
+    : text;
 }
 
 /**
