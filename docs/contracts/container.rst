@@ -1146,7 +1146,7 @@ setContainerShareConfigs
 
   container.setContainerShareConfigs(newConfigs, originalConfigs);
 
-Takes a full share configuration for an accountId (or a list of them), share newly added properties and unshare removed properties from the container. Also accepts a list / instance of the original sharing configurations duplicated loading can be avoided.
+Takes a full share configuration for an accountId (or a list of them), share newly added properties and unshare removed properties from the container. Also accepts a list or instance of the original sharing configurations so that duplicated loading can be avoided.
 
 ----------
 Parameters
