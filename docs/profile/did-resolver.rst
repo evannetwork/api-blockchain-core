@@ -150,6 +150,96 @@ Example
 
 --------------------------------------------------------------------------------
 
+.. _didResolver_setService:
+
+setService
+================================================================================
+
+.. code-block:: typescript
+
+  didResolver.setService(service[, did]);
+
+Sets service in DID document.
+
+----------
+Parameters
+----------
+
+#. ``service`` - ``any``: service to set
+#. ``did`` - ``string`` (optional): DID name to set service for
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const document = await runtime.didResolver.getDidDocumentTemplate();
+  const identity = await runtime.verifications.getIdentityForAccount(account, true);
+  const did = await runtime.didResolver.convertIdentityToDid(identity);
+  await runtime.didResolver.setDidDocument(document, did);
+  const service = [{
+    id: `${did}#randomService`,
+    type: `randomService-${random}`,
+    serviceEndpoint: `https://openid.example.com/${random}`,
+  }];
+  await runtime.didResolver.setService(service, did);
+
+
+
+--------------------------------------------------------------------------------
+
+.. _didResolver_getService:
+
+getService
+================================================================================
+
+.. code-block:: typescript
+
+  didResolver.getService([did]);
+
+Get service from DID document.
+
+----------
+Parameters
+----------
+
+#. ``did`` - ``string`` (optional): DID to fetch DID service for, defaults to current ``activeIdentity`` of given ``signerIdentity``
+
+-------
+Returns
+-------
+
+``Promise`` returns ``DidResolverServiceEntry[] | DidResolverServiceEntry``: service
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const document = await runtime.didResolver.getDidDocumentTemplate();
+  const identity = await runtime.verifications.getIdentityForAccount(account, true);
+  const did = await runtime.didResolver.convertIdentityToDid(identity);
+  await runtime.didResolver.setDidDocument(document, did);
+  const service = [{
+    id: `${did}#randomService`,
+    type: `randomService-${random}`,
+    serviceEndpoint: `https://openid.example.com/${random}`,
+  }];
+  await runtime.didResolver.setService(service, did);
+  const retrieved = await runtime.didResolver.getService(did);
+
+
+
+--------------------------------------------------------------------------------
+
 = utilities =
 ==============================
 

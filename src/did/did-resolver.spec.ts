@@ -44,28 +44,29 @@ describe('DID Resolver', function() {
 
   describe('when storing did documents for account identities', () => {
     it('allows to store a DID document for the own identity (implicitely)', async () => {
-      const document = await runtimes[0].didResolver.getDidDocumentTemplate();
+      const document = await runtimes[0].didResolver.getDidResolverDocumentTemplate();
       const promise = runtimes[0].didResolver.setDidDocument(document);
       await expect(promise).not.to.be.rejected;
     });
 
     it('allows to store a DID document for the own identity (explicitely)', async () => {
-      const document = await runtimes[0].didResolver.getDidDocumentTemplate();
-      const accounts0Identity = await runtimes[0].verifications.getIdentityForAccount(accounts[0], true);
+      const document = await runtimes[0].didResolver.getDidResolverDocumentTemplate();
+      const accounts0Identity = await runtimes[0].verifications.getIdentityForAccount(
+        accounts[0], true);
       const accounts0Did = await runtimes[0].didResolver.convertIdentityToDid(accounts0Identity);
       const promise = runtimes[0].didResolver.setDidDocument(document, accounts0Did);
       await expect(promise).not.to.be.rejected;
     });
 
     it('can get retrieve an account identities DID document', async () => {
-      const document = await runtimes[0].didResolver.getDidDocumentTemplate();
+      const document = await runtimes[0].didResolver.getDidResolverDocumentTemplate();
       await runtimes[0].didResolver.setDidDocument(document);
       const retrieved = await runtimes[0].didResolver.getDidDocument();
       expect(retrieved).to.deep.eq(document);
     });
 
     it('allows to get a DID document of another identity', async () => {
-      const document = await runtimes[0].didResolver.getDidDocumentTemplate();
+      const document = await runtimes[0].didResolver.getDidResolverDocumentTemplate();
       await runtimes[0].didResolver.setDidDocument(document);
 
       const accounts0Identity = await runtimes[0].verifications.getIdentityForAccount(accounts[0], true);
@@ -76,11 +77,33 @@ describe('DID Resolver', function() {
     });
 
     it('does not allow to store a DID document for another identity', async () => {
-      const document = await runtimes[0].didResolver.getDidDocumentTemplate();
+      const document = await runtimes[0].didResolver.getDidResolverDocumentTemplate();
       const accounts1Identity = await runtimes[0].verifications.getIdentityForAccount(accounts[1], true);
       const accounts1Did = await runtimes[0].didResolver.convertIdentityToDid(accounts1Identity);
       const promise = runtimes[0].didResolver.setDidDocument(document, accounts1Did);
       await expect(promise).to.be.rejectedWith(/^could not estimate gas usage for setDidDocument/);
+    });
+
+    it('allows to define services in a DID document', async () => {
+      const document = await runtimes[0].didResolver.getDidResolverDocumentTemplate();
+      const accounts0Identity = await runtimes[0].verifications.getIdentityForAccount(
+        accounts[0], true);
+      const accounts0Did = await runtimes[0].didResolver.convertIdentityToDid(accounts0Identity);
+      await runtimes[0].didResolver.setDidDocument(document, accounts0Did);
+
+      // set new service
+      const random = Math.floor(Math.random() * 1e9);
+      const service = [{
+        id: `${accounts0Did}#randomService`,
+        type: `randomService-${random}`,
+        serviceEndpoint: `https://openid.example.com/${random}`,
+      }];
+      await runtimes[0].didResolver.setService(service, accounts0Did);
+
+      expect(await runtimes[0].didResolver.getService(accounts0Did))
+        .to.deep.eq(service);
+      expect(await runtimes[0].didResolver.getDidDocument(accounts0Did))
+        .to.deep.eq({ ...document, service });
     });
   });
 
@@ -110,7 +133,7 @@ describe('DID Resolver', function() {
       const controllerDid = await runtimes[0].didResolver.convertIdentityToDid(
         runtimes[0].activeIdentity);
       const controllerDidDocument = await runtimes[0].didResolver.getDidDocument();
-      const document = await runtimes[0].didResolver.getDidDocumentTemplate(
+      const document = await runtimes[0].didResolver.getDidResolverDocumentTemplate(
         twinDid, controllerDid, controllerDidDocument.authentication[0]);
       const promise = runtimes[0].didResolver.setDidDocument(document, twinDid);
       await expect(promise).not.to.be.rejected;
@@ -133,7 +156,7 @@ describe('DID Resolver', function() {
       const controllerDid = await runtimes[0].didResolver.convertIdentityToDid(
         runtimes[0].activeIdentity);
       const controllerDidDocument = await runtimes[0].didResolver.getDidDocument();
-      const document = await runtimes[0].didResolver.getDidDocumentTemplate(
+      const document = await runtimes[0].didResolver.getDidResolverDocumentTemplate(
         twinDid, controllerDid, controllerDidDocument.authentication[0]);
       await runtimes[0].didResolver.setDidDocument(document, twinDid);
       const retrieved = await runtimes[0].didResolver.getDidDocument(twinDid);
@@ -157,14 +180,13 @@ describe('DID Resolver', function() {
       const controllerDid = await runtimes[0].didResolver.convertIdentityToDid(
         runtimes[0].activeIdentity);
       const controllerDidDocument = await runtimes[0].didResolver.getDidDocument();
-      const document = await runtimes[0].didResolver.getDidDocumentTemplate(
+      const document = await runtimes[0].didResolver.getDidResolverDocumentTemplate(
         twinDid, controllerDid, controllerDidDocument.authentication[0]);
       await runtimes[0].didResolver.setDidDocument(document, twinDid);
 
       const retrieved = await runtimes[1].didResolver.getDidDocument(twinDid);
       expect(retrieved).to.deep.eq(document);
     });
-
 
     it('does not allow to store a DID document for the identity of an own contract', async () => {
       const accountRuntime = await TestUtils.getRuntime(accounts[0]);
@@ -183,7 +205,7 @@ describe('DID Resolver', function() {
       const controllerDid = await runtimes[0].didResolver.convertIdentityToDid(
         runtimes[0].activeIdentity);
       const controllerDidDocument = await runtimes[0].didResolver.getDidDocument();
-      const document = await runtimes[0].didResolver.getDidDocumentTemplate(
+      const document = await runtimes[0].didResolver.getDidResolverDocumentTemplate(
         twinDid, controllerDid, controllerDidDocument.authentication[0]);
       const runtime1 = runtimes[1];
       const promise = runtime1.didResolver.setDidDocument(document, twinDid);

@@ -59,6 +59,17 @@ export interface DidResolverDocumentTemplate {
 }
 
 /**
+ * interface for services in DIDs
+ */
+export interface DidResolverServiceEntry {
+  type: any;
+  serviceEndpoint: any;
+  '@context'?: any;
+  id?: any;
+  [id: string]: any;
+}
+
+/**
  * options for DidResolver constructor
  */
 export interface DidResolverOptions extends LoggerOptions {
@@ -202,6 +213,17 @@ export class DidResolver extends Logger {
   }
 
   /**
+   * Get service from DID document.
+   *
+   * @param      {string}  did     DID name to get service for
+   * @return     {Promise<DidResolverServiceEntry[] | DidResolverServiceEntry>}   service
+   */
+  public async getService(did?: string
+  ): Promise<DidResolverServiceEntry[] | DidResolverServiceEntry> {
+    return (await this.getDidDocument(did)).service;
+  }
+
+  /**
    * Store given DID document for given DID or for currently configured active identity.
    *
    * @param      {any}     document  DID document to store
@@ -222,6 +244,20 @@ export class DidResolver extends Logger {
       identity,
       documentHash,
     );
+  }
+
+  /**
+   * Sets service in DID document.
+   *
+   * @param      {DidResolverServiceEntry[] | DidResolverServiceEntry}  service  service to set
+   * @param      {string}                                               did      DID name to set
+   *                                                                             service for
+   * @return     {Promise<void>}  resolved when done
+   */
+  public async setService(
+    service: DidResolverServiceEntry[] | DidResolverServiceEntry, did?: string
+  ): Promise<void> {
+    await this.setDidDocument({ ...(await this.getDidDocument(did)), service, }, did);
   }
 
   /**
