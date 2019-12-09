@@ -167,6 +167,9 @@ export async function createDefaultRuntime(
     }
     Object.assign(runtimeConfig.accountMap, tempConfig.accountMap);
     Object.assign(runtimeConfig.keyConfig, tempConfig.keyConfig);
+   } else if (!runtimeConfig.accountMap ||
+       !(Object.keys(runtimeConfig.accountMap).length)) {
+     throw new Error('accountMap invalid');
   }
 
   const activeAccount = Object.keys(runtimeConfig.accountMap)[0];
