@@ -470,7 +470,7 @@ When wanting to perform a contract creation without a factory contract, this con
 .. _source logLogInterface: ../common/logger.html#logloginterface
 
 .. |source signerInterface| replace:: ``SignerInterface``
-.. _source signerInterface: ../blockchain/signer.html
+.. _source signerInterface: ../blockchain/signer-internal.html
 
 .. |source web3| replace:: ``Web3``
 .. _source web3: https://github.com/ethereum/web3.js/

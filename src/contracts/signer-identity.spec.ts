@@ -63,7 +63,7 @@ describe('signer-identity (identity based signer)', function() {
       contracts,
       web3,
     });
-    const accountStore = TestUtils.getAccountStore({});
+    const accountStore = TestUtils.getAccountStore();
     const verifications = await TestUtils.getVerifications(web3, await TestUtils.getIpfs());
     const underlyingSigner = new SignerInternal({
       accountStore,
@@ -86,7 +86,6 @@ describe('signer-identity (identity based signer)', function() {
     executor = new Executor(
       { config: { alwaysAutoGasLimit: 1.1 }, signer: signer, web3 });
     await executor.init({ eventHub: await TestUtils.getEventHub(web3) });
-
   });
 
   describe('when making transaction with underlying accountId', () => {
@@ -374,7 +373,8 @@ describe('signer-identity (identity based signer)', function() {
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
         const signPromise = signer.signMessage(signer.activeIdentity, randomString);
         await expect(signPromise)
-          .to.be.rejectedWith('signing messages with identities is not supported');
+          .to.be.rejectedWith(
+            'signing messages with identities is only supported for \'underlyingAccount\'');
       });
     });
   });

@@ -2,8 +2,15 @@
 
 ## Next Version
 ### Features
+- add `getPublicKey` implementation to `SignerIdentity`
+- add `DidResolver` module for managing DID documents
+- add possiblity to instantiate a new `SignerIdentity` in two steps
+  - can be used to create circular structures if required
+  - first call constructor, you can omit `config` argument
+  - when rest (e.g. verifications) has been set up you can call `updateConfig` to finalize `SignerIdenty` instantiation
 
 ### Fixes
+- add interfaces used in exported classes to export list
 
 ### Deprecations
 
