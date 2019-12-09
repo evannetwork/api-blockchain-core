@@ -65,9 +65,9 @@ describe('Signer Wallet', function() {
     nameResolver = await TestUtils.getNameResolver(web3);
     const eventHub = await TestUtils.getEventHub(web3);
     executor.eventHub = eventHub;
-    executorWallet0 = await TestUtils.getExecutorWallet(web3, wallet0, accounts[0], dfs);
+    executorWallet0 = await TestUtils.getExecutorWallet(web3, wallet0, accounts[0]);
     executorWallet0.eventHub = eventHub;
-    executorWallet1 = await TestUtils.getExecutorWallet(web3, wallet1, accounts[1], dfs);
+    executorWallet1 = await TestUtils.getExecutorWallet(web3, wallet1, accounts[1]);
     executorWallet1.eventHub = eventHub;
   });
 

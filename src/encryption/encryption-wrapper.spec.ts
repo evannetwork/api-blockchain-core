@@ -46,12 +46,13 @@ describe('Encryption Wrapper', function() {
   let sharing1: Sharing;
 
   before(async () => {
+    let web3: any;
     // data sharing sha3 self key and edges to self and other accounts
     const sha3 = (...args) => web3.utils.soliditySha3(...args);
     const sha9 = (accountId1, accountId2) => sha3(...[sha3(accountId1), sha3(accountId2)].sort());
     const getKeys = (ownAccount, partnerAccount) =>
       [sha3(ownAccount), ...[ownAccount, partnerAccount].map(partner => sha9(ownAccount, partner))];
-    const web3 = TestUtils.getWeb3();
+    web3 = TestUtils.getWeb3();
     const dfs = await TestUtils.getIpfs();
     cryptoProvider = TestUtils.getCryptoProvider(dfs);
     executor = await TestUtils.getExecutor(web3);

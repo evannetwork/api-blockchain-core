@@ -48,9 +48,9 @@ describe('Payment Channels', function() {
   before(async () => {
     web3 = TestUtils.getWeb3();
     executor = await TestUtils.getExecutor(web3);
-    payments1 = await TestUtils.getPayments(web3, accounts[0]);
-    payments2 = await TestUtils.getPayments(web3, accounts[1]);
-    accountStore = await TestUtils.getAccountStore({});
+    payments1 = await TestUtils.getPayments(web3);
+    payments2 = await TestUtils.getPayments(web3);
+    accountStore = await TestUtils.getAccountStore();
   });
 
 

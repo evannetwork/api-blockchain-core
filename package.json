@@ -57,6 +57,11 @@
     "typescript": "^3.5.3"
   },
   "homepage": "https://evannetwork.github.io/",
+  "husky": {
+    "hooks": {
+      "pre-commit": "tslint --config tslint.json \"./src/**/*.ts\" --project \"tsconfig_husky.json\""
+    }
+  },
   "keywords": [
     "blockchain",
     "ethereum",

@@ -9,7 +9,8 @@ Blockchain
     executor
     executor-agent
     executor-wallet
-    signer
+    signer-internal
+    signer-identity
     account-store
     event-hub
     name-resolver

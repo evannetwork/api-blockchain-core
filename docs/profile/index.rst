@@ -14,6 +14,7 @@ Profile
     verifications
     verification-usage-examples
     verification-usage-examples-full-output
+    did-resolver
 
 Profiles are personal data for accounts. They can be shared with other accounts or used for storing own data. This section contains modules for maintaining profile and interacting with profiles from other accounts.
 

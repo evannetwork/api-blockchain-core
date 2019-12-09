@@ -1327,8 +1327,8 @@ describe('Container', function() {
 
       await container.removeEntries('testField');
 
-      const description = await container.getDescription();
-      expect(description.dataSchema).not.to.haveOwnProperty('testField');
+      const currentDescription = await container.getDescription();
+      expect(currentDescription.dataSchema).not.to.haveOwnProperty('testField');
 
       const shareConfig = await container.getContainerShareConfigForAccount(consumer);
       expect(shareConfig.read).to.be.eq(undefined);
@@ -1344,9 +1344,9 @@ describe('Container', function() {
 
       await container.removeEntries([ 'testField', 'testField2' ]);
 
-      const description = await container.getDescription();
-      expect(description.dataSchema).not.to.haveOwnProperty('testField');
-      expect(description.dataSchema).not.to.haveOwnProperty('testField2');
+      const currentDescription = await container.getDescription();
+      expect(currentDescription.dataSchema).not.to.haveOwnProperty('testField');
+      expect(currentDescription.dataSchema).not.to.haveOwnProperty('testField2');
 
       const shareConfig = await container.getContainerShareConfigForAccount(consumer);
       expect(shareConfig.read).to.be.eq(undefined);

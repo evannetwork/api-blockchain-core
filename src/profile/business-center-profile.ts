@@ -18,64 +18,24 @@
 */
 
 import {
+  CryptoProvider,
+  Ipld,
   Logger,
   LoggerOptions,
   NameResolver,
-} from '@evan.network/dbcp';
-
-import { CryptoProvider } from '../encryption/crypto-provider';
-import { Ipld } from '../dfs/ipld';
-
-function saveGet(root, labels) {
-  const split = labels.split('/');
-  let pointer = root;
-  for (let i = 0; i < split.length; i++) {
-    let sublabel = split[i];
-    if (pointer.hasOwnProperty(sublabel)) {
-      pointer = pointer[sublabel];
-    } else {
-      pointer = undefined;
-      break;
-    }
-  }
-  return pointer;
-}
-
-
-function saveSet(root, labels, child) {
-  const split = labels.split('/');
-  let pointer = root;
-  for (let i = 0; i < split.length; i++) {
-    let sublabel = split[i];
-    if (i === split.length - 1) {
-      pointer[sublabel] = child;
-    } else if (!pointer[sublabel]) {
-      pointer[sublabel] = {};
-    }
-    pointer = pointer[sublabel];
-  }
-}
+} from '../index';
 
 
 /**
  * parameters for Profile constructor
  */
-export interface ProfileOptions extends LoggerOptions {
+export interface BusinessCenterProfileOptions extends LoggerOptions {
   ipld: Ipld;
   nameResolver: NameResolver;
   defaultCryptoAlgo: string;
-  cryptoProvider: CryptoProvider
+  cryptoProvider: CryptoProvider;
   bcAddress: string;
   ipldData?: any;
-}
-
-
-export interface DappBookmark {
-  title: string;
-  description: string;
-  img: string;
-  primaryColor: string;
-  secondaryColor?: string;
 }
 
 
@@ -92,7 +52,7 @@ export class BusinessCenterProfile extends Logger {
   cryptoProvider: CryptoProvider;
   bcAddress: string;
 
-  constructor(options: ProfileOptions) {
+  constructor(options: BusinessCenterProfileOptions) {
     super(options);
     this.ipld = options.ipld;
     this.ipldData = options.ipldData || {};
