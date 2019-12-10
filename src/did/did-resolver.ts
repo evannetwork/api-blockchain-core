@@ -59,6 +59,17 @@ export interface DidResolverDocumentTemplate {
 }
 
 /**
+ * interface for services in DIDs
+ */
+export interface DidResolverServiceEntry {
+  type: any;
+  serviceEndpoint: any;
+  '@context'?: any;
+  id?: any;
+  [id: string]: any;
+}
+
+/**
  * options for DidResolver constructor
  */
 export interface DidResolverOptions extends LoggerOptions {
@@ -179,12 +190,12 @@ export class DidResolver extends Logger {
   }
 
   /**
-   * Get DID document for given DID or for currently configured active identity.
+   * Get DID document for given DID.
    *
-   * @param      {string}  did     (optional) DID to fetch DID document for
+   * @param      {string}  did     DID to fetch DID document for
    * @return     {Promise<any>}    a DID document that MAY resemble `DidResolverDocumentTemplate` format
    */
-  public async getDidDocument(did?: string): Promise<any> {
+  public async getDidDocument(did: string): Promise<any> {
     let result = null;
     const identity = this.padIdentity(did ?
       await this.convertDidToIdentity(did) :
@@ -202,13 +213,24 @@ export class DidResolver extends Logger {
   }
 
   /**
-   * Store given DID document for given DID or for currently configured active identity.
+   * Get service from DID document.
    *
+   * @param      {string}  did     DID name to get service for
+   * @return     {Promise<DidResolverServiceEntry[] | DidResolverServiceEntry>}   service
+   */
+  public async getService(did: string
+  ): Promise<DidResolverServiceEntry[] | DidResolverServiceEntry> {
+    return (await this.getDidDocument(did)).service;
+  }
+
+  /**
+   * Store given DID document for given DID.
+   *
+   * @param      {string}  did       DID to store DID document for
    * @param      {any}     document  DID document to store
-   * @param      {string}  did       (optional) DID to store DID document for
    * @return     {Promise<void>}  resolved when done
    */
-  public async setDidDocument(document: any, did?: string): Promise<void> {
+  public async setDidDocument(did: string, document: any): Promise<void> {
     const identity = this.padIdentity(did ?
       await this.convertDidToIdentity(did) :
       this.options.signerIdentity.activeIdentity
@@ -222,6 +244,20 @@ export class DidResolver extends Logger {
       identity,
       documentHash,
     );
+  }
+
+  /**
+   * Sets service in DID document.
+   *
+   * @param      {string}                                               did      DID name to set
+   *                                                                             service for
+   * @param      {DidResolverServiceEntry[] | DidResolverServiceEntry}  service  service to set
+   * @return     {Promise<void>}  resolved when done
+   */
+  public async setService(
+    did: string, service: DidResolverServiceEntry[] | DidResolverServiceEntry
+  ): Promise<void> {
+    await this.setDidDocument(did, { ...(await this.getDidDocument(did)), service, });
   }
 
   /**

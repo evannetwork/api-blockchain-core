@@ -8,6 +8,7 @@
   - can be used to create circular structures if required
   - first call constructor, you can omit `config` argument
   - when rest (e.g. verifications) has been set up you can call `updateConfig` to finalize `SignerIdenty` instantiation
+- add `getService`, `setService` to `DidResolver`
 
 ### Fixes
 - fix `Container` documentation links and add warning to `ContainerUnshareConfig` documentation
