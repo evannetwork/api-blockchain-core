@@ -18,18 +18,18 @@
 */
 
 import crypto = require('crypto-browserify');
-
 import {
   Cryptor,
   CryptoInfo,
   Logger,
-  LoggerOptions,
 } from '@evan.network/dbcp';
 
 /**
  * aes ecb instance options
  */
-export interface AesEcbOptions extends LoggerOptions {}
+export {
+  LoggerOptions as AesEcbOptions
+} from '@evan.network/dbcp';
 
 export class AesEcb extends Logger implements Cryptor {
   public static defaultOptions = {

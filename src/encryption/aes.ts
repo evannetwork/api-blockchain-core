@@ -18,12 +18,17 @@
 */
 
 import crypto = require('crypto-browserify');
-
 import {
   Cryptor,
   CryptoInfo,
   Logger,
-  LoggerOptions,
+} from '@evan.network/dbcp';
+
+/**
+ * aes instance options
+ */
+export {
+  LoggerOptions as AesOptions
 } from '@evan.network/dbcp';
 
 
@@ -34,13 +39,6 @@ import {
  */
 function generateInitialVector(): Buffer {
   return crypto.randomBytes(16);
-}
-
-/**
- * aes instance options
- */
-export interface AesOptions extends LoggerOptions {
-
 }
 
 export class Aes extends Logger implements Cryptor {
