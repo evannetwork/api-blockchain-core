@@ -783,7 +783,7 @@ export class Container extends Logger {
       entries = [ entries ];
     }
 
-    // check for list entries, removeListEntries permissions only form them 
+    // check for list entries, removeListEntries permissions only form them
     const schemaProperties = (await this.toPlugin(false)).template.properties;
     const listEntries = entries.filter(entry => schemaProperties[entry].type === 'list');
 
@@ -1244,7 +1244,7 @@ export class Container extends Logger {
     // only allow owner removal when force attribute is set
     const unpermittedOwnerRemoval = unshareConfigs.filter(
       unshareConfig => unshareConfig.accountId === this.config.accountId && !unshareConfig.force);
-    if (unpermittedOwnerRemoval.length !==0) {
+    if (unpermittedOwnerRemoval.length !== 0) {
       throw new Error(`current account "${this.config.accountId}" is owner of the contract ` +
         'and cannot remove himself from sharing without force attribute' +
         this.contract.options.address);

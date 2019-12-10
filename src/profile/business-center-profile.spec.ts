@@ -20,30 +20,23 @@
 import 'mocha';
 import { expect } from 'chai';
 
-import {
-  NameResolver,
-  SignerInternal,
-  KeyProvider
-} from '@evan.network/dbcp';
-
-import { accounts } from '../test/accounts';
-import { accountMap } from '../test/accounts';
-import { Aes } from '../encryption/aes';
-import { BusinessCenterProfile } from './business-center-profile';
-import { configTestcore as config } from '../config-testcore';
-import { CryptoProvider } from '../encryption/crypto-provider';
-import { Ipld } from '../dfs/ipld';
 import { TestUtils } from '../test/test-utils';
+import { accounts, accountMap } from '../test/accounts';
+import { configTestcore as config } from '../config-testcore';
+import {
+  BusinessCenterProfile,
+  Ipld,
+  KeyProvider,
+  NameResolver,
+} from '../index';
 
 
 describe('BusinessCenterProfile helper', function() {
   this.timeout(600000);
   let ipld: Ipld;
   let nameResolver: NameResolver;
-  let ensName;
   let businessCenterDomain;
   let web3;
-  let cryptoProvider = TestUtils.getCryptoProvider();
   const sampleProfile = {
     alias: 'fnord',
     contact: 'fnord@contoso.com',
@@ -54,7 +47,6 @@ describe('BusinessCenterProfile helper', function() {
     ipld = await TestUtils.getIpld();
 
     nameResolver = await TestUtils.getNameResolver(web3);
-    ensName = nameResolver.getDomainName(config.nameResolver.domains.profile);
     businessCenterDomain = nameResolver.getDomainName(config.nameResolver.domains.businessCenter);
     nameResolver = await TestUtils.getNameResolver(web3);
     const loader = await TestUtils.getContractLoader(web3);
@@ -71,8 +63,8 @@ describe('BusinessCenterProfile helper', function() {
 
   it('should be able to set and load a profile for a given user in a business center', async () => {
     // use own key for test
-    (<KeyProvider>ipld.keyProvider).keys[nameResolver.soliditySha3(businessCenterDomain)] =
-      (<KeyProvider>ipld.keyProvider).keys[nameResolver.soliditySha3(accounts[0])];
+    (ipld.keyProvider as KeyProvider).keys[nameResolver.soliditySha3(businessCenterDomain)] =
+      (ipld.keyProvider as KeyProvider).keys[nameResolver.soliditySha3(accounts[0])];
     // create profile
     const profile = new BusinessCenterProfile({
       ipld,

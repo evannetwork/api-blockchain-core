@@ -25,6 +25,7 @@ import { createDefaultRuntime } from './runtime';
 import { TestUtils } from './test/test-utils';
 import { accountMap, accounts } from './test/accounts';
 
+use (chaiAsPromised);
 
 describe('Runtime', function() {
   this.timeout(600000);
@@ -76,5 +77,20 @@ describe('Runtime', function() {
     const runtime = await createDefaultRuntime(web3, dfs, tmpRuntimeConfig);
     expect(runtime).to.be.ok;
     expect(Object.keys(runtime.keyProvider.keys).length).to.eq(5);
+  });
+
+  it('should NOT create a new and valid runtime with only passing mnemonic and empty account map', async () => {
+    const runtimePromise = createDefaultRuntime(web3, dfs, {
+      mnemonic: 'annual lyrics orbit slight object space jeans ethics broccoli umbrella entry couch',
+      accountMap: { }
+    });
+    await expect(runtimePromise).to.be.rejected;
+  });
+
+  it('should NOT create a new and valid runtime with account map is invalid', async () => {
+    const runtimePromise = createDefaultRuntime(web3, dfs, {
+      accountMap: { }
+    });
+    await expect(runtimePromise).to.be.rejectedWith('accountMap invalid');
   });
 });
