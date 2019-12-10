@@ -48,7 +48,6 @@ export {
   ValidatorOptions,
 } from '@evan.network/dbcp'
 
-
 // expose modules from here
 export * from './contracts/base-contract/base-contract';
 export * from './contracts/data-contract/data-contract';

@@ -156,7 +156,6 @@ export class Ipld extends Logger {
             if (!key) {
               return {};
             } else {
-
               const decryptedObject = await cryptor.decrypt(
                 Buffer.from(envelope.private, this.encodingEncrypted), { key, });
               rebuffer(decryptedObject);

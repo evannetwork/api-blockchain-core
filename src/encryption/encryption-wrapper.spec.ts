@@ -18,13 +18,10 @@
 */
 
 import 'mocha';
+import { Executor } from '@evan.network/dbcp';
 import { expect } from 'chai';
 import { promisify } from 'util';
 import { readFile } from 'fs';
-import {
-  Envelope,
-  Executor,
-} from '@evan.network/dbcp';
 
 import { accounts } from '../test/accounts';
 import { CryptoProvider } from '../encryption/crypto-provider';
@@ -43,21 +40,18 @@ describe('Encryption Wrapper', function() {
   let encryptionWrapper: EncryptionWrapper;
   let executor: Executor;
   let sharing0: Sharing;
-  let sharing1: Sharing;
 
   before(async () => {
-    let web3: any;
+    const web3 = TestUtils.getWeb3();
     // data sharing sha3 self key and edges to self and other accounts
     const sha3 = (...args) => web3.utils.soliditySha3(...args);
     const sha9 = (accountId1, accountId2) => sha3(...[sha3(accountId1), sha3(accountId2)].sort());
     const getKeys = (ownAccount, partnerAccount) =>
       [sha3(ownAccount), ...[ownAccount, partnerAccount].map(partner => sha9(ownAccount, partner))];
-    web3 = TestUtils.getWeb3();
     const dfs = await TestUtils.getIpfs();
     cryptoProvider = TestUtils.getCryptoProvider(dfs);
     executor = await TestUtils.getExecutor(web3);
     sharing0 = await TestUtils.getSharing(web3, dfs, getKeys(accounts[0], accounts[1]));
-    sharing1 = await TestUtils.getSharing(web3, dfs, getKeys(accounts[1], accounts[0]));
     encryptionWrapper = new EncryptionWrapper({
       cryptoProvider,
       nameResolver: await TestUtils.getNameResolver(web3),
@@ -142,7 +136,6 @@ describe('Encryption Wrapper', function() {
     let sharingId = TestUtils.getRandomBytes32();
 
     before(async () => {
-      const randomSecret = `super secret; ${Math.random()}`;
       const contract = await executor.createContract(
         'MultiShared', [], { from: accounts[0], gas: 500000, });
       multiSharingAddress = contract.options.address;
@@ -227,7 +220,6 @@ describe('Encryption Wrapper', function() {
     let sharingAddress: string;
 
     before(async () => {
-      const randomSecret = `super secret; ${Math.random()}`;
       const contract = await executor.createContract(
         'Shared', [], { from: accounts[0], gas: 500000, });
       sharingAddress = contract.options.address;

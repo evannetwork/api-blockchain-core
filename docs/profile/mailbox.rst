@@ -57,6 +57,7 @@ Parameters
     * ``keyProvider`` - |source keyProviderInterface|_: |source keyProviderInterface|_ instance
     * ``mailboxOwner`` - ``string``: account, that will be used, when working with the mailbox
     * ``nameResolver`` - |source nameResolver|_: |source nameResolver|_ instance
+    * ``executor`` - |source executor|_ (optional): |source executor|_ instance
     * ``log`` - ``Function`` (optional): function to use for logging: ``(message, level) => {...}``
     * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
@@ -506,6 +507,9 @@ Example
 
 .. |source cryptoProvider| replace:: ``CryptoProvider``
 .. _source cryptoProvider: ../encryption/crypto-provider.html
+
+.. |source executor| replace:: ``Executor``
+.. _source executor: ../blockchain/executor.html
 
 .. |source ipfs| replace:: ``Ipfs``
 .. _source ipfs: ../dfs/ipfs.html
