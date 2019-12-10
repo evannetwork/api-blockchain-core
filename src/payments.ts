@@ -175,7 +175,7 @@ export class Payments extends Logger {
       this.setChannel(Object.assign(
         {},
         this.channel,
-        { closing_sig: closingSig },
+        { closing_sig: closingSig },    // eslint-disable-line @typescript-eslint/camelcase
       ));
     }
     this.log(`Closing channel. Cooperative = ${closingSig}`, 'debug');
@@ -248,9 +248,9 @@ export class Payments extends Logger {
 
     const closeEvents = await this.channelManager.getPastEvents('ChannelCloseRequested', {
       filter: {
-        _sender_address: channel.account,
-        _receiver_address: channel.receiver,
-        _open_block_number: channel.block,
+        _sender_address: channel.account,  // eslint-disable-line @typescript-eslint/camelcase
+        _receiver_address: channel.receiver,  // eslint-disable-line @typescript-eslint/camelcase
+        _open_block_number: channel.block,  // eslint-disable-line @typescript-eslint/camelcase
       },
       fromBlock: channel.block,
       toBlock: 'latest'
@@ -265,9 +265,9 @@ export class Payments extends Logger {
 
     const settleEvents = await this.channelManager.getPastEvents('ChannelSettled', {
       filter: {
-        _sender_address: channel.account,
-        _receiver_address: channel.receiver,
-        _open_block_number: channel.block,
+        _sender_address: channel.account,  // eslint-disable-line @typescript-eslint/camelcase
+        _receiver_address: channel.receiver,  // eslint-disable-line @typescript-eslint/camelcase
+        _open_block_number: channel.block,  // eslint-disable-line @typescript-eslint/camelcase
       },
       fromBlock: closed || channel.block,
       toBlock: 'latest'
@@ -438,8 +438,8 @@ export class Payments extends Logger {
   public async loadChannelFromBlockchain(account: string, receiver: string): Promise<MicroChannel> {
     const openEvents = await this.channelManager.getPastEvents('ChannelCreated', {
       filter: {
-        _sender_address: account,
-        _receiver_address: receiver,
+        _sender_address: account,  // eslint-disable-line @typescript-eslint/camelcase
+        _receiver_address: receiver,  // eslint-disable-line @typescript-eslint/camelcase
       },
       fromBlock: this.startBlock,
       toBlock: 'latest'
@@ -452,16 +452,16 @@ export class Payments extends Logger {
     const [ closeEvents, settleEvents, currentBlock, challenge ] = await Promise.all([
       this.channelManager.getPastEvents('ChannelCloseRequested', {
         filter: {
-          _sender_address: account,
-          _receiver_address: receiver,
+          _sender_address: account,  // eslint-disable-line @typescript-eslint/camelcase
+          _receiver_address: receiver,  // eslint-disable-line @typescript-eslint/camelcase
         },
         fromBlock: minBlock,
         toBlock: 'latest'
       }),
       this.channelManager.getPastEvents('ChannelSettled', {
         filter: {
-          _sender_address: account,
-          _receiver_address: receiver,
+          _sender_address: account,  // eslint-disable-line @typescript-eslint/camelcase
+          _receiver_address: receiver,  // eslint-disable-line @typescript-eslint/camelcase
         },
         fromBlock: minBlock,
         toBlock: 'latest'
@@ -689,13 +689,13 @@ export class Payments extends Logger {
       this.setChannel(Object.assign(
         {},
         this.channel,
-        { proof, next_proof: proof }
+        { proof, next_proof: proof }  // eslint-disable-line @typescript-eslint/camelcase
       ));
     } else {
       this.setChannel(Object.assign(
         {},
         this.channel,
-        { next_proof: proof }
+        { next_proof: proof }  // eslint-disable-line @typescript-eslint/camelcase
       ));
     }
     return proof;

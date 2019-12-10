@@ -497,7 +497,7 @@ describe('DataContract', function() {
       });
       describe('when working with descriptions', async () => {
         const testSchema = {
-          list_settable_by_member: {
+          "list_settable_by_member": {
             "$id": "list_settable_by_member_schema",
             "type": "object",
             "additionalProperties": false,
@@ -506,7 +506,7 @@ describe('DataContract', function() {
               "bar": { "type": "integer" }
             }
           },
-          entry_settable_by_member: {
+          "entry_settable_by_member": {
             "$id": "entry_settable_by_member_schema",
             "type": "integer",
           }
@@ -606,7 +606,7 @@ describe('DataContract', function() {
         });
         it('allows specifying list based schemata', async () => {
           const customSchema = JSON.parse(JSON.stringify(testSchema));
-          customSchema.list_settable_by_member = {
+          customSchema["list_settable_by_member"] = {
             "$id": "list_settable_by_member_schema",
             "$comment": "{\"entryType\": \"list\"}",
             "type": "array",
