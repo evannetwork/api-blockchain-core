@@ -10,6 +10,7 @@
   - when rest (e.g. verifications) has been set up you can call `updateConfig` to finalize `SignerIdenty` instantiation
 
 ### Fixes
+- fix `Container` documentation links and add warning to `ContainerUnshareConfig` documentation
 - add interfaces used in exported classes to export list
 
 ### Deprecations

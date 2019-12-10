@@ -149,8 +149,9 @@ export class Onboarding extends Logger {
 
     const description = {
       public: {
-        name: 'Container Contract (DataContract)',
-        description: 'Container for Digital Twin Data',
+        name: 'Profile Container',
+        description: 'Container contract for storing and sharing profile related information ' +
+          '(account type, company information, device detail, ...)',
         author: '',
         version: '0.1.0',
         dbcpVersion: 2,

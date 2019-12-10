@@ -1316,6 +1316,7 @@ describe('Container', function() {
       const unshare = container.unshareProperties([{ accountId: owner, readWrite: ['testField'], }]);
       await expect(unshare).to.be.rejectedWith(new RegExp(`^current account "${ owner }" is owner of the contract and cannot remove himself from sharing without force attribute`, 'i'));
     });
+
     it('can remove properties as owner', async() => {
       const { container, } = await createTestContainerWithProperties([ 'testField', 'testField2', 'testField3' ]);
 
@@ -1333,6 +1334,7 @@ describe('Container', function() {
       const shareConfig = await container.getContainerShareConfigForAccount(consumer);
       expect(shareConfig.read).to.be.eq(undefined);
     });
+
     it('can remove multiple properties as owner', async() => {
       const { container, } = await createTestContainerWithProperties([ 'testField', 'testField2', 'testField3' ]);
 
@@ -1352,6 +1354,7 @@ describe('Container', function() {
       expect(shareConfig.read).to.be.eq(undefined);
       expect(shareConfig.readWrite).to.be.eq(undefined);
     });
+
     it('cannot remove properties as another user', async() => {
       const { container, } = await createTestContainerWithProperties([ 'testField', 'testField2', 'testField3' ]);
 

@@ -1146,14 +1146,14 @@ setContainerShareConfigs
 
   container.setContainerShareConfigs(newConfigs, originalConfigs);
 
-Takes a full share configuration for a accountId (or a list of them), share newly added properties and unshare removed properties from the container. Also accepts a list / instance of the original sharing configurations duplicated loading can be avoided.
+Takes a full share configuration for an accountId (or a list of them), share newly added properties and unshare removed properties from the container. Also accepts a list or instance of the original sharing configurations so that duplicated loading can be avoided.
 
 ----------
 Parameters
 ----------
 
-#. ``newConfigs`` - :ref:`container_ContainerShareConfig` / :ref:`container_ContainerShareConfig`[]: sharing configurations that should be persisted
-#. ``unshareConfigs`` - :ref:`container_ContainerShareConfig` / :ref:`container_ContainerShareConfig`[]: pass original share configurations, for that the sharing delta should be built (reduces load time)
+#. ``newConfigs`` - :ref:`container_ContainerShareConfig` / :ref:`container_ContainerShareConfig` []: sharing configurations that should be persisted
+#. ``originalConfigs`` - :ref:`container_ContainerShareConfig` / :ref:`container_ContainerShareConfig` [] (optional): pass original share configurations to check differences; better performance if provided, automatically fetched if omitted
 
 -------
 Returns
@@ -1535,7 +1535,7 @@ config for unsharing multiple fields from one account (write and/or readWrite ac
 #. ``readWrite`` - ``string[]`` (optional): list of properties, that are unshared (read and write permissions)
 #. ``removeListEntries`` - ``string[]`` (optional): list of properties, that are losing the rights to remove listentries
 #. ``write`` - ``string[]`` (optional): list of properties, for which write permissions should be removed
-#. ``force`` - ``boolean`` (optional): Without force flag, removal of the owner will throw an error. By setting to true, force will even remove the owner
+#. ``force`` - ``boolean`` (optional): Without force flag, removal of the owner will throw an error. By setting to true, force will even remove the owner. **Important: By removing the owner from a property, the encryptions keys get lost and cannot be recovered. As the result of this, the data isn't readable anymore and must be overwritten by creating new encryption keys to encrypt future content.**
 
 .. _container_ContainerPlugin:
 
