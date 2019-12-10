@@ -97,11 +97,11 @@ const buffer = Buffer;
 // load adjusted bitcore mnemonic lib and do not load the full API specification to reduce bundle size
 // be careful when used adjusted components!
 import Mnemonic = require('../libs/bitcore-mnemonic/mnemonic.js');
-let instanceId = Date.now() + Math.random();
+const instanceId = Date.now() + Math.random();
 // used for global & shared available logLog
-let logLog = [ ];
+const logLog = [ ];
 // push everything into the logLog
-let logLogLevel = 0;
+const logLogLevel = 0;
 
 export {
   AccountType,

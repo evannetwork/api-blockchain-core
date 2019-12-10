@@ -17,9 +17,9 @@
   the following URL: https://evan.network/license/
 */
 
+import * as Web3 from 'web3';
 import crypto = require('crypto');
 import smartContract = require('@evan.network/smart-contracts-core');
-const Web3 = require('web3');
 
 import {
   AccountStore,
@@ -140,7 +140,6 @@ export class TestUtils {
   }
 
   public static async getContracts() {
-
     const solc = new smartContract.Solc({
       log: Logger.getDefaultLog(),
       config: { compileContracts: false, },

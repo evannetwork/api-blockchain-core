@@ -22,18 +22,12 @@ import { expect, use } from 'chai';
 import chaiAsPromised = require('chai-as-promised');
 
 import {
-  ContractLoader,
   DfsInterface,
   Executor,
-  NameResolver,
 } from '@evan.network/dbcp';
 
 import { accounts } from '../test/accounts';
-import { configTestcore as config } from '../config-testcore';
-import { CryptoProvider } from '../encryption/crypto-provider';
-import { Ipfs } from '../dfs/ipfs';
-import { sampleContext, TestUtils } from '../test/test-utils';
-import { Sharing } from './sharing';
+import { TestUtils } from '../test/test-utils';
 import { Wallet } from './wallet';
 
 use(chaiAsPromised);
@@ -42,7 +36,6 @@ use(chaiAsPromised);
 describe('Wallet handler', function() {
   this.timeout(60000);
   let dfs: DfsInterface;
-  let contractLoader: ContractLoader;
   let executor: Executor;
   let wallet: Wallet;
   let web3: any;
@@ -52,7 +45,6 @@ describe('Wallet handler', function() {
     dfs = await TestUtils.getIpfs();
     wallet = await TestUtils.getWallet(web3, dfs);
     executor = await TestUtils.getExecutor(web3);
-    contractLoader = await TestUtils.getContractLoader(web3);
   });
 
   function runTests(walletType, createWallet) {
@@ -199,7 +191,7 @@ describe('Wallet handler', function() {
           'TestContract', ['test'], { from: accounts[0], gas: 1000000, });
         expect(await web3.eth.getBalance(testContract.options.address)).to.eq('0');
 
-        const txInfo = await wallet.submitTransaction(testContract, 'chargeFunds', { from: accounts[0], value: valueToSend, });
+        await wallet.submitTransaction(testContract, 'chargeFunds', { from: accounts[0], value: valueToSend, });
         expect(await web3.eth.getBalance(testContract.options.address)).to.eq(valueToSend.toString());
         expect(await web3.eth.getBalance(walletAddress)).to.eq('0');
       });
@@ -229,7 +221,11 @@ describe('Wallet handler', function() {
 
   describe('when using managed wallets', () => {
     async function createWallet(
-        executingAccount: string, manager: string, participants: string[], confirmations?: number) {
+      executingAccount: string,
+      manager: string,
+      participants: string[],
+      confirmations?: number,
+    ) {
       // create wallet via factory, returned wallet is of type 'MultiSigWallet'
       if (typeof confirmations !== 'undefined') {
         await wallet.create(executingAccount, manager, participants, confirmations);
@@ -271,7 +267,11 @@ describe('Wallet handler', function() {
 
   describe('when using self governed wallets', () => {
     async function createWallet(
-        executingAccount: string, manager: string, participants: string[], confirmations?: number) {
+      executingAccount: string,
+      manager: string,
+      participants: string[],
+      confirmations?: number,
+    ) {
       // create wallet by hand
       const walletContract = await executor.createContract(
         'MultiSigWalletSG',

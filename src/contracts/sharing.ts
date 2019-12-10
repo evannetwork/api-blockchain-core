@@ -19,7 +19,6 @@
 
 import {
   ContractLoader,
-  Cryptor,
   Description,
   Executor,
   DfsInterface,
@@ -52,14 +51,13 @@ export interface SharingOptions extends LoggerOptions {
  * @class      Sharing (name)
  */
 export class Sharing extends Logger {
-  options: SharingOptions;
-
+  public options: SharingOptions;
   private readonly encodingUnencrypted = 'binary';
   private readonly encodingEncrypted = 'hex';
   private sharingCache = {};
   private hashCache = {};
 
-  constructor(options: SharingOptions) {
+  public constructor(options: SharingOptions) {
     super(options);
     this.options = Object.assign({
       defaultCryptoAlgo: 'aes',
@@ -81,19 +79,18 @@ export class Sharing extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async addSharing(
-      address: string,
-      originator: string,
-      partner: string,
-      section: string,
-      block: number|string,
-      sharingKey: string,
-      context?: string,
-      isHashKey = false,
-      sharingId: string = null,
-      ): Promise<void> {
+    address: string,
+    originator: string,
+    partner: string,
+    section: string,
+    block: number|string,
+    sharingKey: string,
+    context?: string,
+    isHashKey = false,
+    sharingId: string = null,
+  ): Promise<void> {
     let sharings;
     let contract;
-    let description;
 
     // load
     if (address.startsWith('0x')) {
@@ -161,13 +158,13 @@ export class Sharing extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async bumpSharings(
-      address: string,
-      originator: string,
-      partners: string[],
-      section: string,
-      block: number,
-      sharingKey: string,
-    ): Promise<void> {
+    address: string,
+    originator: string,
+    partners: string[],
+    section: string,
+    block: number,
+    sharingKey: string,
+  ): Promise<void> {
     let sharings;
     let contract;
     let description;
@@ -195,7 +192,7 @@ export class Sharing extends Logger {
     }
 
     // add new keys
-    for (let partner of partners) {
+    for (const partner of partners) {
       sharings = await this.extendSharings(sharings, originator, partner, section, block, sharingKey);
     }
 
@@ -231,7 +228,13 @@ export class Sharing extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async ensureHashKey(
-      address: string, originator: string, partner: string, hashKey: string, context?: string, sharingId: string = null): Promise<void> {
+    address: string,
+    originator: string,
+    partner: string,
+    hashKey: string,
+    context?: string,
+    sharingId: string = null,
+  ): Promise<void> {
     const setHashKey = await this.getHashKey(address, partner, sharingId);
     if (!setHashKey) {
       return this.addSharing(address, originator, partner, '*', 'hashKey', hashKey, context, true, sharingId);
@@ -252,19 +255,20 @@ export class Sharing extends Logger {
    * @return     {Promise<any>}   updated sharings info
    */
   public async extendSharings(
-      sharings: any,
-      originator: string,
-      partner: string,
-      section: string,
-      block: number|string,
-      sharingKey: string,
-      context?: string): Promise<string> {
+    sharings: any,
+    originator: string,
+    partner: string,
+    section: string,
+    block: number|string,
+    sharingKey: string,
+    context?: string,
+  ): Promise<string> {
     // encrypt sharing key
     const originatorHash = this.options.nameResolver.soliditySha3(originator);
     const partnerHash = this.options.nameResolver.soliditySha3(partner);
     const sectionHash = this.options.nameResolver.soliditySha3(section);
     const edgeKey = context ? this.options.nameResolver.soliditySha3(context) :
-      this.options.nameResolver.soliditySha3.apply(this.options.nameResolver, [originatorHash, partnerHash].sort());
+      this.options.nameResolver.soliditySha3(...[originatorHash, partnerHash].sort());
     const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(this.options.defaultCryptoAlgo);
     const cryptoInfo = cryptor.getCryptoInfo(edgeKey);
     const encryptionKey = await this.options.keyProvider.getKey(cryptoInfo);
@@ -290,7 +294,8 @@ export class Sharing extends Logger {
    * @param      {string}           sharingId  id of a sharing (when multi-sharings is used)
    * @return     {Promise<string>}  matching key
    */
-  public async getHashKey(address: string, partner: string, sharingId: string = null): Promise<any> {
+  public async getHashKey(address: string, partner: string, sharingId: string = null
+  ): Promise<any> {
     return this.getKey(address, partner, '*', 'hashKey', sharingId);
   }
 
@@ -334,13 +339,11 @@ export class Sharing extends Logger {
    * @return     {Promise<any>}  sharings object
    */
   public async getSharingsFromContract(contract: any, sharingId: string = null): Promise<any> {
-    let result = {};
-    let sharings;
-
     // use preloaded hashes if available
     if (!this.hashCache[contract.options.address] ||
         !this.hashCache[contract.options.address][sharingId] ||
-        this.hashCache[contract.options.address][sharingId] === '0x0000000000000000000000000000000000000000000000000000000000000000') {
+        this.hashCache[contract.options.address][sharingId] ===
+          '0x0000000000000000000000000000000000000000000000000000000000000000') {
       if (!this.hashCache[contract.options.address]) {
         this.hashCache[contract.options.address] = {};
       }
@@ -384,11 +387,12 @@ export class Sharing extends Logger {
    * @return     {Promise<string>}  matching key
    */
   public async getKey(
-      address: string,
-      partner: string,
-      section: string,
-      block: number|string = Number.MAX_SAFE_INTEGER,
-      sharingId: string = null): Promise<string> {
+    address: string,
+    partner: string,
+    section: string,
+    block: number|string = Number.MAX_SAFE_INTEGER,
+    sharingId: string = null,
+  ): Promise<string> {
     const partnerHash = this.options.nameResolver.soliditySha3(partner);
     const sectionHash = this.options.nameResolver.soliditySha3(section || '*');
     if (!this.sharingCache[address] ||
@@ -469,11 +473,12 @@ export class Sharing extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async removeSharing(
-      address: string,
-      originator: string,
-      partner: string,
-      section: string,
-      sharingId: string = null): Promise<void> {
+    address: string,
+    originator: string,
+    partner: string,
+    section: string,
+    sharingId: string = null,
+  ): Promise<void> {
     const partnerHash = this.options.nameResolver.soliditySha3(partner);
     const sectionHash = this.options.nameResolver.soliditySha3(section);
     let sharings;
@@ -507,12 +512,12 @@ export class Sharing extends Logger {
       // delete entry
       delete sharings[partnerHash][sectionHash];
       // remove from cache if already cached
-       if (this.sharingCache[address] &&
+      if (this.sharingCache[address] &&
           this.sharingCache[address][sharingId] &&
           this.sharingCache[address][sharingId][partnerHash] &&
           this.sharingCache[address][sharingId][partnerHash][sectionHash]) {
         delete this.sharingCache[address][sharingId][partnerHash][sectionHash];
-       }
+      }
       // save
       if (address.startsWith('0x')) {
         const updatedHash = await this.options.dfs.add(
@@ -545,7 +550,11 @@ export class Sharing extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async saveSharingsToContract(
-      contract: string, sharings: any, originator: string, sharingId?: string): Promise<void> {
+    contract: string,
+    sharings: any,
+    originator: string,
+    sharingId?: string,
+  ): Promise<void> {
     let shareContract;
     if (typeof contract === 'string') {
       shareContract = this.options.contractLoader.loadContract(sharingId ? 'MultiShared' : 'Shared',
@@ -618,7 +627,7 @@ export class Sharing extends Logger {
     sharings: any,
     partner: string,
     section?: string,
-    block?: number|string
+    block?: number|string,
   ): Promise<string> {
     const partnerHash = this.options.nameResolver.soliditySha3(partner);
     if (!section) {
@@ -635,22 +644,22 @@ export class Sharing extends Logger {
   }
 
   private async decryptSharings(sharings: any, _partner?: string, _section?: string, _block?: number): Promise<any> {
-    let result = {};
+    const result = {};
     const _partnerHash = _partner ? this.options.nameResolver.soliditySha3(_partner) : null;
-    for (let partnerHashKey of Object.keys(sharings)) {
+    for (const partnerHashKey of Object.keys(sharings)) {
       if (_partnerHash && _partnerHash !== partnerHashKey) {
         continue;
       }
       result[partnerHashKey] = {};
       const partner = sharings[partnerHashKey];
       const _sectionHash = _section ? this.options.nameResolver.soliditySha3(_section) : null;
-      for (let sectionHashKey of Object.keys(partner)) {
+      for (const sectionHashKey of Object.keys(partner)) {
         if (_sectionHash && _sectionHash !== sectionHashKey) {
           continue;
         }
         result[partnerHashKey][sectionHashKey] = {};
         const section = partner[sectionHashKey];
-        for (let blockKey of Object.keys(section)) {
+        for (const blockKey of Object.keys(section)) {
           if (_block && _block !== parseInt(blockKey, 10)) {
             continue;
           }

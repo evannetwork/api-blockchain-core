@@ -26,16 +26,20 @@ import {
 } from '@evan.network/dbcp';
 
 import * as BigNumber from 'bignumber.js';
-import { typedSignatureHash, signTypedDataLegacy, recoverTypedSignatureLegacy, concatSig } from 'eth-sig-util';
+import {
+  recoverTypedSignatureLegacy,
+  signTypedDataLegacy,
+  typedSignatureHash,
+} from 'eth-sig-util';
 
 /**
  * parameters for Payments constructor
  */
 export interface PaymentOptions extends LoggerOptions {
-  executor: any,
-  accountStore: AccountStore,
-  contractLoader: ContractLoader,
-  web3: any,
+  executor: any;
+  accountStore: AccountStore;
+  contractLoader: ContractLoader;
+  web3: any;
 }
 
 /**
@@ -122,23 +126,20 @@ interface MsgParam {
  * @class      Payments (name)
  */
 export class Payments extends Logger {
-  options: PaymentOptions;
+  public options: PaymentOptions;
   /**
    * Currently set channel info. May be loaded through [[loadStoredChannel]],
    * [[loadChannelFromBlockchain]], or stored and set manually with [[setChannel]]
    */
-  channel: MicroChannel;
-  channelManager: any;
-  startBlock: any;
-  challenge: any;
+  public channel: MicroChannel;
+  public channelManager: any;
+  public startBlock: any;
+  public challenge: any;
 
-  constructor(options) {
+  public constructor(options) {
     super(options);
     this.options = options;
     this.startBlock = 0;
-    if (concatSig) {
-      const sig = concatSig;
-    }
     if (options.channelManager) {
       this.channelManager = this.options.contractLoader.loadContract(
         'RaidenMicroTransferChannels',
@@ -159,7 +160,7 @@ export class Payments extends Logger {
    * @param closingSig  Cooperative-close signature from receiver
    * @returns  Promise to closing tx hash
    */
-  async closeChannel(closingSig?: string): Promise<void> {
+  public async closeChannel(closingSig?: string): Promise<void> {
     if (!this.isChannelValid()) {
       throw new Error('No valid channelInfo');
     }
@@ -215,7 +216,7 @@ export class Payments extends Logger {
    * or right after signNewProof is resolved,
    * if implementation don't care for request status
    */
-  confirmPayment(proof: MicroProof): void {
+  public confirmPayment(proof: MicroProof): void {
     if (!this.channel.next_proof
       || !this.channel.next_proof.sig
       || this.channel.next_proof.sig !== proof.sig) {
@@ -237,7 +238,7 @@ export class Payments extends Logger {
    * @param channel  Channel to get info from. Default to channel
    * @returns Promise to MicroChannelInfo data
    */
-  async getChannelInfo(channel?: MicroChannel): Promise<MicroChannelInfo> {
+  public async getChannelInfo(channel?: MicroChannel): Promise<MicroChannelInfo> {
     if (!channel) {
       channel = this.channel;
     }
@@ -315,7 +316,7 @@ export class Payments extends Logger {
    *
    * @returns  Promise to challenge period number, in blocks
    */
-  async getChallengePeriod(): Promise<number> {
+  public async getChallengePeriod(): Promise<number> {
     this.challenge = await this.options.executor.executeContractCall(
       this.channelManager,
       'challenge_period'
@@ -341,7 +342,7 @@ export class Payments extends Logger {
    * @param proof  Balance proof to be signed
    * @returns  Promise to signature
    */
-  async getClosingSig(account: string): Promise<string> {
+  public async getClosingSig(account: string): Promise<string> {
     if (!this.isChannelValid()) {
       throw new Error('No valid channelInfo');
     }
@@ -379,7 +380,7 @@ export class Payments extends Logger {
    * @param channel  Channel to test. Default to channel
    * @returns  True if channel is valid, false otherwise
    */
-  isChannelValid(channel?: MicroChannel): boolean {
+  public isChannelValid(channel?: MicroChannel): boolean {
     if (!channel) {
       channel = this.channel;
     }
@@ -399,7 +400,7 @@ export class Payments extends Logger {
    * @param amount  Amount to increment in current balance
    * @returns  Promise to signature
    */
-  async incrementBalanceAndSign(amount: BigNumber|string): Promise<MicroProof> {
+  public async incrementBalanceAndSign(amount: BigNumber|string): Promise<MicroProof> {
     if (!(amount instanceof BigNumber)) {
       amount = new BigNumber(amount);
     }
@@ -434,7 +435,7 @@ export class Payments extends Logger {
    * @param receiver  Receiver/server's account address
    * @returns  Promise to channel info, if a channel was found
    */
-  async loadChannelFromBlockchain(account: string, receiver: string): Promise<MicroChannel> {
+  public async loadChannelFromBlockchain(account: string, receiver: string): Promise<MicroChannel> {
     const openEvents = await this.channelManager.getPastEvents('ChannelCreated', {
       filter: {
         _sender_address: account,
@@ -470,22 +471,22 @@ export class Payments extends Logger {
     ]);
 
     const stillOpen = openEvents.filter((ev) => {
-      for (let sev of settleEvents) {
+      for (const sev of settleEvents) {
         if (sev.args._open_block_number.eq(ev.blockNumber)) {
           return false;
         }
       }
-      for (let cev of closeEvents) {
+      for (const cev of closeEvents) {
         if (cev.args._open_block_number.eq(ev.blockNumber) &&
             cev.blockNumber + challenge > currentBlock) {}
-          return false;
+        return false;
       }
       return true;
     });
 
     let openChannel: MicroChannel;
-    for (let ev of stillOpen) {
-      let channel: MicroChannel = {
+    for (const ev of stillOpen) {
+      const channel: MicroChannel = {
         account,
         receiver,
         block: ev.blockNumber,
@@ -517,7 +518,7 @@ export class Payments extends Logger {
    * @param deposit  Tokens to be initially deposited in the channel (in Wei)
    * @returns  Promise to MicroChannel info object
    */
-  async openChannel(account: string, receiver: string, deposit: BigNumber|string): Promise<MicroChannel> {
+  public async openChannel(account: string, receiver: string, deposit: BigNumber|string): Promise<MicroChannel> {
     if (!(deposit instanceof BigNumber)) {
       deposit = new BigNumber(deposit);
     }
@@ -534,7 +535,6 @@ export class Payments extends Logger {
     }
 
     // call transfer to make the deposit, automatic support for ERC20/223 token
-    let transferTxHash: string;
     const createdBlockNumber = await this.options.executor.executeContractTransaction(
       this.channelManager,
       'createChannel',
@@ -543,7 +543,7 @@ export class Payments extends Logger {
         value: deposit,
         // event ChannelCreated(address _sender_address, address  _receiver_address, uint256 _deposit)
         event: { target: 'RaidenMicroTransferChannels', eventName: 'ChannelCreated' },
-        getEventResult: (event, args) => event.blockNumber,
+        getEventResult: (event) => event.blockNumber,
       },
       receiver
     );
@@ -574,7 +574,7 @@ export class Payments extends Logger {
    *
    * @param      {string}  channelManager  the new channelmanager address
    */
-  setChannelManager(channelManager: string) {
+  public setChannelManager(channelManager: string) {
     this.channelManager = this.options.contractLoader.loadContract(
       'RaidenMicroTransferChannels',
       channelManager
@@ -588,11 +588,11 @@ export class Payments extends Logger {
    *
    * @param channel  Channel info to be set
    */
-  setChannel(channel: MicroChannel): void {
+  public setChannel(channel: MicroChannel): void {
     this.channel = channel;
-    if (typeof (<any>global).localStorage !== 'undefined') {
+    if (typeof (global as any).localStorage !== 'undefined') {
       const key = [this.channel.account, this.channel.receiver].join('|');
-      (<any>global).localStorage.setItem(key, JSON.stringify(this.channel));
+      (global as any).localStorage.setItem(key, JSON.stringify(this.channel));
     }
   }
 
@@ -604,7 +604,7 @@ export class Payments extends Logger {
    *
    * @returns  Promise resolved when done
    */
-  async settleChannel(): Promise<void> {
+  public async settleChannel(): Promise<void> {
     if (!this.isChannelValid()) {
       throw new Error('No valid channelInfo');
     }
@@ -641,7 +641,7 @@ export class Payments extends Logger {
    * @param proof  Balance proof to be signed
    * @returns  Promise to signature
    */
-  async signNewProof(proof?: MicroProof): Promise<MicroProof> {
+  public async signNewProof(proof?: MicroProof): Promise<MicroProof> {
     if (!this.isChannelValid()) {
       throw new Error('No valid channelInfo');
     }
@@ -707,29 +707,19 @@ export class Payments extends Logger {
    * @param msg  Data to be signed
    * @returns Promise to signature
    */
-  async signMessage(msg: string): Promise<string> {
+  public async signMessage(msg: string): Promise<string> {
     if (!this.isChannelValid()) {
       throw new Error('No valid channelInfo');
     }
     const hex = msg.startsWith('0x') ? msg : this.options.web3.utils.toHex(msg);
     this.log(`Signing "${msg}" => ${hex}, account: ${this.channel.account}`, 'debug');
     const privKey = await this.options.accountStore.getPrivateKey(this.channel.account)
-    let sig = await this.options.web3.eth.accounts.sign(
+    const sig = await this.options.web3.eth.accounts.sign(
       hex,
       Buffer.from('0x' + privKey, 'hex')
     );
     return sig;
   }
-
-
-   /**
-   * Top up current channel, by depositing some [more] tokens to it
-   *
-   * Should work with both ERC20/ERC223 tokens
-   *
-   * @param deposit  Tokens to be deposited in the channel
-   * @returns  Promise to tx hash
-   */
 
   /**
    * Top up current channel, by depositing some [more] EVE to it
@@ -737,7 +727,7 @@ export class Payments extends Logger {
    * @param      {BigNumber|string}  deposit  amount  to topup channel
    * @return     {Promise<void>}  resolved when done
    */
-  async topUpChannel(deposit: BigNumber|string): Promise<void> {
+  public async topUpChannel(deposit: BigNumber|string): Promise<void> {
     if (!(deposit instanceof BigNumber)) {
       deposit = new BigNumber(deposit);
     }
@@ -838,5 +828,4 @@ export class Payments extends Logger {
       },
     ];
   }
-
 }

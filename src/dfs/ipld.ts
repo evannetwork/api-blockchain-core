@@ -18,13 +18,11 @@
 */
 
 import Graph = require('ipld-graph-builder');
-import bs58 = require('bs58');
-import * as https from 'https';
 import _ = require('lodash');
+import bs58 = require('bs58');
 
 import {
   CryptoInfo,
-  Cryptor,
   Envelope,
   KeyProviderInterface,
   Logger,
@@ -65,15 +63,14 @@ export interface IpldOptions extends LoggerOptions {
  * @class      Ipld IPFS helper class
  */
 export class Ipld extends Logger {
-  graph: Graph;
-  ipfs: Ipfs;
-  keyProvider: KeyProviderInterface;
-  cryptoProvider: CryptoProvider;
-  originator: string;
-  defaultCryptoAlgo: string;
-  nameResolver: NameResolver;
-  hashLog: string[] = [];
-
+  public graph: Graph;
+  public ipfs: Ipfs;
+  public keyProvider: KeyProviderInterface;
+  public cryptoProvider: CryptoProvider;
+  public originator: string;
+  public defaultCryptoAlgo: string;
+  public nameResolver: NameResolver;
+  public hashLog: string[] = [];
   private readonly dagOptions = { format: 'dag-pb', };
   private readonly encodingUnencrypted = 'utf-8';
   private readonly encodingEncrypted = 'hex';
@@ -93,7 +90,7 @@ export class Ipld extends Logger {
     });
   }
 
-  constructor(options: IpldOptions) {
+  public constructor(options: IpldOptions) {
     super(options);
     this.ipfs = options.ipfs;
     this.graph = new Graph({ get: null, put: null, });
@@ -104,7 +101,6 @@ export class Ipld extends Logger {
     this.nameResolver = options.nameResolver;
 
     // overwrite dag.put and dag.get if cryptor was provided
-    const originalDagPut = this.graph._dag.put;
     this.graph._dag.put = async (...args) => {
       const data = args[0];
       if (data.cryptoInfo || this.defaultCryptoAlgo) {
@@ -132,15 +128,13 @@ export class Ipld extends Logger {
         .then((hash) => {
           this.hashLog.push(hash);
           const bufferHash = bs58.decode(Ipfs.bytes32ToIpfsHash(hash));
-          const dagHash = bs58.encode(bufferHash);
           return bufferHash;
         });
     };
 
-    const originalDagGet = this.graph._dag.get;
     this.graph._dag.get = (...args) => {
       const timeout = new Promise((resolve, reject) => {
-        let wait = setTimeout(() => {
+        const wait = setTimeout(() => {
           clearTimeout(wait);
           reject(new Error('timeout reached'));
         }, IPLD_TIMEOUT)
@@ -182,7 +176,7 @@ export class Ipld extends Logger {
    * @param      {string}                 path            path in the tree
    * @return     {Promise<any>}           linked graph.
    */
-  async getLinkedGraph(graphReference: string | Buffer | any, path = ''): Promise<any> {
+  public async getLinkedGraph(graphReference: string | Buffer | any, path = ''): Promise<any> {
     let graphObject;
     if (typeof graphReference === 'string') {
       // fetch ipfs file
@@ -229,7 +223,7 @@ export class Ipld extends Logger {
    *                                                      (default: 10)
    * @return     {Promise<any>}           resolved graph
    */
-  async getResolvedGraph(graphReference: string | Buffer | any, path = '', depth = 10): Promise<any> {
+  public async getResolvedGraph(graphReference: string | Buffer | any, path = '', depth = 10): Promise<any> {
     const treeNode = await this.getLinkedGraph(graphReference, path);
     return await this.graph.tree(treeNode, depth, true);
   }
@@ -240,17 +234,14 @@ export class Ipld extends Logger {
    * @param      {any}              toSet   tree to store
    * @return     {Promise<string>}  hash reference to a tree with with merklefied links
    */
-  async store(toSet: any): Promise<string> {
+  public async store(toSet: any): Promise<string> {
     const cryptoInfo = {
       algorithm: 'unencrypted'
     }
     const treeToStore = _.cloneDeep(toSet);
-    const [rootObject, key] = await Promise.all([
-      // get final tree
-      this.graph.flush(treeToStore, Object.assign({}, this.dagOptions, { cryptoInfo, })),
-      // encrypt dag and put in envelope
-      this.keyProvider.getKey(cryptoInfo),
-    ]);
+    // get final tree
+    const rootObject = await this.graph.flush(
+      treeToStore, Object.assign({}, this.dagOptions, { cryptoInfo }));
     const envelope: Envelope = {
       private: Buffer.from(JSON.stringify(rootObject), this.encodingUnencrypted).toString(this.encodingEncrypted),
       cryptoInfo,
@@ -272,7 +263,7 @@ export class Ipld extends Logger {
    * @param      {CryptoInfo}    cryptoInfo   crypto info for encrypting subtree
    * @return     {Promise<any>}  tree with merklefied links
    */
-  async set(tree: any, path: string, subtree: any, plainObject = false, cryptoInfo?: CryptoInfo): Promise<any> {
+  public async set(tree: any, path: string, subtree: any, plainObject = false, cryptoInfo?: CryptoInfo): Promise<any> {
     if (cryptoInfo && typeof subtree === 'object') {
       subtree.cryptoInfo = cryptoInfo;
     }
@@ -287,7 +278,7 @@ export class Ipld extends Logger {
    * @param      {string}        path    path of inserted element
    * @return     {Promise<any>}  tree with merklefied links
    */
-  async remove(tree: any, path: string): Promise<any> {
+  public async remove(tree: any, path: string): Promise<any> {
     const splitPath = path.split('/');
     const node = splitPath[splitPath.length - 1];
     const toTraverse = splitPath.slice(0, -1);

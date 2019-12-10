@@ -44,21 +44,21 @@ export enum ContractState {
  * describes the state of a consumer or owner in a contract
  */
 export enum ConsumerState {
-    Initial,
-    Error,
-    Draft,
-    Rejected,
-    Active,
-    Terminated
+  Initial,
+  Error,
+  Draft,
+  Rejected,
+  Active,
+  Terminated
 };
 
 /**
  * options for BaseContract constructor
  */
 export interface BaseContractOptions extends LoggerOptions {
-  executor: Executor,
-  loader: ContractLoader,
-  nameResolver: NameResolver,
+  executor: Executor;
+  loader: ContractLoader;
+  nameResolver: NameResolver;
 }
 
 /**
@@ -69,7 +69,7 @@ export interface BaseContractOptions extends LoggerOptions {
 export class BaseContract extends Logger {
   protected options: BaseContractOptions;
 
-  constructor(optionsInput: BaseContractOptions) {
+  public constructor(optionsInput: BaseContractOptions) {
     super(optionsInput);
     this.options = optionsInput;
   }
@@ -86,11 +86,11 @@ export class BaseContract extends Logger {
    * @return     {Promise<string>}  Ethereum id of new contract
    */
   public async createUninitialized(
-      factoryName: string,
-      accountId: string,
-      businessCenterDomain?: string,
-      descriptionDfsHash = '0x0000000000000000000000000000000000000000000000000000000000000000')
-      : Promise<string> {
+    factoryName: string,
+    accountId: string,
+    businessCenterDomain?: string,
+    descriptionDfsHash = '0x0000000000000000000000000000000000000000000000000000000000000000',
+  ): Promise<string> {
     let factoryAddress;
     if (factoryName.startsWith('0x')) {
       factoryAddress = factoryName;
@@ -159,10 +159,11 @@ export class BaseContract extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async inviteToContract(
-      businessCenterDomain: string,
-      contract: string,
-      inviterId: string,
-      inviteeId: string): Promise<void> {
+    businessCenterDomain: string,
+    contract: string,
+    inviterId: string,
+    inviteeId: string,
+  ): Promise<void> {
     const baseContractInterface = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('BaseContractInterface', contract);
     let businessCenterAddress;
@@ -188,7 +189,8 @@ export class BaseContract extends Logger {
    * @param      {ContractState}  state      new state
    * @return     {Promise<void>}  resolved when done
    */
-  public async changeContractState(contract: string|any, accountId: string, state: ContractState): Promise<void> {
+  public async changeContractState(contract: string|any, accountId: string, state: ContractState
+  ): Promise<void> {
     const baseContractInterface = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('BaseContractInterface', contract);
     await this.options.executor.executeContractTransaction(
@@ -209,10 +211,11 @@ export class BaseContract extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async changeConsumerState(
-      contract: string|any,
-      accountId: string,
-      consumerId: string,
-      state: ConsumerState): Promise<void> {
+    contract: string|any,
+    accountId: string,
+    consumerId: string,
+    state: ConsumerState,
+  ): Promise<void> {
     const baseContractInterface = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('BaseContractInterface', contract);
     await this.options.executor.executeContractTransaction(
@@ -236,10 +239,11 @@ export class BaseContract extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async removeFromContract(
-      businessCenterDomain: string,
-      contract: string,
-      accountId: string,
-      idToBeRemoved: string): Promise<void> {
+    businessCenterDomain: string,
+    contract: string,
+    accountId: string,
+    idToBeRemoved: string,
+  ): Promise<void> {
     const baseContractInterface = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('BaseContractInterface', contract);
     let businessCenterAddress;

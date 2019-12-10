@@ -20,43 +20,17 @@
 import * as Throttle from 'promise-parallel-throttle';
 import { Mutex } from 'async-mutex';
 import {
-  ContractLoader,
-  DfsInterface,
   Envelope,
-  Executor,
   Logger,
   LoggerOptions,
 } from '@evan.network/dbcp';
 
 import { Container, ContainerConfig, ContainerOptions } from './container';
-import { DataContract } from '../data-contract/data-contract';
-import { Description } from '../../shared-description';
-import { NameResolver } from '../../name-resolver';
 import { Profile } from '../../profile/profile';
-import { RightsAndRoles } from '../rights-and-roles';
-import { Sharing } from '../sharing';
-import { Verifications } from '../../verifications/verifications';
 
 
 // empty address
 const nullAddress = '0x0000000000000000000000000000000000000000';
-
-/**
- * Check, that given subset of properties is present at config, collections missing properties and
- * throws a single error.
- *
- * @param      {ContainerConfig}  config      config for container instance
- * @param      {string}           properties  list of property names, that should be present
- */
-function checkConfigProperties(config: DigitalTwinConfig, properties: string[]): void {
-  let missing = properties.filter(property => !config.hasOwnProperty(property));
-  if (missing.length === 1) {
-    throw new Error(`missing property in config: "${missing[0]}"`);
-  } else if (missing.length > 1) {
-    throw new Error(`missing properties in config: "${missing.join(', ')}"`);
-  }
-}
-
 
 /**
  * possible entry types for entries in index
@@ -137,7 +111,7 @@ export class DigitalTwin extends Logger {
   private config: DigitalTwinConfig;
   private contract: any;
   private options: DigitalTwinOptions;
-  private mutexes: { [id: string]: Mutex; };
+  private mutexes: { [id: string]: Mutex };
 
   /**
    * Create digital twin contract.
@@ -234,7 +208,7 @@ export class DigitalTwin extends Logger {
    *
    * @param      {DigitalTwinOptions}  options  twin runtime options
    */
-  public static async getFavorites(options: DigitalTwinOptions): Promise<Array<string>> {
+  public static async getFavorites(options: DigitalTwinOptions): Promise<string[]> {
     const favorites = (await options.profile.getBcContracts('twins.evan')) || { };
 
     // purge crypto info directly
@@ -253,7 +227,7 @@ export class DigitalTwin extends Logger {
   public static async getValidity(
     options: DigitalTwinOptions,
     ensAddress: string,
-  ): Promise<{ valid: boolean, exists: boolean, error: Error }> {
+  ): Promise<{ valid: boolean; exists: boolean; error: Error }> {
     let valid = false, exists = false, error = null;
 
     // create temporary twin instance, to ensure the contract
@@ -286,7 +260,7 @@ export class DigitalTwin extends Logger {
    * @param      {DigitalTwinOptions}  options  runtime-like object with required modules
    * @param      {DigitalTwinConfig}   config   digital twin related config
    */
-  constructor(options: DigitalTwinOptions, config: DigitalTwinConfig) {
+  public constructor(options: DigitalTwinOptions, config: DigitalTwinConfig) {
     super(options as LoggerOptions);
     this.options = options;
     this.config = config;
@@ -296,7 +270,7 @@ export class DigitalTwin extends Logger {
   /**
    * Add the digital twin with given address to profile.
    */
-  async addAsFavorite() {
+  public async addAsFavorite() {
     await this.getMutex('profile').runExclusive(async () => {
       await this.options.profile.loadForAccount(this.options.profile.treeLabels.contracts);
       await this.options.profile.addBcContract('twins.evan', this.config.address, {});
@@ -380,7 +354,7 @@ export class DigitalTwin extends Logger {
     if (this.contract) {
       return;
     }
-    let address = this.config.address.startsWith('0x') ?
+    const address = this.config.address.startsWith('0x') ?
       this.config.address : await this.options.nameResolver.getAddress(this.config.address);
     const baseError = `ens address ${ this.config.address } / contract address ${ address }:`;
     let description;
@@ -432,7 +406,7 @@ export class DigitalTwin extends Logger {
   public async getEntries(): Promise<{[id: string]: DigitalTwinIndexEntry}> {
     await this.ensureContract();
     // get all from contract
-    let results = {};
+    const results = {};
     let itemsRetrieved = 0;
     const resultsPerPage = 10;
     const getResults = async (singleQueryOffset) => {
@@ -447,7 +421,6 @@ export class DigitalTwin extends Logger {
           // result pages have empty entries after valid results, so drop those
           break;
         }
-        const resultId = i + singleQueryOffset;
         results[queryResult.names[i]] = {
           raw: { value: queryResult.values[i], entryType: queryResult.entryTypes[i] },
         };
@@ -457,7 +430,7 @@ export class DigitalTwin extends Logger {
       }
     };
     await getResults(0);
-    for (let key of Object.keys(results)) {
+    for (const key of Object.keys(results)) {
       this.processEntry(results[key]);
     }
     return results;
@@ -518,8 +491,6 @@ export class DigitalTwin extends Logger {
    */
   public async removeFromFavorites() {
     await this.getMutex('profile').runExclusive(async () => {
-      const description = await this.getDescription();
-
       await this.options.profile.loadForAccount(this.options.profile.treeLabels.contracts);
       await this.options.profile.removeBcContract('twins.evan', this.config.address);
       await this.options.profile.storeForAccount(this.options.profile.treeLabels.contracts);
@@ -612,27 +583,27 @@ export class DigitalTwin extends Logger {
     let address;
     entry.entryType = parseInt(entry.raw.entryType, 10);
     switch (entry.entryType) {
-        case DigitalTwinEntryType.AccountId:
-        case DigitalTwinEntryType.GenericContract:
-          entry.value = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
-          break;
-        case DigitalTwinEntryType.Container:
-          address = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
-          entry.value = new Container(
-            this.options,
-            {
-              accountId: this.config.accountId,
-              ...this.config.containerConfig,
-              address,
-            },
-          );
-          break;
-        case DigitalTwinEntryType.DigitalTwin:
-          address = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
-          entry.value = new DigitalTwin(this.options, { ...this.config, address });
-          break;
-        default:
-          entry.value = entry.raw.value;
+      case DigitalTwinEntryType.AccountId:
+      case DigitalTwinEntryType.GenericContract:
+        entry.value = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
+        break;
+      case DigitalTwinEntryType.Container:
+        address = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
+        entry.value = new Container(
+          this.options,
+          {
+            accountId: this.config.accountId,
+            ...this.config.containerConfig,
+            address,
+          },
+        );
+        break;
+      case DigitalTwinEntryType.DigitalTwin:
+        address = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
+        entry.value = new DigitalTwin(this.options, { ...this.config, address });
+        break;
+      default:
+        entry.value = entry.raw.value;
     }
   }
 }

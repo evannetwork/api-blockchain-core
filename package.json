@@ -34,8 +34,8 @@
     "@types/chai": "^4.1.7",
     "@types/chai-as-promised": "^7.1.0",
     "@types/mocha": "^5.2.7",
-    "@typescript-eslint/eslint-plugin": "^1.13.0",
-    "@typescript-eslint/parser": "^1.13.0",
+    "@typescript-eslint/eslint-plugin": "^2.11.0",
+    "@typescript-eslint/parser": "^2.11.0",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
     "common-shakeify": "^0.6.2",
@@ -59,7 +59,7 @@
   "homepage": "https://evannetwork.github.io/",
   "husky": {
     "hooks": {
-      "pre-commit": "tslint --config tslint.json \"./src/**/*.ts\" --project \"tsconfig_husky.json\""
+      "pre-commit": "eslint --ext .js,.ts -c .eslintrc.js ./src"
     }
   },
   "keywords": [

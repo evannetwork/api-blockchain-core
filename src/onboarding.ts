@@ -136,10 +136,10 @@ export class Onboarding extends Logger {
     const factoryAddress = await runtime.nameResolver.getAddress(factoryDomain);
 
     const combinedDataSchema = merge(
-        ...Object.keys(AccountType).map(accountType => cloneDeep(AccountType[accountType])))
+      ...Object.keys(AccountType).map(accountType => cloneDeep(AccountType[accountType])))
     const properties = combinedDataSchema.template.properties
     const ajvProperties = {}
-    for (let key of Object.keys(properties)) {
+    for (const key of Object.keys(properties)) {
       ajvProperties[key] = properties[key].dataSchema
     }
     const dataSchemaEntries =
@@ -220,7 +220,7 @@ export class Onboarding extends Logger {
         sharings, runtime.activeAccount, runtime.activeAccount, profileKeys[i], blockNr, dataContentKeys[i]);
     }
     // upload sharings
-    let sharingsHash = await runtime.dfs.add(
+    const sharingsHash = await runtime.dfs.add(
       'sharing', Buffer.from(JSON.stringify(sharings), encodingUnencrypted));
 
 
@@ -431,7 +431,7 @@ export class Onboarding extends Logger {
         sharings, accountId, accountId, profileKeys[i], blockNr, dataContentKeys[i]);
     }
     // upload sharings
-    let sharingsHash = await runtime.dfs.add(
+    const sharingsHash = await runtime.dfs.add(
       'sharing', Buffer.from(JSON.stringify(sharings), runtime.dataContract.encodingUnencrypted));
 
     // used to exclude encrypted hashes from fileHashes.ipfsHashes
@@ -448,7 +448,7 @@ export class Onboarding extends Logger {
         cryptoInfo: cryptorAes.getCryptoInfo(
           runtime.nameResolver.soliditySha3((requestedProfile as any).contractId)),
       };
-      let ipfsHash = await runtime.dfs.add(key, Buffer.from(JSON.stringify(envelope)));
+      const ipfsHash = await runtime.dfs.add(key, Buffer.from(JSON.stringify(envelope)));
       profile.ipld.hashLog.push(`${ ipfsHash.toString('hex') }`);
 
       fileHashes.properties.entries[key] = await cryptor.encrypt(

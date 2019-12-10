@@ -16,12 +16,11 @@
   Fifth Floor, Boston, MA, 02110-1301 USA, or download the license from
   the following URL: https://evan.network/license/
 */
+import * as BigNumber from 'bignumber.js';
+import * as http from 'http';
+import * as https from 'https';
+import * as url from 'url';
 
-const BigNumber = require('bignumber.js');
-const http = require('http');
-const https = require('https');
-const querystring = require('querystring');
-const url = require('url');
 
 /**
  * Use this function instead of request node_module to reduce browser bundle file size.
@@ -88,20 +87,20 @@ export interface ExecutorAgentOptions extends ExecutorOptions {
  * @class      ExecutorAgent (name)
  */
 export class ExecutorAgent extends Executor {
-  agentUrl: string;
-  config: any;
-  contractLoader: ContractLoader;
-  defaultOptions: any;
-  eventHub: EventHub;
-  signer: SignerInterface;
-  web3: any;
-  token: string;
+  public agentUrl: string;
+  public config: any;
+  public contractLoader: ContractLoader;
+  public defaultOptions: any;
+  public eventHub: EventHub;
+  public signer: SignerInterface;
+  public web3: any;
+  public token: string;
 
   /**
    * note, that the ExecutorAgent requires the "init" function to be called when intending to use the
    * EventHub helper for transactions with event return values
    */
-  constructor(options: ExecutorAgentOptions) {
+  public constructor(options: ExecutorAgentOptions) {
     super(options);
     this.config = options.config;
     this.contractLoader = options.contractLoader;
@@ -255,7 +254,7 @@ export class ExecutorAgent extends Executor {
    *                                            value
    * @return     {Promise<void>}  resolved when done
    */
-  public async executeSend(inputOptions): Promise<void> {
+  public async executeSend(): Promise<void> {
     throw new Error(`sending funds is not supported by the agent based executor`);
   }
 

@@ -368,7 +368,7 @@ export class Verifications extends Logger {
 
     // iterate through all verifications and check for warnings and the latest creation date of an
     // verification
-    for (let verification of verifications) {
+    for (const verification of verifications) {
       // concatenate all warnings
       computed.warnings = computed.warnings.concat(verification.warnings);
 
@@ -1104,7 +1104,7 @@ export class Verifications extends Logger {
     return this.formatToV2(nested, queryOptions || this.defaultQueryOptions);
   }
 
-   /**
+  /**
     * Builds required data for a transaction from an identity (offchain) and returns data, that can
     * be used to submit it later on. Return value can be passed to ``executeTransaction``.
     * Transaction information is not signed and therefore can only be submitted by an appropriate key
@@ -1136,7 +1136,7 @@ export class Verifications extends Logger {
       `${options.nonce}` : await this.getExecutionNonce(sourceIdentity, true);
 
     const input = contract ?
-      contract.methods[functionName].apply(contract.methods, args).encodeABI() :
+      contract.methods[functionName](...args).encodeABI() :
       options.input;
 
     const to = contract ?
@@ -1234,27 +1234,27 @@ export class Verifications extends Logger {
         }
       })());
 
-      let [
+      const [
         verification,
         verificationStatus,
-        creationBlock,
-        creationDate,
+        creationBlockRaw,
+        creationDateRaw,
         disableSubVerifications,
-        expirationDate,
+        expirationDateRaw,
         rejected,
         description,
       ] = await Promise.all(verificationDetails);
 
       // check BigNumber Objects and convert back
-      if (expirationDate.toString) {
-        expirationDate = expirationDate.toString()
-      }
-      if (creationBlock.toNumber) {
-        creationBlock = creationBlock.toNumber()
-      }
-      if (creationDate.toString) {
-        creationDate = creationDate.toString()
-      }
+      const expirationDate = expirationDateRaw.toString
+        ? expirationDateRaw.toString()
+        : expirationDateRaw;
+      const creationBlock = creationBlockRaw.toNumber
+        ? creationBlockRaw.toNumber()
+        : creationBlockRaw;
+      const creationDate = creationDateRaw.toString
+        ? creationDateRaw.toString()
+        : creationDateRaw;
 
       if (verification.issuer === nullAddress) {
         return false;
@@ -1421,12 +1421,10 @@ export class Verifications extends Logger {
       issuer,
       subject,
       topic,
-      expirationDate,
       verificationValue,
       descriptionDomain,
-      disableSubVerifications,
       isIdentity,
-      uri
+      uri,
     );
 
     // clear cache for this verification
@@ -1587,10 +1585,8 @@ export class Verifications extends Logger {
       issuer,
       subject,
       topic,
-      expirationDate,
       verificationValue,
       descriptionDomain,
-      disableSubVerifications,
       isIdentity,
       uri,
     );
@@ -1661,7 +1657,7 @@ export class Verifications extends Logger {
   ): Promise<boolean> {
     await this.ensureStorage();
 
-    let subjectIdentity = isIdentity ? subject : await this.getIdentityForAccount(subject, true);
+    const subjectIdentity = isIdentity ? subject : await this.getIdentityForAccount(subject, true);
 
     const verification = await this.callOnIdentity(
       subject,
@@ -1747,14 +1743,14 @@ export class Verifications extends Logger {
     // iterate over all verifications, then over all flags and update status
     // later on pick most trustworthy verification as trust level
     // iterate even if best reachable is 'red', as status is set per verification
-    for (let verification of partialResult.verifications) {
+    for (const verification of partialResult.verifications) {
       // check this levels trustworthiness
       let currentVerificationStatus;
       if (verification.statusFlags &&
           verification.statusFlags.length) {
         // flags found, set to false and start to prove trustworthiness
         currentVerificationStatus = VerificationsStatusV2.Red;
-        for (let statusFlag of verification.statusFlags) {
+        for (const statusFlag of verification.statusFlags) {
           // current flag is untrusted by default, start checks
           let tempStatus = VerificationsStatusV2.Red;
           // use defined status or function for check
@@ -1957,7 +1953,7 @@ export class Verifications extends Logger {
     const subjectType = await this.getSubjectType(subject, isIdentity);
     if (subjectType === 'contract') {
       const targetIdentity = isIdentity ? subject : await this.getIdentityForAccount(subject);
-      let abiOnRegistry = this.contracts.registry.methods[fun](targetIdentity, ...args).encodeABI();
+      const abiOnRegistry = this.contracts.registry.methods[fun](targetIdentity, ...args).encodeABI();
       if (options.event) {
         return this.executeAndHandleEventResult(
           options.from,
@@ -2070,7 +2066,7 @@ export class Verifications extends Logger {
         verifications: [],
       };
     }
-    let verifications = [];
+    const verifications = [];
     let levelComputed: any;
 
     if (nestedVerifications.length) {
@@ -2096,7 +2092,7 @@ export class Verifications extends Logger {
     }
 
     // convert verification data
-    for (let nestedVerification of nestedVerifications) {
+    for (const nestedVerification of nestedVerifications) {
       const verification: Partial<VerificationsVerificationEntry> = {
         details: {
           creationDate: nestedVerification.creationDate,
@@ -2172,16 +2168,12 @@ export class Verifications extends Logger {
    * @param      {string}   subject                  subject of the verification and the owner of
    *                                                 the verification node
    * @param      {string}   topic                    name of the verification (full path)
-   * @param      {number}   expirationDate           expiration date, for the verification, defaults
-   *                                                 to `0` (≈does not expire)
    * @param      {any}      verificationValue        json object which will be stored in the
    *                                                 verification
    * @param      {string}   descriptionDomain        domain of the verification, this is a subdomain
    *                                                 under 'verifications.evan', so passing
    *                                                 'example' will link verifications description
    *                                                 to 'example.verifications.evan'
-   * @param      {boolean}  disableSubVerifications  if true, verifications created under this path
-   *                                                 are invalid
    * @param      {string}   uri                      when given this uri will be stored on
    *                                                 the new verification
    * @return     {any}      data for setting verifications
@@ -2190,10 +2182,8 @@ export class Verifications extends Logger {
     issuer: string,
     subject: string,
     topic: string,
-    expirationDate = 0,
     verificationValue?: any,
     descriptionDomain?: string,
-    disableSubVerifications = false,
     isIdentity = false,
     uri = ''
   ): Promise<{
@@ -2243,7 +2233,7 @@ export class Verifications extends Logger {
     const uint256VerificationName = new BigNumber(sha3VerificationName).toString(10);
 
     let verificationData = nullBytes32;
-    let verificationDataUrl = uri;
+    const verificationDataUrl = uri;
     if (verificationValue) {
       try {
         const stringified = JSON.stringify(verificationValue);

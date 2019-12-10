@@ -16,17 +16,14 @@
   Fifth Floor, Boston, MA, 02110-1301 USA, or download the license from
   the following URL: https://evan.network/license/
 */
+import { AbiCoder } from 'web3-eth-abi';
+import { Wallet } from './wallet';
 
 import {
   ContractLoader,
-  EventHub,
   Executor,
   ExecutorOptions,
-  SignerInterface,
 } from '@evan.network/dbcp';
-
-import { AbiCoder } from 'web3-eth-abi';
-import { Wallet } from './wallet';
 
 
 const coder: AbiCoder = new AbiCoder();
@@ -49,13 +46,13 @@ export interface ExecutorWalletOptions extends ExecutorOptions {
  * @class      ExecutorWallet (name)
  */
 export class ExecutorWallet extends Executor {
-  options: ExecutorWalletOptions;
+  public options: ExecutorWalletOptions;
 
   /**
    * note, that the ExecutorWallet requires the "init" function to be called when intending to use
    * EventHub helper for transactions with event return values
    */
-  constructor(options: ExecutorWalletOptions) {
+  public constructor(options: ExecutorWalletOptions) {
     super(options);
     this.options = options;
     this.defaultOptions = options.defaultOptions || {};
@@ -71,8 +68,8 @@ export class ExecutorWallet extends Executor {
    *                                                .gas
    * @return     {Promise<any>}  new contract
    */
-  async createContract(contractName: string, functionArguments: any[], inputOptions: any):
-      Promise<any> {
+  public async createContract(contractName: string, functionArguments: any[], inputOptions: any):
+  Promise<any> {
     this.log(`starting creation of contract "${contractName}"`, 'debug');
     const compiledContract = this.options.contractLoader.getCompiledContract(contractName);
     if (!compiledContract || !compiledContract.bytecode) {
@@ -101,7 +98,7 @@ export class ExecutorWallet extends Executor {
    *                                           parameter
    * @return     {Promise<any>}  resolves to: {Object} contract calls result
    */
-  async executeContractCall(contract: any, functionName: string, ...args): Promise<any>  {
+  public async executeContractCall(contract: any, functionName: string, ...args): Promise<any>  {
     this.log(`starting contract call "${functionName}"`, 'debug');
     if (!contract.methods[functionName]) {
       throw new Error(`contract does not support method "${functionName}", ` +
@@ -119,12 +116,11 @@ export class ExecutorWallet extends Executor {
         args[args.length - 1],
         { from: this.options.wallet.walletAddress, },
       );
-      return contract.methods[functionName].apply(
-        contract.methods, args.slice(0, args.length - 1)).call(options);
+      return contract.methods[functionName](...args.slice(0, args.length - 1)).call(options);
     } else if (options) {
-      return contract.methods[functionName].apply(contract.methods, args).call(options);
+      return contract.methods[functionName](...args).call(options);
     } else {
-      return contract.methods[functionName].apply(contract.methods, args).call();
+      return contract.methods[functionName](...args).call();
     }
   }
 
@@ -144,9 +140,9 @@ export class ExecutorWallet extends Executor {
    *                             given), the event (if event but no getEventResult was given), the
    *                             value returned by getEventResult(eventObject)
    */
-  async executeContractTransaction(
-      contract: any, functionName: string, inputOptions: any, ...functionArguments: any[]):
-      Promise<any> {
+  public async executeContractTransaction(
+    contract: any, functionName: string, inputOptions: any, ...functionArguments: any[]):
+    Promise<any> {
     // autoGas 1.1 ==> if truthy, enables autoGas 1.1 ==> adds 10% to estimated value capped to
     // current block maximum minus 4* the allowed derivation per block -
     // The protocol allows the miner of a block
@@ -171,7 +167,7 @@ export class ExecutorWallet extends Executor {
     }
 
     // every argument beyond the third is an argument for the contract function
-    let options = Object.assign(
+    const options = Object.assign(
       { timeout: 300000 },
       this.defaultOptions || {},
       inputOptions,
@@ -210,20 +206,20 @@ export class ExecutorWallet extends Executor {
       const stopWatching = async (isError?) => {
         return new Promise((resolveStop) => {
           setTimeout(() => {
-        if (inputOptions.event && subscription) {
-          if (this.eventHub) {
-            this.eventHub
-              .unsubscribe({ subscription})
-              .catch((ex) => {
-                this.log('error occurred while unsubscribing from transaction event; ' +
+            if (inputOptions.event && subscription) {
+              if (this.eventHub) {
+                this.eventHub
+                  .unsubscribe({ subscription})
+                  .catch((ex) => {
+                    this.log('error occurred while unsubscribing from transaction event; ' +
                   `${ex.message || ex}${ex.stack || ''}`, 'error');
-              })
-            ;
-          } else {
-            reject('passed an event to a transaction but no event hub registered');
-          }
-        }
-        isPending = false;
+                  })
+                ;
+              } else {
+                reject('passed an event to a transaction but no event hub registered');
+              }
+            }
+            isPending = false;
             resolveStop();
           }, isError ? 1000 : 0);
         });
@@ -247,7 +243,7 @@ export class ExecutorWallet extends Executor {
                 inputOptions.event.target,
                 contract.options.address,
                 inputOptions.event.eventName,
-                (event) => true,
+                () => true,
                 (event) => {
                   if (transactionHash === event.transactionHash) {
                     // if we have a retriever function, use it, otherwise return entire event object
@@ -278,39 +274,8 @@ export class ExecutorWallet extends Executor {
         functionArguments.push(options);
         // const estimationArguments = functionArguments.slice();
         let gasEstimated;
-        let executeCallback;
-        const estimationCallback = async (estimationError, gasAmount) => {
-          gasEstimated = gasAmount;
-          if (estimationError) {
-            await stopWatching(true);
-            logGas({ status: 'error', message: `could not estimate; ${estimationError}` });
-            reject(`could not estimate gas usage for ${functionName}: ${estimationError}; ` +
-              estimationError.stack);
-          } else if (inputOptions.estimate) {
-            await stopWatching();
-            resolve(gasAmount);
-          } else if (!inputOptions.force &&
-              parseInt(inputOptions.gas, 10) === parseInt(gasAmount, 10)) {
-            await stopWatching(true);
-            logGas({ status: 'error', message: 'out of gas estimated' });
-            reject(`transaction ${functionName} by ${options.from} would most likely fail`);
-          } else {
-            // execute contract function
-            // recover original from, as estimate converts from to lower case
-            if (inputOptions.timeout) {
-              options.timeout = inputOptions.timeout;
-            }
-            this.signAndExecuteTransactionViaWallet(
-              contract,
-              functionName,
-              functionArguments.slice(0, -1),
-              Object.assign({}, options),
-              (...args) => { executeCallback.apply(this, args).catch((ex) => { reject(ex); }); },
-            );
-          }
-        };
 
-        executeCallback = async (err, packedResult) => {
+        const executeCallback = async (err, packedResult) => {
           if (err) {
             return reject(`${functionName} failed: ${err}`);
           }
@@ -377,11 +342,42 @@ export class ExecutorWallet extends Executor {
             return reject(`${functionName} failed: ${ex.message}`);
           }
         };
+
+        const estimationCallback = async (estimationError, gasAmount) => {
+          gasEstimated = gasAmount;
+          if (estimationError) {
+            await stopWatching(true);
+            logGas({ status: 'error', message: `could not estimate; ${estimationError}` });
+            reject(`could not estimate gas usage for ${functionName}: ${estimationError}; ` +
+              estimationError.stack);
+          } else if (inputOptions.estimate) {
+            await stopWatching();
+            resolve(gasAmount);
+          } else if (!inputOptions.force &&
+              parseInt(inputOptions.gas, 10) === parseInt(gasAmount, 10)) {
+            await stopWatching(true);
+            logGas({ status: 'error', message: 'out of gas estimated' });
+            reject(`transaction ${functionName} by ${options.from} would most likely fail`);
+          } else {
+            // execute contract function
+            // recover original from, as estimate converts from to lower case
+            if (inputOptions.timeout) {
+              options.timeout = inputOptions.timeout;
+            }
+            this.signAndExecuteTransactionViaWallet(
+              contract,
+              functionName,
+              functionArguments.slice(0, -1),
+              Object.assign({}, options),
+              (...args) => { executeCallback.apply(this, args).catch((ex) => { reject(ex); }); },
+            );
+          }
+        };
+
         // estimate tx with wallet accountid instead of users account id
         const estimateOptions = Object.assign(
           {}, options, { from: this.options.wallet.walletAddress, });
-        contract.methods[functionName]
-          .apply(contract.methods, initialArguments)
+        contract.methods[functionName](...initialArguments)
           .estimateGas(
             estimateOptions,
             (...args) => { estimationCallback.apply(this, args).catch((ex) => { reject(ex); }); },
@@ -403,7 +399,7 @@ export class ExecutorWallet extends Executor {
    *                                            value
    * @return     {Promise<void>}  resolved when done
    */
-  async executeSend(inputOptions): Promise<void> {
+  public async executeSend(): Promise<void> {
     throw new Error(`sending funds is not supported by the walled based executor`);
   }
 
@@ -442,7 +438,7 @@ export class ExecutorWallet extends Executor {
    * @return     {void}
    */
   private signAndExecuteTransactionViaWallet (
-      contract, functionName, functionArguments, options, handleTxResult): void {
+    contract, functionName, functionArguments, options, handleTxResult): void {
     this.log(`using wallet ${this.options.wallet.walletAddress} ` +
       `for making transaction "${functionName}"`, 'debug');
     this.options.wallet

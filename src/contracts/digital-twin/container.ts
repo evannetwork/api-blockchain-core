@@ -17,6 +17,9 @@
   the following URL: https://evan.network/license/
 */
 
+// disabled until global function handling is resolved
+/* eslint-disable @typescript-eslint/no-use-before-define */
+
 import * as Throttle from 'promise-parallel-throttle';
 import BigNumber from 'bignumber.js';
 import { Mutex } from 'async-mutex';
@@ -281,7 +284,7 @@ export class Container extends Logger {
           return false;
         }
       },
-      () => {}
+      () => { /* action already handled in filter block */ },
     );
 
     // convert template properties to jsonSchema
@@ -816,8 +819,8 @@ export class Container extends Logger {
     originalConfigs?: ContainerShareConfig | ContainerShareConfig[]
   ) {
     // collect all users that properties should be shared / unshared
-    const shareConfigs: Array<ContainerShareConfig> = [ ];
-    const unshareConfigs: Array<ContainerShareConfig> = [ ];
+    const shareConfigs: ContainerShareConfig[] = [ ];
+    const unshareConfigs: ContainerShareConfig[] = [ ];
 
     // ensure working with arrays
     if (!Array.isArray(newConfigs)) {
@@ -924,8 +927,9 @@ export class Container extends Logger {
       'DSRolesPerContract',
       await this.options.executor.executeContractCall(this.contract, 'authority'),
     );
-    if (!await this.options.executor.executeContractCall(
-        authority, 'hasUserRole', this.config.accountId, 0)) {
+    if (! await this.options.executor.executeContractCall(
+      authority, 'hasUserRole', this.config.accountId, 0)
+    ) {
       throw new Error(`current account "${this.config.accountId}" is unable to share properties, ` +
         `as it isn't owner of the underlying contract "${this.contract.options.address}"`);
     }
@@ -944,10 +948,11 @@ export class Container extends Logger {
         `tried to share properties, but missing one or more in schema: ${missingProperties}`);
     }
     // for all share configs
-    for (let { accountId, read = [], readWrite = [], removeListEntries = [] } of localShareConfig) {
+    for (const { accountId, read = [], readWrite = [], removeListEntries = [] } of localShareConfig) {
       //////////////////////////////////////////////////// ensure that account is member in contract
       if (! await this.options.executor.executeContractCall(
-          this.contract, 'isConsumer', accountId)) {
+        this.contract, 'isConsumer', accountId)
+      ) {
         await this.options.dataContract.inviteToContract(
           null, this.contract.options.address, this.config.accountId, accountId);
       }
@@ -958,7 +963,7 @@ export class Container extends Logger {
         read.push('type');
       }
       // ensure that roles for fields exist and that accounts have permissions
-      for (let property of readWrite) {
+      for (const property of readWrite) {
         // get permissions from contract
         const hash = this.options.rightsAndRoles.getOperationCapabilityHash(
           property,
@@ -1002,7 +1007,7 @@ export class Container extends Logger {
       }
 
 
-      for (let property of removeListEntries) {
+      for (const property of removeListEntries) {
         const propertyType = getPropertyType(schemaProperties[property].type);
 
         // throw error if remove should be given on no list
@@ -1085,7 +1090,7 @@ export class Container extends Logger {
         // ensure that target user has sharings for properties
         const blockNr = await this.options.web3.eth.getBlockNumber();
         // share keys for read and readWrite
-        for (let property of [...read, ...readWrite]) {
+        for (const property of [...read, ...readWrite]) {
           if (!isShared(property)) {
             // get key
             const contentKey = await this.options.sharing.getKey(
@@ -1179,7 +1184,7 @@ export class Container extends Logger {
         'DSRolesPerContract',
         await this.options.executor.executeContractCall(this.contract, 'authority'),
       );
-      for (let property of Object.keys(description.dataSchema)) {
+      for (const property of Object.keys(description.dataSchema)) {
         if (property === 'type') {
           continue;
         }
@@ -1265,8 +1270,8 @@ export class Container extends Logger {
     }
 
     // ensure if removeListEntries can be removed correctly beforehand
-    for (let { removeListEntries = [], } of localUnshareConfigs) {
-      for (let property of removeListEntries) {
+    for (const { removeListEntries = [], } of localUnshareConfigs) {
+      for (const property of removeListEntries) {
         const propertyType = getPropertyType(schemaProperties[property].type);
 
         // throw error if remove should be given on no list
@@ -1275,7 +1280,7 @@ export class Container extends Logger {
         }
 
         // search for role with permissions
-        let permittedRole = await this.getPermittedRole(
+        const permittedRole = await this.getPermittedRole(
           authority, property, propertyType, ModificationType.Remove);
         if (permittedRole < this.reservedRoles) {
           // if not found or included in reserved roles, exit
@@ -1285,14 +1290,14 @@ export class Container extends Logger {
     }
 
     // for all share configs
-    for (let { accountId, readWrite = [], removeListEntries = [], write = [] } of localUnshareConfigs) {
+    for (const { accountId, readWrite = [], removeListEntries = [], write = [] } of localUnshareConfigs) {
       this.log(`checking unshare configs`, 'debug');
       // remove write permissions for all in readWrite and write
-      for (let property of [...readWrite, ...write]) {
+      for (const property of [...readWrite, ...write]) {
         this.log(`removing write permissions for ${property}`, 'debug');
         const propertyType = getPropertyType(schemaProperties[property].type);
         // search for role with permissions
-        let permittedRole = await this.getPermittedRole(
+        const permittedRole = await this.getPermittedRole(
           authority, property, propertyType, ModificationType.Set);
         if (permittedRole < this.reservedRoles) {
           // if not found or included in reserved roles, exit
@@ -1332,7 +1337,7 @@ export class Container extends Logger {
       ]));
       if (remainingFields.length === 1 && remainingFields[0] === 'type') {
         // remove property
-        let permittedRole = await this.getPermittedRole(
+        const permittedRole = await this.getPermittedRole(
           authority, 'type', PropertyType.Entry, ModificationType.Set);
         await this.options.rightsAndRoles.removeAccountFromRole(
           this.contract, this.config.accountId, accountId, permittedRole);
@@ -1346,9 +1351,9 @@ export class Container extends Logger {
       }
 
       ///////////////////////////////////////////////////////////////// remove list entries handling
-      for (let property of removeListEntries) {
+      for (const property of removeListEntries) {
         const propertyType = getPropertyType(schemaProperties[property].type);
-        let permittedRole = await this.getPermittedRole(
+        const permittedRole = await this.getPermittedRole(
           authority, property, propertyType, ModificationType.Remove);
 
         // remove account from role
@@ -1395,7 +1400,7 @@ export class Container extends Logger {
         let modified = false;
 
         // remove keys for readWrite
-        for (let property of readWrite) {
+        for (const property of readWrite) {
           this.log(`checking read permissions for ${property}`, 'debug');
           if (isShared(property)) {
             this.log(`removing key for ${property}`, 'debug');
@@ -1428,11 +1433,11 @@ export class Container extends Logger {
           // check if field still exists in updated sharing, if not remove field schema
           const description = await this.getDescription();
           const propertyHashes = [];
-          for (let accountHash of Object.keys(sharings)) {
+          for (const accountHash of Object.keys(sharings)) {
             propertyHashes.push(...Object.keys(sharings[accountHash]));
           }
           modified = false;
-          for (let property of readWrite) {
+          for (const property of readWrite) {
             if (!propertyHashes.includes(this.options.nameResolver.soliditySha3(property))) {
               delete description.dataSchema[property];
               modified = true;
@@ -1469,7 +1474,7 @@ export class Container extends Logger {
       } else if (subSchema.type === 'object') {
         // check objects subproperties
         const transformed = {};
-        for (let key of Object.keys(toInspect)) {
+        for (const key of Object.keys(toInspect)) {
           // traverse further, if suproperties are defined
           if (subSchema.properties && subSchema.properties[key]) {
             // if included in schema, drill down
@@ -1540,7 +1545,7 @@ export class Container extends Logger {
       throw new Error('could not derive type of value; cyclic references detected');
     }
     let schema;
-    let type = typeof value;
+    const type = typeof value;
     if (['boolean', 'number', 'string'].includes(type)) {
       schema = { type };
     } else if (type === 'object') {
@@ -1603,7 +1608,7 @@ export class Container extends Logger {
       return;
     }
     checkConfigProperties(this.config, ['address']);
-    let address = this.config.address.startsWith('0x') ?
+    const address = this.config.address.startsWith('0x') ?
       this.config.address : await this.options.nameResolver.getAddress(this.config.address);
     this.contract = this.options.contractLoader.loadContract('DataContract', address)
   }
@@ -1660,7 +1665,7 @@ export class Container extends Logger {
       await this.options.executor.executeContractCall(this.contract, 'authority'),
     );
     const enumType = getPropertyType(type);
-    let canSetField = await this.options.executor.executeContractCall(
+    const canSetField = await this.options.executor.executeContractCall(
       authority,
       'canCallOperation',
       accountId,
@@ -1737,7 +1742,7 @@ export class Container extends Logger {
     // build string with all roles and 1/0 depending on permissions
     const binary = (new BigNumber(rolesMap)).toString(2);
     // check index in group list, ignore reserved roles for this
-    let index = [...binary.substr(0, binary.length - this.reservedRoles)]
+    const index = [...binary.substr(0, binary.length - this.reservedRoles)]
       .reverse().join('').indexOf('1');
     // if group was found, re-apply reserved roles count, result is group with permission
     const permittedRole = (index === -1) ? index : (index + this.reservedRoles);
@@ -1755,7 +1760,7 @@ export class Container extends Logger {
   private async getRolePermission(authorityContract: any, property: string, type: string
   ): Promise<any> {
     const permissions = {};
-    for (let operation of ['set', 'remove']) {
+    for (const operation of ['set', 'remove']) {
       const rolesMap = await this.options.executor.executeContractCall(
         authorityContract,
         'getOperationCapabilityRoles',
@@ -1862,10 +1867,10 @@ async function applyPlugin(
     operations: [],
   };
   const propertyNames = Object.keys(properties);
-  for (let propertyName of propertyNames) {
+  for (const propertyName of propertyNames) {
     const property: ContainerTemplateProperty = properties[propertyName];
-    for (let role of Object.keys(property.permissions)) {
-      for (let modification of property.permissions[role]) {
+    for (const role of Object.keys(property.permissions)) {
+      for (const modification of property.permissions[role]) {
         permissionUpdates.roles.push(parseInt(role, 10));
         permissionUpdates.operations.push(options.rightsAndRoles.getOperationCapabilityHash(
           propertyName,
@@ -1905,7 +1910,7 @@ async function applyPlugin(
 
   // set values after desription has been set
   const tasks = [];
-  for (let propertyName of propertyNames) {
+  for (const propertyName of propertyNames) {
     const property: ContainerTemplateProperty = properties[propertyName];
     if (property.hasOwnProperty('value')) {
       tasks.push(async () => container.setEntry(propertyName, property.value, false));
@@ -1924,7 +1929,7 @@ async function applyPlugin(
  * @param      {string}           properties  list of property names, that should be present
  */
 function checkConfigProperties(config: ContainerConfig, properties: string[]): void {
-  let missing = properties.filter(property => !config.hasOwnProperty(property));
+  const missing = properties.filter(property => !config.hasOwnProperty(property));
   if (missing.length === 1) {
     throw new Error(`missing property in config: "${missing[0]}"`);
   } else if (missing.length > 1) {
@@ -2009,7 +2014,7 @@ function getPropertyType(typeName: string): PropertyType {
 function toJsonSchema(properties: any): any {
   const jsonSchema = {};
 
-  for (let field of Object.keys(properties)) {
+  for (const field of Object.keys(properties)) {
     const fieldId = field.replace(/[^a-zA-Z0-9]/g, '');
     jsonSchema[field] = { $id: `${fieldId}_schema`, ...properties[field].dataSchema };
   }
