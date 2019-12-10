@@ -19,18 +19,16 @@
 
 import 'mocha';
 import { expect, use } from 'chai';
-import chaiAsPromised = require('chai-as-promised');
+import * as chaiAsPromised from 'chai-as-promised';
 
 import {
   ContractLoader,
-  EventHub,
   Executor,
   KeyProvider,
   NameResolver,
 } from '@evan.network/dbcp';
 
 import { accounts } from '../../test/accounts';
-import { ContractState } from '../base-contract/base-contract';
 import { Ipfs } from '../../dfs/ipfs';
 import { ServiceContract } from './service-contract';
 import { configTestcore as config } from '../../config-testcore';
@@ -44,7 +42,6 @@ describe('ServiceContract', function() {
   let sc0: ServiceContract;
   let sc1: ServiceContract;
   let sc2: ServiceContract;
-  let contractFactory: any;
   let executor: Executor;
   let loader: ContractLoader;
   let businessCenterDomain;
@@ -267,17 +264,20 @@ describe('ServiceContract', function() {
     const businessCenterAddress = await nameResolver.getAddress(businessCenterDomain);
     const businessCenter = await loader.loadContract('BusinessCenter', businessCenterAddress);
     if (!await executor.executeContractCall(
-        businessCenter, 'isMember', accounts[0], { from: accounts[0], })) {
+      businessCenter, 'isMember', accounts[0], { from: accounts[0] })
+    ) {
       await executor.executeContractTransaction(
         businessCenter, 'join', { from: accounts[0], autoGas: 1.1, });
     }
     if (!await executor.executeContractCall(
-        businessCenter, 'isMember', accounts[1], { from: accounts[1], })) {
+      businessCenter, 'isMember', accounts[1], { from: accounts[1], })
+    ) {
       await executor.executeContractTransaction(
         businessCenter, 'join', { from: accounts[1], autoGas: 1.1, });
     }
     if (!await executor.executeContractCall(
-        businessCenter, 'isMember', accounts[2], { from: accounts[2], })) {
+      businessCenter, 'isMember', accounts[2], { from: accounts[2], })
+    ) {
       await executor.executeContractTransaction(
         businessCenter, 'join', { from: accounts[2], autoGas: 1.1, });
     }
@@ -355,7 +355,7 @@ describe('ServiceContract', function() {
       return currentSample;
     });
     const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
-    for (let currentSample of sampleCalls) {
+    for (const currentSample of sampleCalls) {
       await sc0.sendCall(contract, accounts[0], currentSample);
     }
     expect((await sc0.getCall(contract, accounts[0], 0)).data).to.deep.eq(sampleCalls[0]);
@@ -370,7 +370,7 @@ describe('ServiceContract', function() {
       return currentSample;
     });
     const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
-    for (let currentSample of sampleCalls) {
+    for (const currentSample of sampleCalls) {
       await sc0.sendCall(contract, accounts[0], currentSample);
     }
     await sc0.sendCall(contract, accounts[1], sampleCalls[0]);
@@ -381,18 +381,18 @@ describe('ServiceContract', function() {
   });
 
   it('does not allow calls to be read by every contract member without extending the sharing',
-  async() => {
-    const blockNr = await web3.eth.getBlockNumber();
-    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
-    await sc0.inviteToContract(
-      businessCenterDomain, contract.options.address, accounts[0], accounts[2]);
-    const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', blockNr);
-    await sharing.addSharing(
-      contract.options.address, accounts[0], accounts[2], '*', blockNr, contentKey);
-    const callId = await sc0.sendCall(contract, accounts[0], sampleCall);
-    const call = await sc2.getCall(contract, accounts[2], callId);
-    expect(call.data).to.be.undefined;
-  });
+    async() => {
+      const blockNr = await web3.eth.getBlockNumber();
+      const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+      await sc0.inviteToContract(
+        businessCenterDomain, contract.options.address, accounts[0], accounts[2]);
+      const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', blockNr);
+      await sharing.addSharing(
+        contract.options.address, accounts[0], accounts[2], '*', blockNr, contentKey);
+      const callId = await sc0.sendCall(contract, accounts[0], sampleCall);
+      const call = await sc2.getCall(contract, accounts[2], callId);
+      expect(call.data).to.be.undefined;
+    });
 
   it('allows calls to be read, when added to a calls sharing', async() => {
     const blockNr = await web3.eth.getBlockNumber();
@@ -425,8 +425,12 @@ describe('ServiceContract', function() {
 
     // create second service contract helper with fewer keys
     const limitedKeyProvider = TestUtils.getKeyProvider([
-      nameResolver.soliditySha3.apply(nameResolver,
-        [nameResolver.soliditySha3(accounts[0]), nameResolver.soliditySha3(accounts[1])].sort()),
+      nameResolver.soliditySha3(
+        ...[
+          nameResolver.soliditySha3(accounts[0]),
+          nameResolver.soliditySha3(accounts[1]),
+        ].sort()
+      ),
     ]);
     const limitedSc = await TestUtils.getServiceContract(web3, ipfs, limitedKeyProvider);
     const answer = await limitedSc.getAnswer(contract, accounts[1], 0, 0);
@@ -440,7 +444,7 @@ describe('ServiceContract', function() {
       return currentSample;
     });
     const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
-    for (let currentSample of sampleCalls) {
+    for (const currentSample of sampleCalls) {
       await sc0.sendCall(contract, accounts[0], currentSample);
     }
     expect(await sc0.getCallCount(contract)).to.eq(sampleCalls.length);
@@ -460,7 +464,7 @@ describe('ServiceContract', function() {
       contract.options.address, accounts[0], accounts[2], '*', 0, contentKey);
     await sc0.sendCall(contract, accounts[0], sampleCall, [accounts[2]]);
     const call = await sc2.getCall(contract, accounts[2], 0);
-    for (let currentSample of sampleAnswers) {
+    for (const currentSample of sampleAnswers) {
       await sc2.sendAnswer(contract, accounts[2], currentSample, 0, call.data.metadata.author);
     }
     const answerCount = await sc0.getAnswerCount(contract, 0);
@@ -481,7 +485,7 @@ describe('ServiceContract', function() {
       contract.options.address, accounts[0], accounts[2], '*', 0, contentKey);
     await sc0.sendCall(contract, accounts[0], sampleCall, [accounts[2]]);
     const call = await sc2.getCall(contract, accounts[0], 0);
-    for (let currentSample of sampleAnswers) {
+    for (const currentSample of sampleAnswers) {
       await sc2.sendAnswer(contract, accounts[2], currentSample, 0, call.data.metadata.author);
     }
     const answers = await sc0.getAnswers(contract, accounts[0], 0);
@@ -555,9 +559,9 @@ describe('ServiceContract', function() {
       });
       sampleAnswers = [];
       for (let i = 0; i < anwersCount; i++) {
-         const answer = JSON.parse(JSON.stringify(sampleAnswer));
-         answer.payload.note += i;
-         sampleAnswers.push(answer);
+        const answer = JSON.parse(JSON.stringify(sampleAnswer));
+        answer.payload.note += i;
+        sampleAnswers.push(answer);
       }
 
       // if using existing contract
@@ -572,12 +576,12 @@ describe('ServiceContract', function() {
       await sharing.addSharing(
         contract.options.address, accounts[0], accounts[2], '*', 0, contentKey);
       let callIndex = 0;
-      for (let currentSample of sampleCalls) {
+      for (const currentSample of sampleCalls) {
         console.log(`send test call ${callIndex++}`);
         await sc0.sendCall(contract, accounts[0], currentSample, [accounts[2]]);
       }
       let answerIndex = 0;
-      for (let answer of sampleAnswers) {
+      for (const answer of sampleAnswers) {
         console.log(`send test answer ${answerIndex++}`);
         await sc2.sendAnswer(contract, accounts[2], answer, anweredCallId, accounts[0])
       }
@@ -657,14 +661,14 @@ describe('ServiceContract', function() {
       });
 
       it('can retrieve calls in reverse order with offset that doesn\'t result not full page',
-      async() => {
-        const offset = 17;
-        const calls = await sc0.getCalls(contract, accounts[0], 10, offset, true);
-        expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length - offset, 10));
-        Object.keys(calls).reverse().forEach((callId, i) => {
-          expect(calls[callId].data).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i - offset]);
+        async() => {
+          const offset = 17;
+          const calls = await sc0.getCalls(contract, accounts[0], 10, offset, true);
+          expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length - offset, 10));
+          Object.keys(calls).reverse().forEach((callId, i) => {
+            expect(calls[callId].data).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i - offset]);
+          });
         });
-      });
 
       it('can retrieve calls in reverse order with limited page size and offset', async() => {
         const count = 2;
@@ -741,28 +745,28 @@ describe('ServiceContract', function() {
       });
 
       it('can retrieve answers in reverse order with offset that results in a full page',
-      async() => {
-        const offset = 7;
-        const answers = await sc0.getAnswers(
-          contract, accounts[0], anweredCallId, 10, offset, true);
-        expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length - offset, 10));
-        Object.keys(answers).reverse().forEach((answerId, i) => {
-          expect(answers[answerId].data).to.deep.eq(
-            sampleAnswers[sampleAnswers.length - 1 - i - offset]);
+        async() => {
+          const offset = 7;
+          const answers = await sc0.getAnswers(
+            contract, accounts[0], anweredCallId, 10, offset, true);
+          expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length - offset, 10));
+          Object.keys(answers).reverse().forEach((answerId, i) => {
+            expect(answers[answerId].data).to.deep.eq(
+              sampleAnswers[sampleAnswers.length - 1 - i - offset]);
+          });
         });
-      });
 
       it('can retrieve answers in reverse with offset that doesn\'t result not full page',
-      async() => {
-        const offset = 17;
-        const answers = await sc0.getAnswers(
-          contract, accounts[0], anweredCallId, 10, offset, true);
-        expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length - offset, 10));
-        Object.keys(answers).reverse().forEach((answerId, i) => {
-          expect(answers[answerId].data).to.deep.eq(
-            sampleAnswers[sampleAnswers.length - 1 - i - offset]);
+        async() => {
+          const offset = 17;
+          const answers = await sc0.getAnswers(
+            contract, accounts[0], anweredCallId, 10, offset, true);
+          expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length - offset, 10));
+          Object.keys(answers).reverse().forEach((answerId, i) => {
+            expect(answers[answerId].data).to.deep.eq(
+              sampleAnswers[sampleAnswers.length - 1 - i - offset]);
+          });
         });
-      });
 
       it('can retrieve answers in reverse with limited page size and offset', async() => {
         const count = 2;

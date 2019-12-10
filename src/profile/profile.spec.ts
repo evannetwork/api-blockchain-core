@@ -20,24 +20,17 @@
 import 'mocha';
 import { expect, use } from 'chai';
 import { isEqual } from 'lodash';
-import chaiAsPromised = require('chai-as-promised');
+import * as chaiAsPromised from 'chai-as-promised';
 
 import {
-  ContractLoader,
-  KeyProvider,
   NameResolver,
-  SignerInternal,
 } from '@evan.network/dbcp';
 
 import { accountMap } from '../test/accounts';
 import { accounts } from '../test/accounts';
 import { configTestcore as config } from '../config-testcore';
 import { createDefaultRuntime } from '../runtime';
-import { DataContract } from '../contracts/data-contract/data-contract';
-import { KeyExchange } from '../keyExchange';
-import { Mailbox } from '../mailbox';
 import { Onboarding } from '../onboarding';
-import { RightsAndRoles } from '../contracts/rights-and-roles';
 import { TestUtils } from '../test/test-utils';
 
 use(chaiAsPromised);
@@ -49,12 +42,7 @@ describe('Profile helper', function() {
   let nameResolver: NameResolver;
   let ensName;
   let web3;
-  let dataContract: DataContract;
-  let keyExchange;
-  let mailbox;
   let executor;
-  let rightsAndRoles: RightsAndRoles;
-  let cryptoProvider;
   const sampleDesc = {
     title: 'sampleTest',
     description: 'desc',
@@ -72,35 +60,15 @@ describe('Profile helper', function() {
     web3 = TestUtils.getWeb3();
     ipfs = await TestUtils.getIpfs();
     ipld = await TestUtils.getIpld(ipfs);
-    dataContract = await TestUtils.getDataContract(web3, ipld.ipfs)
     nameResolver = await TestUtils.getNameResolver(web3);
     ensName = nameResolver.getDomainName(config.nameResolver.domains.profile);
-    cryptoProvider = await TestUtils.getCryptoProvider();
-    mailbox = new Mailbox({
-      mailboxOwner: accounts[0],
-      nameResolver: await TestUtils.getNameResolver(web3),
-      ipfs: ipld.ipfs,
-      contractLoader: await TestUtils.getContractLoader(web3),
-      cryptoProvider,
-      keyProvider:  TestUtils.getKeyProvider(),
-      defaultCryptoAlgo: 'aes',
-    });
-    const keyExchangeOptions = {
-      mailbox: mailbox,
-      cryptoProvider,
-      defaultCryptoAlgo: 'aes',
-      account: accounts[0],
-      keyProvider: TestUtils.getKeyProvider(),
-    };
-    keyExchange = new KeyExchange(keyExchangeOptions);
     const eventHub = await TestUtils.getEventHub(web3);
     executor = await TestUtils.getExecutor(web3);
     executor.eventHub = eventHub;
-    rightsAndRoles = await TestUtils.getRightsAndRoles(web3);
   });
 
   it('should be able to be add contact keys', async () => {
-    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
+    const profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await profile.addContactKey(accounts[0], 'context a', 'key 0x01_a');
     await profile.addContactKey(accounts[1], 'context a', 'key 0x02_a');
     await profile.addContactKey(accounts[1], 'context b', 'key 0x02_b');
@@ -112,7 +80,7 @@ describe('Profile helper', function() {
   });
 
   it('should be able to be add dapp bookmarks', async () => {
-    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
+    const profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await profile.addDappBookmark('sample1.test', sampleDesc);
 
     expect(await profile.getDappBookmark('sample1.test')).to.be.ok;
@@ -145,7 +113,7 @@ describe('Profile helper', function() {
   });
 
   it('should be able to save an encrypted profile to IPLD', async () => {
-    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
+    const profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await profile.addContactKey(accounts[0], 'context a', 'key 0x01_a');
     await profile.addContactKey(accounts[1], 'context a', 'key 0x02_a');
     await profile.addContactKey(accounts[1], 'context b', 'key 0x02_b');
@@ -178,9 +146,8 @@ describe('Profile helper', function() {
     const address = await nameResolver.getAddress(ensName);
     const contract = nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
     const valueToSet = '0x0000000000000000000000000000000000000004';
-    let hash;
     const from = Object.keys(accountMap)[0];
-    hash = await nameResolver.executor.executeContractCall(contract, 'getProfile', from, { from, });
+    const hash = await nameResolver.executor.executeContractCall(contract, 'getProfile', from, { from, });
     await nameResolver.executor.executeContractTransaction(
       contract,
       'setMyProfile',
@@ -207,7 +174,7 @@ describe('Profile helper', function() {
         accountName: 'test account',
       }
     })
-    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
+    const profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await profile.loadForAccount();
     await profile.addContactKey(accounts[0], 'context a', 'key 0x01_a');
     await profile.addContactKey(accounts[1], 'context a', 'key 0x02_a');
@@ -239,7 +206,7 @@ describe('Profile helper', function() {
   });
 
   it('should remove a bookmark from a given profile', async () => {
-    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
+    const profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await profile.addDappBookmark('sample1.test', sampleDesc);
     await profile.addDappBookmark('sample2.test', sampleDesc);
 
@@ -281,7 +248,7 @@ describe('Profile helper', function() {
   it.skip('should be able to set a contact as known', async () => {
 
     const initRuntime = await TestUtils.getRuntime(accounts[0]);
-    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
+    const profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await Onboarding.createProfile(initRuntime, {
       accountDetails: {
         profileType: 'company',
@@ -297,7 +264,7 @@ describe('Profile helper', function() {
 
   it.skip('should be able to set a contact as unknown', async () => {
     const initRuntime = await TestUtils.getRuntime(accounts[0]);
-    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
+    const profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await Onboarding.createProfile(initRuntime, {
       accountDetails: {
         profileType: 'company',

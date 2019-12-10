@@ -19,7 +19,7 @@
 
 import 'mocha';
 import { expect, use } from 'chai';
-import chaiAsPromised = require('chai-as-promised');
+import * as chaiAsPromised from 'chai-as-promised';
 
 import {
   DfsInterface,
@@ -157,18 +157,6 @@ describe('Wallet handler', function() {
     });
 
     describe('when submitting funds alongside transactions', () => {
-      async function createContract(accountId) {
-        const contract = await executor.createContract(
-          'TestContract', [], { from: accounts[0], gas: 1000000, });
-        await executor.executeContractTransaction(
-          contract,
-          'transferOwnership',
-          { from: accounts[0], },
-          wallet.walletAddress,
-        );
-        return contract;
-      }
-
       it('allows to transfer funds to wallet', async () => {
         await createWallet(accounts[0], accounts[0], [accounts[0]]);
         const walletAddress = wallet.walletAddress;

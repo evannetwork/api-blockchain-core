@@ -19,21 +19,17 @@
 
 import 'mocha';
 import { expect, use, } from 'chai';
-import chaiAsPromised = require('chai-as-promised');
+import * as chaiAsPromised from 'chai-as-promised';
 
 import {
   ContractLoader,
-  Envelope,
   Executor,
-  Ipfs,
   KeyProvider,
   NameResolver,
-  Unencrypted,
 } from '@evan.network/dbcp';
 
 import { accounts } from './test/accounts';
 import { Aes } from './encryption/aes';
-import { BaseContract } from './contracts/base-contract/base-contract';
 import { configTestcore as config } from './config-testcore';
 import { CryptoProvider } from './encryption/crypto-provider';
 import { DataContract } from './contracts/data-contract/data-contract';
@@ -57,7 +53,7 @@ const sampleDescription = {
       "angular-bc": "^1.0.0",
       "angular-core": "^1.0.0",
       "angular-libs": "^1.0.0"
-  },
+    },
     "entrypoint": "task.js",
     "files": [
       "task.js",

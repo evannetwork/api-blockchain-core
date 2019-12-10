@@ -18,21 +18,13 @@
 */
 
 import 'mocha';
-import * as Throttle from 'promise-parallel-throttle';
-import chaiAsPromised = require('chai-as-promised');
+import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
-
-import {
-  ContractLoader,
-  Executor,
-  NameResolver,
-} from '@evan.network/dbcp';
 
 import { accounts } from '../test/accounts';
 import { configTestcore as config } from '../config-testcore';
 import { DataContract } from './data-contract/data-contract';
 import { RightsAndRoles, ModificationType, PropertyType } from './rights-and-roles';
-import { ServiceContract } from './service-contract/service-contract';
 import { TestUtils } from '../test/test-utils'
 
 use(chaiAsPromised);
@@ -40,7 +32,6 @@ use(chaiAsPromised);
 
 describe('Rights and Roles handler', function() {
   this.timeout(300000);
-  let sc: ServiceContract;
   let executor;
   let rar: RightsAndRoles;
   let businessCenterDomain;
@@ -55,24 +46,26 @@ describe('Rights and Roles handler', function() {
     web3 = TestUtils.getWeb3();
     executor = await TestUtils.getExecutor(web3);
     rar = await TestUtils.getRightsAndRoles(web3);
-    sc = await TestUtils.getServiceContract(web3, ipfs);
     const loader = await TestUtils.getContractLoader(web3);
     const nameResolver = await TestUtils.getNameResolver(web3);
     businessCenterDomain = nameResolver.getDomainName(config.nameResolver.domains.businessCenter);
     const businessCenterAddress = await nameResolver.getAddress(businessCenterDomain);
     businessCenter = await loader.loadContract('BusinessCenter', businessCenterAddress);
     if (!await executor.executeContractCall(
-        businessCenter, 'isMember', accounts[0], { from: accounts[0], })) {
+      businessCenter, 'isMember', accounts[0], { from: accounts[0], })
+    ) {
       await executor.executeContractTransaction(
         businessCenter, 'join', { from: accounts[0], autoGas: 1.1, });
     }
     if (!await executor.executeContractCall(
-        businessCenter, 'isMember', accounts[1], { from: accounts[1], })) {
+      businessCenter, 'isMember', accounts[1], { from: accounts[1], })
+    ) {
       await executor.executeContractTransaction(
         businessCenter, 'join', { from: accounts[1], autoGas: 1.1, });
     }
     if (!await executor.executeContractCall(
-        businessCenter, 'isMember', accounts[2], { from: accounts[2], })) {
+      businessCenter, 'isMember', accounts[2], { from: accounts[2], })
+    ) {
       await executor.executeContractTransaction(
         businessCenter, 'join', { from: accounts[2], autoGas: 1.1, });
     }
@@ -81,27 +74,27 @@ describe('Rights and Roles handler', function() {
   });
 
   it('should be able to retrieve all members', async () => {
-     const contract = await dc.create('testdatacontract', accounts[0], businessCenterDomain);
-     await dc.inviteToContract(
-       businessCenterDomain, contract.options.address, accounts[0], accounts[1]);
-     await dc.inviteToContract(
-       businessCenterDomain, contract.options.address, accounts[0], accounts[2]);
-     const contractParticipants = await rar.getMembers(contract);
-     const members = contractParticipants[1];
-     expect(members.length).to.eq(3);
-     expect(members[0]).to.eq(accounts[0]);
-     expect(members[1]).to.eq(accounts[1]);
-     expect(members[2]).to.eq(accounts[2]);
+    const contract = await dc.create('testdatacontract', accounts[0], businessCenterDomain);
+    await dc.inviteToContract(
+      businessCenterDomain, contract.options.address, accounts[0], accounts[1]);
+    await dc.inviteToContract(
+      businessCenterDomain, contract.options.address, accounts[0], accounts[2]);
+    const contractParticipants = await rar.getMembers(contract);
+    const members = contractParticipants[1];
+    expect(members.length).to.eq(3);
+    expect(members[0]).to.eq(accounts[0]);
+    expect(members[1]).to.eq(accounts[1]);
+    expect(members[2]).to.eq(accounts[2]);
   });
 
   it('should be able to retrieve more than 10 members per role', async () => {
-     const contract = await dc.create('testdatacontract', accounts[0], null);
-     const invitees = [...Array(31)].map(() => TestUtils.getRandomAddress());
-     await Promise.all(invitees.map(invitee =>
-       dc.inviteToContract(null, contract.options.address, accounts[0], invitee)));
-     const contractParticipants = await rar.getMembers(contract);
-     const membersResult = contractParticipants[1].sort();
-     expect(membersResult).to.deep.eq([accounts[0], ...invitees].sort());
+    const contract = await dc.create('testdatacontract', accounts[0], null);
+    const invitees = [...Array(31)].map(() => TestUtils.getRandomAddress());
+    await Promise.all(invitees.map(invitee =>
+      dc.inviteToContract(null, contract.options.address, accounts[0], invitee)));
+    const contractParticipants = await rar.getMembers(contract);
+    const membersResult = contractParticipants[1].sort();
+    expect(membersResult).to.deep.eq([accounts[0], ...invitees].sort());
   });
 
   it('should be able to retrieve members from a business center', async () => {

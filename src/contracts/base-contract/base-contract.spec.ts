@@ -18,14 +18,12 @@
 */
 
 import 'mocha';
+import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
-import chaiAsPromised = require('chai-as-promised');
-
 import {
   ContractLoader,
   EventHub,
   Executor,
-  NameResolver,
 } from '@evan.network/dbcp';
 
 import { accounts } from '../../test/accounts';
@@ -36,17 +34,12 @@ import { Ipld } from '../../dfs/ipld';
 import { Profile } from '../../profile/profile';
 import { TestUtils } from '../../test/test-utils';
 
+
 use(chaiAsPromised);
-
-function timeout(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 
 describe('BaseContract', function() {
   this.timeout(60000);
   let baseContract: BaseContract;
-  let contractFactory: any;
   let executor: Executor;
   let ipfs: Ipfs;
   let ipld: Ipld;
@@ -155,7 +148,6 @@ describe('BaseContract', function() {
       'testdatacontract',
       accounts[0],
       businessCenterDomain);
-    const contract = loader.loadContract('BaseContractInterface', contractId);
     await baseContract.inviteToContract(
       businessCenterDomain,
       contractId,
@@ -176,8 +168,6 @@ describe('BaseContract', function() {
       'testdatacontract',
       accounts[0],
       businessCenterDomain);
-    const contract = loader.loadContract('BaseContractInterface', contractId);
-    let isMember = await executor.executeContractCall(contract, 'isConsumer', accounts[1]);
     const promise = baseContract.inviteToContract(
       businessCenterDomain,
       contractId,
@@ -194,7 +184,7 @@ describe('BaseContract', function() {
       accounts[0],
       businessCenterDomain);
     const contract = loader.loadContract('BaseContractInterface', contractId);
-    let isMember = await executor.executeContractCall(contract, 'isConsumer', accounts[1]);
+    const isMember = await executor.executeContractCall(contract, 'isConsumer', accounts[1]);
     expect(isMember).to.be.false;
     await profile.setContactKnownState(accounts[0], false);
     const invitePromise = baseContract.inviteToContract(
@@ -244,8 +234,6 @@ describe('BaseContract', function() {
       'testdatacontract',
       accounts[0],
       businessCenterDomain);
-    const contract = loader.loadContract('BaseContract', contractId)
-    const cstate = await executor.executeContractCall(contract, 'consumerState', accounts[0]);
     await baseContract.changeConsumerState(contractId, accounts[0], accounts[0], ConsumerState.Active);
   });
 
@@ -255,8 +243,6 @@ describe('BaseContract', function() {
         'testdatacontract',
         accounts[0],
         null);
-      const contract = loader.loadContract('BaseContract', contractId)
-      const cstate = await executor.executeContractCall(contract, 'consumerState', accounts[0]);
       await baseContract.changeConsumerState(contractId, accounts[0], accounts[0], ConsumerState.Active);
     });
 
@@ -311,7 +297,6 @@ describe('BaseContract', function() {
             'testdatacontract',
             accounts[0],
             null);
-          const contract = loader.loadContract('BaseContractInterface', contractId);
           // reject on timeout
           let resolved;
           setTimeout(() => {
@@ -325,7 +310,7 @@ describe('BaseContract', function() {
               const { sender, eventType } = event.returnValues;
               return sender === contractId && eventType.toString() === '0';
             },
-            (event) => { resolved = true; resolve(); }
+            () => { resolved = true; resolve(); }
           );
           await baseContract.inviteToContract(
             null,

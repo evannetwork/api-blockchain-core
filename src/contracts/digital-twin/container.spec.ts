@@ -17,12 +17,11 @@
   the following URL: https://evan.network/license/
 */
 
-import { promisify } from 'util';
-import { readFile } from 'fs';
-
 import 'mocha';
 import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
+import { promisify } from 'util';
+import { readFile } from 'fs';
 import {
   Executor,
   Ipfs,
@@ -44,7 +43,7 @@ use(chaiAsPromised);
 
 describe('Container', function() {
   this.timeout(600000);
-  let [ owner, consumer, otherUser ] = accounts;
+  const [ owner, consumer, otherUser ] = accounts;
   let createRuntime: Function;
   let dfs: Ipfs;
   let defaultConfig: ContainerConfig;
@@ -56,7 +55,7 @@ describe('Container', function() {
     version: '0.1.0',
     dbcpVersion: 2,
   };
-  let runtimes: { [id: string]: ContainerOptions } = {};
+  const runtimes: { [id: string]: ContainerOptions } = {};
   let sha3: Function;
 
   /**
@@ -126,7 +125,7 @@ describe('Container', function() {
       runtime.executor.eventHub = await TestUtils.getEventHub(web3);
       return runtime;
     };
-    for (let accountId of accounts) {
+    for (const accountId of accounts) {
       runtimes[accountId] = await createRuntime(accountId);
     }
     defaultConfig = {
@@ -180,9 +179,9 @@ describe('Container', function() {
 
 
       const verifications: ContainerVerificationEntry[] = [...Array(3)].map(
-        (_, i) => (<ContainerVerificationEntry> { topic: `verifcation_${i}` }));
+        (_, i) => ({ topic: `verifcation_${i}` } as ContainerVerificationEntry));
 
-      for (let container of [container1, container2, container3]) {
+      for (const container of [container1, container2, container3]) {
         await container.addVerifications(verifications);
         const verificationsResults = await container.getVerifications();
         expect(verificationsResults.length).to.eq(3);
@@ -234,7 +233,7 @@ describe('Container', function() {
     });
 
     it('can set and get entries for properties defined in (custom) plugin', async () => {
-      const { container, randomValues } = await createTestContainerWithProperties([ 'testField' ]);
+      await expect(createTestContainerWithProperties([ 'testField' ])).to.be.fulfilled;
     });
 
     it('can set entries if not defined in plugin template (auto adds properties)', async () => {
@@ -1104,12 +1103,12 @@ describe('Container', function() {
 
     // negative unshare tests
     it('cannot revoke access from another user to another user', async() => {
-      const { container, randomValues } = await createTestContainerWithProperties([ 'testField', 'anotherTestField' ]);
+      const { container } = await createTestContainerWithProperties([ 'testField', 'anotherTestField' ]);
 
       await container.shareProperties([{ accountId: consumer, readWrite: ['testField'] }]);
 
       // now unshare
-      let consumerContainer = await getConsumerContainer(container);
+      const consumerContainer = await getConsumerContainer(container);
       const unshare = consumerContainer.unshareProperties([{
         accountId: consumer, readWrite: ['testField'] }])
       await expect(unshare).to.be.rejectedWith(new RegExp(`^current account "${ consumer }" is unable to unshare properties, as it isn't owner of the underlying contract`, 'i'));
@@ -1193,7 +1192,7 @@ describe('Container', function() {
         readWrite: [ 'testField2', ]
       }]);
 
-      let shareConfig = await container.getContainerShareConfigForAccount(consumer);
+      const shareConfig = await container.getContainerShareConfigForAccount(consumer);
       const consumerContainer = await getConsumerContainer(container);
 
       shareConfig.readWrite = [ 'testField3' ];
@@ -1211,7 +1210,7 @@ describe('Container', function() {
       }]);
 
       let shareConfig = await container.getContainerShareConfigForAccount(consumer);
-      let originalConfig = JSON.parse(JSON.stringify(shareConfig));
+      const originalConfig = JSON.parse(JSON.stringify(shareConfig));
 
       expect(shareConfig.read).to.include('testField');
       expect(shareConfig.readWrite).to.include('testField2');
@@ -1244,7 +1243,7 @@ describe('Container', function() {
       }]);
 
       let shareConfig = await container.getContainerShareConfigForAccount(consumer);
-      let originalConfig = JSON.parse(JSON.stringify(shareConfig));
+      const originalConfig = JSON.parse(JSON.stringify(shareConfig));
       expect(shareConfig.read).to.include('testField');
       expect(shareConfig.readWrite).to.include('testField2');
       expect(shareConfig.read).to.not.include('testField3');

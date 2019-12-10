@@ -19,7 +19,7 @@
 
 import 'mocha';
 import { expect, use, } from 'chai';
-import chaiAsPromised = require('chai-as-promised');
+import * as chaiAsPromised from 'chai-as-promised';
 
 import { createDefaultRuntime } from './runtime';
 import { TestUtils } from './test/test-utils';

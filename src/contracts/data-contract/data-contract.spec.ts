@@ -18,22 +18,19 @@
 */
 
 import 'mocha';
+import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
-import chaiAsPromised = require('chai-as-promised');
 
 import {
   ContractLoader,
-  Description,
   DfsInterface,
   Envelope,
-  EventHub,
   Executor,
   NameResolver,
 } from '@evan.network/dbcp';
 
 import { accounts } from '../../test/accounts';
 import { ConsumerState, ContractState } from '../base-contract/base-contract';
-import { configTestcore as config } from '../../config-testcore';
 import { CryptoProvider } from '../../encryption/crypto-provider';
 import { DataContract } from './data-contract';
 import { Sharing } from '../../contracts/sharing';
@@ -45,7 +42,6 @@ use(chaiAsPromised);
 describe('DataContract', function() {
   this.timeout(60000);
   let dc: DataContract;
-  let contractFactory: any;
   let executor: Executor;
   let loader: ContractLoader;
   let businessCenterDomain;
@@ -97,25 +93,6 @@ describe('DataContract', function() {
       description: await TestUtils.getDescription(web3, dfs),
     });
     businessCenterDomain = null;
-    /* nameResolver.getDomainName(config.nameResolver.domains.businessCenter);
-
-    const businessCenterAddress = await nameResolver.getAddress(businessCenterDomain);
-    const businessCenter = await loader.loadContract('BusinessCenter', businessCenterAddress);
-    if (!await executor.executeContractCall(
-      businessCenter, 'isMember', accounts[0], { from: accounts[0], })) {
-      await executor.executeContractTransaction(
-        businessCenter, 'join', { from: accounts[0], autoGas: 1.1, });
-    }
-    if (!await executor.executeContractCall(
-      businessCenter, 'isMember', accounts[1], { from: accounts[1], })) {
-      await executor.executeContractTransaction(
-        businessCenter, 'join', { from: accounts[1], autoGas: 1.1, });
-    }
-    if (!await executor.executeContractCall(
-      businessCenter, 'isMember', accounts[2], { from: accounts[2], })) {
-      await executor.executeContractTransaction(
-        businessCenter, 'join', { from: accounts[2], autoGas: 1.1, });
-    }*/
   });
 
   async function createContract(addSharing = false, schema?) {
@@ -190,8 +167,6 @@ describe('DataContract', function() {
             storeInDfs,
             encryptHashes,
           );
-          const retrievedDefaultAlgo = await dc.getEntry(
-            contract, 'entry_settable_by_owner', accounts[0], storeInDfs, encryptHashes);
           const encryptedHash = await executor.executeContractCall(
             contract, 'getEntry', nameResolver.sha3('entry_settable_by_owner'));
           if (!storeInDfs) {
@@ -213,8 +188,6 @@ describe('DataContract', function() {
             encryptHashes,
             'aes',
           );
-          const retrievedAes = await dc.getEntry(
-            contract, 'entry_settable_by_owner', accounts[0], storeInDfs, encryptHashes);
           const hashAes = await executor.executeContractCall(
             contract, 'getEntry', nameResolver.sha3('entry_settable_by_owner'));
           if (!storeInDfs) {
@@ -236,8 +209,6 @@ describe('DataContract', function() {
             encryptHashes,
             'unencrypted',
           );
-          const retrievedUnencrypted = await dc.getEntry(
-            contract, 'entry_settable_by_owner', accounts[0], storeInDfs, encryptHashes);
           const hashRaw = await executor.executeContractCall(
             contract, 'getEntry', nameResolver.sha3('entry_settable_by_owner'));
           if (!storeInDfs) {
@@ -517,7 +488,7 @@ describe('DataContract', function() {
             storeInDfs,
             encryptHashes,
           );
-          let retrieved = await dc.getListEntries(
+          const retrieved = await dc.getListEntries(
             contract, 'list_removable_by_owner', accounts[0], storeInDfs, encryptHashes);
           for (let i = 0; i < sampleValues.length; i++) {
             expect(retrieved[i]).to.eq(sampleValues[i]);
@@ -745,7 +716,6 @@ describe('DataContract', function() {
             encryptHashes,
           )).to.eq(sampleValues[1]);
         });
-        it('allows to move an entry from one list to multiple lists', async () => {});
       });
     });
     describe('when working with mappings', async() => {

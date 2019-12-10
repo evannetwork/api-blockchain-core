@@ -19,7 +19,7 @@
 
 import 'mocha';
 import { expect, use } from 'chai';
-import chaiAsPromised = require('chai-as-promised');
+import * as chaiAsPromised from 'chai-as-promised';
 
 import {
   Executor,
@@ -89,7 +89,7 @@ describe('Business Center', function() {
     nameResolver = await TestUtils.getNameResolver(web3);
     ensDomain = nameResolver.getDomainName(config.nameResolver.domains.businessCenter);
     businessCenter = await createBusinessCenter(0);
-    let isMember = await executor.executeContractCall(
+    const isMember = await executor.executeContractCall(
       businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
     if (!isMember) {
       await executor.executeContractTransaction(
@@ -102,7 +102,7 @@ describe('Business Center', function() {
       const selfJoinBc = await createBusinessCenter(0);
       await executor.executeContractTransaction(
         selfJoinBc, 'join', { from: accounts[2], autoGas: 1.1, });
-      let isMember = await executor.executeContractCall(
+      const isMember = await executor.executeContractCall(
         selfJoinBc, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
       expect(isMember).to.be.true;
     });
@@ -127,7 +127,7 @@ describe('Business Center', function() {
       const inviteOnlyBc = await createBusinessCenter(1);
       await executor.executeContractTransaction(
         inviteOnlyBc, 'invite', { from: accounts[0], autoGas: 1.1, }, accounts[2], );
-      let isMember = await executor.executeContractCall(inviteOnlyBc, 'isMember', accounts[2]);
+      const isMember = await executor.executeContractCall(inviteOnlyBc, 'isMember', accounts[2]);
       expect(isMember).to.be.true;
     });
   });
@@ -185,7 +185,7 @@ describe('Business Center', function() {
       it('allows to join', async () => {
         await executor.executeContractTransaction(
           currentBc, 'join', { from: accounts[2], autoGas: 1.1, });
-        let isMember = await executor.executeContractCall(
+        const isMember = await executor.executeContractCall(
           currentBc, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
         expect(isMember).to.be.true;
       });
@@ -226,7 +226,7 @@ describe('Business Center', function() {
       it('adds a member, when a member is invited', async () => {
         await executor.executeContractTransaction(
           currentBc, 'invite', { from: accounts[0], autoGas: 1.1, }, accounts[1], );
-        let isMember = await executor.executeContractCall(currentBc, 'isMember', accounts[1]);
+        const isMember = await executor.executeContractCall(currentBc, 'isMember', accounts[1]);
         expect(isMember).to.be.true;
       });
     });
@@ -247,7 +247,7 @@ describe('Business Center', function() {
   });
 
   it('does not allow to cancel a membership if not joined', async () => {
-    let isMember = await executor.executeContractCall(
+    const isMember = await executor.executeContractCall(
       businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
     if (isMember) {
       await executor.executeContractTransaction(
@@ -259,7 +259,7 @@ describe('Business Center', function() {
   });
 
   it('does not allow sending fake contract events', async () => {
-    let isMember = await executor.executeContractCall(
+    const isMember = await executor.executeContractCall(
       businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
     if (isMember) {
       await executor.executeContractTransaction(
@@ -278,7 +278,7 @@ describe('Business Center', function() {
 
   it('allows members to set their own profile', async () => {
     const sampleProfile = '0x1234000000000000000000000000000000000000000000000000000000000000';
-    let isMember = await executor.executeContractCall(
+    const isMember = await executor.executeContractCall(
       businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
     if (!isMember) {
       await executor.executeContractTransaction(
@@ -297,7 +297,7 @@ describe('Business Center', function() {
 
   it('removes a user profile when this user leaves', async () => {
     const sampleProfile = '0x1234000000000000000000000000000000000000000000000000000000000000';
-    let isMember = await executor.executeContractCall(
+    const isMember = await executor.executeContractCall(
       businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
     if (!isMember) {
       await executor.executeContractTransaction(
@@ -316,7 +316,7 @@ describe('Business Center', function() {
 
   it('does not allow setting a profile when executing user is not a member  ', async () => {
     const sampleProfile = '0x1234000000000000000000000000000000000000000000000000000000000000';
-    let isMember = await executor.executeContractCall(
+    const isMember = await executor.executeContractCall(
       businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
     if (isMember) {
       await executor.executeContractTransaction(
@@ -330,7 +330,7 @@ describe('Business Center', function() {
   it('allows members to update own profile', async () => {
     const sampleProfile1 = '0x1234000000000000000000000000000000000000000000000000000000000000';
     const sampleProfile2 = '0x1234500000000000000000000000000000000000000000000000000000000000';
-    let isMember = await executor.executeContractCall(
+    const isMember = await executor.executeContractCall(
       businessCenter, 'isMember', accounts[2], { from: accounts[2], gas: 3000000, });
     if (!isMember) {
       await executor.executeContractTransaction(

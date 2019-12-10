@@ -27,8 +27,7 @@ import {
 
 import { accounts } from '../../test/accounts';
 import { configTestcore as config } from '../../config-testcore';
-import { Container, ContainerConfig } from './container';
-import { Ipld } from '../../dfs/ipld';
+import { Container } from './container';
 import { TestUtils } from '../../test/test-utils';
 import { VerificationsStatus } from '../../verifications/verifications';
 import {
@@ -47,7 +46,6 @@ const ownedDomain = 'twintest.fifs.registrar.test.evan';
 describe('DigitalTwin', function() {
   this.timeout(60000);
   let dfs: Ipfs;
-  let ipld: Ipld;
   let defaultConfig: DigitalTwinConfig;
   let executor: Executor;
   const description = {
@@ -197,7 +195,7 @@ describe('DigitalTwin', function() {
         await twin.setEntries(samples);
         const result = await twin.getEntries();
         expect(Object.keys(result).length).to.eq(Object.keys(samples).length);
-        for (let key of Object.keys(samples)) {
+        for (const key of Object.keys(samples)) {
           expect(result[key].value).to.eq(samples[key].value);
           expect(result[key].entryType).to.eq(samples[key].entryType);
         }
@@ -207,7 +205,7 @@ describe('DigitalTwin', function() {
     describe('when paging entries', () => {
       const checkTwin = async (twin, samples) => {
         const result = await twin.getEntries();
-        for (let key of Object.keys(samples)) {
+        for (const key of Object.keys(samples)) {
           expect(result[key].value).to.eq(samples[key].value);
           expect(result[key].entryType).to.eq(samples[key].entryType);
         }
@@ -256,7 +254,6 @@ describe('DigitalTwin', function() {
         const car = await DigitalTwin.create(runtime, defaultConfig);
         const tire = await DigitalTwin.create(runtime, defaultConfig);
 
-        const carAddress = await car.getContractAddress();
         const tireAddress = await tire.getContractAddress();
 
         const container = TestUtils.getRandomAddress();
@@ -278,7 +275,6 @@ describe('DigitalTwin', function() {
         const tire = await DigitalTwin.create(runtime, defaultConfig);
         const screw = await DigitalTwin.create(runtime, defaultConfig);
 
-        const carAddress = await car.getContractAddress();
         const tireAddress = await tire.getContractAddress();
         const screwAddress = await screw.getContractAddress();
 
@@ -340,7 +336,7 @@ describe('DigitalTwin', function() {
     it('can set verifications to twin', async () => {
       const twin = await DigitalTwin.create(runtime, defaultConfig);
       const verifications: DigitalTwinVerificationEntry[] = [...Array(3)].map(
-        (_, i) => (<DigitalTwinVerificationEntry> { topic: `verifcation_${i}` }));
+        (_, i) => ({ topic: `verifcation_${i}` } as DigitalTwinVerificationEntry));
       await twin.addVerifications(verifications);
       const verificationsResults = await twin.getVerifications();
       expect(verificationsResults.length).to.eq(3);
@@ -379,7 +375,6 @@ describe('DigitalTwin', function() {
     it('can load indicdes from ENS', async () => {
       const randomName = Math.floor(Math.random() * 1e12).toString(36);
       const address = `${randomName}.${ownedDomain}`;
-      const twin = await DigitalTwin.create(runtime, { ...defaultConfig, address });
       const loadedTwin = new DigitalTwin(runtime, { ...defaultConfig, address });
 
       expect(await loadedTwin.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
