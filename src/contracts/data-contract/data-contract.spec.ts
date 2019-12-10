@@ -59,7 +59,6 @@ describe('DataContract', function() {
     '0x0000000000000000000000000000000000000000000000000000000000041234',
     '0x0000000000000000000000000000000000000000000000000000000000051234',
   ];
-  /* tslint:disable:quotemark */
   const sampleDescription: Envelope = {
     "public": {
       "name": "Data Contract Sample",
@@ -68,7 +67,6 @@ describe('DataContract', function() {
       "author": "evan GmbH",
     }
   };
-  /* tslint:enable:quotemark */
 
   before(async () => {
     web3 = TestUtils.getWeb3();
@@ -498,7 +496,6 @@ describe('DataContract', function() {
         });
       });
       describe('when working with descriptions', async () => {
-        /* tslint:disable:quotemark */
         const testSchema = {
           list_settable_by_member: {
             "$id": "list_settable_by_member_schema",
@@ -514,7 +511,6 @@ describe('DataContract', function() {
             "type": "integer",
           }
         };
-        /* tslint:enable:quotemark */
         it('allows adding entries matching the field schema', async () => {
           const contract = await createContract(!storeInDfs, testSchema);
           const values = [ !storeInDfs ? sampleValues[0] : {
@@ -610,7 +606,6 @@ describe('DataContract', function() {
         });
         it('allows specifying list based schemata', async () => {
           const customSchema = JSON.parse(JSON.stringify(testSchema));
-          /* tslint:disable:quotemark */
           customSchema.list_settable_by_member = {
             "$id": "list_settable_by_member_schema",
             "$comment": "{\"entryType\": \"list\"}",
@@ -624,7 +619,6 @@ describe('DataContract', function() {
               }
             }
           };
-          /* tslint:enable:quotemark */
           const contract = await createContract(!storeInDfs, customSchema);
           const values = [ !storeInDfs ? sampleValues[0] : {
             foo: 'sample',

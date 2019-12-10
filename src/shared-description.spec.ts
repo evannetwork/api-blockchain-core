@@ -41,7 +41,6 @@ import { TestUtils } from './test/test-utils';
 use(chaiAsPromised);
 
 const testAddressPrefix = 'testDapp';
-/* tslint:disable:quotemark */
 const sampleDescription = {
   "name": "test description",
   "description": "description used in tests.",
@@ -66,7 +65,6 @@ const sampleDescription = {
     "type": "dapp"
   },
 };
-/* tslint:enable:quotemark */
 const sampleKey = '346c22768f84f3050f5c94cec98349b3c5cbfa0b7315304e13647a49181fd1ef';
 let description: Description;
 let testAddressFoo;
