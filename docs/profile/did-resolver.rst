@@ -83,16 +83,16 @@ setDidDocument
 
 .. code-block:: typescript
 
-  didResolver.setDidDocument(document[, did]);
+  didResolver.setDidDocument(did, document);
 
-Store given DID document for given DID or for currently configured active identity.
+Store given DID document for given DID.
 
 ----------
 Parameters
 ----------
 
+#. ``did`` - ``string``: DID to store DID document for
 #. ``document`` - ``any``: DID document to store, ``getDidDocumentTemplate`` can be used as a starting point for DID documents
-#. ``did`` - ``string`` (optional): DID to store DID document for, defaults to current ``activeIdentity`` of given ``signerIdentity``
 
 -------
 Returns
@@ -106,8 +106,10 @@ Example
 
 .. code-block:: typescript
 
+  const identity = await runtime.verifications.getIdentityForAccount(accountsId, true);
+  const did = await runtime.didResolver.convertIdentityToDid(identity);
   const document = await runtime.didResolver.getDidDocumentTemplate();
-  await runtime.didResolver.setDidDocument(document);
+  await runtime.didResolver.setDidDocument(did, document);
 
 
 
@@ -122,13 +124,13 @@ getDidDocument
 
   didResolver.getDidDocument([did]);
 
-Get DID document for given DID or for currently configured active identity.
+Get DID document for given DID.
 
 ----------
 Parameters
 ----------
 
-#. ``did`` - ``string`` (optional): DID to fetch DID document for, defaults to current ``activeIdentity`` of given ``signerIdentity``
+#. ``did`` - ``string``: DID to fetch DID document for.
 
 -------
 Returns
@@ -142,9 +144,11 @@ Example
 
 .. code-block:: typescript
 
+  const identity = await runtime.verifications.getIdentityForAccount(accountsId, true);
+  const did = await runtime.didResolver.convertIdentityToDid(identity);
   const document = await runtime.didResolver.getDidDocumentTemplate();
-  await runtime.didResolver.setDidDocument(document);
-  const retrieved = await runtime.didResolver.getDidDocument();
+  await runtime.didResolver.setDidDocument(did, document);
+  const retrieved = await runtime.didResolver.getDidDocument(did);
 
 
 
@@ -165,8 +169,8 @@ Sets service in DID document.
 Parameters
 ----------
 
-#. ``service`` - ``any``: service to set
-#. ``did`` - ``string`` (optional): DID name to set service for
+#. ``did`` - ``string``: DID name to set service for
+#. ``service`` - ``DidResolverServiceEntry[] | DidResolverServiceEntry``: service to set
 
 -------
 Returns
@@ -183,13 +187,13 @@ Example
   const document = await runtime.didResolver.getDidDocumentTemplate();
   const identity = await runtime.verifications.getIdentityForAccount(account, true);
   const did = await runtime.didResolver.convertIdentityToDid(identity);
-  await runtime.didResolver.setDidDocument(document, did);
+  await runtime.didResolver.setDidDocument(did, document);
   const service = [{
     id: `${did}#randomService`,
     type: `randomService-${random}`,
     serviceEndpoint: `https://openid.example.com/${random}`,
   }];
-  await runtime.didResolver.setService(service, did);
+  await runtime.didResolver.setService(did, service);
 
 
 
@@ -210,7 +214,7 @@ Get service from DID document.
 Parameters
 ----------
 
-#. ``did`` - ``string`` (optional): DID to fetch DID service for, defaults to current ``activeIdentity`` of given ``signerIdentity``
+#. ``did`` - ``string``: DID to fetch DID service for.
 
 -------
 Returns
@@ -227,13 +231,13 @@ Example
   const document = await runtime.didResolver.getDidDocumentTemplate();
   const identity = await runtime.verifications.getIdentityForAccount(account, true);
   const did = await runtime.didResolver.convertIdentityToDid(identity);
-  await runtime.didResolver.setDidDocument(document, did);
+  await runtime.didResolver.setDidDocument(did, document);
   const service = [{
     id: `${did}#randomService`,
     type: `randomService-${random}`,
     serviceEndpoint: `https://openid.example.com/${random}`,
   }];
-  await runtime.didResolver.setService(service, did);
+  await runtime.didResolver.setService(did, service);
   const retrieved = await runtime.didResolver.getService(did);
 
 
