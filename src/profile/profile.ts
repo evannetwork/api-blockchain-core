@@ -788,7 +788,7 @@ export class Profile extends Logger {
       accountDetails = await this.getProfileProperty('accountDetails');
     } catch (ex) {
       this.log('could not get account details, will use this profile as user; ' +
-        '${ex.message || ex}', 'warning');
+        ex.message || ex, 'warning');
     }
 
     // get profile type and forbid invalid type transitions

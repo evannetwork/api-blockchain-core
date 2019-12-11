@@ -306,7 +306,6 @@ export class Ipld extends Logger {
       pathInParent = path.replace(`${toTraverse.join('/')}/`, '');
       splitPathInParent = pathInParent.split('/').slice(1, -1);  // skip parent prop, skip last
     } else {
-      pathInParent = path;
       if (linkedParent === tree) {
         // entire graph is plain object, current linkedParent is entire tree
         splitPathInParent = path.split('/').slice(0, -1);  // skip last

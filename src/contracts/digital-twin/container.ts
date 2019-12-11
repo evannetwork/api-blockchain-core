@@ -1502,7 +1502,6 @@ export class Container extends Logger {
     if (value === '0x0000000000000000000000000000000000000000000000000000000000000000') {
       return value;
     }
-    let result = value;
     const description = await this.getDescription();
     if (!description.dataSchema || !description.dataSchema[propertyName]) {
       throw new Error(`could not find description for entry "${propertyName}"`);
@@ -1527,9 +1526,7 @@ export class Container extends Logger {
 
       return { files: encryptedFiles.filter((f) => f !== null) };
     };
-    result = await this.applyIfEncrypted(description.dataSchema[propertyName], value, decrypt);
-
-    return result;
+    return this.applyIfEncrypted(description.dataSchema[propertyName], value, decrypt);
   }
 
   /**
@@ -1571,7 +1568,6 @@ export class Container extends Logger {
     propertyName: string,
     value: ContainerFile[]|any,
   ): Promise<any> {
-    let result = value;
     const description = await this.getDescription();
     if (!description.dataSchema || !description.dataSchema[propertyName]) {
       throw new Error(`could not find description for entry "${propertyName}"`);
@@ -1595,9 +1591,7 @@ export class Container extends Logger {
     };
 
     // check for encrypted files
-    result = await this.applyIfEncrypted(description.dataSchema[propertyName], value, encrypt);
-
-    return result;
+    return this.applyIfEncrypted(description.dataSchema[propertyName], value, encrypt);
   }
 
   /**

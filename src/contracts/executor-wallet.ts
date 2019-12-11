@@ -283,60 +283,49 @@ export class ExecutorWallet extends Executor {
           try {
             // keep transaction hash for checking agains it in event
             transactionHash = receipt && receipt.transactionHash ? receipt.transactionHash : '';
-            if (err) {
-              this.log(`${functionName} failed: ${err.message || err}`, 'error');
+            let optionsGas;
+            if (typeof options.gas === 'string' && options.gas.startsWith('0x')) {
+              optionsGas = parseInt(options.gas, 16);
+            } else {
+              optionsGas = parseInt(options.gas, 10);
+            }
+            if (optionsGas !== receipt.gasUsed) {
               logGas({
-                status: 'error',
-                message: 'transaction submit error',
+                status: 'success',
+                gasUsed: receipt.gasUsed,
                 gasEstimated,
                 transactionHash,
               });
-              reject(err);
+              // if no event to watch for was given, resolve promise here
+              if (!inputOptions.event || !this.eventHub) {
+                isPending = false;
+                resolve();
+              } else if (eventResults[transactionHash]) {
+                await stopWatching();
+                if (inputOptions.getEventResult) {
+                  resolve(inputOptions.getEventResult(
+                    eventResults[transactionHash],
+                    eventResults[transactionHash].args ||
+                      eventResults[transactionHash].returnValues
+                  ));
+                } else {
+                  resolve(eventResults[transactionHash]);
+                }
+              }
             } else {
-              let optionsGas;
-              if (typeof options.gas === 'string' && options.gas.startsWith('0x')) {
-                optionsGas = parseInt(options.gas, 16);
-              } else {
-                optionsGas = parseInt(options.gas, 10);
+              const errorText = 'all gas used up';
+              this.log(`${functionName} failed: ${errorText}`, 'error');
+              if (inputOptions.event && this.eventHub) {
+                await stopWatching(true);
               }
-              if (optionsGas !== receipt.gasUsed) {
-                logGas({
-                  status: 'success',
-                  gasUsed: receipt.gasUsed,
-                  gasEstimated,
-                  transactionHash,
-                });
-                // if no event to watch for was given, resolve promise here
-                if (!inputOptions.event || !this.eventHub) {
-                  isPending = false;
-                  resolve();
-                } else if (eventResults[transactionHash]) {
-                  await stopWatching();
-                  if (inputOptions.getEventResult) {
-                    resolve(inputOptions.getEventResult(
-                      eventResults[transactionHash],
-                      eventResults[transactionHash].args ||
-                        eventResults[transactionHash].returnValues
-                    ));
-                  } else {
-                    resolve(eventResults[transactionHash]);
-                  }
-                }
-              } else {
-                const errorText = 'all gas used up';
-                this.log(`${functionName} failed: ${errorText}`, 'error');
-                if (inputOptions.event && this.eventHub) {
-                  await stopWatching(true);
-                }
-                logGas({
-                  status: 'error',
-                  message: 'transaction failed',
-                  gasUsed: receipt.gasUsed,
-                  gasEstimated,
-                  transactionHash,
-                });
-                reject(errorText);
-              }
+              logGas({
+                status: 'error',
+                message: 'transaction failed',
+                gasUsed: receipt.gasUsed,
+                gasEstimated,
+                transactionHash,
+              });
+              reject(errorText);
             }
           } catch (ex) {
             return reject(`${functionName} failed: ${ex.message}`);

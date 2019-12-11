@@ -221,7 +221,7 @@ export async function createDefaultRuntime(
   executor.eventHub = eventHub;
 
   // check if the dfs remoteNode matches our ipfslib
-  if (!(dfs as Ipfs).remoteNode as any instanceof IpfsLib) {
+  if (!((dfs as Ipfs).remoteNode as any instanceof IpfsLib)) {
     (dfs as Ipfs).remoteNode = new IpfsLib(config.ipfsConfig);
   }
   (dfs as Ipfs).setRuntime({signer, activeAccount, web3});
