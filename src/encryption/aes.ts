@@ -22,6 +22,7 @@ import {
   Cryptor,
   CryptoInfo,
   Logger,
+  LoggerOptions as AesOptions,
 } from '@evan.network/dbcp';
 
 /**
