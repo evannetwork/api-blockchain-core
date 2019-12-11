@@ -23,7 +23,6 @@ import { BigNumber } from 'bignumber.js';
 import {
   AccountStore,
   ContractLoader,
-  Description,
   Executor,
   Logger,
   LoggerOptions,
@@ -31,8 +30,14 @@ import {
   DfsInterface
 } from '@evan.network/dbcp';
 
-import { Ipfs } from '../dfs/ipfs';
-import { nullAddress, nullBytes32 } from '../common/utils';
+import {
+  nullAddress,
+  nullBytes32,
+} from '../common/utils';
+import {
+  Description,
+  Ipfs,
+} from '../index';
 
 
 /**

@@ -21,15 +21,18 @@ import crypto = require('crypto');
 import prottle = require('prottle');
 
 import {
-  Description,
   DfsInterface,
   Envelope,
   Validator,
 } from '@evan.network/dbcp';
 
-import { BaseContract, BaseContractOptions } from '../base-contract/base-contract';
-import { CryptoProvider } from '../../encryption/crypto-provider';
-import { Sharing } from '../sharing';
+import {
+  BaseContract,
+  BaseContractOptions,
+  CryptoProvider,
+  Description,
+  Sharing,
+} from '../../index';
 
 
 const requestWindowSize = 10;

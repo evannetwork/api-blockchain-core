@@ -19,7 +19,6 @@
 
 import {
   ContractLoader,
-  Description,
   Executor,
   DfsInterface,
   KeyProvider,
@@ -28,7 +27,10 @@ import {
   LoggerOptions,
 } from '@evan.network/dbcp';
 
-import { CryptoProvider } from '../encryption/crypto-provider';
+import {
+  CryptoProvider,
+  Description,
+} from '../index';
 
 
 // constant hash: this.options.nameResolver.soliditySha3('*')

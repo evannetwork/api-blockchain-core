@@ -21,13 +21,14 @@ import { AbiCoder } from 'web3-eth-abi';
 
 import {
   ContractLoader,
-  Description,
   EventHub,
   Executor,
   Logger,
   LoggerOptions,
   NameResolver,
 } from '@evan.network/dbcp';
+
+import { Description } from '../index';
 
 
 const coder: AbiCoder = new AbiCoder();
