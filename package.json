@@ -57,7 +57,7 @@
   "homepage": "https://evannetwork.github.io/",
   "husky": {
     "hooks": {
-      "pre-commit": "eslint --ext .js,.ts -c .eslintrc.js ./src"
+      "pre-commit": "eslint --ext .js,.ts -c .eslintrc.js ./src && yarn build"
     }
   },
   "keywords": [
