@@ -292,10 +292,7 @@ export class AesBlob extends Logger implements Cryptor {
             file = await this.decryptBrowser(this.webCryptoAlgo, encryptedFile, Buffer.from(options.key, 'hex'), initialVectorFile);
           } else {
             const fileDecipher = crypto.createDecipheriv(this.algorithm, Buffer.from(options.key, 'hex'), initialVectorFile);
-            const chunks = this.chunkBuffer(encryptedFile, 1024);
-            for (let chunk of chunks) {
-              file = Buffer.concat([file, fileDecipher.update(chunk)]);
-            }
+            file = Buffer.concat([file, fileDecipher.update(encryptedFile)]);
             file = Buffer.concat([file, fileDecipher.final()]);
           }
           blob.file = file;
@@ -309,10 +306,7 @@ export class AesBlob extends Logger implements Cryptor {
           file = await this.decryptBrowser(this.webCryptoAlgo, encryptedFile, Buffer.from(options.key, 'hex'), initialVectorFile);
         } else {
           const fileDecipher = crypto.createDecipheriv(this.algorithm, Buffer.from(options.key, 'hex'), initialVectorFile);
-          const chunks = this.chunkBuffer(encryptedFile, 1024);
-          for (let chunk of chunks) {
-            file = Buffer.concat([file, fileDecipher.update(chunk)]);
-          }
+          file = Buffer.concat([file, fileDecipher.update(encryptedFile)]);
           file = Buffer.concat([file, fileDecipher.final()]);
         }
         wrapper.file = file;
