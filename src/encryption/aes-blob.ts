@@ -23,9 +23,8 @@ import {
   Cryptor,
   CryptoInfo,
   Logger,
-  LoggerOptions,
+  LoggerOptions
 } from '@evan.network/dbcp';
-
 
 /**
  * generate new intiala vector, length is 16 bytes (aes)
@@ -91,17 +90,6 @@ export class AesBlob extends Logger implements Cryptor {
     delete ret.dfs;
     return ret;
   }
-
-  public chunkBuffer(buffer, chunkSize) {
-    const result = [];
-    const len = buffer.length;
-    let i = 0;
-    while (i < len) {
-      result.push(buffer.slice(i, i += chunkSize));
-    }
-    return result;
-  }
-
 
   /**
    * generate key for cryptor/decryption
