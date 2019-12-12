@@ -26,7 +26,6 @@ import {
   LoggerOptions,
 } from '@evan.network/dbcp';
 
-
 /**
  * generate new intiala vector, length is 16 bytes (aes)
  *
@@ -91,17 +90,6 @@ export class AesBlob extends Logger implements Cryptor {
     delete ret.dfs;
     return ret;
   }
-
-  public chunkBuffer(buffer, chunkSize) {
-    const result = [];
-    const len = buffer.length;
-    let i = 0;
-    while (i < len) {
-      result.push(buffer.slice(i, i += chunkSize));
-    }
-    return result;
-  }
-
 
   /**
    * generate key for cryptor/decryption
@@ -291,10 +279,7 @@ export class AesBlob extends Logger implements Cryptor {
             file = await this.decryptBrowser(this.webCryptoAlgo, encryptedFile, Buffer.from(options.key, 'hex'), initialVectorFile);
           } else {
             const fileDecipher = crypto.createDecipheriv(this.algorithm, Buffer.from(options.key, 'hex'), initialVectorFile);
-            const chunks = this.chunkBuffer(encryptedFile, 1024);
-            for (const chunk of chunks) {
-              file = Buffer.concat([file, fileDecipher.update(chunk)]);
-            }
+            file = Buffer.concat([file, fileDecipher.update(encryptedFile)]);
             file = Buffer.concat([file, fileDecipher.final()]);
           }
           blob.file = file;
@@ -308,10 +293,7 @@ export class AesBlob extends Logger implements Cryptor {
           file = await this.decryptBrowser(this.webCryptoAlgo, encryptedFile, Buffer.from(options.key, 'hex'), initialVectorFile);
         } else {
           const fileDecipher = crypto.createDecipheriv(this.algorithm, Buffer.from(options.key, 'hex'), initialVectorFile);
-          const chunks = this.chunkBuffer(encryptedFile, 1024);
-          for (const chunk of chunks) {
-            file = Buffer.concat([file, fileDecipher.update(chunk)]);
-          }
+          file = Buffer.concat([file, fileDecipher.update(encryptedFile)]);
           file = Buffer.concat([file, fileDecipher.final()]);
         }
         wrapper.file = file;
