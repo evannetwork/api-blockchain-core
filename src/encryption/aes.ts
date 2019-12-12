@@ -18,12 +18,18 @@
 */
 
 import crypto = require('crypto-browserify');
-
 import {
   Cryptor,
   CryptoInfo,
   Logger,
-  LoggerOptions,
+  LoggerOptions as AesOptions,
+} from '@evan.network/dbcp';
+
+/**
+ * aes instance options
+ */
+export {
+  LoggerOptions as AesOptions
 } from '@evan.network/dbcp';
 
 
@@ -36,25 +42,16 @@ function generateInitialVector(): Buffer {
   return crypto.randomBytes(16);
 }
 
-/**
- * aes instance options
- */
-export interface AesOptions extends LoggerOptions {
-
-}
-
 export class Aes extends Logger implements Cryptor {
-  static defaultOptions = {
+  public static defaultOptions = {
     keyLength: 256,
     algorithm: 'aes-256-cbc',
   };
-
+  public options: any;
   private readonly encodingUnencrypted = 'utf-8';
   private readonly encodingEncrypted = 'hex';
 
-  options: any;
-
-  constructor(options?: AesOptions) {
+  public constructor(options?: AesOptions) {
     super(options);
     this.options = Object.assign({}, Aes.defaultOptions, options || {});
   }
@@ -66,9 +63,9 @@ export class Aes extends Logger implements Cryptor {
    * @param      {string}  str     string to convert
    * @return     {Buffer}  converted input
    */
-  stringToArrayBuffer(str) {
-    let len = str.length;
-    let bytes = new Uint8Array( len );
+  public stringToArrayBuffer(str) {
+    const len = str.length;
+    const bytes = new Uint8Array( len );
     for (let i = 0; i < len; i++) {
       bytes[i] = str.charCodeAt(i);
     }
@@ -76,7 +73,7 @@ export class Aes extends Logger implements Cryptor {
   }
 
 
-  getCryptoInfo(originator: string): CryptoInfo {
+  public getCryptoInfo(originator: string): CryptoInfo {
     return Object.assign({ originator, }, this.options);
   }
 
@@ -86,7 +83,7 @@ export class Aes extends Logger implements Cryptor {
    * @return     {any}  The iv from key.
 
    */
-  async generateKey(): Promise<any> {
+  public async generateKey(): Promise<any> {
     return new Promise((resolve, reject) => {
       crypto.randomBytes(this.options.keyLength / 8, (err, buf) => {
         if (err) {
@@ -106,7 +103,7 @@ export class Aes extends Logger implements Cryptor {
    * @param      {any}     options  cryptor options
    * @return     {Buffer}  encrypted message
    */
-  async encrypt(message: any, options: any): Promise<Buffer> {
+  public async encrypt(message: any, options: any): Promise<Buffer> {
     try {
       if (!options.key) {
         throw new Error('no key given');
@@ -130,7 +127,7 @@ export class Aes extends Logger implements Cryptor {
    * @param      {any}     options  decryption options
    * @return     {any}  decrypted message
    */
-  async decrypt(message: Buffer, options: any): Promise<any> {
+  public async decrypt(message: Buffer, options: any): Promise<any> {
     try {
       if (!options.key) {
         throw new Error('no key given');

@@ -29,21 +29,20 @@ import {
  * @brief      IPFS library for add/pin
  */
 export class IpfsLib {
-
   /**
    * compatible IPFS files api
    */
-  files: any;
+  public files: any;
   /**
    * compatible IPFS pin api
    */
-  pin: any;
+  public pin: any;
   /**
    * holds the provider
    */
-  provider: any;
+  public provider: any;
 
-  constructor(provider: any) {
+  public constructor(provider: any) {
     this.setProvider(provider || {});
   }
 
@@ -52,7 +51,7 @@ export class IpfsLib {
    *
    * @param      {any}  provider  The provider
    */
-  setProvider(provider: any): void {
+  public setProvider(provider: any): void {
     const data = Object.assign({
       host: '127.0.0.1',
       pinning: true,
@@ -78,8 +77,7 @@ export class IpfsLib {
    *
    * @param      {object}  opts    The options for the request
    */
-  async sendAsync(opts) {
-
+  public async sendAsync(opts) {
     return new Promise((resolve, reject) => {
       const requestLib: any = this.provider.protocol === 'http' ? http : https;
       const reqOptions: http.RequestOptions = {};
@@ -125,20 +123,20 @@ export class IpfsLib {
       }
       req.end();
     });
-  };
+  }
 
   /**
    * adds files to ipfs
    *
    * @param      {FileToAdd}  input   Array with to be pushed files
    */
-  async add(input: FileToAdd[]) {
+  public async add(input: FileToAdd[]) {
     let files = input;
     if (!Array.isArray(files)) {
       files = [].concat(files)
     }
     const response = [];
-    for (let file of files) {
+    for (const file of files) {
       const boundary = this.createBoundary();
       const header = [
         `--${boundary}`,
@@ -148,7 +146,6 @@ export class IpfsLib {
         ''
       ].join('\r\n');
 
-      const data = file.content;
       const footer = `\r\n--${boundary}--`;
 
       const payload = Buffer.concat([
@@ -167,13 +164,12 @@ export class IpfsLib {
       }));
     }
     return response;
-
-  };
+  }
 
   /**
    * creates a boundary that isn't part of the payload
    */
-  createBoundary() {
+  public createBoundary() {
     const boundary = `----EVANipfs${Math.random() * 100000}.${Math.random() * 100000}`;
     return boundary;
   }
@@ -183,25 +179,25 @@ export class IpfsLib {
    *
    * @param      {string}  ipfsHash  The ipfs hash
    */
-  async cat(ipfsHash: string) {
+  public async cat(ipfsHash: string) {
     return this.sendAsync({ uri: `/cat?arg=${ipfsHash}` });
-  };
+  }
 
   /**
    * adds a pin to IPFS
    *
    * @param      {string}  ipfsHash  The ipfs hash
    */
-  async pinAdd(ipfsHash: string) {
+  public async pinAdd(ipfsHash: string) {
     return this.sendAsync({ uri: `/pin/add?arg=${ipfsHash}`, jsonParse: true });
-  };
+  }
 
   /**
    * removes a pin from IPFS
    *
    * @param      {string}  ipfsHash  The ipfs hash
    */
-  async pinRm(ipfsHash: string) {
+  public async pinRm(ipfsHash: string) {
     return this.sendAsync({ uri: `/pin/rm?arg=${ipfsHash}`, jsonParse: true });
-  };
+  }
 }

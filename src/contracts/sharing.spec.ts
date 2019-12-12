@@ -19,7 +19,7 @@
 
 import 'mocha';
 import { expect, use } from 'chai';
-import chaiAsPromised = require('chai-as-promised');
+import * as chaiAsPromised from 'chai-as-promised';
 
 import {
   DfsInterface,
@@ -28,7 +28,6 @@ import {
 } from '@evan.network/dbcp';
 
 import { accounts } from '../test/accounts';
-import { configTestcore as config } from '../config-testcore';
 import { CryptoProvider } from '../encryption/crypto-provider';
 import { sampleContext, TestUtils } from '../test/test-utils';
 import { Sharing } from './sharing';
@@ -242,7 +241,7 @@ describe('Sharing handler', function() {
         false,
         sharingId,
       );
-      let sharings = await sharing.getSharings(
+      const sharings = await sharing.getSharings(
         contract.options.address, null, null, null, sharingId);
       // object checks
       expect(Object.keys(sharings)).to.deep.eq([nameResolver.soliditySha3(accounts[1])]);
@@ -296,7 +295,7 @@ describe('Sharing handler', function() {
         false,
         sharingId,
       );
-      let sharings = await sharing.getSharings(
+      const sharings = await sharing.getSharings(
         contract.options.address, null, null, null, sharingId);
       // object checks
       expect(Object.keys(sharings)).to.deep.eq([nameResolver.soliditySha3(accounts[1])]);
@@ -364,7 +363,7 @@ describe('Sharing handler', function() {
         false,
         sharingId,
       );
-      let sharings = await sharing.getSharings(
+      const sharings = await sharing.getSharings(
         contract.options.address, null, null, null, sharingId);
       // object checks
       expect(Object.keys(sharings).sort())

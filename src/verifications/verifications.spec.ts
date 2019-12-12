@@ -18,7 +18,7 @@
 */
 
 import 'mocha';
-import chaiAsPromised = require('chai-as-promised');
+import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
 import { ContractLoader, Executor } from '@evan.network/dbcp';
 
@@ -49,30 +49,6 @@ describe('Verifications handler', function() {
   function getRandomTopic(prefix: string) {
     return `${ prefix }/${ Date.now().toString() + Math.random().toString().slice(2, 20) }`;
   }
-
-  const singedByAccounts0 = async (verification) => {
-    if (verification.details.issuer === accounts[0]) {
-      return VerificationsStatusV2.Green;
-    }
-    return VerificationsStatusV2.Red;
-  };
-
-  const validationOptions: VerificationsValidationOptions = {
-    disableSubVerifications: VerificationsStatusV2.Red,
-    expired:                 VerificationsStatusV2.Red,
-    invalid:                 VerificationsStatusV2.Red,
-    issued:                  VerificationsStatusV2.Green,
-    missing:                 VerificationsStatusV2.Red,
-    noIdentity:              VerificationsStatusV2.Red,
-    notEnsRootOwner:         VerificationsStatusV2.Red,
-    parentMissing:           VerificationsStatusV2.Yellow,
-    parentUntrusted:         singedByAccounts0,
-    rejected:                VerificationsStatusV2.Red,
-    selfIssued:              VerificationsStatusV2.Red,
-  };
-  const queryOptions: VerificationsQueryOptions = {
-    validationOptions,
-  };
 
   let baseContract: BaseContract;
   let verifications: Verifications;
@@ -122,7 +98,7 @@ describe('Verifications handler', function() {
     await deploy('verifications/VerificationHolderLibrary.sol:VerificationHolderLibrary');
     await deploy('verifications/VerificationsRegistryLibrary.sol:VerificationsRegistryLibrary');
 
-    for (let key of Object.keys(libs)) {
+    for (const key of Object.keys(libs)) {
       console.log(`${/[^:]:(.*)/g.exec(key)[1]}: ${libs[key].slice(2)}`);
     }
   });
@@ -403,7 +379,7 @@ describe('Verifications handler', function() {
     describe('when validating nested verifications', () => {
       it('verifications for a subject that has no identity should throw', async () => {
         const randomAccount = TestUtils.getRandomAddress();
-        let topic = getRandomTopic('/evan');
+        const topic = getRandomTopic('/evan');
 
         // check missing state
         const promise = verifications.getComputedVerification(randomAccount, topic);
@@ -417,7 +393,8 @@ describe('Verifications handler', function() {
 
       it('non existing verifications include the warning "missing" and status should be -1',
         async () => {
-          let topic = getRandomTopic('/evan'), computed;
+          let computed;
+          const topic = getRandomTopic('/evan')
 
           // check missing state
           computed = await verifications.getComputedVerification(accounts[0], topic);
@@ -445,8 +422,8 @@ describe('Verifications handler', function() {
       );
 
       it('should be able to fetch a netsted parent path', async () => {
-        let parentTopic = getRandomTopic('/evan');
-        let topic = getRandomTopic(parentTopic);
+        const parentTopic = getRandomTopic('/evan');
+        const topic = getRandomTopic(parentTopic);
 
         // check issued case
         await verifications.setVerification(accounts[0], accounts[0], parentTopic);
@@ -480,7 +457,8 @@ describe('Verifications handler', function() {
       });
 
       it('verifications with status 0 should have warning "issued"', async () => {
-        let topic = getRandomTopic('/evan'), computed;
+        let computed;
+        const topic = getRandomTopic('/evan');
 
         // check issued case
         await verifications.setVerification(accounts[0], accounts[1], topic);
@@ -536,11 +514,11 @@ describe('Verifications handler', function() {
 
       it('verifications that are created by the same user should have warning "selfIssued"',
         async () => {
-          let topic = getRandomTopic('/evan'), computed;
+          const topic = getRandomTopic('/evan');
 
           // check issued case
           await verifications.setVerification(accounts[0], accounts[0], topic);
-          computed = await verifications.getComputedVerification(accounts[0], topic);
+          const computed = await verifications.getComputedVerification(accounts[0], topic);
           await expect(computed.status).to.be.eq(0);
           await expect(computed.warnings).to.include('selfIssued');
 
@@ -561,8 +539,8 @@ describe('Verifications handler', function() {
       it('verifications with an missing parent should have the warning "parentMissing"',
         async () => {
           let computed;
-          let topicParent = getRandomTopic('');
-          let topic = getRandomTopic(topicParent);
+          const topicParent = getRandomTopic('');
+          const topic = getRandomTopic(topicParent);
 
           // check issued case
           await verifications.setVerification(accounts[0], accounts[1], topic);
@@ -596,14 +574,13 @@ describe('Verifications handler', function() {
 
       it('verifications with an untrusted parent should have the warning "parentUntrusted"',
         async () => {
-          let computed;
-          let topicParent = getRandomTopic('/evan');
-          let topic = getRandomTopic(topicParent);
+          const topicParent = getRandomTopic('/evan');
+          const topic = getRandomTopic(topicParent);
 
           // check issued case
           await verifications.setVerification(accounts[0], accounts[1], topic);
           await verifications.setVerification(accounts[0], accounts[0], topicParent);
-          computed = await verifications.getComputedVerification(accounts[1], topic);
+          const computed = await verifications.getComputedVerification(accounts[1], topic);
           await expect(computed.warnings).to.include('parentUntrusted');
 
           // V2
@@ -621,12 +598,11 @@ describe('Verifications handler', function() {
 
       it('verifications with the base "/evan" should be issued by the evan root account',
         async () => {
-          let computed;
-          let topic = '/evan';
+          const topic = '/evan';
 
           // check issued case
           await verifications.setVerification(accounts[0], accounts[1], topic);
-          computed = await verifications.getComputedVerification(accounts[1], topic);
+          const computed = await verifications.getComputedVerification(accounts[1], topic);
           await expect(computed.warnings).to.include('notEnsRootOwner');
 
           // V2
@@ -639,8 +615,8 @@ describe('Verifications handler', function() {
 
       it('verifications V2 can be marked as "red" using a customComputer',
         async () => {
-          let topicParent = getRandomTopic('');
-          let topic = getRandomTopic(topicParent);
+          const topicParent = getRandomTopic('');
+          const topic = getRandomTopic(topicParent);
 
           // issue verifications
           await verifications.setVerification(accounts[0], accounts[1], topic);
@@ -688,8 +664,8 @@ describe('Verifications handler', function() {
       it('sub verifications, where the parent verifications has the property has ' +
         '"disableSubVerifications" should be not valid',
       async () => {
-        let parentTopic = getRandomTopic('');
-        let topic = getRandomTopic(parentTopic);
+        const parentTopic = getRandomTopic('');
+        const topic = getRandomTopic(parentTopic);
 
         // check issued case
         await verifications.setVerification(
@@ -1027,7 +1003,8 @@ describe('Verifications handler', function() {
       describe('when validating nested verifications', () => {
         it('non existing verifications include the warning "missing" and status should be -1',
           async () => {
-            let topic = getRandomTopic('/evan'), computed;
+            let computed;
+            const topic = getRandomTopic('/evan');
 
             // check missing state
             computed = await verifications.getComputedVerification(subject, topic, isIdentity);
@@ -1037,15 +1014,14 @@ describe('Verifications handler', function() {
             // check missing state is missing after set
             await verifications.setVerification(accounts[0], subject, topic, ...extraArgs);
             computed = await verifications.getComputedVerification(subject, topic, isIdentity);
-            const v2 = await verifications.getNestedVerificationsV2(subject, topic, isIdentity, queryOptions);
             await expect(computed.status).to.be.eq(0);
             await expect(computed.warnings).to.not.include('missing');
           }
         );
 
         it('should parent', async () => {
-          let parentTopic = getRandomTopic('');
-          let topic = getRandomTopic(parentTopic);
+          const parentTopic = getRandomTopic('');
+          const topic = getRandomTopic(parentTopic);
 
           // check missing state
           let computed;
@@ -1064,7 +1040,8 @@ describe('Verifications handler', function() {
         });
 
         it('verifications with status 0 should have warning "issued"', async () => {
-          let topic = getRandomTopic('/evan'), computed;
+          let computed;
+          const topic = getRandomTopic('/evan');
 
           // check issued case
           await verifications.setVerification(accounts[0], subject, topic, ...extraArgs);
@@ -1092,8 +1069,8 @@ describe('Verifications handler', function() {
         it('verifications with a missing parent should have the warning "parentMissing"',
           async () => {
             let computed;
-            let topicParent = getRandomTopic('');
-            let topic = getRandomTopic(topicParent);
+            const topicParent = getRandomTopic('');
+            const topic = getRandomTopic(topicParent);
 
             // check issued case
             await verifications.setVerification(accounts[0], subject, topic, ...extraArgs);
@@ -1108,26 +1085,24 @@ describe('Verifications handler', function() {
 
         it('verifications with an untrusted parent should have the warning "parentUntrusted"',
           async () => {
-            let computed;
-            let topicParent = getRandomTopic('/evan');
-            let topic = getRandomTopic(topicParent);
+            const topicParent = getRandomTopic('/evan');
+            const topic = getRandomTopic(topicParent);
 
             // check issued case
             await verifications.setVerification(accounts[0], subject, topic, ...extraArgs);
             await verifications.setVerification(accounts[0], accounts[0], topicParent);
-            computed = await verifications.getComputedVerification(subject, topic, isIdentity);
+            const computed = await verifications.getComputedVerification(subject, topic, isIdentity);
             await expect(computed.warnings).to.include('parentUntrusted');
           }
         );
 
         it('verifications with the base "/evan" should be issued by the evan root account',
           async () => {
-            let computed;
-            let topic = '/evan';
+            const topic = '/evan';
 
             // check issued case
             await verifications.setVerification(accounts[0], subject, topic, ...extraArgs);
-            computed = await verifications.getComputedVerification(subject, topic, isIdentity);
+            const computed = await verifications.getComputedVerification(subject, topic, isIdentity);
             await expect(computed.warnings).to.include('notEnsRootOwner');
           }
         );
@@ -1135,8 +1110,8 @@ describe('Verifications handler', function() {
         it('sub verifications, where the parent verifications has the property has ' +
           '"disableSubVerifications" should be not valid',
         async () => {
-          let parentTopic = getRandomTopic('');
-          let topic = getRandomTopic(parentTopic);
+          const parentTopic = getRandomTopic('');
+          const topic = getRandomTopic(parentTopic);
 
           // check issued case
           await verifications.setVerification(
@@ -1237,7 +1212,7 @@ describe('Verifications handler', function() {
       });
 
       it('verifications for a subject that has no identity should throw', async () => {
-        let topic = getRandomTopic('/evan');
+        const topic = getRandomTopic('/evan');
 
         const contractIdWithoutIdentity = await baseContract.createUninitialized(
           'testdatacontract',
@@ -1362,14 +1337,14 @@ describe('Verifications handler', function() {
 
       // on account[0]s side
       let nonce = JSON.parse(await verifications.getExecutionNonce(accounts[0]));
-      let txInfos = [];
-      for (let path of paths) {
+      const txInfos = [];
+      for (const path of paths) {
         txInfos.push(await verifications.signSetVerificationTransaction(
           accounts[0], accounts[1], path, 0, null, null, false, false, nonce++));
       }
 
       // on account[2]s side
-      for (let i of txInfos.keys()) {
+      for (const i of txInfos.keys()) {
         const verificationId = await verifications.executeVerification(accounts[2], txInfos[i]);
         await timeout(1000);
         expect(verificationId).to.be.ok;

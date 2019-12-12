@@ -31,7 +31,7 @@ import * as Dbcp from '@evan.network/dbcp';
  * @class      CryptoProvider (name)
  */
 export class CryptoProvider extends Dbcp.CryptoProvider {
-  constructor(cryptors) {
+  public constructor(cryptors) {
     super(cryptors);
   }
 
@@ -41,7 +41,7 @@ export class CryptoProvider extends Dbcp.CryptoProvider {
    * @param      {CryptoInfo}  info    details about en-/decryption
    * @return     {Cryptor}     matching cryptor
    */
-  getCryptorByCryptoInfo(info: CryptoInfo): Cryptor {
+  public getCryptorByCryptoInfo(info: CryptoInfo): Cryptor {
     switch (info.algorithm) {
       case 'aes-256-cbc': return this.cryptors.aes;
       case 'unencrypted': return this.cryptors.unencrypted;

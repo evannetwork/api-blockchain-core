@@ -19,7 +19,7 @@
 
 import 'mocha';
 import { expect, use } from 'chai';
-import chaiAsPromised = require('chai-as-promised');
+import * as chaiAsPromised from 'chai-as-promised';
 
 import { accounts } from '../test/accounts';
 import { getSmartAgentAuthHeaders } from './utils';

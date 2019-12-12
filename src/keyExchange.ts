@@ -20,17 +20,13 @@
 import crypto = require('crypto-browserify');
 
 import {
-  ContractLoader,
   KeyProvider,
   Logger,
   LoggerOptions,
-  NameResolver,
 } from '@evan.network/dbcp';
 
 import { Aes } from './encryption/aes';
 import { CryptoProvider } from './encryption/crypto-provider';
-import { Ipld } from './dfs/ipld';
-import { Ipfs } from './dfs/ipfs';
 import { Mail, Mailbox } from './mailbox';
 
 
@@ -73,7 +69,7 @@ export class KeyExchange extends Logger {
    * @param {KeyExchangeOptions} options
    * @memberof KeyExchange
    */
-  constructor(options: KeyExchangeOptions) {
+  public constructor(options: KeyExchangeOptions) {
     super(options);
     this.aes = new Aes();
     this.mailbox = options.mailbox;

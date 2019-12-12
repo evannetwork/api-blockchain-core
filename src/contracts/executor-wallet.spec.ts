@@ -19,23 +19,18 @@
 
 import 'mocha';
 import { expect, use } from 'chai';
-import chaiAsPromised = require('chai-as-promised');
+import * as chaiAsPromised from 'chai-as-promised';
 
 import {
   ContractLoader,
   DfsInterface,
   Executor,
   NameResolver,
-  SignerInternal,
 } from '@evan.network/dbcp';
 
 import { accounts } from '../test/accounts';
-import { configTestcore as config } from '../config-testcore';
-import { CryptoProvider } from '../encryption/crypto-provider';
 import { ExecutorWallet } from './executor-wallet';
-import { Ipfs } from '../dfs/ipfs';
-import { sampleContext, TestUtils } from '../test/test-utils';
-import { Sharing } from './sharing';
+import { TestUtils } from '../test/test-utils';
 import { Wallet } from './wallet';
 
 use(chaiAsPromised);
@@ -132,9 +127,6 @@ describe('Signer Wallet', function() {
     it('can instantly submit transactions with event based result', async () => {
       const factoryAddress = await nameResolver.getAddress('testcontract.factory.testbc.evan');
       const factory = contractLoader.loadContract('TestContractFactory', factoryAddress);
-      const businessCenterDomain = nameResolver.getDomainName(
-        config.nameResolver.domains.businessCenter);
-      const businessCenterAddress = '0x0000000000000000000000000000000000000000';
 
       const data = `I like random numbers, for example: ${Math.random()}`;
       const contractId = await executorWallet0.executeContractTransaction(
@@ -154,9 +146,6 @@ describe('Signer Wallet', function() {
     it('can instantly submit transactions with event based result a second time', async () => {
       const factoryAddress = await nameResolver.getAddress('testcontract.factory.testbc.evan');
       const factory = contractLoader.loadContract('TestContractFactory', factoryAddress);
-      const businessCenterDomain = nameResolver.getDomainName(
-        config.nameResolver.domains.businessCenter);
-      const businessCenterAddress = '0x0000000000000000000000000000000000000000';
 
       const data = `I like random numbers, for example: ${Math.random()}`;
       const contractId = await executorWallet0.executeContractTransaction(

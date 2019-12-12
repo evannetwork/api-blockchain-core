@@ -19,21 +19,17 @@
 
 import 'mocha';
 import { expect, use, } from 'chai';
-import chaiAsPromised = require('chai-as-promised');
+import * as chaiAsPromised from 'chai-as-promised';
 
 import {
   ContractLoader,
-  Envelope,
   Executor,
-  Ipfs,
   KeyProvider,
   NameResolver,
-  Unencrypted,
 } from '@evan.network/dbcp';
 
 import { accounts } from './test/accounts';
 import { Aes } from './encryption/aes';
-import { BaseContract } from './contracts/base-contract/base-contract';
 import { configTestcore as config } from './config-testcore';
 import { CryptoProvider } from './encryption/crypto-provider';
 import { DataContract } from './contracts/data-contract/data-contract';
@@ -45,7 +41,6 @@ import { TestUtils } from './test/test-utils';
 use(chaiAsPromised);
 
 const testAddressPrefix = 'testDapp';
-/* tslint:disable:quotemark */
 const sampleDescription = {
   "name": "test description",
   "description": "description used in tests.",
@@ -57,7 +52,7 @@ const sampleDescription = {
       "angular-bc": "^1.0.0",
       "angular-core": "^1.0.0",
       "angular-libs": "^1.0.0"
-  },
+    },
     "entrypoint": "task.js",
     "files": [
       "task.js",
@@ -70,7 +65,6 @@ const sampleDescription = {
     "type": "dapp"
   },
 };
-/* tslint:enable:quotemark */
 const sampleKey = '346c22768f84f3050f5c94cec98349b3c5cbfa0b7315304e13647a49181fd1ef';
 let description: Description;
 let testAddressFoo;

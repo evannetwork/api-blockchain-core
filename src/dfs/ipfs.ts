@@ -153,7 +153,7 @@ export class Ipfs extends Logger implements DfsInterface {
         return fileHash;
       });
     } catch (ex) {
-      let msg = `could not add file to ipfs: ${ex.message || ex}`;
+      const msg = `could not add file to ipfs: ${ex.message || ex}`;
       this.log(msg);
       throw new Error(msg);
     }
@@ -187,7 +187,7 @@ export class Ipfs extends Logger implements DfsInterface {
     this.log(`Getting IPFS Hash ${ipfsHash}`, 'debug');
 
     if (this.cache) {
-      let buffer = await this.cache.get(ipfsHash);
+      const buffer = await this.cache.get(ipfsHash);
       if (buffer) {
         if (returnBuffer) {
           return Buffer.from(buffer);
@@ -198,7 +198,7 @@ export class Ipfs extends Logger implements DfsInterface {
     }
 
     const timeout = new Promise((resolve, reject) => {
-      let wait = setTimeout(() => {
+      const wait = setTimeout(() => {
         clearTimeout(wait);
 
         reject(new Error(`error while getting ipfs hash ${ipfsHash}: rejected after ${ IPFS_TIMEOUT }ms`));
@@ -207,7 +207,7 @@ export class Ipfs extends Logger implements DfsInterface {
 
     const getRemoteHash = this.remoteNode.files.cat(ipfsHash)
       .then((buffer: any) => {
-        let fileBuffer = buffer;
+        const fileBuffer = buffer;
         const ret = fileBuffer.toString('binary');
         if (this.cache) {
           this.cache.add(ipfsHash, fileBuffer);
@@ -218,7 +218,7 @@ export class Ipfs extends Logger implements DfsInterface {
           return ret;
         }
       })
-      .catch((ex: any) => {
+      .catch(() => {
         throw new Error(`error while getting ipfs hash ${ipfsHash}`);
       })
     ;

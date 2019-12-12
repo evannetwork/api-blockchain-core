@@ -19,16 +19,12 @@
 
 import 'mocha';
 import { expect } from 'chai';
-import BigNumber = require('bignumber.js');
-
-import {
-  NameResolver,
-} from '@evan.network/dbcp';
+import * as BigNumber from 'bignumber.js';
 
 import { accounts } from './test/accounts';
 import { Ipfs } from './dfs/ipfs';
 import { Ipld } from './dfs/ipld';
-import { Mail, Mailbox, MailboxOptions } from './mailbox';
+import { Mail, Mailbox } from './mailbox';
 import { TestUtils } from './test/test-utils';
 
 describe('Mailbox class', function() {
@@ -162,7 +158,6 @@ describe('Mailbox class', function() {
   });
 
   it('should be able to send UTC tokens with a mail', async () => {
-    const startTime = Date.now();
     await mailbox.init();
     const balanceToSend = new BigNumber(web3.utils.toWei('1', 'kWei'));
     const balanceBefore = new BigNumber(await web3.eth.getBalance(accounts[0]));
@@ -175,7 +170,6 @@ describe('Mailbox class', function() {
   });
 
   it('should allow checking balance for a mail', async () => {
-    const startTime = Date.now();
     const  mailbox2 = new Mailbox({
       mailboxOwner: accounts[1],
       nameResolver: await TestUtils.getNameResolver(web3),
@@ -194,7 +188,6 @@ describe('Mailbox class', function() {
   });
 
   it('should allow withdrawing UTC tokens for a mail', async () => {
-    const startTime = Date.now();
     const  mailbox2 = new Mailbox({
       mailboxOwner: accounts[1],
       nameResolver: await TestUtils.getNameResolver(web3),
@@ -216,6 +209,4 @@ describe('Mailbox class', function() {
     expect(balanceBefore.plus(balanceToSend).gte(balanceAfter)).to.be.true;  // before + value - cost = after // (withdrawer pays cost)
     expect(mailboxBalanceAfter.plus(balanceToSend).eq(mailboxBalanceBefore)).to.be.true;  // before - value = after
   });
-
-  it('should now allow withdrawing UTC tokens for a mail that has no tokens', async () => {});
 });

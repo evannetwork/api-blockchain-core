@@ -21,13 +21,14 @@ import { AbiCoder } from 'web3-eth-abi';
 
 import {
   ContractLoader,
-  Description,
   EventHub,
   Executor,
   Logger,
   LoggerOptions,
   NameResolver,
 } from '@evan.network/dbcp';
+
+import { Description } from '../index';
 
 
 const coder: AbiCoder = new AbiCoder();
@@ -47,9 +48,9 @@ export interface WalletOptions extends LoggerOptions {
  * @class      Sharing (name)
  */
 export class Wallet extends Logger {
-  options: WalletOptions;
-  defaultOptions: any;
-  defaultDescription: any = {
+  public options: WalletOptions;
+  public defaultOptions: any;
+  public defaultDescription: any = {
     'public': {
       'name': 'MultiSigWallet contract',
       'description': 'allows multiple accounts to agree on transactions',
@@ -58,34 +59,33 @@ export class Wallet extends Logger {
       'dbcpVersion': 1,
     }
   };
-  receipts = {};
-  walletType: string;
-  walletContract: any;
+  public receipts = {};
+  public walletType: string;
+  public walletContract: any;
 
-  get walletAddress() {
+  public get walletAddress() {
     return this.walletContract ? this.walletContract.options.address : null;
   }
 
-  constructor(options: WalletOptions) {
+  public constructor(options: WalletOptions) {
     super(options);
     this.options = options;
     this.defaultOptions = options.defaultOptions || {};
     this.defaultDescription.public.abis = {
       own: JSON.parse(this.options.contractLoader.contracts.MultiSigWallet.interface),
     };
-    const that = this;
     const signAndExecuteTransaction = this.options.executor.signer.signAndExecuteTransaction;
     this.options.executor.signer.signAndExecuteTransaction =
-      function(contract, functionName, functionArguments, innerOptions, handleTxResult) {
+      (contract, functionName, functionArguments, innerOptions, handleTxResult) => {
         signAndExecuteTransaction.call(
-          that.options.executor.signer,
+          this.options.executor.signer,
           contract,
           functionName,
           functionArguments,
           innerOptions,
           (error, receipt) => {
             if (receipt) {
-              that.receipts[receipt.transactionHash] = receipt;
+              this.receipts[receipt.transactionHash] = receipt;
             }
             handleTxResult(error, receipt);
           },
@@ -135,8 +135,8 @@ export class Wallet extends Logger {
    *                                             transaction, defaults to 1
    * @return     {Promise<void>}  resolved when done
    */
-  public async create(accountId: string, manager: string, owners: string[], confirmations = 1):
-     Promise<void> {
+  public async create(accountId: string, manager: string, owners: string[], confirmations = 1
+  ): Promise<void> {
     // get factory
     const factoryDomain = [
       this.options.nameResolver.config.labels.wallet,
@@ -229,8 +229,8 @@ export class Wallet extends Logger {
    *                                                transaction
    * @return     {Promise<any>}  status information about transaction
    */
-  public async submitRawTransaction(
-      target: any, encoded: string, inputOptions: any): Promise<any> {
+  public async submitRawTransaction(target: any, encoded: string, inputOptions: any
+  ): Promise<any> {
     return this.submitAndHandleConfirmation(
       target, 'submitTransaction', inputOptions, encoded);
   }
@@ -247,7 +247,8 @@ export class Wallet extends Logger {
    * @return     {Promise<any>}  status information about transaction
    */
   public async submitTransaction(
-      target: any, functionName: string, inputOptions: any, ...functionArguments): Promise<any> {
+    target: any, functionName: string, inputOptions: any, ...functionArguments
+  ): Promise<any> {
     // serialize data
     const encoded = this.encodeFunctionParams(functionName, target, functionArguments);
     return this.submitRawTransaction(target, encoded, inputOptions);
@@ -267,18 +268,12 @@ export class Wallet extends Logger {
     return `${signature}${coder.encodeParameters(types, params).replace('0x', '')}`;
   }
 
-  private ensureContract(): any {
-    if (!this.walletContract) {
-      throw new Error('no wallet contract specified at wallet helper, load or create one');
-    }
-    return this.walletContract;
-  }
-
   public async submitAndHandleConfirmation(
-      target: any, functionName: string, inputOptions: any, ...functionArguments): Promise<any> {
+    target: any, functionName: string, inputOptions: any, ...functionArguments
+  ): Promise<any> {
     const subscriptions = [];
     let receipt;
-    let walletOptions = Object.assign(
+    const walletOptions = Object.assign(
       { timeout: 300000 },
       this.defaultOptions || {},
       inputOptions,
@@ -408,5 +403,12 @@ export class Wallet extends Logger {
     }
 
     return receipt;
+  }
+
+  private ensureContract(): any {
+    if (!this.walletContract) {
+      throw new Error('no wallet contract specified at wallet helper, load or create one');
+    }
+    return this.walletContract;
   }
 }

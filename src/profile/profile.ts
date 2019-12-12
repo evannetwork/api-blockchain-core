@@ -178,10 +178,11 @@ export class Profile extends Logger {
     let addressHash;
     // check if address is already hashed
     if (address.length === 42) {
-      addressHash = this.nameResolver.soliditySha3.apply(this.nameResolver, [
-        this.nameResolver.soliditySha3(address),
-        this.nameResolver.soliditySha3(this.activeAccount),
-      ].sort());
+      addressHash = this.nameResolver.soliditySha3(
+        ...[
+          this.nameResolver.soliditySha3(address),
+          this.nameResolver.soliditySha3(this.activeAccount),
+        ].sort());
     } else {
       addressHash = address;
     }
@@ -224,7 +225,7 @@ export class Profile extends Logger {
     }
     await this.ipld.set(this.trees['bookmarkedDapps'], `bookmarkedDapps/${address}`, {}, true);
     const descriptionKeys = Object.keys(description);
-    for (let key of descriptionKeys) {
+    for (const key of descriptionKeys) {
       await this.ipld.set(
         this.trees['bookmarkedDapps'], `bookmarkedDapps/${address}/${key}`, description[key], true);
     }
@@ -361,10 +362,11 @@ export class Profile extends Logger {
     let addressHash;
     // check if address is already hashed
     if (address.length === 42) {
-      addressHash = this.nameResolver.soliditySha3.apply(this.nameResolver, [
-        this.nameResolver.soliditySha3(address),
-        this.nameResolver.soliditySha3(this.activeAccount),
-      ].sort());
+      addressHash = this.nameResolver.soliditySha3(
+        ...[
+          this.nameResolver.soliditySha3(address),
+          this.nameResolver.soliditySha3(this.activeAccount),
+        ].sort());
     } else {
       addressHash = address;
     }
@@ -628,10 +630,11 @@ export class Profile extends Logger {
    */
   public async removeContact(address: string): Promise<void> {
     this.throwIfNotOwner('remove a contract');
-    const addressHash = this.nameResolver.soliditySha3.apply(this.nameResolver, [
-      this.nameResolver.soliditySha3(address),
-      this.nameResolver.soliditySha3(this.activeAccount),
-    ].sort());
+    const addressHash = this.nameResolver.soliditySha3(
+      ...[
+        this.nameResolver.soliditySha3(address),
+        this.nameResolver.soliditySha3(this.activeAccount),
+      ].sort());
     const addressBook = await this.getAddressBook();
     delete addressBook.keys[addressHash];
     delete addressBook.profile[address];
@@ -785,7 +788,7 @@ export class Profile extends Logger {
       accountDetails = await this.getProfileProperty('accountDetails');
     } catch (ex) {
       this.log('could not get account details, will use this profile as user; ' +
-        '${ex.message || ex}', 'warning');
+        ex.message || ex, 'warning');
     }
 
     // get profile type and forbid invalid type transitions

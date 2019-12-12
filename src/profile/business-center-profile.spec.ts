@@ -53,7 +53,7 @@ describe('BusinessCenterProfile helper', function() {
     const bcAddress = await nameResolver.getAddress(businessCenterDomain);
     const businessCenter = loader.loadContract('BusinessCenter', bcAddress);
     const executor = await TestUtils.getExecutor(web3);
-    let isMember = await executor.executeContractCall(
+    const isMember = await executor.executeContractCall(
       businessCenter, 'isMember', accounts[0], { from: accounts[0], gas: 3000000, });
     if (!isMember) {
       await executor.executeContractTransaction(

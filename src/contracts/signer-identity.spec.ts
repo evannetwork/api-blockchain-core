@@ -18,8 +18,8 @@
 */
 
 import 'mocha';
-import BigNumber = require('bignumber.js');
-import chaiAsPromised = require('chai-as-promised');
+import * as BigNumber from 'bignumber.js';
+import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
 import {
   ContractLoader,

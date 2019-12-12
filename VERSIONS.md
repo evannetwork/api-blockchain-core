@@ -13,6 +13,7 @@
 ### Fixes
 - fix `Container` documentation links and add warning to `ContainerUnshareConfig` documentation
 - add interfaces used in exported classes to export list
+- update pre-commit hook to use eslint for typescript
 
 ### Deprecations
 

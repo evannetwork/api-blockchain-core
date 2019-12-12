@@ -50,7 +50,7 @@ export interface AesBlobOptions extends LoggerOptions {
  * @class      AesBlob (name)
  */
 export class AesBlob extends Logger implements Cryptor {
-  static defaultOptions = {
+  public static defaultOptions = {
     keyLength: 256,
     algorithm: 'aes-blob',
   };
@@ -58,11 +58,11 @@ export class AesBlob extends Logger implements Cryptor {
   private readonly encodingUnencrypted = 'utf-8';
   private readonly encodingEncrypted = 'hex';
 
-  options: any;
-  algorithm: string;
-  webCryptoAlgo: string;
+  public options: any;
+  public algorithm: string;
+  public webCryptoAlgo: string;
 
-  constructor(options?: AesBlobOptions) {
+  public constructor(options?: AesBlobOptions) {
     super(options);
     this.algorithm = 'aes-256-cbc';
     this.webCryptoAlgo = 'AES-CBC';
@@ -76,7 +76,7 @@ export class AesBlob extends Logger implements Cryptor {
    * @param      {string}  str     string to convert
    * @return     {any}  converted input
    */
-  stringToArrayBuffer(str): any {
+  public stringToArrayBuffer(str): any {
     const len = str.length;
     const bytes = new Uint8Array(len);
     for (let i = 0; i < len; i++) {
@@ -86,13 +86,13 @@ export class AesBlob extends Logger implements Cryptor {
   }
 
 
-  getCryptoInfo(originator: string): CryptoInfo {
+  public getCryptoInfo(originator: string): CryptoInfo {
     const ret = Object.assign({ originator, }, this.options);
     delete ret.dfs;
     return ret;
   }
 
-  chunkBuffer(buffer, chunkSize) {
+  public chunkBuffer(buffer, chunkSize) {
     const result = [];
     const len = buffer.length;
     let i = 0;
@@ -109,7 +109,7 @@ export class AesBlob extends Logger implements Cryptor {
    * @return     {any}  The iv from key.
 
    */
-  async generateKey(): Promise<any> {
+  public async generateKey(): Promise<any> {
     return new Promise((resolve, reject) => {
       crypto.randomBytes(this.options.keyLength / 8, (err, buf) => {
         if (err) {
@@ -122,8 +122,8 @@ export class AesBlob extends Logger implements Cryptor {
     })
   }
 
-  async decryptBrowser(algorithm, buffer, decryptKey, iv) {
-    const key = await (<any>global).crypto.subtle.importKey(
+  public async decryptBrowser(algorithm, buffer, decryptKey, iv) {
+    const key = await (global as any).crypto.subtle.importKey(
       'raw',
       decryptKey,
       {
@@ -133,7 +133,7 @@ export class AesBlob extends Logger implements Cryptor {
       false,
       ['decrypt']
     );
-    const decrypted = await (<any>global).crypto.subtle.decrypt(
+    const decrypted = await (global as any).crypto.subtle.decrypt(
       {
         name: algorithm,
         iv: iv,
@@ -144,8 +144,8 @@ export class AesBlob extends Logger implements Cryptor {
     return Buffer.from(decrypted);
   }
 
-  async encryptBrowser(algorithm, buffer, encryptionKey, iv) {
-    const key = await (<any>global).crypto.subtle.importKey(
+  public async encryptBrowser(algorithm, buffer, encryptionKey, iv) {
+    const key = await (global as any).crypto.subtle.importKey(
       'raw',
       encryptionKey,
       {
@@ -155,7 +155,7 @@ export class AesBlob extends Logger implements Cryptor {
       false,
       ['encrypt']
     );
-    const encrypted = await (<any>global).crypto.subtle.encrypt(
+    const encrypted = await (global as any).crypto.subtle.encrypt(
       {
         name: algorithm,
         iv: iv,
@@ -173,7 +173,7 @@ export class AesBlob extends Logger implements Cryptor {
    * @param      {any}     options  cryptor options
    * @return     {Buffer}  encrypted message
    */
-  async encrypt(message: any, options: any): Promise<Buffer> {
+  public async encrypt(message: any, options: any): Promise<Buffer> {
     try {
       if (!options.key) {
         throw new Error('no key given');
@@ -189,9 +189,9 @@ export class AesBlob extends Logger implements Cryptor {
       );
       if (Array.isArray(message)) {
         const files = [];
-        for (let blob of message) {
+        for (const blob of message) {
           let encrypted;
-          if ((<any>global).crypto && (<any>global).crypto.subtle) {
+          if ((global as any).crypto && (global as any).crypto.subtle) {
             encrypted = await this.encryptBrowser(
               this.webCryptoAlgo,
               Buffer.from(blob.file),
@@ -214,7 +214,7 @@ export class AesBlob extends Logger implements Cryptor {
         }
       } else {
         let encrypted;
-        if ((<any>global).crypto && (<any>global).crypto.subtle) {
+        if ((global as any).crypto && (global as any).crypto.subtle) {
           encrypted = await this.encryptBrowser(
             this.webCryptoAlgo,
             Buffer.from(message.file),
@@ -230,7 +230,7 @@ export class AesBlob extends Logger implements Cryptor {
         message.file = hash;
       }
       const wrapperMessage = Buffer.from(JSON.stringify(message), this.encodingUnencrypted);
-      if ((<any>global).crypto && (<any>global).crypto.subtle) {
+      if ((global as any).crypto && (global as any).crypto.subtle) {
         encryptedWrapperMessage = await this.encryptBrowser(
           this.webCryptoAlgo,
           Buffer.from(wrapperMessage),
@@ -262,7 +262,7 @@ export class AesBlob extends Logger implements Cryptor {
    * @param      {any}     options  decryption options
    * @return     {any}     decrypted message
    */
-  async decrypt(message: Buffer, options: any): Promise<any> {
+  public async decrypt(message: Buffer, options: any): Promise<any> {
     try {
       if (!options.key) {
         throw new Error('no key given');
@@ -271,7 +271,7 @@ export class AesBlob extends Logger implements Cryptor {
       const initialVector = message.slice(0, 16);
       const encrypted = message.slice(16);
       let decrypted;
-      if ((<any>global).crypto && (<any>global).crypto.subtle) {
+      if ((global as any).crypto && (global as any).crypto.subtle) {
         decrypted = await this.decryptBrowser(this.webCryptoAlgo, encrypted, Buffer.from(options.key, 'hex'), initialVector);
       } else {
         const decipher = crypto.createDecipheriv(this.algorithm, Buffer.from(options.key, 'hex'), initialVector);
@@ -282,13 +282,12 @@ export class AesBlob extends Logger implements Cryptor {
 
 
       if (Array.isArray(wrapper)) {
-        const encryptedFiles = [];
-        for (let blob of wrapper) {
+        for (const blob of wrapper) {
           const ipfsFile = await this.options.dfs.get(blob.file, true);
           let file = Buffer.from('');
           const initialVectorFile = ipfsFile.slice(0, 16);
           const encryptedFile = ipfsFile.slice(16);
-          if ((<any>global).crypto && (<any>global).crypto.subtle) {
+          if ((global as any).crypto && (global as any).crypto.subtle) {
             file = await this.decryptBrowser(this.webCryptoAlgo, encryptedFile, Buffer.from(options.key, 'hex'), initialVectorFile);
           } else {
             const fileDecipher = crypto.createDecipheriv(this.algorithm, Buffer.from(options.key, 'hex'), initialVectorFile);
@@ -302,7 +301,7 @@ export class AesBlob extends Logger implements Cryptor {
         const initialVectorFile = ipfsFile.slice(0, 16);
         const encryptedFile = ipfsFile.slice(16);
         let file = Buffer.from('');
-        if ((<any>global).crypto && (<any>global).crypto.subtle) {
+        if ((global as any).crypto && (global as any).crypto.subtle) {
           file = await this.decryptBrowser(this.webCryptoAlgo, encryptedFile, Buffer.from(options.key, 'hex'), initialVectorFile);
         } else {
           const fileDecipher = crypto.createDecipheriv(this.algorithm, Buffer.from(options.key, 'hex'), initialVectorFile);

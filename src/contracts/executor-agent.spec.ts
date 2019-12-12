@@ -19,16 +19,9 @@
 
 import 'mocha';
 import { expect, use } from 'chai';
-import chaiAsPromised = require('chai-as-promised');
+import * as chaiAsPromised from 'chai-as-promised';
+import { SignerInternal } from '@evan.network/dbcp';
 
-import {
-  ContractLoader,
-  LogLevel,
-  SignerInternal,
-  SignerInterface,
-} from '@evan.network/dbcp';
-
-import { accounts } from '../test/accounts';
 import { ExecutorAgent } from './executor-agent';
 import { TestUtils } from '../test/test-utils'
 
@@ -166,7 +159,7 @@ describe.skip('Executor handler', function() {
 
     it('rejects contract creations, when value has been set', async() => {
       // create token for creating contract
-      let token = await executor.generateToken(password, [{ signature: 'Owned', }]);
+      const token = await executor.generateToken(password, [{ signature: 'Owned', }]);
       executor.token = token;
       // fails, as value has been given
       const localContractPromise = executor.createContract('Owned', [], { gas: 2000000, value: 1000, });
@@ -180,7 +173,7 @@ describe.skip('Executor handler', function() {
       // allowed, as token has been set
       const localContract = await executor.createContract('Owned', [], { gas: 2000000, });
       expect(localContract).not.to.be.undefined;
-      let owner = await executor.executeContractCall(localContract, 'owner');
+      const owner = await executor.executeContractCall(localContract, 'owner');
       expect(owner).to.eq(agentUser);
 
       // grant tx token
