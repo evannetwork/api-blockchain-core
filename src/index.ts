@@ -77,6 +77,7 @@ export * from './profile/business-center-profile';
 export * from './profile/profile';
 export * from './runtime';
 export * from './shared-description';
+export * from './verifications/vc-resolver'
 export * from './verifications/verifications';
 export * from './votings/votings';
 
