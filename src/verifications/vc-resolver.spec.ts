@@ -2,9 +2,8 @@ import { expect } from 'chai';
 import { accounts } from '../test/accounts';
 import { TestUtils } from '../test/test-utils';
 import { Runtime } from '../index';
-import { VCResolver } from './vc-resolver'
 import { Verifications } from './verifications';
-import { DidResolver } from '../did/did-resolver';
+import { DidResolver, DidResolverDocumentTemplate } from '../did/did-resolver';
 
 /**
  * What to test:
@@ -15,7 +14,7 @@ import { DidResolver } from '../did/did-resolver';
  *  - VC Storage
  */
 
-describe('VC Resolver', function() {
+describe('DID Resolver', function() {
   this.timeout(600000);
   let runtime: Runtime;
   let verifications: Verifications;
@@ -29,13 +28,16 @@ describe('VC Resolver', function() {
 
   describe('When creating verifications', async () => {
     it('allows to export them as VCs', async () => {
-      const newVerification = await verifications.setVerification(issuer, subject, '/company');
-      const verification = (await verifications.getVerifications(subject, '/company'))
+      const topic = '/company'
+
+      const newVerification = await verifications.setVerification(issuer, subject, topic);
+      const verification = (await verifications.getVerifications(subject, topic))
         .filter((ver) => ver.id === newVerification)[0];
       const vc = await runtime.vcResolver.createVCFromVerification(verification);
 
-      // Create verification
-      // Create VC for verification
+      expect(runtime.didResolver.convertDidToIdentity(vc.issuer.id)).to.eq(issuer);
+      expect(runtime.didResolver.convertDidToIdentity(vc.credentialSubject.id)).to.eq(subject);
+      expect(vc.credentialSubject.credential).to.eq(topic);
     });
   });
 });
