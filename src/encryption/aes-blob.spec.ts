@@ -18,13 +18,13 @@
 */
 
 import 'mocha';
+import * as fs from 'fs';
 import { expect } from 'chai';
-
-const fs = require('fs');
-const { promisify } = require('util');
+import { promisify } from'util';
 
 import { AesBlob } from './aes-blob'
 import { TestUtils } from '../test/test-utils'
+
 
 let sampleFile;
 let fileDescription;

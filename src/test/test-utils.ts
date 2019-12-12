@@ -17,9 +17,9 @@
   the following URL: https://evan.network/license/
 */
 
+import * as Web3 from 'web3';
 import crypto = require('crypto');
 import smartContract = require('@evan.network/smart-contracts-core');
-const Web3 = require('web3');
 
 import {
   AccountStore,
@@ -66,9 +66,8 @@ export const publicMailBoxExchange = 'mailboxKeyExchange';
 export const sampleContext = 'context sample';
 
 const web3Provider = (process.env.CHAIN_ENDPOINT as any) || 'wss://testcore.evan.network/ws';
-// const wsp = new Web3.providers.WebsocketProvider(
-//   web3Provider, { clientConfig: { keepalive: true, keepaliveInterval: 5000 } });
-const localWeb3 = new Web3(web3Provider, null, { transactionConfirmationBlocks: 1 });
+// due to issues with typings in web3 remove type from Web3
+const localWeb3 = new (Web3 as any)(web3Provider, null, { transactionConfirmationBlocks: 1 });
 const sampleKeys = {};
 // dataKeys
 sampleKeys[localWeb3.utils.soliditySha3(accounts[0])] =
@@ -140,7 +139,6 @@ export class TestUtils {
   }
 
   public static async getContracts() {
-
     const solc = new smartContract.Solc({
       log: Logger.getDefaultLog(),
       config: { compileContracts: false, },

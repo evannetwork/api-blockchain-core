@@ -19,7 +19,7 @@
 
 import 'mocha';
 import * as chaiAsPromised from 'chai-as-promised';
-import IpfsApi = require('ipfs-api');
+import * as IpfsApi from 'ipfs-api';
 import { expect, use } from 'chai';
 
 import { Ipfs } from './ipfs'
@@ -92,10 +92,10 @@ describe('IPFS handler', function() {
     ];
     const hashes = await ipfs.addMultiple(randomContents.map(content => (
       { path: content, content: Buffer.from(content, 'utf-8')}
-     )));
+    )));
     expect(hashes).not.to.be.undefined;
     let hashesToCheck = randomContents.length;
-    for (let [index, hash] of hashes.entries()) {
+    for (const [ , hash] of hashes.entries()) {
       expect(randomContents).to.contain(await ipfs.get(hash));
       hashesToCheck--;
     }

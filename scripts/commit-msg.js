@@ -46,7 +46,7 @@ if (trimmed.toLowerCase() === 'merge') {
 console.log(process.env.EVAN_COMMIT_PATTERN)
 let messagePattern = process.env.EVAN_COMMIT_PATTERN ||
   // '(?:add|fix|remove|update|refactor|document|merge)\\s.+[\\r\\n]+- \\[CORE-\\d+\\]';
-  '(?:add|fix|remove|update|refactor|document|merge)\s.+';
+  '(?:add|fix|remove|update|refactor|document|merge)\\s.+';
 let messageRegEx = new RegExp(messagePattern, 'i');
 
 // check trimmed commit message with pattern

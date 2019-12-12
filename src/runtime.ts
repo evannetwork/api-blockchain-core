@@ -127,6 +127,7 @@ export async function createDefaultRuntime(
         solcCfg['destinationPath'] = runtimeConfig.contractsLoadPath;
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const smartContract = require('@evan.network/smart-contracts-core');
       const solc = new smartContract.Solc({ config: solcCfg, log, });
       await solc.ensureCompiled(
@@ -137,6 +138,7 @@ export async function createDefaultRuntime(
       // if this lib is used within the browser using browserify, smart-contracts-core needs to be
       // defined externaly (normally defined by @evan.network/ui-dapp-browser) to return the abis
       // directly as json
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const originalContracts = require('@evan.network/smart-contracts-core');
       contracts = { };
 
@@ -167,9 +169,9 @@ export async function createDefaultRuntime(
     }
     Object.assign(runtimeConfig.accountMap, tempConfig.accountMap);
     Object.assign(runtimeConfig.keyConfig, tempConfig.keyConfig);
-   } else if (!runtimeConfig.accountMap ||
+  } else if (!runtimeConfig.accountMap ||
        !(Object.keys(runtimeConfig.accountMap).length)) {
-     throw new Error('accountMap invalid');
+    throw new Error('accountMap invalid');
   }
 
   const activeAccount = Object.keys(runtimeConfig.accountMap)[0];
@@ -219,7 +221,7 @@ export async function createDefaultRuntime(
   executor.eventHub = eventHub;
 
   // check if the dfs remoteNode matches our ipfslib
-  if (!(dfs as Ipfs).remoteNode as any instanceof IpfsLib) {
+  if (!((dfs as Ipfs).remoteNode as any instanceof IpfsLib)) {
     (dfs as Ipfs).remoteNode = new IpfsLib(config.ipfsConfig);
   }
   (dfs as Ipfs).setRuntime({signer, activeAccount, web3});
@@ -234,7 +236,7 @@ export async function createDefaultRuntime(
 
   // check and modify if any accountid with password is provided
   if (runtimeConfig.keyConfig) {
-    for (let accountId in runtimeConfig.keyConfig) {
+    for (const accountId in runtimeConfig.keyConfig) {
       // check if the key is a valid accountId
       if (accountId.length === 42) {
         const sha9Account = web3.utils.soliditySha3.apply(

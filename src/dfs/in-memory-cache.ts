@@ -21,6 +21,7 @@ import {
   DfsCacheInterface
 } from '@evan.network/dbcp';
 
+
 /**
  * in-memory cache for DFS requests,
  * that allows to keep retrieved items once and skip external requests in DFS
@@ -30,7 +31,7 @@ import {
 export class InMemoryCache implements DfsCacheInterface {
   private cache;
 
-  constructor() {
+  public constructor() {
     this.cache = {};
   }
 
@@ -42,7 +43,7 @@ export class InMemoryCache implements DfsCacheInterface {
    * @return     {Promise<string>}  reference to the file in the DFS, format may differ depending on
    *                                the type of DFS
    */
-  async add(hash: string, data: any): Promise<void> {
+  public async add(hash: string, data: any): Promise<void> {
     this.cache[hash] = data;
   }
 
@@ -53,7 +54,7 @@ export class InMemoryCache implements DfsCacheInterface {
    *                                        depending on the type of DFS
    * @return     {Promise<Buffer>}  file content as buffer
    */
-  async get(hash: string): Promise<Buffer> {
+  public async get(hash: string): Promise<Buffer> {
     return this.cache[hash];
   }
 }

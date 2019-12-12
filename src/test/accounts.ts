@@ -47,17 +47,17 @@ const accountMap3 = {
 }
 
 let accountMap;
-if (<any>process.env && <any>process.env.ACCOUNT_MAP) {
+if (process.env && process.env.ACCOUNT_MAP) {
   accountMap = JSON.parse(process.env.ACCOUNT_MAP);
-} else if (<any>process.env && <any>process.env.TESTSPEC === 'contracts') {
+} else if (process.env && process.env.TESTSPEC === 'contracts') {
   accountMap =  accountMap1;
-} else if (<any>process.env && <any>process.env.TESTSPEC === 'datacontract') {
+} else if (process.env && process.env.TESTSPEC === 'datacontract') {
   accountMap =  accountMap2;
-} else if (<any>process.env && <any>process.env.TESTSPEC === 'services') {
+} else if (process.env && process.env.TESTSPEC === 'services') {
   accountMap =  accountMap3;
 } else {
   accountMap =  accountMap1;
 }
-let accounts = Object.keys(accountMap);
+const accounts = Object.keys(accountMap);
 
 export { accounts, accountMap }

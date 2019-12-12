@@ -21,7 +21,6 @@ import 'mocha';
 import { expect } from 'chai';
 
 import { Aes } from './aes'
-import { TestUtils } from '../test/test-utils'
 
 
 describe('aes handler', function() {

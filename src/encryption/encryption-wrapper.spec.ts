@@ -61,9 +61,6 @@ describe('Encryption Wrapper', function() {
     });
   });
 
-  after(async () => {
-  });
-
   it('should be able to be created', async () => {
     const testInstance = new EncryptionWrapper();
     expect(testInstance).not.to.be.undefined;
@@ -133,7 +130,7 @@ describe('Encryption Wrapper', function() {
 
   describe('when using keys stored in Multisharings', () => {
     let multiSharingAddress: string;
-    let sharingId = TestUtils.getRandomBytes32();
+    const sharingId = TestUtils.getRandomBytes32();
 
     before(async () => {
       const contract = await executor.createContract(

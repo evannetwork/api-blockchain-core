@@ -21,16 +21,18 @@ import crypto = require('crypto');
 import prottle = require('prottle');
 
 import {
-  Description,
   DfsInterface,
   Envelope,
-  Logger,
   Validator,
 } from '@evan.network/dbcp';
 
-import { BaseContract, BaseContractOptions } from '../base-contract/base-contract';
-import { CryptoProvider } from '../../encryption/crypto-provider';
-import { Sharing } from '../sharing';
+import {
+  BaseContract,
+  BaseContractOptions,
+  CryptoProvider,
+  Description,
+  Sharing,
+} from '../../index';
 
 
 const requestWindowSize = 10;
@@ -40,12 +42,12 @@ const requestWindowSize = 10;
  * options for DataContract constructor
  */
 export interface DataContractOptions extends BaseContractOptions {
-  cryptoProvider: CryptoProvider,
-  dfs: DfsInterface,
-  sharing: Sharing,
-  web3: any,
-  defaultCryptoAlgo?: string,
-  description: Description,
+  cryptoProvider: CryptoProvider;
+  dfs: DfsInterface;
+  sharing: Sharing;
+  web3: any;
+  defaultCryptoAlgo?: string;
+  description: Description;
 }
 
 /**
@@ -60,7 +62,7 @@ export class DataContract extends BaseContract {
   private readonly encodingUnencryptedHash = 'hex';
   private readonly cryptoAlgorithHashes = 'aesEcb';
 
-  constructor(optionsInput: DataContractOptions) {
+  public constructor(optionsInput: DataContractOptions) {
     super(optionsInput as BaseContractOptions);
     this.options = optionsInput;
     if (!this.options.defaultCryptoAlgo) {
@@ -84,12 +86,12 @@ export class DataContract extends BaseContract {
    * @return     {Promise<any>}  contract instance
    */
   public async create(
-      factoryName: string,
-      accountId: string,
-      businessCenterDomain?: string,
-      contractDescription: any = '0x0000000000000000000000000000000000000000000000000000000000000000',
-      allowConsumerInvite = true,
-      sharingsHash = null,
+    factoryName: string,
+    accountId: string,
+    businessCenterDomain?: string,
+    contractDescription: any = '0x0000000000000000000000000000000000000000000000000000000000000000',
+    allowConsumerInvite = true,
+    sharingsHash = null,
   ): Promise<any> {
     const contractP = (async () => {
       const descriptionHash = (typeof contractDescription === 'object') ?
@@ -162,14 +164,15 @@ export class DataContract extends BaseContract {
    * @return     {Promise<void>}  resolved when done
    */
   public async addListEntries(
-      contract: any|string,
-      listName: string|string[],
-      values: any[],
-      accountId: string,
-      dfsStorage = true,
-      encryptedHashes = true,
-      encryption: string = this.options.defaultCryptoAlgo,
-      encryptionContext = accountId): Promise<void> {
+    contract: any|string,
+    listName: string|string[],
+    values: any[],
+    accountId: string,
+    dfsStorage = true,
+    encryptedHashes = true,
+    encryption: string = this.options.defaultCryptoAlgo,
+    encryptionContext = accountId,
+  ): Promise<void> {
     const dataContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('DataContractInterface', contract);
     const listNames = Array.isArray(listName) ? listName : [listName];
@@ -206,9 +209,9 @@ export class DataContract extends BaseContract {
         }
       });
       // push grouped by key
-      for (let key of Object.keys(groupedKeys)) {
+      for (const key of Object.keys(groupedKeys)) {
         const ipfsFiles = [];
-        for (let value of hashes) {
+        for (const value of hashes) {
           const encrypted = await this.encrypt({private: value}, dataContract, encryptionContext, groupedKeys[key][0], blockNr, encryption);
           const stateMd5 = crypto.createHash('md5').update(encrypted).digest('hex');
           ipfsFiles.push({
@@ -315,9 +318,10 @@ export class DataContract extends BaseContract {
     accountId: string,
     propertyName: string,
     block: number,
-    encryption: string = this.options.defaultCryptoAlgo): Promise<string> {
+    encryption: string = this.options.defaultCryptoAlgo,
+  ): Promise<string> {
     const dataContract = (typeof contract === 'object') ?
-       contract : this.options.loader.loadContract('DataContractInterface', contract);
+      contract : this.options.loader.loadContract('DataContractInterface', contract);
 
     // get content key from contract
     const contentKey = await this.options.sharing.getKey(dataContract.options.address, accountId, propertyName, block);
@@ -350,8 +354,9 @@ export class DataContract extends BaseContract {
    * @return     {Promise<string>}  encrypted hash as string
    */
   public async encryptHash(toEncrypt: string, contract: any, accountId: string): Promise<string> {
-    const dataContract = (typeof contract === 'object') ?
-       contract : this.options.loader.loadContract('DataContractInterface', contract);
+    const dataContract = (typeof contract === 'object')
+      ? contract
+      : this.options.loader.loadContract('DataContractInterface', contract);
 
     // get hash key from contract
     const hashKey = await this.options.sharing.getHashKey(dataContract.options.address, accountId);
@@ -376,11 +381,12 @@ export class DataContract extends BaseContract {
    * @return     {Promise<any[]>}  list entries
    */
   public async getEntry(
-      contract: any|string,
-      entryName: string,
-      accountId: string,
-      dfsStorage = true,
-      encryptedHashes = true): Promise<any> {
+    contract: any|string,
+    entryName: string,
+    accountId: string,
+    dfsStorage = true,
+    encryptedHashes = true,
+  ): Promise<any> {
     const dataContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('DataContractInterface', contract);
     const entryRaw = await this.options.executor.executeContractCall(
@@ -422,12 +428,13 @@ export class DataContract extends BaseContract {
    * @return     {Promise<any>}   mappings value for given key
    */
   public async getMappingValue(
-      contract: any|string,
-      mappingName: string,
-      entryName: string,
-      accountId: string,
-      dfsStorage = true,
-      encryptedHashes = true): Promise<any> {
+    contract: any|string,
+    mappingName: string,
+    entryName: string,
+    accountId: string,
+    dfsStorage = true,
+    encryptedHashes = true,
+  ): Promise<any> {
     const dataContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('DataContractInterface', contract);
     const entryRaw = await this.options.executor.executeContractCall(
@@ -472,14 +479,15 @@ export class DataContract extends BaseContract {
    * @return     {Promise<any[]>}  list entries
    */
   public async getListEntries(
-      contract: any|string,
-      listName: string,
-      accountId: string,
-      dfsStorage = true,
-      encryptedHashes = true,
-      count = 10,
-      offset = 0,
-      reverse = false): Promise<any[]> {
+    contract: any|string,
+    listName: string,
+    accountId: string,
+    dfsStorage = true,
+    encryptedHashes = true,
+    count = 10,
+    offset = 0,
+    reverse = false,
+  ): Promise<any[]> {
     const dataContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('DataContractInterface', contract);
     const listKey = this.options.web3.utils.sha3(listName);
@@ -528,12 +536,13 @@ export class DataContract extends BaseContract {
    * @return     {Promise<any>}   list entry
    */
   public async getListEntry(
-      contract: any|string,
-      listName: string,
-      index: number,
-      accountId: string,
-      dfsStorage = true,
-      encryptedHashes = true): Promise<any> {
+    contract: any|string,
+    listName: string,
+    index: number,
+    accountId: string,
+    dfsStorage = true,
+    encryptedHashes = true,
+  ): Promise<any> {
     const dataContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('DataContractInterface', contract);
     const listKey = this.options.web3.utils.sha3(listName);
@@ -563,8 +572,9 @@ export class DataContract extends BaseContract {
    * @return     {Promise<number>}  list entry count
    */
   public async getListEntryCount(
-      contract: any|string,
-      listName: string): Promise<number> {
+    contract: any|string,
+    listName: string,
+  ): Promise<number> {
     const dataContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('DataContractInterface', contract);
     const listKey = this.options.web3.utils.sha3(listName);
@@ -582,11 +592,12 @@ export class DataContract extends BaseContract {
    * @return     {Promise<void>}  resolved when done
    */
   public async moveListEntry(
-      contract: any|string,
-      listNameFrom: string,
-      entryIndex: number,
-      listNamesTo: string[],
-      accountId: string): Promise<void> {
+    contract: any|string,
+    listNameFrom: string,
+    entryIndex: number,
+    listNamesTo: string[],
+    accountId: string,
+  ): Promise<void> {
     const dataContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('DataContractInterface', contract);
     await this.options.executor.executeContractTransaction(
@@ -609,10 +620,11 @@ export class DataContract extends BaseContract {
    * @return     {Promise<void>}  resolved when done
    */
   public async removeListEntry(
-      contract: any|string,
-      listName: string,
-      entryIndex: number,
-      accountId: string): Promise<void> {
+    contract: any|string,
+    listName: string,
+    entryIndex: number,
+    accountId: string,
+  ): Promise<void> {
     const dataContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('DataContractInterface', contract);
     await this.options.executor.executeContractTransaction(
@@ -637,14 +649,15 @@ export class DataContract extends BaseContract {
    * @return     {Promise<void>}  resolved when done
    */
   public async setEntry(
-      contract: any|string,
-      entryName: string,
-      value: any,
-      accountId: string,
-      dfsStorage = true,
-      encryptedHashes = true,
-      encryption: string = this.options.defaultCryptoAlgo,
-      encryptionContext = accountId): Promise<void> {
+    contract: any|string,
+    entryName: string,
+    value: any,
+    accountId: string,
+    dfsStorage = true,
+    encryptedHashes = true,
+    encryption: string = this.options.defaultCryptoAlgo,
+    encryptionContext = accountId,
+  ): Promise<void> {
     const dataContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('DataContractInterface', contract);
     let toSet;
@@ -688,15 +701,16 @@ export class DataContract extends BaseContract {
    * @return     {Promise<void>}  resolved when done
    */
   public async setMappingValue(
-      contract: any|string,
-      mappingName: string,
-      entryName: string,
-      value: any,
-      accountId: string,
-      dfsStorage = true,
-      encryptedHashes = true,
-      encryption: string = this.options.defaultCryptoAlgo,
-      encryptionContext = accountId): Promise<void> {
+    contract: any|string,
+    mappingName: string,
+    entryName: string,
+    value: any,
+    accountId: string,
+    dfsStorage = true,
+    encryptedHashes = true,
+    encryption: string = this.options.defaultCryptoAlgo,
+    encryptionContext = accountId,
+  ): Promise<void> {
     const dataContract = (typeof contract === 'object') ?
       contract : this.options.loader.loadContract('DataContractInterface', contract);
     let toSet;
@@ -712,7 +726,7 @@ export class DataContract extends BaseContract {
       ]);
       await this.validate(description, mappingName, value);
       const encrypted = await this.encrypt(
-        { private: value }, dataContract, accountId, mappingName, blockNr);
+        { private: value }, dataContract, accountId, mappingName, blockNr, encryption);
       const stateMd5 = crypto.createHash('md5').update(encrypted).digest('hex');
       toSet = await this.options.dfs.add(stateMd5, Buffer.from(encrypted));
     }
@@ -722,7 +736,7 @@ export class DataContract extends BaseContract {
     await this.options.executor.executeContractTransaction(
       dataContract,
       'setMappingValue',
-      { from: accountId, autoGas: 1.1, },
+      { from: accountId, autoGas: 1.1 },
       this.options.web3.utils.sha3(mappingName),
       this.options.web3.utils.sha3(entryName),
       toSet,

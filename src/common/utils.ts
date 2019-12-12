@@ -80,7 +80,7 @@ export function obfuscate(text: string): string {
 * @return {Promise}             resolves to: {Object} (the result from the function(error, result) {...} callback)
 */
 export async function promisify(funThis, functionName, ...args): Promise<any> {
-  let functionArguments = args.slice(0);
+  const functionArguments = args.slice(0);
 
   return new Promise(function(resolve, reject) {
     try {
@@ -93,7 +93,7 @@ export async function promisify(funThis, functionName, ...args): Promise<any> {
         }
       });
       // run function
-      funThis[functionName].apply(funThis, functionArguments);
+      funThis[functionName](...functionArguments);
     } catch (ex) {
       reject(ex.message);
     }

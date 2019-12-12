@@ -17,11 +17,10 @@
   the following URL: https://evan.network/license/
 */
 import * as Dbcp from '@evan.network/dbcp';
-import prottle = require('prottle');
 
 
 export class NameResolver extends Dbcp.NameResolver {
-  constructor(options: any) {
+  public constructor(options: any) {
     super(options);
   }
 
@@ -35,8 +34,8 @@ export class NameResolver extends Dbcp.NameResolver {
    * @param      {string|number}  value          (optional) value to send (if registrar is payable)
    * @return     {Promise<void>}  resolved when done
    */
-  public async claimAddress(
-      name: string, accountId: string, domainOwnerId = accountId, value = '0'): Promise<void> {
+  public async claimAddress(name: string, accountId: string, domainOwnerId = accountId, value = '0'
+  ): Promise<void> {
     // check ownership
     const namehash = this.namehash(name);
     const nodeOwner = await this.executor.executeContractCall(this.ensContract, 'owner', namehash);
@@ -83,8 +82,8 @@ export class NameResolver extends Dbcp.NameResolver {
    * @param      {string}         domainOwnerId  owner of the new domain, fallbacks to accountId
    * @return     {Promise<void>}  resolved when done
    */
-  public async claimPermanentAddress(
-      name: string, accountId: string, domainOwnerId = accountId): Promise<void> {
+  public async claimPermanentAddress(name: string, accountId: string, domainOwnerId = accountId
+  ): Promise<void> {
     const [ , node, parentName  ] = /^([^.]+)\.(.*)$/.exec(name);
     const parentOnwer = await this.executor.executeContractCall(
       this.ensContract, 'owner', this.namehash(parentName));
@@ -217,8 +216,8 @@ export class NameResolver extends Dbcp.NameResolver {
    * @param      {number|string}  validUntil  js timestamp, when name resolution stops
    * @return     {Promise<void>}  resolved when done
    */
-  public async setValidUntil(
-      name: string, accountId: string, validUntil: number|string): Promise<void> {
+  public async setValidUntil(name: string, accountId: string, validUntil: number|string
+  ): Promise<void> {
     const numberString = `${validUntil}`;
     await this.executor.executeContractTransaction(
       this.ensContract,
