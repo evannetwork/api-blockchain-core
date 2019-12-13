@@ -1,18 +1,28 @@
 import {
-  Logger, LoggerOptions, ContractLoader, DfsInterface, Executor, AccountStore, Runtime
+  Logger, LoggerOptions, Executor, AccountStore
 } from '@evan.network/dbcp'
 
 import {
   NameResolver,
-  SignerIdentity,
   Verifications,
+  SignerIdentity,
 } from '../index';
 
 import {
   DidResolver
 } from '../did/did-resolver'
-import { accounts } from 'src/test/accounts';
 
+import { BigNumber } from 'bignumber.js';
+import { VerificationsVerificationEntry } from './verifications';
+
+const didJWT = require('did-jwt');
+
+export const enum VCProofType {
+  EcdsaPublicKeySecp256k1 = 'EcdsaPublicKeySecp256k1',
+}
+
+let JWTProofMapping = {};
+JWTProofMapping[(VCProofType.EcdsaPublicKeySecp256k1)] =  'ES256K-R';
 
 export interface VCDocument {
   '@context': string[];
@@ -20,34 +30,34 @@ export interface VCDocument {
   type: string[];
   issuer: VCIssuer;
   validFrom: string;
-  validUntil: string;
-  credentialSubject: CredentialSubject;
-  credentialStatus: CredentialStatus | undefined;
+  validUntil?: string;
+  credentialSubject: VCCredentialSubject;
+  credentialStatus?: VCCredentialStatus;
   proof: VCProof;
 }
 
-export interface CredentialStatus {
+export interface VCCredentialStatus {
   id: string;
   type: string;
 }
 
-export interface CredentialSubject {
+export interface VCCredentialSubject {
   id: string;
   credential: string;
-  data: CredentialSubjectPayload[] | undefined;
-  description: string;
-  uri: string;
+  data?: VCCredentialSubjectPayload[];
+  description?: string;
+  uri?: string;
   enableSubVerifications: boolean;
 }
 
-export interface CredentialSubjectPayload {
+export interface VCCredentialSubjectPayload {
   name: string;
   value: string;
 }
 
 export interface VCIssuer {
   id: string;
-  name: string;
+  name?: string;
 }
 
 export interface VCProof {
@@ -63,6 +73,7 @@ export interface VCResolverOptions extends LoggerOptions {
   activeAccount: string;
   executor: Executor;
   nameResolver: NameResolver;
+  signerIdentity: SignerIdentity;
   verifications: Verifications;
 }
 
@@ -78,21 +89,14 @@ export class VCResolver extends Logger {
     this.didResolver = didResolver;
   }
 
-  public async createVCFromVerification(verification: any): Promise<VCDocument> {
-    const subjectDid = await this.didResolver.convertIdentityToDid(verification.subject);
-    const issuerDid = await this.didResolver.convertIdentityToDid(verification.issuer);
+  public async createVCFromVerification(verification: VerificationsVerificationEntry): Promise<VCDocument> {
+    const subjectDid = await this.didResolver.convertIdentityToDid(verification.details.subjectIdentity);
+    const issuerDid = await this.didResolver.convertIdentityToDid(verification.details.issuerIdentity);
 
-    const validUntilString: string = verification.expirationDate ?
-      new Date(verification.expirationDate + '000').toISOString() :
-      null;
-
-    const subject: CredentialSubject = {
+    const subject: VCCredentialSubject = {
       id: subjectDid,
-      credential: verification.topic,
-      description: undefined, // TODO
-      uri: undefined, // TODO
-      enableSubVerifications: !verification.disable,
-      data: undefined
+      credential: verification.details.topic,
+      enableSubVerifications: !verification.raw.disableSubVerifications,
     }
 
     const vc: VCDocument = {
@@ -101,41 +105,36 @@ export class VCResolver extends Logger {
       ],
       id: this.createVCId(verification),
       type: [ 'VerifiableCredential', 'evanCredential' ],
-      issuer: { id: issuerDid, name: '' }, // TODO: Where to get name from?
-      validFrom: new Date(parseInt(verification.creationDate + '000')).toISOString(), // milliseconds
-      validUntil: validUntilString,
+      issuer: { id: issuerDid },
+      validFrom: new Date(parseInt(`${verification.details.creationDate}`)).toISOString(), // milliseconds
       credentialSubject: subject,
-      credentialStatus: undefined,
       proof: null
     };
 
-    vc.proof = await this.createProofForVc(vc, verification.issuer);
+    if (verification.details.expirationDate)
+      vc.validUntil = new Date(`${verification.details.expirationDate}`).toISOString();
+
+    vc.proof = await this.createProofForVc(vc, verification.details.issuerIdentity);
 
     return vc;
   }
 
-  private async createProofForVc(vc: VCDocument, issuerIdentityId: string): Promise<VCProof> {
-    // create the signature for the VC
-    // TODO: Validate that signer is issuer
-    const documentPayloadToSign = JSON.stringify(vc);
-    // TODO: Get accountID for identityID
+  private async createProofForVc(vc: VCDocument, issuerIdentityId: string, proofType: VCProofType = VCProofType.EcdsaPublicKeySecp256k1): Promise<VCProof> {
     const accountIdentityId = await this.options.verifications.getIdentityForAccount(this.options.activeAccount, true);
 
-    if (accountIdentityId !== issuerIdentityId) {
+    if (accountIdentityId !== issuerIdentityId)
       throw Error('You are not authorized to issue this VC');
-    }
 
-    const signature = await this.options.executor.web3.eth.accounts.sign(
-      this.options.nameResolver.soliditySha3(documentPayloadToSign),
-      '0x' + await this.options.accountStore.getPrivateKey(this.options.activeAccount)
-    );
+    const jwt = await this.createJWTForVC(vc, proofType);
+
+    const verMethod = await this.getPublicKeyURIFromDid(vc.issuer.id);
 
     const proof: VCProof = {
-      type: 'Placeholder', // TODO: Which type to use?
+      type: `${proofType}`,
       created: new Date(Date.now()).toISOString(),
       proofPurpose: 'assertionMethod',
-      verificationMethod: '', // TODO: Which method to use?
-      jws: signature
+      verificationMethod: verMethod,
+      jws: jwt
     }
 
     return proof;
@@ -144,4 +143,30 @@ export class VCResolver extends Logger {
   private createVCId(verification: any): string {
     return 'vc:evan:' + verification.subject + '-' + verification.id
   }
+
+  private async createJWTForVC(vc: VCDocument, proofType: VCProofType): Promise<string> {
+    const signer = didJWT.SimpleSigner(await this.options.accountStore.getPrivateKey(this.options.activeAccount));
+    let jwt = '';
+    await didJWT.createJWT({exp: vc.validUntil},
+                 {alg: JWTProofMapping[proofType], issuer: vc.issuer.id, signer}).then( response =>
+                 { jwt = response });
+
+    return jwt;
+  }
+
+  private async getPublicKeyURIFromDid(issuerDid: string): Promise<string> {
+    const signaturePublicKey = await this.options.signerIdentity.getPublicKey(this.options.signerIdentity.underlyingAccount);
+    const doc = await this.didResolver.getDidDocument(issuerDid);
+
+    if (!(doc.authentication || doc.publicKey || doc.publicKey.length == 0))
+      throw Error(`Document for ${issuerDid} does not provide authentication material. Cannot sign VC.`);
+
+    const key = doc.publicKey.filter(key => {return key.publicKeyHex === signaturePublicKey})[0];
+
+    if (!key)
+      throw Error('The signature key for the active account is not associated to its DID document. Cannot sign VC.');
+
+    return key.id;
+  }
+
 }

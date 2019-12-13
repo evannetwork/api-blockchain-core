@@ -455,6 +455,7 @@ export async function createDefaultRuntime(
       accountStore,
       executor,
       nameResolver,
+      signerIdentity: signer,
       verifications
     }, didResolver);
   }
