@@ -3,40 +3,36 @@ import { accounts } from '../test/accounts';
 import { TestUtils } from '../test/test-utils';
 import { Runtime } from '../index';
 import { Verifications } from './verifications';
-import { DidResolver, DidResolverDocumentTemplate } from '../did/did-resolver';
-
-/**
- * What to test:
- *  - Setting a verification and creating a VC from it
- *  - Creating a VC from someone else's verification
- *  - Proof validity
- *  - Encrypted payload data VC valid
- *  - VC Storage
- */
 
 describe('DID Resolver', function() {
   this.timeout(600000);
   let runtime: Runtime;
   let verifications: Verifications;
-  const issuer = accounts[0];
-  const subject = accounts[1];
+  const issuerAccountId = accounts[0];
+  const subjectAccountId = accounts[1];
+  let issuerIdentityId;
+  let subjectIdentityId;
 
   before(async () => {
     runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity: true });
     verifications = await TestUtils.getVerifications(runtime.web3, await TestUtils.getIpfs());
+    issuerIdentityId = await verifications.getIdentityForAccount(issuerAccountId, true);
+    subjectIdentityId = await verifications.getIdentityForAccount(subjectAccountId, true);
   });
 
-  describe('When creating verifications', async () => {
-    it('allows to export them as VCs', async () => {
+  describe('When creating a verification', async () => {
+    it('allows to export them as valid VC', async () => {
       const topic = '/company'
 
-      const newVerification = await verifications.setVerification(issuer, subject, topic);
-      const verification = (await verifications.getVerifications(subject, topic))
-        .filter((ver) => ver.id === newVerification)[0];
+      const newVerification = await verifications.setVerification(issuerAccountId, subjectAccountId, topic);
+
+      const verification = (await verifications.getNestedVerificationsV2(subjectAccountId, topic))
+        .verifications.filter((ver) => ver.details.id === newVerification)[0];
+
       const vc = await runtime.vcResolver.createVCFromVerification(verification);
 
-      expect(runtime.didResolver.convertDidToIdentity(vc.issuer.id)).to.eq(issuer);
-      expect(runtime.didResolver.convertDidToIdentity(vc.credentialSubject.id)).to.eq(subject);
+      expect(await runtime.didResolver.convertDidToIdentity(vc.issuer.id)).to.eq(issuerIdentityId);
+      expect(await runtime.didResolver.convertDidToIdentity(vc.credentialSubject.id)).to.eq(subjectIdentityId);
       expect(vc.credentialSubject.credential).to.eq(topic);
     });
   });

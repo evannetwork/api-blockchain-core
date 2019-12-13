@@ -12,10 +12,9 @@ import {
   DidResolver
 } from '../did/did-resolver'
 
-import { BigNumber } from 'bignumber.js';
 import { VerificationsVerificationEntry } from './verifications';
 
-const didJWT = require('did-jwt');
+import didJWT = require('did-jwt');
 
 export const enum VCProofType {
   EcdsaPublicKeySecp256k1 = 'EcdsaPublicKeySecp256k1',
@@ -147,9 +146,8 @@ export class VCResolver extends Logger {
   private async createJWTForVC(vc: VCDocument, proofType: VCProofType): Promise<string> {
     const signer = didJWT.SimpleSigner(await this.options.accountStore.getPrivateKey(this.options.activeAccount));
     let jwt = '';
-    await didJWT.createJWT({exp: vc.validUntil},
-                 {alg: JWTProofMapping[proofType], issuer: vc.issuer.id, signer}).then( response =>
-                 { jwt = response });
+    await didJWT.createJWT({exp: vc.validUntil}, {alg: JWTProofMapping[proofType], issuer: vc.issuer.id, signer})
+      .then( response => { jwt = response });
 
     return jwt;
   }
