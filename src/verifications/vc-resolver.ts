@@ -32,7 +32,7 @@ export interface VCDocument {
   validUntil?: string;
   credentialSubject: VCCredentialSubject;
   credentialStatus?: VCCredentialStatus;
-  proof: VCProof;
+  proof?: VCProof;
 }
 
 export interface VCCredentialStatus {
@@ -107,7 +107,6 @@ export class VCResolver extends Logger {
       issuer: { id: issuerDid },
       validFrom: new Date(parseInt(`${verification.details.creationDate}`)).toISOString(), // milliseconds
       credentialSubject: subject,
-      proof: null
     };
 
     if (verification.details.expirationDate)
@@ -146,7 +145,7 @@ export class VCResolver extends Logger {
   private async createJWTForVC(vc: VCDocument, proofType: VCProofType): Promise<string> {
     const signer = didJWT.SimpleSigner(await this.options.accountStore.getPrivateKey(this.options.activeAccount));
     let jwt = '';
-    await didJWT.createJWT({exp: vc.validUntil}, {alg: JWTProofMapping[proofType], issuer: vc.issuer.id, signer})
+    await didJWT.createJWT({vc: vc, exp: vc.validUntil}, {alg: JWTProofMapping[proofType], issuer: vc.issuer.id, signer})
       .then( response => { jwt = response });
 
     return jwt;
