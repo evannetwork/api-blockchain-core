@@ -4,10 +4,18 @@ sudo: required
 
 matrix:
   include:
-  - name: "services contracts & digital-twin tests"
+  - name: "services contracts"
     node_js: "11"
     env:
       - TESTSPECS='src/verifications/*.spec.ts src/profile/*.spec.ts src/*.spec.ts src/votings/*.spec.ts src/contracts/digital-twin/*.spec.ts'
+      - CHAIN_ENDPOINT='ws://localhost:7545'
+    script:
+      - npm run testunitcoverage -- --exclude src/name-resolver.spec.ts
+
+  - name: "digital-twin tests"
+    node_js: "11"
+    env:
+      - TESTSPECS='src/contracts/digital-twin/*.spec.ts'
       - CHAIN_ENDPOINT='ws://localhost:7545'
     script:
       - npm run testunitcoverage -- --exclude src/name-resolver.spec.ts
