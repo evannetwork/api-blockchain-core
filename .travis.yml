@@ -7,7 +7,7 @@ matrix:
   - name: "service contracts"
     node_js: "11"
     env:
-      - TESTSPECS='src/verifications/*.spec.ts src/profile/*.spec.ts src/*.spec.ts src/votings/*.spec.ts src/contracts/digital-twin/*.spec.ts'
+      - TESTSPECS='src/verifications/*.spec.ts src/profile/*.spec.ts src/*.spec.ts src/votings/*.spec.ts'
       - CHAIN_ENDPOINT='ws://localhost:7545'
       - COVERALLS_PARALLEL=true
     script:
