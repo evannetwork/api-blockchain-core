@@ -375,9 +375,10 @@ describe('DigitalTwin', function() {
     it('can load indicdes from ENS', async () => {
       const randomName = Math.floor(Math.random() * 1e12).toString(36);
       const address = `${randomName}.${ownedDomain}`;
+      await DigitalTwin.create(runtime, { ...defaultConfig, address });
       const loadedTwin = new DigitalTwin(runtime, { ...defaultConfig, address });
 
-      expect(await loadedTwin.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
+      expect(await loadedTwin.getContractAddress()).to.throw('salmon');
       expect(await loadedTwin.getContractAddress()).to.eq(
         await runtime.nameResolver.getAddress(address));
     });
