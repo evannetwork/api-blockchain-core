@@ -1,5 +1,6 @@
 bundles
 dist
+dist-test
 docs
 libs
 node_modules

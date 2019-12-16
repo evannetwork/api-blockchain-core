@@ -57,7 +57,7 @@
   "homepage": "https://evannetwork.github.io/",
   "husky": {
     "hooks": {
-      "pre-commit": "eslint --ext .js,.ts -c .eslintrc.js ./src && yarn build"
+      "pre-commit": "eslint --ext .js,.ts -c .eslintrc.js ./src && yarn build-test"
     }
   },
   "keywords": [
@@ -77,6 +77,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "build-test": "tsc -p ./tsconfig-test.json",
     "build-all": "env-cmd --fallback -f ./.env.local npm run build-contracts && env-cmd --fallback -f ./.env.local npm run build",
     "build-contracts": "node ./scripts/buildContracts.js",
     "installl": "npm install && ./scripts/link.sh",
