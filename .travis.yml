@@ -4,7 +4,7 @@ sudo: required
 
 matrix:
   include:
-  - name: "services contracts"
+  - name: "service contracts"
     node_js: "11"
     env:
       - TESTSPECS='src/verifications/*.spec.ts src/profile/*.spec.ts src/*.spec.ts src/votings/*.spec.ts src/contracts/digital-twin/*.spec.ts'
@@ -74,4 +74,3 @@ install:
   - cd ../../../
   - cd ganache-cli && node cli.js --allowUnlimitedContractSize --gasLimit 0xE4E1C0 -p 7545 -f http://localhost:8545 > /dev/null &
   - cd /home/travis/build/evannetwork/api-blockchain-core
-
