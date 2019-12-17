@@ -86,7 +86,7 @@
     "testunit": "env-cmd --fallback -f ./.env.local npm run build && env-cmd --fallback -f ./.env.local mocha --exit --inspect -r ts-node/register $*",
     "testunitbail": "env-cmd --fallback -f ./.env.local npm run build && env-cmd --fallback -f ./.env.local mocha --exit -b --inspect -r ts-node/register $*",
     "testunitbrk": "env-cmd --fallback -f ./.env.local npm run build && env-cmd --fallback -f ./.env.local mocha --exit --inspect-brk -r ts-node/register $*",
-    "testunitcoverage": "env-cmd --fallback -f ./.env.local npm run build && nyc -r lcov -e .ts -x \"**/*.spec.ts\" -x \"lib\" mocha --exit -r ts-node/register $TESTSPECS && nyc report --reporter=text-lcov | coveralls --collectCoverageFrom='!src/**/*.spec.ts' --collectCoverageFrom='!libs/**/*.js'"
+    "testunitcoverage": "env-cmd --fallback -f ./.env.local npm run build && nyc -r lcov -e .ts -x \"**/*.spec.ts\" -x \"lib\" mocha --exit -r ts-node/register $TESTSPECS && nyc report --reporter=text-lcov | coveralls"
   },
   "types": "./dist/index.d.ts",
   "version": "2.15.0"

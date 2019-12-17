@@ -11,7 +11,7 @@ matrix:
       - CHAIN_ENDPOINT='ws://localhost:7545'
       - COVERALLS_PARALLEL=true
     script:
-      - npm run testunitcoverage -- --exclude src/name-resolver.spec.ts
+      - npm run testunitcoverage
 
   - name: "digital-twin tests"
     node_js: "11"
@@ -20,7 +20,7 @@ matrix:
       - CHAIN_ENDPOINT='ws://localhost:7545'
       - COVERALLS_PARALLEL=true
     script:
-      - npm run testunitcoverage -- --exclude src/name-resolver.spec.ts
+      - npm run testunitcoverage
 
   - name: "data contract & IPFS tests"
     node_js: "11"
