@@ -1,5 +1,5 @@
 import {
-  Logger, LoggerOptions, Executor, AccountStore
+  Logger, LoggerOptions, Executor, AccountStore, ContractLoader, DfsInterface
 } from '@evan.network/dbcp'
 
 import {
@@ -70,10 +70,13 @@ export interface VCProof {
 export interface VCResolverOptions extends LoggerOptions {
   accountStore: AccountStore;
   activeAccount: string;
+  contractLoader: ContractLoader;
+  dfs: DfsInterface;
   executor: Executor;
   nameResolver: NameResolver;
   signerIdentity: SignerIdentity;
   verifications: Verifications;
+  web3: any;
 }
 
 export class VCResolver extends Logger {
@@ -82,13 +85,17 @@ export class VCResolver extends Logger {
 
   public didResolver: DidResolver;
 
+  private cache: any = {};
+
   public constructor(options: VCResolverOptions, didResolver: DidResolver) {
     super(options as LoggerOptions);
     this.options = options;
     this.didResolver = didResolver;
   }
 
-  public async createVCFromVerification(verification: VerificationsVerificationEntry): Promise<VCDocument> {
+  public async issueVCFromVerification(verification: VerificationsVerificationEntry): Promise<VCDocument> {
+    if(verification.details.issuer !== this.options.activeAccount)
+      throw Error("This account is not the issuer of this verification.")
     const subjectDid = await this.didResolver.convertIdentityToDid(verification.details.subjectIdentity);
     const issuerDid = await this.didResolver.convertIdentityToDid(verification.details.issuerIdentity);
 
@@ -115,6 +122,19 @@ export class VCResolver extends Logger {
     vc.proof = await this.createProofForVc(vc, verification.details.issuerIdentity);
 
     return vc;
+  }
+
+  public async setVC(vc: VCDocument) {
+    const vcDfsAddress = await this.options.dfs.add('vc', Buffer.from(JSON.stringify(vc), 'utf-8'));
+    const vcIdHash = this.options.web3.utils.soliditySha3(vc.id);
+
+    await this.options.executor.executeContractTransaction(
+      await this.getRegistryContract(),
+      'setVC',
+      { from: this.options.signerIdentity.activeIdentity },
+      vcIdHash,
+      vcDfsAddress,
+    )
   }
 
   private async createProofForVc(vc: VCDocument, issuerIdentityId: string, proofType: VCProofType = VCProofType.EcdsaPublicKeySecp256k1): Promise<VCProof> {
@@ -166,4 +186,21 @@ export class VCResolver extends Logger {
     return key.id;
   }
 
+  /**
+   * Get web3 contract instance for VC registry contract via ENS. Result is cached.
+   *
+   * @return     {Promise<any>}  VC registry contract
+   */
+  private async getRegistryContract(): Promise<any> {
+    if (!this.cache.vcRegistryContract) {
+      const vcRegistryDomain = this.options.nameResolver.getDomainName(
+        this.options.nameResolver.config.domains.vcRegistry);
+      const vcRegistryAddress = await this.options.nameResolver.getAddress(vcRegistryDomain);
+
+      this.cache.vcRegistryContract = this.options.contractLoader.loadContract(
+        'VCRegistry', vcRegistryAddress);
+    }
+
+    return this.cache.vcRegistryContract;
+  }
 }

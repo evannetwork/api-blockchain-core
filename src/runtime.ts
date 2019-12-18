@@ -453,10 +453,13 @@ export async function createDefaultRuntime(
     vcResolver = new VCResolver({
       activeAccount,
       accountStore,
+      contractLoader,
+      dfs,
       executor,
       nameResolver,
       signerIdentity: signer,
-      verifications
+      verifications,
+      web3
     }, didResolver);
   }
 

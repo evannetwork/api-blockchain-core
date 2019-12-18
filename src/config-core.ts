@@ -32,6 +32,7 @@ const configCore = {
       index: 'index',
       mailbox: 'mailbox',
       profile: 'profile',
+      vcs: 'vcs',
       wallet: 'wallet',
     },
     domains: {
@@ -46,6 +47,7 @@ const configCore = {
       profile: process.env.ENS_PROFILES || ['profile', 'ensRoot'],
       profileFactory: ['profile', 'factory', 'ensRoot'],
       root: ['ensRoot'],
+      vcRegstiry: ['vcs', 'ensRoot'],
     },
   },
   smartAgents: {
