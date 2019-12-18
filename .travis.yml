@@ -4,19 +4,30 @@ sudo: required
 
 matrix:
   include:
-  - name: "services contracts & digital-twin tests"
+  - name: "service contracts"
     node_js: "11"
     env:
-      - TESTSPECS='src/verifications/*.spec.ts src/profile/*.spec.ts src/*.spec.ts src/votings/*.spec.ts src/contracts/digital-twin/*.spec.ts'
+      - TESTSPECS='src/verifications/*.spec.ts src/profile/*.spec.ts src/*.spec.ts src/votings/*.spec.ts'
       - CHAIN_ENDPOINT='ws://localhost:7545'
+      - COVERALLS_PARALLEL=true
     script:
-      - npm run testunitcoverage -- --exclude src/name-resolver.spec.ts
+      - npm run testunitcoverage
+
+  - name: "digital-twin tests"
+    node_js: "11"
+    env:
+      - TESTSPECS='src/contracts/digital-twin/*.spec.ts'
+      - CHAIN_ENDPOINT='ws://localhost:7545'
+      - COVERALLS_PARALLEL=true
+    script:
+      - npm run testunitcoverage
 
   - name: "data contract & IPFS tests"
     node_js: "11"
     env:
       - TESTSPECS="src/contracts/data-contract/*.spec.ts src/encryption/*.spec.ts src/dfs/*.spec.ts"
       - CHAIN_ENDPOINT='ws://localhost:7545'
+      - COVERALLS_PARALLEL=true
     script:
       - npm run testunitcoverage
 
@@ -25,6 +36,7 @@ matrix:
     env:
       - TESTSPECS='src/contracts/*.spec.ts src/contracts/base-contract/*.spec.ts src/contracts/business-center/*.spec.ts src/contracts/service-contract/*.spec.ts'
       - CHAIN_ENDPOINT='ws://localhost:7545'
+      - COVERALLS_PARALLEL=true
     script:
       - npm run testunitcoverage
 
@@ -44,6 +56,8 @@ addons:
       - gcc-5
       - g++-5
 
+notifications:
+  webhooks: https://coveralls.io/webhook
 
 before_install:
   - |
@@ -66,4 +80,3 @@ install:
   - cd ../../../
   - cd ganache-cli && node cli.js --allowUnlimitedContractSize --gasLimit 0xE4E1C0 -p 7545 -f http://localhost:8545 > /dev/null &
   - cd /home/travis/build/evannetwork/api-blockchain-core
-
