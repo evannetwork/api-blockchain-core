@@ -15,6 +15,7 @@ import {
 import { VerificationsVerificationEntry } from './verifications';
 
 import didJWT = require('did-jwt');
+import { nullBytes32 } from 'src/common/utils';
 
 export const enum VCProofType {
   EcdsaPublicKeySecp256k1 = 'EcdsaPublicKeySecp256k1',
@@ -35,6 +36,16 @@ export interface VCDocument {
   proof?: VCProof;
 }
 
+export interface VCDocumentTemplate {
+  type?: string[];
+  issuer: VCIssuer;
+  validFrom: string;
+  validUntil?: string;
+  credentialSubject: VCCredentialSubject;
+  credentialStatus?: VCCredentialStatus;
+  proof?: VCProof;
+}
+
 export interface VCCredentialStatus {
   id: string;
   type: string;
@@ -42,11 +53,9 @@ export interface VCCredentialStatus {
 
 export interface VCCredentialSubject {
   id: string;
-  credential: string;
   data?: VCCredentialSubjectPayload[];
   description?: string;
   uri?: string;
-  enableSubVerifications: boolean;
 }
 
 export interface VCCredentialSubjectPayload {
@@ -93,6 +102,64 @@ export class VCResolver extends Logger {
     this.didResolver = didResolver;
   }
 
+  public async storeVC(vcData: VCDocumentTemplate) {
+    const vcId = await this.buyVCId();
+    const types = vcData.type ? vcData.type : ['VerifiableCredential']
+
+    const documentToStore: VCDocument = {
+      '@context': ['https://www.w3.org/2018/credentials/v1'],
+      id: 'vc:evan:' + vcId,
+      type: types,
+      ...vcData
+    };
+
+    await this.validateVCDocument(documentToStore);
+
+    // Document is not signed, create own proof
+    if (!documentToStore.proof) {
+      const issuerIdentity = await this.didResolver.convertDidToIdentity(documentToStore.issuer.id)
+      documentToStore.proof = await this.createProofForVc(documentToStore, issuerIdentity);
+    }
+
+
+    const vcDfsAddress = await this.options.dfs.add('vc',
+      Buffer.from(JSON.stringify(documentToStore), 'utf-8'));
+
+    await this.options.executor.executeContractTransaction(
+      await this.getRegistryContract(),
+      'setVC',
+      { from: this.options.signerIdentity.activeIdentity },
+      vcId,
+      vcDfsAddress,
+    )
+  }
+
+  public async getVC(vcId: string): Promise<VCDocument> {
+    const vcDfsHash = await this.options.executor.executeContractCall(
+      await this.getRegistryContract(),
+      'vcStore',
+      vcId,
+    );
+
+    let result;
+    if (vcDfsHash !== nullBytes32) {
+      result = JSON.parse(await this.options.dfs.get(vcDfsHash) as any) as VCDocument;
+    }
+    return result;
+  }
+
+  private async validateVCDocument(document: VCDocument) {
+    // TODO: Implement
+  }
+
+  private async buyVCId(): Promise<string> {
+    return await this.options.executor.executeContractTransaction(
+      await this.getRegistryContract(),
+      'createId',
+      { from: this.options.signerIdentity.activeIdentity },
+    )
+  }
+
   public async issueVCFromVerification(verification: VerificationsVerificationEntry): Promise<VCDocument> {
     if(verification.details.issuer !== this.options.activeAccount)
       throw Error("This account is not the issuer of this verification.")
@@ -101,8 +168,6 @@ export class VCResolver extends Logger {
 
     const subject: VCCredentialSubject = {
       id: subjectDid,
-      credential: verification.details.topic,
-      enableSubVerifications: !verification.raw.disableSubVerifications,
     }
 
     const vc: VCDocument = {
@@ -119,7 +184,6 @@ export class VCResolver extends Logger {
     if (verification.details.expirationDate)
       vc.validUntil = new Date(`${verification.details.expirationDate}`).toISOString();
 
-    vc.proof = await this.createProofForVc(vc, verification.details.issuerIdentity);
 
     return vc;
   }
