@@ -15,7 +15,7 @@ import {
 import { VerificationsVerificationEntry } from './verifications';
 
 import didJWT = require('did-jwt');
-import { nullBytes32 } from 'src/common/utils';
+import { nullBytes32 } from '../common/utils';
 
 export const enum VCProofType {
   EcdsaPublicKeySecp256k1 = 'EcdsaPublicKeySecp256k1',
@@ -102,7 +102,7 @@ export class VCResolver extends Logger {
     this.didResolver = didResolver;
   }
 
-  public async storeVC(vcData: VCDocumentTemplate) {
+  public async storeNewVC(vcData: VCDocumentTemplate): Promise<VCDocument> {
     const vcId = await this.buyVCId();
     const types = vcData.type ? vcData.type : ['VerifiableCredential']
 
@@ -121,7 +121,6 @@ export class VCResolver extends Logger {
       documentToStore.proof = await this.createProofForVc(documentToStore, issuerIdentity);
     }
 
-
     const vcDfsAddress = await this.options.dfs.add('vc',
       Buffer.from(JSON.stringify(documentToStore), 'utf-8'));
 
@@ -132,6 +131,8 @@ export class VCResolver extends Logger {
       vcId,
       vcDfsAddress,
     )
+
+    return documentToStore;
   }
 
   public async getVC(vcId: string): Promise<VCDocument> {
@@ -141,64 +142,27 @@ export class VCResolver extends Logger {
       vcId,
     );
 
-    let result;
-    if (vcDfsHash !== nullBytes32) {
-      result = JSON.parse(await this.options.dfs.get(vcDfsHash) as any) as VCDocument;
+    if (vcDfsHash === nullBytes32) {
+      throw Error(`VC for address ${vcDfsHash} does not exist`);
     }
-    return result;
+
+    return JSON.parse(await this.options.dfs.get(vcDfsHash) as any) as VCDocument;
   }
 
   private async validateVCDocument(document: VCDocument) {
     // TODO: Implement
+    throw new Error('Not implemented');
   }
 
   private async buyVCId(): Promise<string> {
     return await this.options.executor.executeContractTransaction(
       await this.getRegistryContract(),
-      'createId',
-      { from: this.options.signerIdentity.activeIdentity },
-    )
-  }
-
-  public async issueVCFromVerification(verification: VerificationsVerificationEntry): Promise<VCDocument> {
-    if(verification.details.issuer !== this.options.activeAccount)
-      throw Error("This account is not the issuer of this verification.")
-    const subjectDid = await this.didResolver.convertIdentityToDid(verification.details.subjectIdentity);
-    const issuerDid = await this.didResolver.convertIdentityToDid(verification.details.issuerIdentity);
-
-    const subject: VCCredentialSubject = {
-      id: subjectDid,
-    }
-
-    const vc: VCDocument = {
-      '@context': [
-        'https://www.w3.org/2018/credentials/v1'
-      ],
-      id: this.createVCId(verification),
-      type: [ 'VerifiableCredential', 'evanCredential' ],
-      issuer: { id: issuerDid },
-      validFrom: new Date(parseInt(`${verification.details.creationDate}`)).toISOString(), // milliseconds
-      credentialSubject: subject,
-    };
-
-    if (verification.details.expirationDate)
-      vc.validUntil = new Date(`${verification.details.expirationDate}`).toISOString();
-
-
-    return vc;
-  }
-
-  public async setVC(vc: VCDocument) {
-    const vcDfsAddress = await this.options.dfs.add('vc', Buffer.from(JSON.stringify(vc), 'utf-8'));
-    const vcIdHash = this.options.web3.utils.soliditySha3(vc.id);
-
-    await this.options.executor.executeContractTransaction(
-      await this.getRegistryContract(),
-      'setVC',
-      { from: this.options.signerIdentity.activeIdentity },
-      vcIdHash,
-      vcDfsAddress,
-    )
+      'createId', {
+        from: this.options.signerIdentity.activeIdentity,
+        event: { target: 'VCRegistry', eventName: 'VCIdRegistered', },
+        getEventResult: (event, args) => args.vcId,
+      },
+    );
   }
 
   private async createProofForVc(vc: VCDocument, issuerIdentityId: string, proofType: VCProofType = VCProofType.EcdsaPublicKeySecp256k1): Promise<VCProof> {
@@ -220,10 +184,6 @@ export class VCResolver extends Logger {
     }
 
     return proof;
-  }
-
-  private createVCId(verification: any): string {
-    return 'vc:evan:' + verification.subject + '-' + verification.id
   }
 
   private async createJWTForVC(vc: VCDocument, proofType: VCProofType): Promise<string> {

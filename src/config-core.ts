@@ -47,7 +47,7 @@ const configCore = {
       profile: process.env.ENS_PROFILES || ['profile', 'ensRoot'],
       profileFactory: ['profile', 'factory', 'ensRoot'],
       root: ['ensRoot'],
-      vcRegstiry: ['vcs', 'ensRoot'],
+      vcRegistry: ['vcs', 'test', 'ensRoot'],
     },
   },
   smartAgents: {
