@@ -138,12 +138,12 @@ export class VcResolver extends Logger {
       ...vcData
     };
 
-    await this.validateVCDocument(documentToStore);
-
     // Document is not signed, create own proof
     if (!documentToStore.proof) {
       documentToStore.proof = await this.createProofForVc(documentToStore);
     }
+
+    await this.validateVCDocument(documentToStore);
 
     const vcDfsAddress = await this.options.dfs.add('vc',
       Buffer.from(JSON.stringify(documentToStore), 'utf-8'));
@@ -208,8 +208,6 @@ export class VcResolver extends Logger {
     } else if (!document.proof.type) {
       throw new Error('VC proof misses type');
     }
-
-    throw new Error('Not implemented');
   }
 
   /**

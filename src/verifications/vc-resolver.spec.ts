@@ -24,7 +24,7 @@ import { accounts } from '../test/accounts';
 import { TestUtils } from '../test/test-utils';
 import { Runtime } from '../index';
 import { Verifications } from './verifications';
-import { VcResolverDocument, VcResolverDocumentTemplate } from './vc-resolver';
+import { VcResolverDocumentTemplate } from './vc-resolver';
 
 use(chaiAsPromised);
 
@@ -46,7 +46,7 @@ describe('VC Resolver', function() {
     subjectIdentityId = await verifications.getIdentityForAccount(subjectAccountId, true);
     minimalVcData = {
       issuer: {
-       id: await runtime.didResolver.convertIdentityToDid(issuerIdentityId),
+        id: await runtime.didResolver.convertIdentityToDid(issuerIdentityId),
       },
       credentialSubject: {
         id: await runtime.didResolver.convertIdentityToDid(subjectIdentityId),
