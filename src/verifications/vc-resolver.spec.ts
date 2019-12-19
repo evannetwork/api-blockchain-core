@@ -17,13 +17,14 @@
   the following URL: https://evan.network/license/
 */
 
-import { use } from 'chai';
+import { expect, use } from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
+import  * as didJWT from 'did-jwt';
 import { accounts } from '../test/accounts';
 import { TestUtils } from '../test/test-utils';
 import { Runtime } from '../index';
 import { Verifications } from './verifications';
-import { VcResolverDocument } from './vc-resolver';
+import { VcResolverDocument, VcResolverDocumentTemplate } from './vc-resolver';
 
 use(chaiAsPromised);
 
@@ -36,28 +37,53 @@ describe('VC Resolver', function() {
   let issuerIdentityId;
   let subjectIdentityId;
 
+  let minimalVcData: VcResolverDocumentTemplate;
+
   before(async () => {
     runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity: true });
     verifications = await TestUtils.getVerifications(runtime.web3, await TestUtils.getIpfs());
     issuerIdentityId = await verifications.getIdentityForAccount(issuerAccountId, true);
     subjectIdentityId = await verifications.getIdentityForAccount(subjectAccountId, true);
+    minimalVcData = {
+      issuer: {
+       id: await runtime.didResolver.convertIdentityToDid(issuerIdentityId),
+      },
+      credentialSubject: {
+        id: await runtime.didResolver.convertIdentityToDid(subjectIdentityId),
+      },
+      validFrom: new Date(Date.now()).toISOString()
+    };
   });
 
-  describe('When creating a verification', async () => {
-    it.only('', async () => {
-      const doc: VcResolverDocument = await runtime.vcResolver.storeNewVC({
-        issuer: {id: 'did:evan:testcore:' + issuerIdentityId},
-        validFrom: new Date(Date.now()).toISOString(),
-        credentialSubject: {id: 'did:evan:testcore:' + subjectIdentityId},
-        proof: {
-          type: '',
-          created: '',
-          proofPurpose: '',
-          verificationMethod: '',
-          jws: ''}
-      });
+  describe('When creating a VC', async () => {
+    it('allows me to store a valid VC', async () => {
+      const createdVcDoc = await runtime.vcResolver.storeNewVC(minimalVcData);
+      const vcId = createdVcDoc.id.replace('vc:evan:', '');
+      const fetchedVcDoc = await runtime.vcResolver.getVC(vcId.replace('testcore:', ''));
 
-      console.log(await runtime.vcResolver.getVC(doc.id.replace('vc:evan:', '')));
+      expect(createdVcDoc.id).to.eq(fetchedVcDoc.id);
+      expect(createdVcDoc.issuer.id).to.eq(fetchedVcDoc.issuer.id);
+    });
+
+    it('Creates a valid proof if none is given', async() => {
+      const createdVcDoc = await runtime.vcResolver.storeNewVC(minimalVcData);
+
+      expect(createdVcDoc.proof).not.to.be.undefined;
+      expect(createdVcDoc.proof.jws).not.to.be.undefined;
+
+      const jwt = createdVcDoc.proof.jws;
+
+      // Mock the did-resolver package that did-jwt usually requires
+      const resolver = {
+        async resolve() {
+          const doc = await runtime.didResolver.getDidDocument(createdVcDoc.issuer.id);
+          // TODO: Workaround until we fixed the public key type array structure (bc that is not allowed)
+          doc.publicKey[0].type = 'Secp256k1SignatureVerificationKey2018';
+          return doc as any;
+        }
+      }
+
+      expect(didJWT.verifyJWT(jwt, {resolver: resolver})).to.be.eventually.fulfilled;
     });
   });
 });
