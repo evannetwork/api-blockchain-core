@@ -101,7 +101,7 @@ export class DidResolver extends Logger {
     this.cached = {};
   }
 
-   /**
+  /**
    * Validates if a given DID is a valid evan DID.
    *
    * @param did DID to validate.

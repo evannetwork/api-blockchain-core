@@ -2,7 +2,7 @@ import {
   Logger, LoggerOptions, Executor, AccountStore, ContractLoader, DfsInterface
 } from '@evan.network/dbcp'
 
-import didJWT = require('did-jwt');
+import  * as didJWT from 'did-jwt';
 
 import {
   NameResolver,
@@ -198,13 +198,13 @@ export class VcResolver extends Logger {
 
     // Issuer
     if (!document.issuer.id) {
-      throw new Error('No Issuer ID provided')
+      throw new Error('No Issuer ID provided');
     }
     await this.didResolver.validateDid(document.issuer.id);
 
     // Proof
     if (!document.proof || !document.proof.jws || document.proof.jws === '') {
-      throw new Error('VC misses proof')
+      throw new Error('VC misses proof');
     } else if (!document.proof.type) {
       throw new Error('VC proof misses type');
     }
@@ -238,7 +238,8 @@ export class VcResolver extends Logger {
    * @throws If the VC issuer identity and the signer identity differ from each other
    */
   private async createProofForVc(vc: VcResolverDocument,
-      proofType: VcResolverProofType = VcResolverProofType.EcdsaPublicKeySecp256k1): Promise<VcResolverProof> {
+    proofType: VcResolverProofType = VcResolverProofType.EcdsaPublicKeySecp256k1): Promise<VcResolverProof> {
+
     const issuerIdentity = await this.didResolver.convertDidToIdentity(vc.issuer.id)
     const accountIdentity = await this.options.verifications.getIdentityForAccount(this.options.activeAccount, true);
 
@@ -278,7 +279,7 @@ export class VcResolver extends Logger {
         alg: JWTProofMapping[proofType],
         issuer: vc.issuer.id,
         signer
-    }).then( response => { jwt = response });
+      }).then( response => { jwt = response });
 
     return jwt;
   }
