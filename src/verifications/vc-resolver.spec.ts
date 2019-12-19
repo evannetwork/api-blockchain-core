@@ -1,10 +1,29 @@
-import { expect, use } from 'chai';
+/*
+  Copyright (C) 2018-present evan GmbH.
+
+  This program is free software: you can redistribute it and/or modify it
+  under the terms of the GNU Affero General Public License, version 3,
+  as published by the Free Software Foundation.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program. If not, see http://www.gnu.org/licenses/ or
+  write to the Free Software Foundation, Inc., 51 Franklin Street,
+  Fifth Floor, Boston, MA, 02110-1301 USA, or download the license from
+  the following URL: https://evan.network/license/
+*/
+
+import { use } from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
 import { accounts } from '../test/accounts';
 import { TestUtils } from '../test/test-utils';
 import { Runtime } from '../index';
 import { Verifications } from './verifications';
-import didJWT = require('did-jwt');
+import { VCDocument } from './vc-resolver';
 
 use(chaiAsPromised);
 
@@ -14,7 +33,6 @@ describe('VC Resolver', function() {
   let verifications: Verifications;
   const issuerAccountId = accounts[0];
   const subjectAccountId = accounts[1];
-  const differentIssuerAccountId = accounts[2];
   let issuerIdentityId;
   let subjectIdentityId;
 
@@ -26,61 +44,20 @@ describe('VC Resolver', function() {
   });
 
   describe('When creating a verification', async () => {
-    it('creates a valid VC', async () => {
-      const topic = '/company'
+    it.only('', async () => {
+      const doc: VCDocument = await runtime.vcResolver.storeNewVC({
+        issuer: {id: 'did:evan:testcore:' + issuerIdentityId},
+        validFrom: new Date(Date.now()).toISOString(),
+        credentialSubject: {id: 'did:evan:testcore:' + subjectIdentityId},
+        proof: {
+          type: '',
+          created: '',
+          proofPurpose: '',
+          verificationMethod: '',
+          jws: ''}
+      });
 
-      const newVerification = await verifications.setVerification(issuerAccountId, subjectAccountId, topic);
-
-      const verification = (await verifications.getNestedVerificationsV2(subjectAccountId, topic))
-        .verifications.filter((ver) => ver.details.id === newVerification)[0];
-
-      const vc = await runtime.vcResolver.issueVCFromVerification(verification);
-
-      expect(await runtime.didResolver.convertDidToIdentity(vc.issuer.id)).to.eq(issuerIdentityId);
-      expect(await runtime.didResolver.convertDidToIdentity(vc.credentialSubject.id)).to.eq(subjectIdentityId);
-      expect(vc.credentialSubject.credential).to.eq(topic);
-    });
-
-    it('creates a VC with a valid proof', async () => {
-      const topic = '/company'
-
-      const newVerification = await verifications.setVerification(issuerAccountId, subjectAccountId, topic);
-
-      const verification = (await verifications.getNestedVerificationsV2(subjectAccountId, topic))
-        .verifications.filter((ver) => ver.details.id === newVerification)[0];
-
-      const vc = await runtime.vcResolver.issueVCFromVerification(verification);
-
-      let jwt = vc.proof.jws;
-
-      // Mock the did-resolver package that did-jwt usually requires
-      const resolver = {
-        async resolve() {
-          const doc = await runtime.didResolver.getDidDocument(vc.issuer.id);
-          // TODO: Workaround until we fixed the public key type array structure (bc that is not allowed)
-          doc.publicKey[0].type = 'Secp256k1SignatureVerificationKey2018';
-          return doc as any;
-        }
-      }
-
-      let verifiedRespone;
-      await didJWT.verifyJWT(jwt, {resolver: resolver}).then((response) =>
-      { verifiedRespone = response });
-
-      expect(verifiedRespone.issuer).to.equal(vc.issuer.id);
-    });
-
-    it('Disallows to issue VCs for a verification one is not the issuer of', async () => {
-      const topic = '/company'
-
-      const newVerificationAddress = await verifications
-        .setVerification(differentIssuerAccountId, subjectAccountId, topic);
-
-      const verification = (await verifications.getNestedVerificationsV2(subjectAccountId, topic))
-        .verifications.filter((ver) => ver.details.id === newVerificationAddress)[0];
-
-      expect(runtime.vcResolver.issueVCFromVerification(verification))
-        .to.be.eventually.rejectedWith('This account is not the issuer of this verification.');
+      console.log(await runtime.vcResolver.getVC(doc.id.replace('vc:evan:', '')));
     });
   });
 });
