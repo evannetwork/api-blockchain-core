@@ -101,6 +101,32 @@ export class DidResolver extends Logger {
     this.cached = {};
   }
 
+   /**
+   * Validates if a given DID is a valid evan DID.
+   *
+   * @param did DID to validate.
+   * @returns {Promise<void>} If the DID is valid.
+   * @throws If the DID is not valid.
+   */
+  public async validateDid(did: string): Promise<void> {
+    await this.validateDidAndGetSections(did);
+  }
+
+  /**
+   * Validates if a given DID is a valid evan DID and returns its parts.
+   *
+   * @param did DID to validate.
+   * @returns {Promise<RegExpExecArray>} The parts of the DID if it is valid.
+   * @throws If the DID is not valid.
+   */
+  private async validateDidAndGetSections(did: string): Promise<RegExpExecArray> {
+    const groups = didRegEx.exec(did);
+    if (!groups) {
+      throw new Error(`Given did ("${did}") is no valid evan DID`);
+    }
+    return groups;
+  }
+
   /**
    * Converts given DID to a evan.network identity.
    *
@@ -110,10 +136,7 @@ export class DidResolver extends Logger {
    *                                "0x000000000000000000000000000000000000001234"
    */
   public async convertDidToIdentity(did: string): Promise<string> {
-    const groups = didRegEx.exec(did);
-    if (!groups) {
-      throw new Error(`given did ("${did}") is no valid evan DID`);
-    }
+    const groups = await this.validateDidAndGetSections(did);
     const [ , didEnvironment = 'core', identity ] = groups;
     const environment = await this.getEnvironment();
     if (environment === 'testcore' && didEnvironment !== 'testcore' ||

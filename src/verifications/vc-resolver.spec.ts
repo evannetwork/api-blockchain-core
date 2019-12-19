@@ -23,7 +23,7 @@ import { accounts } from '../test/accounts';
 import { TestUtils } from '../test/test-utils';
 import { Runtime } from '../index';
 import { Verifications } from './verifications';
-import { VCDocument } from './vc-resolver';
+import { VcResolverDocument } from './vc-resolver';
 
 use(chaiAsPromised);
 
@@ -45,7 +45,7 @@ describe('VC Resolver', function() {
 
   describe('When creating a verification', async () => {
     it.only('', async () => {
-      const doc: VCDocument = await runtime.vcResolver.storeNewVC({
+      const doc: VcResolverDocument = await runtime.vcResolver.storeNewVC({
         issuer: {id: 'did:evan:testcore:' + issuerIdentityId},
         validFrom: new Date(Date.now()).toISOString(),
         credentialSubject: {id: 'did:evan:testcore:' + subjectIdentityId},

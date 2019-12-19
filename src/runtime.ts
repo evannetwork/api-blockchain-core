@@ -53,7 +53,7 @@ import {
   SignerInterface,
   SignerInternal,
   Unencrypted,
-  VCResolver,
+  VcResolver,
   Verifications,
   Votings,
 } from './index';
@@ -91,7 +91,7 @@ export interface Runtime {
   sharing?: Sharing;
   signer?: SignerInterface;
   underlyingAccount?: string;
-  vcResolver?: VCResolver;
+  vcResolver?: VcResolver;
   verifications?: Verifications;
   votings?: Votings;
   web3?: any;
@@ -440,7 +440,7 @@ export async function createDefaultRuntime(
   }
 
   let didResolver: DidResolver;
-  let vcResolver: VCResolver;
+  let vcResolver: VcResolver;
   if (runtimeConfig.useIdentity) {
     didResolver = new DidResolver({
       contractLoader,
@@ -450,7 +450,7 @@ export async function createDefaultRuntime(
       signerIdentity: signer,
       web3,
     });
-    vcResolver = new VCResolver({
+    vcResolver = new VcResolver({
       activeAccount,
       accountStore,
       contractLoader,
