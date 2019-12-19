@@ -336,7 +336,10 @@ describe('DigitalTwin', function() {
     it('can set verifications to twin', async () => {
       const twin = await DigitalTwin.create(runtime, defaultConfig);
       const verifications: DigitalTwinVerificationEntry[] = [...Array(3)].map(
-        (_, i) => ({ topic: `verifcation_${i}` } as DigitalTwinVerificationEntry));
+        (_, i) => {
+          const entry: DigitalTwinVerificationEntry = { topic: `verifcation_${i}` };
+          return entry;
+        });
       await twin.addVerifications(verifications);
       const verificationsResults = await twin.getVerifications();
       expect(verificationsResults.length).to.eq(3);

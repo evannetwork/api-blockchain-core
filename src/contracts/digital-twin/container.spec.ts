@@ -179,7 +179,10 @@ describe('Container', function() {
 
 
       const verifications: ContainerVerificationEntry[] = [...Array(3)].map(
-        (_, i) => ({ topic: `verifcation_${i}` } as ContainerVerificationEntry));
+        (_, i) => {
+          const entry: ContainerVerificationEntry = { topic: `verifcation_${i}`};
+          return entry;
+        });
 
       for (const container of [container1, container2, container3]) {
         await container.addVerifications(verifications);
