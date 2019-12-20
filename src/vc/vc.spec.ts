@@ -36,10 +36,14 @@ describe('VC Resolver', function() {
   let verifications: Verifications;
   const issuerAccountId = accounts[0];
   const subjectAccountId = accounts[1];
+  const nonIssuerAccountId = accounts[2];
   let issuerIdentityId;
   let subjectIdentityId;
+  let nonIssuerIdentityId;
 
   let minimalVcData: VcDocumentTemplate;
+
+  const existingVcId = '0x2a838a6961be98f6a182f375bb9158848ee9760ca97a379939ccdf03fc442a22'
 
   before(async () => {
     runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity: true });
@@ -64,7 +68,7 @@ describe('VC Resolver', function() {
       const fetchedVcDoc = await runtime.vc.getVC(vcId.replace('testcore:', ''));
 
       expect(createdVcDoc.id).to.eq(fetchedVcDoc.id);
-      expect(createdVcDoc.issuer.id).to.eq(fetchedVcDoc.issuer.id);
+      expect(createdVcDoc.issuer.did).to.eq(fetchedVcDoc.issuer.did);
     });
 
     it('Creates a valid proof if none is given', async() => {
@@ -78,7 +82,7 @@ describe('VC Resolver', function() {
       // Mock the did-resolver package that did-jwt usually requires
       const resolver = {
         async resolve() {
-          const doc = await runtime.did.getDidDocument(createdVcDoc.issuer.id);
+          const doc = await runtime.did.getDidDocument(createdVcDoc.issuer.did);
           // TODO: Workaround until we fixed the public key type array structure (bc that is not allowed)
           doc.publicKey[0].type = 'Secp256k1SignatureVerificationKey2018';
           return doc as any;
@@ -87,5 +91,48 @@ describe('VC Resolver', function() {
 
       expect(didJWT.verifyJWT(jwt, {resolver: resolver})).to.be.eventually.fulfilled;
     });
+
+    it('allows me to get an existing VC', async () => {     
+      const fetchedVcDoc = runtime.vc.getVC(existingVcId.replace('testcore:', ''));
+      
+      await expect(fetchedVcDoc).to.not.be.rejected
+    });    
+
+    it('does not allow me to get a non existing VC', async () => {
+      const existingVcId = '0x2a838a6961be98f6a182f375bb9158848ee9760ca97a379939ccdf03fc442a23'
+      const fetchedVcDoc = runtime.vc.getVC(existingVcId.replace('testcore:', ''));
+
+      await expect(Error).to.exist;
+      await expect(fetchedVcDoc).to.be.rejected
+    });     
+
+    it('should not create and store VC with wrong data', async () => {
+
+      minimalVcData = {
+        issuer: {
+          did: await runtime.did.convertIdentityToDid('0x390f70a9AD51a845C8ea4c74E141219361D24f'),
+        },
+        credentialSubject: {
+          did: await runtime.did.convertIdentityToDid(subjectIdentityId),
+        },
+        validFrom: new Date(Date.now()).toISOString()
+      };
+      const createdVcDoc = runtime.vc.storeNewVC(minimalVcData);      
+
+      await expect(Error).to.exist;
+      await expect(createdVcDoc).to.be.rejected
+    });
+
+    it.skip('should not allow to store a VC where you are not the issuer', async () => {
+
+    });
+
+    it.skip('should not allow to store a VC where you are not the issuer on smart contract level', async () => {
+
+    });
+
+    it.skip('should not create a VC with invalid proof', async () => {
+
+    });                   
   });
 });
