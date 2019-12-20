@@ -32,7 +32,7 @@ import {
   DataContract,
   Description,
   DfsInterface,
-  DidResolver,
+  Did,
   EncryptionWrapper,
   EventHub,
   Executor,
@@ -53,7 +53,7 @@ import {
   SignerInterface,
   SignerInternal,
   Unencrypted,
-  VcResolver,
+  Vc,
   Verifications,
   Votings,
 } from './index';
@@ -72,7 +72,7 @@ export interface Runtime {
   dataContract?: DataContract;
   description?: Description;
   dfs?: DfsInterface;
-  didResolver?: DidResolver;
+  did?: Did;
   encryptionWrapper?: EncryptionWrapper;
   environment?: string;
   eventHub?: EventHub;
@@ -91,7 +91,7 @@ export interface Runtime {
   sharing?: Sharing;
   signer?: SignerInterface;
   underlyingAccount?: string;
-  vcResolver?: VcResolver;
+  vc?: Vc;
   verifications?: Verifications;
   votings?: Votings;
   web3?: any;
@@ -439,10 +439,10 @@ export async function createDefaultRuntime(
     );
   }
 
-  let didResolver: DidResolver;
-  let vcResolver: VcResolver;
+  let did: Did;
+  let vc: Vc;
   if (runtimeConfig.useIdentity) {
-    didResolver = new DidResolver({
+    did = new Did({
       contractLoader,
       dfs,
       executor,
@@ -450,7 +450,7 @@ export async function createDefaultRuntime(
       signerIdentity: signer,
       web3,
     });
-    vcResolver = new VcResolver({
+    vc = new Vc({
       activeAccount,
       accountStore,
       contractLoader,
@@ -460,7 +460,7 @@ export async function createDefaultRuntime(
       signerIdentity: signer,
       verifications,
       web3
-    }, didResolver);
+    }, did);
   }
 
 
@@ -545,8 +545,8 @@ export async function createDefaultRuntime(
     web3,
     // optional properties
     ...(activeIdentity && {activeIdentity}),
-    ...(didResolver && {didResolver}),
-    ...(vcResolver && {vcResolver}),
+    ...(did && {did}),
+    ...(vc && {vc}),
     ...(underlyingAccount && {underlyingAccount}),
   };
 };
