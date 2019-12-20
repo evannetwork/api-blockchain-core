@@ -115,6 +115,7 @@ export interface VcOptions extends LoggerOptions {
   web3: any;
 }
 
+const vcRegEx = /^vc:evan:(?:(testcore|core):)?(0x(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64}))$/;
 /**
  * Module for storing VCs in and retrieving VCs from the VC registry
  *
@@ -196,10 +197,20 @@ export class Vc extends Logger {
    * @throws If an invalid VC ID is given or no document is registered under this ID.
    */
   public async getVC(vcId: string): Promise<VcDocument> {
+    // Check whether the full URI (vc:evan:[vcId]) or just the internal ID was given
+    let identityAddress = vcId;
+    if(!identityAddress.startsWith('0x')) {
+      const groups = vcRegEx.exec(vcId);
+      if (!groups) {
+        throw new Error(`Given VC ID ("${vcId}") is no valid evan VC ID`);
+      }
+      identityAddress = groups[2];
+    }
+
     const vcDfsHash = await this.options.executor.executeContractCall(
       await this.getRegistryContract(),
       'vcStore',
-      vcId,
+      identityAddress,
     );
 
     if (vcDfsHash === nullBytes32) {
