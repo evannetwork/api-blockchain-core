@@ -1,20 +1,38 @@
-import {
-  Logger, LoggerOptions, Executor, AccountStore, ContractLoader, DfsInterface
-} from '@evan.network/dbcp'
+/*
+  Copyright (C) 2018-present evan GmbH.
+
+  This program is free software: you can redistribute it and/or modify it
+  under the terms of the GNU Affero General Public License, version 3,
+  as published by the Free Software Foundation.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program. If not, see http://www.gnu.org/licenses/ or
+  write to the Free Software Foundation, Inc., 51 Franklin Street,
+  Fifth Floor, Boston, MA, 02110-1301 USA, or download the license from
+  the following URL: https://evan.network/license/
+*/
 
 import  * as didJWT from 'did-jwt';
 
+import { nullBytes32 } from '../common/utils';
 import {
+  AccountStore,
+  ContractLoader,
+  DfsInterface,
+  Did,
+  Executor,
+  Logger,
+  LoggerOptions,
   NameResolver,
-  Verifications,
   SignerIdentity,
+  Verifications,
 } from '../index';
 
-import {
-  Did
-} from '../did/did';
-
-import { nullBytes32 } from '../common/utils';
 
 /**
  * A valid VC document
@@ -122,10 +140,9 @@ const vcRegEx = /^vc:evan:(?:(testcore|core):)?(0x(?:[0-9a-fA-F]{40}|[0-9a-fA-F]
  * @class Vc
  */
 export class Vc extends Logger {
+  public did: Did;
 
   public options: VcOptions;
-
-  public did: Did;
 
   private cache: any = {};
 
@@ -139,6 +156,39 @@ export class Vc extends Logger {
     super(options as LoggerOptions);
     this.options = options;
     this.did = did;
+  }
+
+  /**
+   * Returns a VC document for a given ID.
+   *
+   * @param vcId The registry ID the VC document is associated with.
+   *
+   * @returns {Promise<VcDocument} A VC document stored in the registry.
+   *
+   * @throws If an invalid VC ID is given or no document is registered under this ID.
+   */
+  public async getVc(vcId: string): Promise<VcDocument> {
+    // Check whether the full URI (vc:evan:[vcId]) or just the internal ID was given
+    let identityAddress = vcId;
+    if(!identityAddress.startsWith('0x')) {
+      const groups = vcRegEx.exec(vcId);
+      if (!groups) {
+        throw new Error(`Given VC ID ("${vcId}") is no valid evan VC ID`);
+      }
+      identityAddress = groups[2];
+    }
+
+    const vcDfsHash = await this.options.executor.executeContractCall(
+      await this.getRegistryContract(),
+      'vcStore',
+      identityAddress,
+    );
+
+    if (vcDfsHash === nullBytes32) {
+      throw Error(`VC for address ${vcDfsHash} does not exist`);
+    }
+
+    return JSON.parse(await this.options.dfs.get(vcDfsHash) as any) as VcDocument;
   }
 
   /**
@@ -188,68 +238,6 @@ export class Vc extends Logger {
   }
 
   /**
-   * Returns a VC document for a given ID.
-   *
-   * @param vcId The registry ID the VC document is associated with.
-   *
-   * @returns {Promise<VcDocument} A VC document stored in the registry.
-   *
-   * @throws If an invalid VC ID is given or no document is registered under this ID.
-   */
-  public async getVc(vcId: string): Promise<VcDocument> {
-    // Check whether the full URI (vc:evan:[vcId]) or just the internal ID was given
-    let identityAddress = vcId;
-    if(!identityAddress.startsWith('0x')) {
-      const groups = vcRegEx.exec(vcId);
-      if (!groups) {
-        throw new Error(`Given VC ID ("${vcId}") is no valid evan VC ID`);
-      }
-      identityAddress = groups[2];
-    }
-
-    const vcDfsHash = await this.options.executor.executeContractCall(
-      await this.getRegistryContract(),
-      'vcStore',
-      identityAddress,
-    );
-
-    if (vcDfsHash === nullBytes32) {
-      throw Error(`VC for address ${vcDfsHash} does not exist`);
-    }
-
-    return JSON.parse(await this.options.dfs.get(vcDfsHash) as any) as VcDocument;
-  }
-
-  /**
-   * Checks various criteria a VC document has to meet
-   *
-   * @param document The VC document to check.
-   * @returns {Promise<void>} If the checks are succesfull.
-   * @throws If any of the criteria is not met.
-   */
-  private async validateVcDocument(document: VcDocument): Promise<void> {
-    // Subject
-    if (!document.credentialSubject.did) {
-      throw new Error('No Subject ID provided');
-    }
-    await this.did.validateDid(document.credentialSubject.did);
-
-    // Issuer
-    if (!document.issuer.did) {
-      throw new Error('No Issuer ID provided');
-    }
-    await this.did.validateDid(document.issuer.did);
-
-    // Proof
-    if (!document.proof || !document.proof.jws || document.proof.jws === '') {
-      throw new Error('VC misses proof');
-    } else if (!document.proof.type) {
-      throw new Error('VC proof misses type');
-    }
-    await this.validateProof(document);
-  }
-
-  /**
    * Associates the active identity with a new ID in the registry to store a VC at.
    * @returns {Promise<string>} The reserved ID.
    */
@@ -262,6 +250,28 @@ export class Vc extends Logger {
         getEventResult: (event, args) => args.vcId,
       },
     );
+  }
+
+  /**
+   * Create a JWT over a VC document
+   *
+   * @param vc The VC document
+   * @param proofType The type of algorithm used for generating the JWT
+   * @returns The JWT
+   */
+  private async createJWTForVc(vc: VcDocument, proofType: VcProofType): Promise<string> {
+    const signer = didJWT.SimpleSigner(await this.options.accountStore.getPrivateKey(this.options.activeAccount));
+    let jwt = '';
+    await didJWT.createJWT(
+      { vc: vc,
+        exp: vc.validUntil
+      },{
+        alg: JWTProofMapping[proofType],
+        issuer: vc.issuer.did,
+        signer
+      }).then( response => { jwt = response });
+
+    return jwt;
   }
 
   /**
@@ -297,28 +307,6 @@ export class Vc extends Logger {
     };
 
     return proof;
-  }
-
-  /**
-   * Create a JWT over a VC document
-   *
-   * @param vc The VC document
-   * @param proofType The type of algorithm used for generating the JWT
-   * @returns The JWT
-   */
-  private async createJWTForVc(vc: VcDocument, proofType: VcProofType): Promise<string> {
-    const signer = didJWT.SimpleSigner(await this.options.accountStore.getPrivateKey(this.options.activeAccount));
-    let jwt = '';
-    await didJWT.createJWT(
-      { vc: vc,
-        exp: vc.validUntil
-      },{
-        alg: JWTProofMapping[proofType],
-        issuer: vc.issuer.did,
-        signer
-      }).then( response => { jwt = response });
-
-    return jwt;
   }
 
   /**
@@ -382,5 +370,34 @@ export class Vc extends Logger {
       }
     };
     await didJWT.verifyJWT(document.proof.jws, {resolver: resolver})
+  }
+
+  /**
+   * Checks various criteria a VC document has to meet
+   *
+   * @param document The VC document to check.
+   * @returns {Promise<void>} If the checks are succesfull.
+   * @throws If any of the criteria is not met.
+   */
+  private async validateVcDocument(document: VcDocument): Promise<void> {
+    // Subject
+    if (!document.credentialSubject.did) {
+      throw new Error('No Subject ID provided');
+    }
+    await this.did.validateDid(document.credentialSubject.did);
+
+    // Issuer
+    if (!document.issuer.did) {
+      throw new Error('No Issuer ID provided');
+    }
+    await this.did.validateDid(document.issuer.did);
+
+    // Proof
+    if (!document.proof || !document.proof.jws || document.proof.jws === '') {
+      throw new Error('VC misses proof');
+    } else if (!document.proof.type) {
+      throw new Error('VC proof misses type');
+    }
+    await this.validateProof(document);
   }
 }
