@@ -105,32 +105,6 @@ export class Did extends Logger {
   }
 
   /**
-   * Validates if a given DID is a valid evan DID.
-   *
-   * @param did DID to validate.
-   * @returns {Promise<void>} If the DID is valid.
-   * @throws If the DID is not valid.
-   */
-  public async validateDid(did: string): Promise<void> {
-    await this.validateDidAndGetSections(did);
-  }
-
-  /**
-   * Validates if a given DID is a valid evan DID and returns its parts.
-   *
-   * @param did DID to validate.
-   * @returns {Promise<RegExpExecArray>} The parts of the DID if it is valid.
-   * @throws If the DID is not valid.
-   */
-  private async validateDidAndGetSections(did: string): Promise<RegExpExecArray> {
-    const groups = didRegEx.exec(did);
-    if (!groups) {
-      throw new Error(`Given did ("${did}") is no valid evan DID`);
-    }
-    return groups;
-  }
-
-  /**
    * Converts given DID to a evan.network identity.
    *
    * @param      {string}  did      a DID like
@@ -160,6 +134,30 @@ export class Did extends Logger {
    */
   public async convertIdentityToDid(identity: string): Promise<string> {
     return `did:evan:${await this.getDidInfix()}${identity}`;
+  }
+
+  /**
+   * Get DID document for given DID.
+   *
+   * @param      {string}  did     DID to fetch DID document for
+   * @return     {Promise<any>}    a DID document that MAY resemble `DidDocumentTemplate` format
+   */
+  public async getDidDocument(did: string): Promise<any> {
+    let result = null;
+    const identity = this.padIdentity(did ?
+      await this.convertDidToIdentity(did) :
+      this.options.signerIdentity.activeIdentity
+    );
+    const documentHash = await this.options.executor.executeContractCall(
+      await this.getRegistryContract(),
+      'didDocuments',
+      identity,
+    );
+    if (documentHash !== nullBytes32) {
+      result = JSON.parse(await this.options.dfs.get(documentHash) as any);
+      result = await this.removePublicKeyTypeArray(result);
+    }
+    return result;
   }
 
   /**
@@ -216,34 +214,10 @@ export class Did extends Logger {
   }
 
   /**
-   * Get DID document for given DID.
-   *
-   * @param      {string}  did     DID to fetch DID document for
-   * @return     {Promise<any>}    a DID document that MAY resemble `DidDocumentTemplate` format
-   */
-  public async getDidDocument(did: string): Promise<any> {
-    let result = null;
-    const identity = this.padIdentity(did ?
-      await this.convertDidToIdentity(did) :
-      this.options.signerIdentity.activeIdentity
-    );
-    const documentHash = await this.options.executor.executeContractCall(
-      await this.getRegistryContract(),
-      'didDocuments',
-      identity,
-    );
-    if (documentHash !== nullBytes32) {
-      result = JSON.parse(await this.options.dfs.get(documentHash) as any);
-      result = await this.removePublicKeyTypeArray(result);
-    }
-    return result;
-  }
-
-  /**
    * Get service from DID document.
    *
    * @param      {string}  did     DID name to get service for
-   * @return     {Promise<DidServiceEntry[] | DidServiceEntry>}   service
+   * @return     {Promise<DidServiceEntry[] | DidServiceEntry>}  service
    */
   public async getService(did: string
   ): Promise<DidServiceEntry[] | DidServiceEntry> {
@@ -276,8 +250,7 @@ export class Did extends Logger {
   /**
    * Sets service in DID document.
    *
-   * @param      {string}                                               did      DID name to set
-   *                                                                             service for
+   * @param      {string}                               did      DID name to set service for
    * @param      {DidServiceEntry[] | DidServiceEntry}  service  service to set
    * @return     {Promise<void>}  resolved when done
    */
@@ -285,6 +258,17 @@ export class Did extends Logger {
     did: string, service: DidServiceEntry[] | DidServiceEntry
   ): Promise<void> {
     await this.setDidDocument(did, { ...(await this.getDidDocument(did)), service, });
+  }
+
+  /**
+   * Validates if a given DID is a valid evan DID.
+   *
+   * @param did DID to validate.
+   * @returns {Promise<void>} If the DID is valid.
+   * @throws If the DID is not valid.
+   */
+  public async validateDid(did: string): Promise<void> {
+    await this.validateDidAndGetSections(did);
   }
 
   /**
@@ -342,11 +326,11 @@ export class Did extends Logger {
   }
 
   /**
-   * Method to ensure no public key array types are written into a retrieved did document.
-   * This is just a legacy method because we still have various faulty DID documents stored that have
-   * an array as the publicKey.type property.
+   * Method to ensure no public key array types are written into a retrieved did document. This is
+   * just a legacy method because we still have various faulty DID documents stored that have an
+   * array as the publicKey.type property.
    *
-   * @param result The cleaned and valid DID document
+   * @param      {any}  result  The cleaned and valid DID document
    */
   private async removePublicKeyTypeArray(result: any): Promise<any> {
     // TODO: Method can be deleted as soon as there is a real DID validation in place
@@ -361,5 +345,20 @@ export class Did extends Logger {
       }
     }
     return cleanedResult;
+  }
+
+  /**
+   * Validates if a given DID is a valid evan DID and returns its parts.
+   *
+   * @param      {string}  did     DID to validate.
+   * @return     {Promise<RegExpExecArray>}  The parts of the DID if it is valid.
+   * @throws           If the DID is not valid.
+   */
+  private async validateDidAndGetSections(did: string): Promise<RegExpExecArray> {
+    const groups = didRegEx.exec(did);
+    if (!groups) {
+      throw new Error(`Given did ("${did}") is no valid evan DID`);
+    }
+    return groups;
   }
 }

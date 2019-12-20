@@ -61,16 +61,16 @@ describe('VC Resolver', function() {
 
   describe('When creating a VC', async () => {
     it('allows me to store a valid VC', async () => {
-      const createdVcDoc = await runtime.vc.storeNewVC(minimalVcData);
+      const createdVcDoc = await runtime.vc.storeNewVc(minimalVcData);
       const vcId = createdVcDoc.id.replace('vc:evan:', '');
-      const fetchedVcDoc = await runtime.vc.getVC(vcId.replace('testcore:', ''));
+      const fetchedVcDoc = await runtime.vc.getVc(vcId.replace('testcore:', ''));
 
       expect(createdVcDoc.id).to.eq(fetchedVcDoc.id);
       expect(createdVcDoc.issuer.did).to.eq(fetchedVcDoc.issuer.did);
     });
 
     it('Creates a valid proof if none is given', async() => {
-      const createdVcDoc = await runtime.vc.storeNewVC(minimalVcData);
+      const createdVcDoc = await runtime.vc.storeNewVc(minimalVcData);
 
       expect(createdVcDoc.proof).not.to.be.undefined;
       expect(createdVcDoc.proof.jws).not.to.be.undefined;
