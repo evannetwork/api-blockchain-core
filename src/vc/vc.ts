@@ -149,8 +149,8 @@ export class Vc extends Logger {
    *
    * @return {Promise<VcDocument} The final VC document as it is stored in the registry.
    */
-  public async storeNewVC(vcData: VcDocumentTemplate): Promise<VcDocument> {
-    const vcId = await this.buyVCId();
+  public async storeNewVc(vcData: VcDocumentTemplate): Promise<VcDocument> {
+    const vcId = await this.buyVcId();
     const types = vcData.type ? vcData.type : ['VerifiableCredential']
 
     const w3cMandatoryContext = 'https://www.w3.org/2018/credentials/v1';
@@ -171,14 +171,14 @@ export class Vc extends Logger {
       documentToStore.proof = await this.createProofForVc(documentToStore);
     }
 
-    await this.validateVCDocument(documentToStore);
+    await this.validateVcDocument(documentToStore);
 
     const vcDfsAddress = await this.options.dfs.add('vc',
       Buffer.from(JSON.stringify(documentToStore), 'utf-8'));
 
     await this.options.executor.executeContractTransaction(
       await this.getRegistryContract(),
-      'setVC',
+      'setVc',
       { from: this.options.signerIdentity.activeIdentity },
       vcId,
       vcDfsAddress,
@@ -196,7 +196,7 @@ export class Vc extends Logger {
    *
    * @throws If an invalid VC ID is given or no document is registered under this ID.
    */
-  public async getVC(vcId: string): Promise<VcDocument> {
+  public async getVc(vcId: string): Promise<VcDocument> {
     // Check whether the full URI (vc:evan:[vcId]) or just the internal ID was given
     let identityAddress = vcId;
     if(!identityAddress.startsWith('0x')) {
@@ -227,7 +227,7 @@ export class Vc extends Logger {
    * @returns {Promise<void>} If the checks are succesfull.
    * @throws If any of the criteria is not met.
    */
-  private async validateVCDocument(document: VcDocument): Promise<void> {
+  private async validateVcDocument(document: VcDocument): Promise<void> {
     // Subject
     if (!document.credentialSubject.did) {
       throw new Error('No Subject ID provided');
@@ -253,7 +253,7 @@ export class Vc extends Logger {
    * Associates the active identity with a new ID in the registry to store a VC at.
    * @returns {Promise<string>} The reserved ID.
    */
-  private async buyVCId(): Promise<string> {
+  private async buyVcId(): Promise<string> {
     return await this.options.executor.executeContractTransaction(
       await this.getRegistryContract(),
       'createId', {
@@ -284,7 +284,7 @@ export class Vc extends Logger {
       throw Error('You are not authorized to issue this VC');
     }
 
-    const jwt = await this.createJWTForVC(vc, proofType);
+    const jwt = await this.createJWTForVc(vc, proofType);
 
     const verMethod = await this.getPublicKeyURIFromDid(vc.issuer.did);
 
@@ -306,7 +306,7 @@ export class Vc extends Logger {
    * @param proofType The type of algorithm used for generating the JWT
    * @returns The JWT
    */
-  private async createJWTForVC(vc: VcDocument, proofType: VcProofType): Promise<string> {
+  private async createJWTForVc(vc: VcDocument, proofType: VcProofType): Promise<string> {
     const signer = didJWT.SimpleSigner(await this.options.accountStore.getPrivateKey(this.options.activeAccount));
     let jwt = '';
     await didJWT.createJWT(
