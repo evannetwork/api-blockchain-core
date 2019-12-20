@@ -36,10 +36,8 @@ describe('VC Resolver', function() {
   let verifications: Verifications;
   const issuerAccountId = accounts[0];
   const subjectAccountId = accounts[1];
-  const nonIssuerAccountId = accounts[2];
   let issuerIdentityId;
   let subjectIdentityId;
-  let nonIssuerIdentityId;
 
   let minimalVcData: VcDocumentTemplate;
 
@@ -123,16 +121,13 @@ describe('VC Resolver', function() {
       await expect(createdVcDoc).to.be.rejected
     });
 
-    it.skip('should not allow to store a VC where you are not the issuer', async () => {
+    // it.skip('should not allow to store a VC where you are not the issuer', async () => { 
+    // });
 
-    });
+    // (it.skip('should not allow to store a VC where you are not the issuer on smart contract level', async () => {
+    // });
 
-    it.skip('should not allow to store a VC where you are not the issuer on smart contract level', async () => {
-
-    });
-
-    it.skip('should not create a VC with invalid proof', async () => {
-
-    });                   
+    // it.skip('should not create a VC with invalid proof', async () => {
+    // });                   
   });
 });
