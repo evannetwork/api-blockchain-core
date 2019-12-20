@@ -75,7 +75,7 @@ export interface VcCredentialStatus {
  * Information about a VC's subject
  */
 export interface VcCredentialSubject {
-  did: string;
+  id: string;
   data?: VcCredentialSubjectPayload[];
   description?: string;
   uri?: string;
@@ -93,7 +93,7 @@ export interface VcCredentialSubjectPayload {
  * Issuer of a VC
  */
 export interface VcIssuer {
-  did: string;
+  id: string;
   name?: string;
 }
 
@@ -266,7 +266,7 @@ export class Vc extends Logger {
         exp: vc.validUntil
       },{
         alg: JWTProofMapping[proofType],
-        issuer: vc.issuer.did,
+        issuer: vc.issuer.id,
         signer
       }).then( response => { jwt = response });
 
@@ -286,7 +286,7 @@ export class Vc extends Logger {
   private async createProofForVc(vc: VcDocument,
     proofType: VcProofType = VcProofType.EcdsaPublicKeySecp256k1): Promise<VcProof> {
 
-    const issuerIdentity = await this.did.convertDidToIdentity(vc.issuer.did)
+    const issuerIdentity = await this.did.convertDidToIdentity(vc.issuer.id)
     const accountIdentity = await this.options.verifications.getIdentityForAccount(this.options.activeAccount, true);
 
     if (accountIdentity !== issuerIdentity) {
@@ -295,7 +295,7 @@ export class Vc extends Logger {
 
     const jwt = await this.createJWTForVc(vc, proofType);
 
-    const verMethod = await this.getPublicKeyUriFromDid(vc.issuer.did);
+    const verMethod = await this.getPublicKeyUriFromDid(vc.issuer.id);
 
     const proof: VcProof = {
       type: `${proofType}`,
@@ -363,7 +363,7 @@ export class Vc extends Logger {
     const didResolver = this.did;
     const resolver = {
       async resolve() {
-        const doc = await didResolver.getDidDocument(document.issuer.did);
+        const doc = await didResolver.getDidDocument(document.issuer.id);
         return doc as any;
       }
     };
@@ -379,16 +379,16 @@ export class Vc extends Logger {
    */
   private async validateVcDocument(document: VcDocument): Promise<void> {
     // Subject
-    if (!document.credentialSubject.did) {
+    if (!document.credentialSubject.id) {
       throw new Error('No Subject ID provided');
     }
-    await this.did.validateDid(document.credentialSubject.did);
+    await this.did.validateDid(document.credentialSubject.id);
 
     // Issuer
-    if (!document.issuer.did) {
+    if (!document.issuer.id) {
       throw new Error('No Issuer ID provided');
     }
-    await this.did.validateDid(document.issuer.did);
+    await this.did.validateDid(document.issuer.id);
 
     // Proof
     if (!document.proof || !document.proof.jws || document.proof.jws === '') {
