@@ -16,6 +16,9 @@ import {
 
 import { nullBytes32 } from '../common/utils';
 
+/**
+ * A valid VC document
+ */
 export interface VcResolverDocument {
   '@context': string[];
   id: string;
@@ -28,6 +31,9 @@ export interface VcResolverDocument {
   proof?: VcResolverProof;
 }
 
+/**
+ * Template for a VC that will be converted into a valid VC by the resolver
+ */
 export interface VcResolverDocumentTemplate {
   '@context'?: string[];
   type?: string[];
@@ -39,11 +45,17 @@ export interface VcResolverDocumentTemplate {
   proof?: VcResolverProof;
 }
 
+/**
+ * A VC's credential status property
+ */
 export interface VcResolverCredentialStatus {
   id: string;
   type: string;
 }
 
+/**
+ * Information about a VC's subject
+ */
 export interface VcResolverCredentialSubject {
   id: string;
   data?: VcResolverCredentialSubjectPayload[];
@@ -51,16 +63,25 @@ export interface VcResolverCredentialSubject {
   uri?: string;
 }
 
+/**
+ * (Optional) Payload for a VC credential subject
+ */
 export interface VcResolverCredentialSubjectPayload {
   name: string;
   value: string;
 }
 
+/**
+ * Issuer of a VC
+ */
 export interface VcResolverIssuer {
-  id: string;
+  did: string;
   name?: string;
 }
 
+/**
+ * The proof for a VC, containing the JWS and metadata
+ */
 export interface VcResolverProof {
   type: string;
   created: string;
@@ -69,6 +90,9 @@ export interface VcResolverProof {
   jws: string;
 }
 
+/**
+ * Holds a list of supported proof types for VC (JWS) proofs
+ */
 export const enum VcResolverProofType {
   EcdsaPublicKeySecp256k1 = 'EcdsaPublicKeySecp256k1',
 }
@@ -76,6 +100,9 @@ export const enum VcResolverProofType {
 const JWTProofMapping = {};
 JWTProofMapping[(VcResolverProofType.EcdsaPublicKeySecp256k1)] =  'ES256K-R';
 
+/**
+ * Options for the VcResolver
+ */
 export interface VcResolverOptions extends LoggerOptions {
   accountStore: AccountStore;
   activeAccount: string;
@@ -197,10 +224,10 @@ export class VcResolver extends Logger {
     await this.didResolver.validateDid(document.credentialSubject.id);
 
     // Issuer
-    if (!document.issuer.id) {
+    if (!document.issuer.did) {
       throw new Error('No Issuer ID provided');
     }
-    await this.didResolver.validateDid(document.issuer.id);
+    await this.didResolver.validateDid(document.issuer.did);
 
     // Proof
     if (!document.proof || !document.proof.jws || document.proof.jws === '') {
@@ -208,6 +235,7 @@ export class VcResolver extends Logger {
     } else if (!document.proof.type) {
       throw new Error('VC proof misses type');
     }
+    await this.validateProof(document);
   }
 
   /**
@@ -238,7 +266,7 @@ export class VcResolver extends Logger {
   private async createProofForVc(vc: VcResolverDocument,
     proofType: VcResolverProofType = VcResolverProofType.EcdsaPublicKeySecp256k1): Promise<VcResolverProof> {
 
-    const issuerIdentity = await this.didResolver.convertDidToIdentity(vc.issuer.id)
+    const issuerIdentity = await this.didResolver.convertDidToIdentity(vc.issuer.did)
     const accountIdentity = await this.options.verifications.getIdentityForAccount(this.options.activeAccount, true);
 
     if (accountIdentity !== issuerIdentity) {
@@ -247,7 +275,7 @@ export class VcResolver extends Logger {
 
     const jwt = await this.createJWTForVC(vc, proofType);
 
-    const verMethod = await this.getPublicKeyURIFromDid(vc.issuer.id);
+    const verMethod = await this.getPublicKeyURIFromDid(vc.issuer.did);
 
     const proof: VcResolverProof = {
       type: `${proofType}`,
@@ -275,7 +303,7 @@ export class VcResolver extends Logger {
         exp: vc.validUntil
       },{
         alg: JWTProofMapping[proofType],
-        issuer: vc.issuer.id,
+        issuer: vc.issuer.did,
         signer
       }).then( response => { jwt = response });
 
@@ -323,5 +351,19 @@ export class VcResolver extends Logger {
     }
 
     return this.cache.vcRegistryContract;
+  }
+
+  private async validateProof(document: VcResolverDocument) {
+    // Mock the did-resolver package that did-jwt usually requires
+    const didResolver = this.didResolver;
+    const resolver = {
+      async resolve() {
+        const doc = await didResolver.getDidDocument(document.issuer.did);
+        // TODO: Workaround until we fix the public key type array structure (bc that is not allowed)
+        doc.publicKey[0].type = 'Secp256k1SignatureVerificationKey2018';
+        return doc as any;
+      }
+    };
+    didJWT.verifyJWT(document.proof.jws, {resolver: resolver})
   }
 }
