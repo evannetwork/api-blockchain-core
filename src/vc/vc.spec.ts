@@ -48,10 +48,10 @@ describe('VC Resolver', function() {
     subjectIdentityId = await verifications.getIdentityForAccount(subjectAccountId, true);
     minimalVcData = {
       issuer: {
-        id: await runtime.did.convertIdentityToDid(issuerIdentityId),
+        did: await runtime.did.convertIdentityToDid(issuerIdentityId),
       },
       credentialSubject: {
-        id: await runtime.did.convertIdentityToDid(subjectIdentityId),
+        did: await runtime.did.convertIdentityToDid(subjectIdentityId),
       },
       validFrom: new Date(Date.now()).toISOString()
     };
