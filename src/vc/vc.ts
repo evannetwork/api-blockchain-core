@@ -198,8 +198,8 @@ export class Vc extends Logger {
    *                                           data.
    * @return     {Promise<VcDocument}  The final VC document as it is stored in the registry.
    */
-  public async storeNewVc(vcData: VcDocumentTemplate): Promise<VcDocument> {
-    const vcId = await this.buyVcId();
+  public async setVc(vcData: VcDocumentTemplate): Promise<VcDocument> {
+    const vcId = await this.createId();
     const types = vcData.type ? vcData.type : ['VerifiableCredential']
 
     const w3cMandatoryContext = 'https://www.w3.org/2018/credentials/v1';
@@ -241,7 +241,7 @@ export class Vc extends Logger {
    *
    * @return     {Promise<string>}  The reserved ID.
    */
-  private async buyVcId(): Promise<string> {
+  private async createId(): Promise<string> {
     return await this.options.executor.executeContractTransaction(
       await this.getRegistryContract(),
       'createId', {
@@ -295,7 +295,7 @@ export class Vc extends Logger {
 
     const jwt = await this.createJWTForVc(vc, proofType);
 
-    const verMethod = await this.getPublicKeyURIFromDid(vc.issuer.did);
+    const verMethod = await this.getPublicKeyUriFromDid(vc.issuer.did);
 
     const proof: VcProof = {
       type: `${proofType}`,
@@ -316,7 +316,7 @@ export class Vc extends Logger {
    * @throws           If there is no authentication material given in the DID or no key matching the
    *                   active identity is found.
    */
-  private async getPublicKeyURIFromDid(issuerDid: string): Promise<string> {
+  private async getPublicKeyUriFromDid(issuerDid: string): Promise<string> {
     const signaturePublicKey =
       await this.options.signerIdentity.getPublicKey(this.options.signerIdentity.underlyingAccount);
     const doc = await this.did.getDidDocument(issuerDid);
