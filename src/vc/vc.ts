@@ -376,8 +376,6 @@ export class Vc extends Logger {
     const resolver = {
       async resolve() {
         const doc = await didResolver.getDidDocument(document.issuer.did);
-        // TODO: Workaround until we fix the public key type array structure (bc that is not allowed)
-        doc.publicKey[0].type = 'Secp256k1SignatureVerificationKey2018';
         return doc as any;
       }
     };

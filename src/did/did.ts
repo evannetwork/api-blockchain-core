@@ -51,7 +51,7 @@ export interface DidDocumentTemplate {
   }[];
   publicKey?: {
     id: string;
-    type: string[];
+    type: string;
     publicKeyHex: string;
   }[];
   service?: {
@@ -203,7 +203,7 @@ export class Did extends Logger {
         "id": "did:evan:${didInfix}${identity}",
         "publicKey": [{
           "id": "did:evan:${didInfix}${identity}#key-1",
-          "type": ["Secp256k1SignatureVerificationKey2018", "ERC725ManagementKey"],
+          "type": "Secp256k1SignatureVerificationKey2018",
           "publicKeyHex": "${publicKey}"
         }],
         "authentication": [
@@ -234,6 +234,7 @@ export class Did extends Logger {
     );
     if (documentHash !== nullBytes32) {
       result = JSON.parse(await this.options.dfs.get(documentHash) as any);
+      result = await this.removePublicKeyTypeArray(result);
     }
     return result;
   }
@@ -338,5 +339,27 @@ export class Did extends Logger {
     return identity.length !== 66 ?
       `0x${identity.replace(/^0x/, '').padStart(64, '0')}` :
       identity;
+  }
+
+  /**
+   * Method to ensure no public key array types are written into a retrieved did document.
+   * This is just a legacy method because we still have various faulty DID documents stored that have
+   * an array as the publicKey.type property.
+   *
+   * @param result The cleaned and valid DID document
+   */
+  private async removePublicKeyTypeArray(result: any): Promise<any> {
+    // TODO: Method can be deleted as soon as there is a real DID validation in place
+    const cleanedResult = result;
+    let keyTypes = [];
+
+    for (const pos in result.publicKey) {
+      // Discard ERC725ManagementKey type entry
+      if (result.publicKey[pos].type instanceof Array) {
+        keyTypes = result.publicKey[pos].type.filter(type => !type.startsWith('ERC725'));
+        cleanedResult.publicKey[pos].type = keyTypes[0];
+      }
+    }
+    return cleanedResult;
   }
 }
