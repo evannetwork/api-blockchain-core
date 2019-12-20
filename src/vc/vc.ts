@@ -353,7 +353,13 @@ export class Vc extends Logger {
     return this.cache.vcRegistryContract;
   }
 
-  private async validateProof(document: VcDocument) {
+  /**
+   * Validates the JWS of a VC Document proof
+   *
+   * @param document The VC Document
+   * @returns {Promise<void>} Resolves when done
+   */
+  private async validateProof(document: VcDocument): Promise<void> {
     // Mock the did-resolver package that did-jwt usually requires
     const didResolver = this.did;
     const resolver = {
@@ -364,6 +370,6 @@ export class Vc extends Logger {
         return doc as any;
       }
     };
-    didJWT.verifyJWT(document.proof.jws, {resolver: resolver})
+    await didJWT.verifyJWT(document.proof.jws, {resolver: resolver})
   }
 }
