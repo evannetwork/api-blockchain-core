@@ -36,7 +36,10 @@ import {
 
 const didRegEx = /^did:evan:(?:(testcore|core):)?(0x(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64}))$/;
 
-export interface DidResolverDocumentTemplate {
+/**
+ * template for a new DID document, can be used as a starting point for building own documents
+ */
+export interface DidDocumentTemplate {
   '@context': string;
   id: string;
   authentication: {
@@ -61,7 +64,7 @@ export interface DidResolverDocumentTemplate {
 /**
  * interface for services in DIDs
  */
-export interface DidResolverServiceEntry {
+export interface DidServiceEntry {
   type: any;
   serviceEndpoint: any;
   '@context'?: any;
@@ -70,9 +73,9 @@ export interface DidResolverServiceEntry {
 }
 
 /**
- * options for DidResolver constructor
+ * options for Did constructor
  */
-export interface DidResolverOptions extends LoggerOptions {
+export interface DidOptions extends LoggerOptions {
   contractLoader: ContractLoader;
   dfs: DfsInterface;
   executor: Executor;
@@ -84,18 +87,18 @@ export interface DidResolverOptions extends LoggerOptions {
 /**
  * module for working with did resolver registry
  *
- * @class      DidResolver (name)
+ * @class      Did (name)
  */
-export class DidResolver extends Logger {
+export class Did extends Logger {
   private cached: any;
-  private options: DidResolverOptions;
+  private options: DidOptions;
 
   /**
-   * Creates a new `DidResolver` instance.
+   * Creates a new `Did` instance.
    *
-   * @param      {DidResolverOptions}  options  runtime like options for `DidResolver`
+   * @param      {DidOptions}  options  runtime like options for `Did`
    */
-  public constructor(options: DidResolverOptions) {
+  public constructor(options: DidOptions) {
     super(options as LoggerOptions);
     this.options = options;
     this.cached = {};
@@ -172,11 +175,11 @@ export class DidResolver extends Logger {
    * @param      {string}  did                   (optional) contract DID
    * @param      {string}  controllerDid         (optional) controller of contracts identity (DID)
    * @param      {string}  authenticationKey     (optional) authentication key used for contract
-   * @return     {Promise<DidResolverDocumentTemplate>}  a DID document template
+   * @return     {Promise<DidDocumentTemplate>}  a DID document template
    */
-  public async getDidResolverDocumentTemplate(
+  public async getDidDocumentTemplate(
     did?: string, controllerDid?: string, authenticationKey?: string
-  ): Promise<DidResolverDocumentTemplate> {
+  ): Promise<DidDocumentTemplate> {
     if (did && controllerDid && authenticationKey) {
       // use given key to create a contract DID document
       return JSON.parse(`{
@@ -216,7 +219,7 @@ export class DidResolver extends Logger {
    * Get DID document for given DID.
    *
    * @param      {string}  did     DID to fetch DID document for
-   * @return     {Promise<any>}    a DID document that MAY resemble `DidResolverDocumentTemplate` format
+   * @return     {Promise<any>}    a DID document that MAY resemble `DidDocumentTemplate` format
    */
   public async getDidDocument(did: string): Promise<any> {
     let result = null;
@@ -239,10 +242,10 @@ export class DidResolver extends Logger {
    * Get service from DID document.
    *
    * @param      {string}  did     DID name to get service for
-   * @return     {Promise<DidResolverServiceEntry[] | DidResolverServiceEntry>}   service
+   * @return     {Promise<DidServiceEntry[] | DidServiceEntry>}   service
    */
   public async getService(did: string
-  ): Promise<DidResolverServiceEntry[] | DidResolverServiceEntry> {
+  ): Promise<DidServiceEntry[] | DidServiceEntry> {
     return (await this.getDidDocument(did)).service;
   }
 
@@ -274,11 +277,11 @@ export class DidResolver extends Logger {
    *
    * @param      {string}                                               did      DID name to set
    *                                                                             service for
-   * @param      {DidResolverServiceEntry[] | DidResolverServiceEntry}  service  service to set
+   * @param      {DidServiceEntry[] | DidServiceEntry}  service  service to set
    * @return     {Promise<void>}  resolved when done
    */
   public async setService(
-    did: string, service: DidResolverServiceEntry[] | DidResolverServiceEntry
+    did: string, service: DidServiceEntry[] | DidServiceEntry
   ): Promise<void> {
     await this.setDidDocument(did, { ...(await this.getDidDocument(did)), service, });
   }

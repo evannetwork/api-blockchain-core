@@ -11,57 +11,57 @@ import {
 } from '../index';
 
 import {
-  DidResolver
-} from '../did/did-resolver';
+  Did
+} from '../did/did';
 
 import { nullBytes32 } from '../common/utils';
 
-export interface VcResolverDocument {
+export interface VcDocument {
   '@context': string[];
   id: string;
   type: string[];
-  issuer: VcResolverIssuer;
+  issuer: VcIssuer;
   validFrom: string;
   validUntil?: string;
-  credentialSubject: VcResolverCredentialSubject;
-  credentialStatus?: VcResolverCredentialStatus;
-  proof?: VcResolverProof;
+  credentialSubject: VcCredentialSubject;
+  credentialStatus?: VcCredentialStatus;
+  proof?: VcProof;
 }
 
-export interface VcResolverDocumentTemplate {
+export interface VcDocumentTemplate {
   '@context'?: string[];
   type?: string[];
-  issuer: VcResolverIssuer;
+  issuer: VcIssuer;
   validFrom: string;
   validUntil?: string;
-  credentialSubject: VcResolverCredentialSubject;
-  credentialStatus?: VcResolverCredentialStatus;
-  proof?: VcResolverProof;
+  credentialSubject: VcCredentialSubject;
+  credentialStatus?: VcCredentialStatus;
+  proof?: VcProof;
 }
 
-export interface VcResolverCredentialStatus {
+export interface VcCredentialStatus {
   id: string;
   type: string;
 }
 
-export interface VcResolverCredentialSubject {
+export interface VcCredentialSubject {
   id: string;
-  data?: VcResolverCredentialSubjectPayload[];
+  data?: VcCredentialSubjectPayload[];
   description?: string;
   uri?: string;
 }
 
-export interface VcResolverCredentialSubjectPayload {
+export interface VcCredentialSubjectPayload {
   name: string;
   value: string;
 }
 
-export interface VcResolverIssuer {
+export interface VcIssuer {
   id: string;
   name?: string;
 }
 
-export interface VcResolverProof {
+export interface VcProof {
   type: string;
   created: string;
   proofPurpose: string;
@@ -69,14 +69,14 @@ export interface VcResolverProof {
   jws: string;
 }
 
-export const enum VcResolverProofType {
+export const enum VcProofType {
   EcdsaPublicKeySecp256k1 = 'EcdsaPublicKeySecp256k1',
 }
 
 const JWTProofMapping = {};
-JWTProofMapping[(VcResolverProofType.EcdsaPublicKeySecp256k1)] =  'ES256K-R';
+JWTProofMapping[(VcProofType.EcdsaPublicKeySecp256k1)] =  'ES256K-R';
 
-export interface VcResolverOptions extends LoggerOptions {
+export interface VcOptions extends LoggerOptions {
   accountStore: AccountStore;
   activeAccount: string;
   contractLoader: ContractLoader;
@@ -91,37 +91,37 @@ export interface VcResolverOptions extends LoggerOptions {
 /**
  * Module for storing VCs in and retrieving VCs from the VC registry
  *
- * @class VcResolver
+ * @class Vc
  */
-export class VcResolver extends Logger {
+export class Vc extends Logger {
 
-  public options: VcResolverOptions;
+  public options: VcOptions;
 
-  public didResolver: DidResolver;
+  public did: Did;
 
   private cache: any = {};
 
   /**
-   * Creates a new `VcResolver` instance
+   * Creates a new `Vc` instance
    *
-   * @param {VcResolverOptions} options options for `VcResolver`
-   * @param {DidResolver} didResolver Instance of `DidResolver` used for resolving DIDs
+   * @param {VcOptions} options options for `Vc`
+   * @param {Did} did Instance of `Did` used for resolving DIDs
    */
-  public constructor(options: VcResolverOptions, didResolver: DidResolver) {
+  public constructor(options: VcOptions, did: Did) {
     super(options as LoggerOptions);
     this.options = options;
-    this.didResolver = didResolver;
+    this.did = did;
   }
 
   /**
    * Creates a new VC document from a template, registers an ID in the registry
    * and stores the document under the ID.
    *
-   * @param {VcResolverDocumentTemplate} vcData Template for the VC document containing the relevant data.
+   * @param {VcDocumentTemplate} vcData Template for the VC document containing the relevant data.
    *
-   * @return {Promise<VcResolverDocument} The final VC document as it is stored in the registry.
+   * @return {Promise<VcDocument} The final VC document as it is stored in the registry.
    */
-  public async storeNewVC(vcData: VcResolverDocumentTemplate): Promise<VcResolverDocument> {
+  public async storeNewVC(vcData: VcDocumentTemplate): Promise<VcDocument> {
     const vcId = await this.buyVCId();
     const types = vcData.type ? vcData.type : ['VerifiableCredential']
 
@@ -131,7 +131,7 @@ export class VcResolver extends Logger {
       context.push(w3cMandatoryContext);
     }
 
-    const documentToStore: VcResolverDocument = {
+    const documentToStore: VcDocument = {
       '@context': context,
       id: `vc:evan:${vcId}`,
       type: types,
@@ -164,11 +164,11 @@ export class VcResolver extends Logger {
    *
    * @param vcId The registry ID the VC document is associated with.
    *
-   * @returns {Promise<VcResolverDocument} A VC document stored in the registry.
+   * @returns {Promise<VcDocument} A VC document stored in the registry.
    *
    * @throws If an invalid VC ID is given or no document is registered under this ID.
    */
-  public async getVC(vcId: string): Promise<VcResolverDocument> {
+  public async getVC(vcId: string): Promise<VcDocument> {
     const vcDfsHash = await this.options.executor.executeContractCall(
       await this.getRegistryContract(),
       'vcStore',
@@ -179,7 +179,7 @@ export class VcResolver extends Logger {
       throw Error(`VC for address ${vcDfsHash} does not exist`);
     }
 
-    return JSON.parse(await this.options.dfs.get(vcDfsHash) as any) as VcResolverDocument;
+    return JSON.parse(await this.options.dfs.get(vcDfsHash) as any) as VcDocument;
   }
 
   /**
@@ -189,18 +189,18 @@ export class VcResolver extends Logger {
    * @returns {Promise<void>} If the checks are succesfull.
    * @throws If any of the criteria is not met.
    */
-  private async validateVCDocument(document: VcResolverDocument): Promise<void> {
+  private async validateVCDocument(document: VcDocument): Promise<void> {
     // Subject
     if (!document.credentialSubject.id) {
       throw new Error('No Subject ID provided');
     }
-    await this.didResolver.validateDid(document.credentialSubject.id);
+    await this.did.validateDid(document.credentialSubject.id);
 
     // Issuer
     if (!document.issuer.id) {
       throw new Error('No Issuer ID provided');
     }
-    await this.didResolver.validateDid(document.issuer.id);
+    await this.did.validateDid(document.issuer.id);
 
     // Proof
     if (!document.proof || !document.proof.jws || document.proof.jws === '') {
@@ -226,19 +226,19 @@ export class VcResolver extends Logger {
   }
 
   /**
-   * Creates a new `VcResolverProof` object for a given VC document, including generating
+   * Creates a new `VcProof` object for a given VC document, including generating
    * a JWT token over the whole document.
    *
    * @param vc The VC document to create the proof for.
    * @param issuerIdentityId The ID of the VC issuer.
    * @param proofType Specify if you want a proof type different from the default one.
-   * @returns {VcResolverProof} A proof object containing a JWT.
+   * @returns {VcProof} A proof object containing a JWT.
    * @throws If the VC issuer identity and the signer identity differ from each other
    */
-  private async createProofForVc(vc: VcResolverDocument,
-    proofType: VcResolverProofType = VcResolverProofType.EcdsaPublicKeySecp256k1): Promise<VcResolverProof> {
+  private async createProofForVc(vc: VcDocument,
+    proofType: VcProofType = VcProofType.EcdsaPublicKeySecp256k1): Promise<VcProof> {
 
-    const issuerIdentity = await this.didResolver.convertDidToIdentity(vc.issuer.id)
+    const issuerIdentity = await this.did.convertDidToIdentity(vc.issuer.id)
     const accountIdentity = await this.options.verifications.getIdentityForAccount(this.options.activeAccount, true);
 
     if (accountIdentity !== issuerIdentity) {
@@ -249,7 +249,7 @@ export class VcResolver extends Logger {
 
     const verMethod = await this.getPublicKeyURIFromDid(vc.issuer.id);
 
-    const proof: VcResolverProof = {
+    const proof: VcProof = {
       type: `${proofType}`,
       created: new Date(Date.now()).toISOString(),
       proofPurpose: 'assertionMethod',
@@ -267,7 +267,7 @@ export class VcResolver extends Logger {
    * @param proofType The type of algorithm used for generating the JWT
    * @returns The JWT
    */
-  private async createJWTForVC(vc: VcResolverDocument, proofType: VcResolverProofType): Promise<string> {
+  private async createJWTForVC(vc: VcDocument, proofType: VcProofType): Promise<string> {
     const signer = didJWT.SimpleSigner(await this.options.accountStore.getPrivateKey(this.options.activeAccount));
     let jwt = '';
     await didJWT.createJWT(
@@ -292,7 +292,7 @@ export class VcResolver extends Logger {
   private async getPublicKeyURIFromDid(issuerDid: string): Promise<string> {
     const signaturePublicKey =
       await this.options.signerIdentity.getPublicKey(this.options.signerIdentity.underlyingAccount);
-    const doc = await this.didResolver.getDidDocument(issuerDid);
+    const doc = await this.did.getDidDocument(issuerDid);
 
     if (!(doc.authentication || doc.publicKey || doc.publicKey.length == 0)) {
       throw Error(`Document for ${issuerDid} does not provide authentication material. Cannot sign VC.`);

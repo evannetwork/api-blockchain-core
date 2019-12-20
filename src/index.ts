@@ -62,7 +62,7 @@ export * from './contracts/signer-identity';
 export * from './contracts/wallet';
 export * from './dfs/ipfs';
 export * from './dfs/ipld';
-export * from './did/did-resolver';
+export * from './did/did';
 export * from './encryption/aes';
 export * from './encryption/aes-blob';
 export * from './encryption/aes-ecb';
@@ -77,7 +77,7 @@ export * from './profile/business-center-profile';
 export * from './profile/profile';
 export * from './runtime';
 export * from './shared-description';
-export * from './verifications/vc-resolver'
+export * from './vc/vc'
 export * from './verifications/verifications';
 export * from './votings/votings';
 
