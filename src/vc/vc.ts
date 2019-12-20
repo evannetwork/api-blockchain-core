@@ -246,7 +246,7 @@ export class Vc extends Logger {
       await this.getRegistryContract(),
       'createId', {
         from: this.options.signerIdentity.activeIdentity,
-        event: { target: 'VCRegistry', eventName: 'VCIdRegistered', },
+        event: { target: 'VcRegistry', eventName: 'VcIdRegistered', },
         getEventResult: (event, args) => args.vcId,
       },
     );
@@ -346,7 +346,7 @@ export class Vc extends Logger {
       const vcRegistryAddress = await this.options.nameResolver.getAddress(vcRegistryDomain);
 
       this.cache.vcRegistryContract = this.options.contractLoader.loadContract(
-        'VCRegistry', vcRegistryAddress);
+        'VcRegistry', vcRegistryAddress);
     }
 
     return this.cache.vcRegistryContract;
