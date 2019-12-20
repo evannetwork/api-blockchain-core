@@ -217,7 +217,7 @@ export class Did extends Logger {
    * Get service from DID document.
    *
    * @param      {string}  did     DID name to get service for
-   * @return     {Promise<DidServiceEntry[] | DidServiceEntry>}   service
+   * @return     {Promise<DidServiceEntry[] | DidServiceEntry>}  service
    */
   public async getService(did: string
   ): Promise<DidServiceEntry[] | DidServiceEntry> {
@@ -250,8 +250,7 @@ export class Did extends Logger {
   /**
    * Sets service in DID document.
    *
-   * @param      {string}                                               did      DID name to set
-   *                                                                             service for
+   * @param      {string}                               did      DID name to set service for
    * @param      {DidServiceEntry[] | DidServiceEntry}  service  service to set
    * @return     {Promise<void>}  resolved when done
    */
@@ -327,11 +326,11 @@ export class Did extends Logger {
   }
 
   /**
-   * Method to ensure no public key array types are written into a retrieved did document.
-   * This is just a legacy method because we still have various faulty DID documents stored that have
-   * an array as the publicKey.type property.
+   * Method to ensure no public key array types are written into a retrieved did document. This is
+   * just a legacy method because we still have various faulty DID documents stored that have an
+   * array as the publicKey.type property.
    *
-   * @param result The cleaned and valid DID document
+   * @param      {any}  result  The cleaned and valid DID document
    */
   private async removePublicKeyTypeArray(result: any): Promise<any> {
     // TODO: Method can be deleted as soon as there is a real DID validation in place
@@ -351,9 +350,9 @@ export class Did extends Logger {
   /**
    * Validates if a given DID is a valid evan DID and returns its parts.
    *
-   * @param did DID to validate.
-   * @returns {Promise<RegExpExecArray>} The parts of the DID if it is valid.
-   * @throws If the DID is not valid.
+   * @param      {string}  did     DID to validate.
+   * @return     {Promise<RegExpExecArray>}  The parts of the DID if it is valid.
+   * @throws           If the DID is not valid.
    */
   private async validateDidAndGetSections(did: string): Promise<RegExpExecArray> {
     const groups = didRegEx.exec(did);

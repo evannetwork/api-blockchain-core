@@ -134,6 +134,7 @@ export interface VcOptions extends LoggerOptions {
 }
 
 const vcRegEx = /^vc:evan:(?:(testcore|core):)?(0x(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64}))$/;
+
 /**
  * Module for storing VCs in and retrieving VCs from the VC registry
  *
@@ -149,8 +150,8 @@ export class Vc extends Logger {
   /**
    * Creates a new `Vc` instance
    *
-   * @param {VcOptions} options options for `Vc`
-   * @param {Did} did Instance of `Did` used for resolving DIDs
+   * @param      {VcOptions}  options  options for `Vc`
+   * @param      {Did}        did      Instance of `Did` used for resolving DIDs
    */
   public constructor(options: VcOptions, did: Did) {
     super(options as LoggerOptions);
@@ -161,11 +162,9 @@ export class Vc extends Logger {
   /**
    * Returns a VC document for a given ID.
    *
-   * @param vcId The registry ID the VC document is associated with.
-   *
-   * @returns {Promise<VcDocument} A VC document stored in the registry.
-   *
-   * @throws If an invalid VC ID is given or no document is registered under this ID.
+   * @param      {string}  vcId    The registry ID the VC document is associated with.
+   * @return     {Promise<VcDocument}  A VC document stored in the registry.
+   * @throws           If an invalid VC ID is given or no document is registered under this ID.
    */
   public async getVc(vcId: string): Promise<VcDocument> {
     // Check whether the full URI (vc:evan:[vcId]) or just the internal ID was given
@@ -192,12 +191,12 @@ export class Vc extends Logger {
   }
 
   /**
-   * Creates a new VC document from a template, registers an ID in the registry
-   * and stores the document under the ID.
+   * Creates a new VC document from a template, registers an ID in the registry and stores the
+   * document under the ID.
    *
-   * @param {VcDocumentTemplate} vcData Template for the VC document containing the relevant data.
-   *
-   * @return {Promise<VcDocument} The final VC document as it is stored in the registry.
+   * @param      {VcDocumentTemplate}  vcData  Template for the VC document containing the relevant
+   *                                           data.
+   * @return     {Promise<VcDocument}  The final VC document as it is stored in the registry.
    */
   public async storeNewVc(vcData: VcDocumentTemplate): Promise<VcDocument> {
     const vcId = await this.buyVcId();
@@ -239,7 +238,8 @@ export class Vc extends Logger {
 
   /**
    * Associates the active identity with a new ID in the registry to store a VC at.
-   * @returns {Promise<string>} The reserved ID.
+   *
+   * @return     {Promise<string>}  The reserved ID.
    */
   private async buyVcId(): Promise<string> {
     return await this.options.executor.executeContractTransaction(
@@ -255,9 +255,8 @@ export class Vc extends Logger {
   /**
    * Create a JWT over a VC document
    *
-   * @param vc The VC document
-   * @param proofType The type of algorithm used for generating the JWT
-   * @returns The JWT
+   * @param      {VcDocument}   vc         The VC document
+   * @param      {VcProofType}  proofType  The type of algorithm used for generating the JWT
    */
   private async createJWTForVc(vc: VcDocument, proofType: VcProofType): Promise<string> {
     const signer = didJWT.SimpleSigner(await this.options.accountStore.getPrivateKey(this.options.activeAccount));
@@ -275,14 +274,14 @@ export class Vc extends Logger {
   }
 
   /**
-   * Creates a new `VcProof` object for a given VC document, including generating
-   * a JWT token over the whole document.
+   * Creates a new `VcProof` object for a given VC document, including generating a JWT token over
+   * the whole document.
    *
-   * @param vc The VC document to create the proof for.
-   * @param issuerIdentityId The ID of the VC issuer.
-   * @param proofType Specify if you want a proof type different from the default one.
-   * @returns {VcProof} A proof object containing a JWT.
-   * @throws If the VC issuer identity and the signer identity differ from each other
+   * @param      {VcDocument}   vc         The VC document to create the proof for.
+   * @param      {VcProofType}  proofType  Specify if you want a proof type different from the
+   *                                       default one.
+   * @return     {VcProof}  A proof object containing a JWT.
+   * @throws           If the VC issuer identity and the signer identity differ from each other
    */
   private async createProofForVc(vc: VcDocument,
     proofType: VcProofType = VcProofType.EcdsaPublicKeySecp256k1): Promise<VcProof> {
@@ -310,11 +309,12 @@ export class Vc extends Logger {
   }
 
   /**
-   * Retrieves the ID of the public key of an VC's issuer's DID document that matches the active identity's public key.
+   * Retrieves the ID of the public key of an VC's issuer's DID document that matches the active
+   * identity's public key.
    *
-   * @param issuerDid DID of the VC issuer.
-   * @returns The URI of the key in the DID document.
-   * @throws If there is no authentication material given in the DID or no key matching the active identity is found.
+   * @param      {string}  issuerDid  DID of the VC issuer.
+   * @throws           If there is no authentication material given in the DID or no key matching the
+   *                   active identity is found.
    */
   private async getPublicKeyURIFromDid(issuerDid: string): Promise<string> {
     const signaturePublicKey =
@@ -355,8 +355,8 @@ export class Vc extends Logger {
   /**
    * Validates the JWS of a VC Document proof
    *
-   * @param document The VC Document
-   * @returns {Promise<void>} Resolves when done
+   * @param      {VcDocument}  document  The VC Document
+   * @return     {Promise<void>}  Resolves when done
    */
   private async validateProof(document: VcDocument): Promise<void> {
     // Mock the did-resolver package that did-jwt usually requires
@@ -373,9 +373,9 @@ export class Vc extends Logger {
   /**
    * Checks various criteria a VC document has to meet
    *
-   * @param document The VC document to check.
-   * @returns {Promise<void>} If the checks are succesfull.
-   * @throws If any of the criteria is not met.
+   * @param      {VcDocument}  document  The VC document to check.
+   * @return     {Promise<void>}  If the checks are succesfull.
+   * @throws           If any of the criteria is not met.
    */
   private async validateVcDocument(document: VcDocument): Promise<void> {
     // Subject
