@@ -20,7 +20,7 @@ matrix:
       - CHAIN_ENDPOINT='ws://localhost:7545'
       - CODECOV_TOKEN="b4aa706f-0ecb-4fbc-955d-711cfea36cdb"
     script:
-      - npm run testunitcoverag
+      - npm run testunitcoverage
 
   - name: "data contract & IPFS tests"
     node_js: "11"
