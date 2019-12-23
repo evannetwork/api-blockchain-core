@@ -66,7 +66,7 @@ describe('VC Resolver', function() {
       const fetchedVcDoc = await runtime.vc.getVc(vcId.replace('testcore:', ''));
 
       expect(createdVcDoc.id).to.eq(fetchedVcDoc.id);
-      expect(createdVcDoc.issuer.did).to.eq(fetchedVcDoc.issuer.did);
+      expect(createdVcDoc.issuer.id).to.eq(fetchedVcDoc.issuer.id);
     });
 
     it('Creates a valid proof if none is given', async() => {
@@ -80,7 +80,7 @@ describe('VC Resolver', function() {
       // Mock the did-resolver package that did-jwt usually requires
       const resolver = {
         async resolve() {
-          const doc = await runtime.did.getDidDocument(createdVcDoc.issuer.did);
+          const doc = await runtime.did.getDidDocument(createdVcDoc.issuer.id);
           // TODO: Workaround until we fixed the public key type array structure (bc that is not allowed)
           doc.publicKey[0].type = 'Secp256k1SignatureVerificationKey2018';
           return doc as any;
@@ -91,14 +91,14 @@ describe('VC Resolver', function() {
     });
 
     it('allows me to get an existing VC', async () => {     
-      const fetchedVcDoc = runtime.vc.getVC(existingVcId.replace('testcore:', ''));
+      const fetchedVcDoc = runtime.vc.getVc(existingVcId.replace('testcore:', ''));
       
       await expect(fetchedVcDoc).to.not.be.rejected
     });    
 
     it('does not allow me to get a non existing VC', async () => {
       const existingVcId = '0x2a838a6961be98f6a182f375bb9158848ee9760ca97a379939ccdf03fc442a23'
-      const fetchedVcDoc = runtime.vc.getVC(existingVcId.replace('testcore:', ''));
+      const fetchedVcDoc = runtime.vc.getVc(existingVcId.replace('testcore:', ''));
 
       await expect(Error).to.exist;
       await expect(fetchedVcDoc).to.be.rejected
