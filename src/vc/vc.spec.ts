@@ -41,6 +41,8 @@ describe('VC Resolver', function() {
 
   let minimalVcData: VcDocumentTemplate;
 
+  const existingVcId = '0x2a838a6961be98f6a182f375bb9158848ee9760ca97a379939ccdf03fc442a22'
+
   before(async () => {
     runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity: true });
     verifications = await TestUtils.getVerifications(runtime.web3, await TestUtils.getIpfs());
@@ -87,5 +89,45 @@ describe('VC Resolver', function() {
 
       expect(didJWT.verifyJWT(jwt, {resolver: resolver})).to.be.eventually.fulfilled;
     });
+
+    it('allows me to get an existing VC', async () => {     
+      const fetchedVcDoc = runtime.vc.getVc(existingVcId.replace('testcore:', ''));
+      
+      await expect(fetchedVcDoc).to.not.be.rejected
+    });    
+
+    it('does not allow me to get a non existing VC', async () => {
+      const existingVcId = '0x2a838a6961be98f6a182f375bb9158848ee9760ca97a379939ccdf03fc442a23'
+      const fetchedVcDoc = runtime.vc.getVc(existingVcId.replace('testcore:', ''));
+
+      await expect(Error).to.exist;
+      await expect(fetchedVcDoc).to.be.rejected
+    });     
+
+    it('should not create and store VC with wrong data', async () => {
+
+      minimalVcData = {
+        issuer: {
+          did: await runtime.did.convertIdentityToDid('0x390f70a9AD51a845C8ea4c74E141219361D24f'),
+        },
+        credentialSubject: {
+          did: await runtime.did.convertIdentityToDid(subjectIdentityId),
+        },
+        validFrom: new Date(Date.now()).toISOString()
+      };
+      const createdVcDoc = runtime.vc.storeNewVC(minimalVcData);      
+
+      await expect(Error).to.exist;
+      await expect(createdVcDoc).to.be.rejected
+    });
+
+    // it.skip('should not allow to store a VC where you are not the issuer', async () => { 
+    // });
+
+    // (it.skip('should not allow to store a VC where you are not the issuer on smart contract level', async () => {
+    // });
+
+    // it.skip('should not create a VC with invalid proof', async () => {
+    // });                   
   });
 });
