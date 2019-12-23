@@ -54,6 +54,7 @@ export interface VcDocument {
  */
 export interface VcDocumentTemplate {
   '@context'?: string[];
+  id: string;
   type?: string[];
   issuer: VcIssuer;
   validFrom: string;
@@ -191,15 +192,13 @@ export class Vc extends Logger {
   }
 
   /**
-   * Creates a new VC document from a template, registers an ID in the registry and stores the
-   * document under the ID.
+   * Creates a new VC document from a template.
    *
    * @param      {VcDocumentTemplate}  vcData  Template for the VC document containing the relevant
    *                                           data.
    * @return     {Promise<VcDocument}  The final VC document as it is stored in the registry.
    */
-  public async setVc(vcData: VcDocumentTemplate): Promise<VcDocument> {
-    const vcId = await this.createId();
+  public async createVc(vcData: VcDocumentTemplate): Promise<VcDocument> {
     const types = vcData.type ? vcData.type : ['VerifiableCredential']
 
     const w3cMandatoryContext = 'https://www.w3.org/2018/credentials/v1';
@@ -208,19 +207,36 @@ export class Vc extends Logger {
       context.push(w3cMandatoryContext);
     }
 
-    const documentToStore: VcDocument = {
+    const vcDocument: VcDocument = {
       '@context': context,
-      id: `vc:evan:${vcId}`,
       type: types,
       ...vcData
     };
 
     // Document is not signed, create own proof
-    if (!documentToStore.proof) {
-      documentToStore.proof = await this.createProofForVc(documentToStore);
+    if (!vcDocument.proof) {
+      vcDocument.proof = await this.createProofForVc(vcDocument);
     }
 
-    await this.validateVcDocument(documentToStore);
+    await this.validateVcDocument(vcDocument);
+
+    return vcDocument;
+  }
+
+  /**
+   * Stores the given VC document in the registry under the provided ID.
+   * The ID has to be a valid and registered VC ID.
+   * Creates a proof if none is given or validates it if one is given.
+   *
+   * @param      {VcDocumentTemplate}  vcData  Template for the VC document containing the relevant
+   *                                           data.
+   * @return     {Promise<VcDocument}  The final VC document as it is stored in the registry.
+   */
+  public async storeVc(vcData: VcDocumentTemplate): Promise<VcDocument> {
+    const documentToStore = await this.createVc(vcData);
+
+    // Is the given VC ID valid and the active identity the owner of the VC ID?
+    await this.validateVcIdOwnership(documentToStore.id);
 
     const vcDfsAddress = await this.options.dfs.add('vc',
       Buffer.from(JSON.stringify(documentToStore), 'utf-8'));
@@ -229,9 +245,9 @@ export class Vc extends Logger {
       await this.getRegistryContract(),
       'setVc',
       { from: this.options.signerIdentity.activeIdentity },
-      vcId,
+      documentToStore.id,
       vcDfsAddress,
-    )
+    );
 
     return documentToStore;
   }
@@ -241,7 +257,7 @@ export class Vc extends Logger {
    *
    * @return     {Promise<string>}  The reserved ID.
    */
-  private async createId(): Promise<string> {
+  public async createId(): Promise<string> {
     return await this.options.executor.executeContractTransaction(
       await this.getRegistryContract(),
       'createId', {
@@ -397,5 +413,24 @@ export class Vc extends Logger {
       throw new Error('VC proof misses type');
     }
     await this.validateProof(document);
+  }
+
+  /**
+   * Checks if the given VC ID is associated to the active identity at the VC registry
+   *
+   * @param vcId VC ID registered at the VC registry
+   * @returns {Promise<void>} Resolves when successful
+   * @throws {Error} If the ID is not valid or the identity is not the ID owner
+   */
+  private async validateVcIdOwnership(vcId: string): Promise<void> {
+    const ownerAddress = await this.options.executor.executeContractCall(
+      await this.getRegistryContract(),
+      'vcOwner',
+      vcId,
+    );
+
+    if (this.options.signerIdentity.activeIdentity !== ownerAddress) {
+      throw Error(`Active identity is not the owner of the given VC ID ${vcId}`);
+    }
   }
 }
