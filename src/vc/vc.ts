@@ -19,7 +19,11 @@
 
 import  * as didJWT from 'did-jwt';
 
-import { nullBytes32 } from '../common/utils';
+import {
+  nullBytes32,
+  getEnvironment
+} from '../common/utils';
+
 import {
   AccountStore,
   ContractLoader,
@@ -61,7 +65,6 @@ export interface VcDocumentTemplate {
   validUntil?: string;
   credentialSubject: VcCredentialSubject;
   credentialStatus?: VcCredentialStatus;
-  proof?: VcProof;
 }
 
 /**
@@ -175,7 +178,13 @@ export class Vc extends Logger {
       if (!groups) {
         throw new Error(`Given VC ID ("${vcId}") is no valid evan VC ID`);
       }
-      identityAddress = groups[2];
+      const [ , vcEnvironment = 'core', address ] = groups;
+      identityAddress = address;
+      const environment = await this.getEnvironment();
+      if (environment === 'testcore' && vcEnvironment !== 'testcore' ||
+          environment === 'core' && vcEnvironment !== 'core') {
+        throw new Error(`Given VC ID environment "${vcEnvironment}" does not match current "${environment}"`);
+      }
     }
 
     const vcDfsHash = await this.options.executor.executeContractCall(
@@ -185,10 +194,11 @@ export class Vc extends Logger {
     );
 
     if (vcDfsHash === nullBytes32) {
-      throw Error(`VC for address ${vcDfsHash} does not exist`);
+      throw Error(`VC for address ${vcId} does not exist`);
     }
-
-    return JSON.parse(await this.options.dfs.get(vcDfsHash) as any) as VcDocument;
+    const document = JSON.parse(await this.options.dfs.get(vcDfsHash) as any) as VcDocument;
+    await this.validateProof(document);
+    return document;
   }
 
   /**
@@ -213,10 +223,7 @@ export class Vc extends Logger {
       ...vcData
     };
 
-    // Document is not signed, create own proof
-    if (!vcDocument.proof) {
-      vcDocument.proof = await this.createProofForVc(vcDocument);
-    }
+    vcDocument.proof = await this.createProofForVc(vcDocument);
 
     await this.validateVcDocument(vcDocument);
 
@@ -232,20 +239,40 @@ export class Vc extends Logger {
    *                                           data.
    * @return     {Promise<VcDocument}  The final VC document as it is stored in the registry.
    */
-  public async storeVc(vcData: VcDocumentTemplate): Promise<VcDocument> {
+  public async storeVc(vcData: VcDocumentTemplate, shouldRegisterNewId = false): Promise<VcDocument> {
     const documentToStore = await this.createVc(vcData);
+    let internalId;
+    let vcEnvironment;
 
-    // Is the given VC ID valid and the active identity the owner of the VC ID?
-    await this.validateVcIdOwnership(documentToStore.id);
+    if (shouldRegisterNewId) {
+      documentToStore.id = await this.createId();
+      const groups = vcRegEx.exec(documentToStore.id);
+      [ , vcEnvironment = 'core', internalId ] = groups;
+    } else {
+      // We prefix the ID specified in the document with the evan identifier (vc:evan:[core|testcore]:)
+      // However, we only need the actual ID to address the registry
+      const groups = vcRegEx.exec(documentToStore.id);
+      if (!groups) {
+        throw new Error(`Given VC ID ("${documentToStore.id}") is no valid evan VC ID`);
+      }
+      [ , vcEnvironment = 'core', internalId ] = groups;
+      const environment = await this.getEnvironment();
+      if (environment === 'testcore' && vcEnvironment !== 'testcore' ||
+          environment === 'core' && vcEnvironment !== 'core') {
+        throw new Error(`VCs environment "${environment} does not match ${vcEnvironment}`);
+      }
+
+      // Is the given VC ID valid and the active identity the owner of the VC ID?
+      await this.validateVcIdOwnership(internalId);
+    }
 
     const vcDfsAddress = await this.options.dfs.add('vc',
       Buffer.from(JSON.stringify(documentToStore), 'utf-8'));
-
     await this.options.executor.executeContractTransaction(
       await this.getRegistryContract(),
       'setVc',
       { from: this.options.signerIdentity.activeIdentity },
-      documentToStore.id,
+      internalId,
       vcDfsAddress,
     );
 
@@ -258,7 +285,7 @@ export class Vc extends Logger {
    * @return     {Promise<string>}  The reserved ID.
    */
   public async createId(): Promise<string> {
-    return await this.options.executor.executeContractTransaction(
+    const id = await this.options.executor.executeContractTransaction(
       await this.getRegistryContract(),
       'createId', {
         from: this.options.signerIdentity.activeIdentity,
@@ -266,6 +293,9 @@ export class Vc extends Logger {
         getEventResult: (event, args) => args.vcId,
       },
     );
+    const environment = await this.getEnvironment();
+
+    return `vc:evan:${environment}:${id}`;
   }
 
   /**
@@ -322,6 +352,18 @@ export class Vc extends Logger {
     };
 
     return proof;
+  }
+
+  /**
+   * Get current environment ('testcore:' || 'core'). Result is cached.
+   *
+   * @return     {Promise<string>}  current environment
+   */
+  private async getEnvironment(): Promise<string> {
+    if (!this.cache.environment) {
+      this.cache.environment = await getEnvironment(this.options.web3);
+    }
+    return this.cache.environment;
   }
 
   /**
