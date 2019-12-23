@@ -23,7 +23,7 @@ import { expect, use } from 'chai';
 
 import { Runtime } from '../index';
 import { TestUtils } from '../test/test-utils';
-import { VcDocumentTemplate, VcDocument } from './vc';
+import { VcDocumentTemplate } from './vc';
 import { Verifications } from '../verifications/verifications';
 import { accounts } from '../test/accounts';
 
@@ -83,7 +83,7 @@ describe('VC Resolver', function() {
 
     it('allows me to store a valid VC on-chain under my registered ID', async () => {
       const myRegisteredId = await runtime.vc.createId();
-      const myDoc : VcDocumentTemplate = {...minimalValidVcData};
+      const myDoc: VcDocumentTemplate = {...minimalValidVcData};
       myDoc.id = myRegisteredId;
       const promise = runtime.vc.storeVc(myDoc);
 
@@ -93,7 +93,7 @@ describe('VC Resolver', function() {
 
     it('does not allow me to store a valid VC on-chain under an invalid ID', async () => {
       const myRegisteredId = 'invalidId';
-      const myDoc : VcDocumentTemplate = {...minimalValidVcData};
+      const myDoc: VcDocumentTemplate = {...minimalValidVcData};
       myDoc.id = myRegisteredId;
       const promise = runtime.vc.storeVc(myDoc);
 

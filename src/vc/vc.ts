@@ -94,6 +94,14 @@ export interface VcCredentialSubjectPayload {
 }
 
 /**
+ * The parts an VC ID in evan is made of
+ */
+export interface VcIdSections {
+  environment: string;
+  internalId: string;
+}
+
+/**
  * Issuer of a VC
  */
 export interface VcIssuer {
@@ -242,28 +250,17 @@ export class Vc extends Logger {
   public async storeVc(vcData: VcDocumentTemplate, shouldRegisterNewId = false): Promise<VcDocument> {
     const documentToStore = await this.createVc(vcData);
     let internalId;
-    let vcEnvironment;
 
     if (shouldRegisterNewId) {
       documentToStore.id = await this.createId();
-      const groups = vcRegEx.exec(documentToStore.id);
-      [ , vcEnvironment = 'core', internalId ] = groups;
+      internalId = (await this.validateVcIdAndGetSections(documentToStore.id)).internalId;
     } else {
       // We prefix the ID specified in the document with the evan identifier (vc:evan:[core|testcore]:)
       // However, we only need the actual ID to address the registry
-      const groups = vcRegEx.exec(documentToStore.id);
-      if (!groups) {
-        throw new Error(`Given VC ID ("${documentToStore.id}") is no valid evan VC ID`);
-      }
-      [ , vcEnvironment = 'core', internalId ] = groups;
-      const environment = await this.getEnvironment();
-      if (environment === 'testcore' && vcEnvironment !== 'testcore' ||
-          environment === 'core' && vcEnvironment !== 'core') {
-        throw new Error(`VCs environment "${environment} does not match ${vcEnvironment}`);
-      }
+      const sections = await this.validateVcIdAndGetSections(vcData.id);
 
       // Is the given VC ID valid and the active identity the owner of the VC ID?
-      await this.validateVcIdOwnership(internalId);
+      await this.validateVcIdOwnership(sections.internalId);
     }
 
     const vcDfsAddress = await this.options.dfs.add('vc',
@@ -277,6 +274,21 @@ export class Vc extends Logger {
     );
 
     return documentToStore;
+  }
+
+  private async validateVcIdAndGetSections(vcId: string): Promise<VcIdSections> {
+    const groups = vcRegEx.exec(vcId);
+    if (!groups) {
+      throw new Error(`Given VC ID ("${vcId}") is no valid evan VC ID`);
+    }
+    const [ , vcEnvironment = 'core', internalId ] = groups;
+    const environment = await this.getEnvironment();
+    if (environment === 'testcore' && vcEnvironment !== 'testcore' ||
+        environment === 'core' && vcEnvironment !== 'core') {
+      throw new Error(`VCs environment "${environment} does not match ${vcEnvironment}`);
+    }
+
+    return {environment: vcEnvironment, internalId: internalId};
   }
 
   /**
