@@ -50,10 +50,10 @@ describe('VC Resolver', function() {
     subjectIdentityId = await verifications.getIdentityForAccount(subjectAccountId, true);
     minimalVcData = {
       issuer: {
-        did: await runtime.did.convertIdentityToDid(issuerIdentityId),
+        id: await runtime.did.convertIdentityToDid(issuerIdentityId),
       },
       credentialSubject: {
-        did: await runtime.did.convertIdentityToDid(subjectIdentityId),
+        id: await runtime.did.convertIdentityToDid(subjectIdentityId),
       },
       validFrom: new Date(Date.now()).toISOString()
     };
@@ -61,7 +61,7 @@ describe('VC Resolver', function() {
 
   describe('When creating a VC', async () => {
     it('allows me to store a valid VC', async () => {
-      const createdVcDoc = await runtime.vc.storeNewVc(minimalVcData);
+      const createdVcDoc = await runtime.vc.setVc(minimalVcData);
       const vcId = createdVcDoc.id.replace('vc:evan:', '');
       const fetchedVcDoc = await runtime.vc.getVc(vcId.replace('testcore:', ''));
 
@@ -70,7 +70,7 @@ describe('VC Resolver', function() {
     });
 
     it('Creates a valid proof if none is given', async() => {
-      const createdVcDoc = await runtime.vc.storeNewVc(minimalVcData);
+      const createdVcDoc = await runtime.vc.setVc(minimalVcData);
 
       expect(createdVcDoc.proof).not.to.be.undefined;
       expect(createdVcDoc.proof.jws).not.to.be.undefined;

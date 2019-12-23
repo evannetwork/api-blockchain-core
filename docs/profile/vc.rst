@@ -15,7 +15,7 @@ VC
    * - Tests
      - `vc.spec.ts <https://github.com/evannetwork/api-blockchain-core/blob/master/src/vc/vc.spec.ts>`_
 
-The `Vc` module allows to create, store, and retrieve with VCs on evan.network.
+The `Vc` module allows to create, store, and retrieve VCs on evan.network.
 As development of identities, and DID and VC handling on evan.network is an ongoing process, this document
 describes the current interoperability of VCs on evan.network and can be seen as a work-in-progress state
 of the current implementation.
@@ -86,14 +86,14 @@ Example
 = Working with VC documents =
 ==============================
 
-.. _vc_storeNewVC:
+.. _vc_setVc:
 
-storeNewVC
+setVc
 ================================================================================
 
 .. code-block:: typescript
 
-  vc.storeNewVc(vcData);
+  vc.setVc(vcData);
 
 Store a new VC that holds the given data.
 
@@ -124,7 +124,7 @@ Example
       },
       validFrom: new Date(Date.now()).toISOString()
   };
-  const createdVcDoc = await runtime.vc.storeNewVC(minimalVcData);
+  const createdVcDoc = await runtime.vc.setVc(minimalVcData);
   const permanentVcAddress = createdVcDoc.id;
 
 
@@ -169,7 +169,7 @@ Example
       },
       validFrom: new Date(Date.now()).toISOString()
   };
-  const createdVcDoc = await vc.storeNewVC(minimalVcData);
+  const createdVcDoc = await vc.setVc(minimalVcData);
   const permanentVcAddress = createdVcDoc.id;
 
   const storedVcDoc = await vc.getVc(permanentVcAddress);

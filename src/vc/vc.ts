@@ -75,7 +75,7 @@ export interface VcCredentialStatus {
  * Information about a VC's subject
  */
 export interface VcCredentialSubject {
-  did: string;
+  id: string;
   data?: VcCredentialSubjectPayload[];
   description?: string;
   uri?: string;
@@ -93,7 +93,7 @@ export interface VcCredentialSubjectPayload {
  * Issuer of a VC
  */
 export interface VcIssuer {
-  did: string;
+  id: string;
   name?: string;
 }
 
@@ -198,8 +198,8 @@ export class Vc extends Logger {
    *                                           data.
    * @return     {Promise<VcDocument}  The final VC document as it is stored in the registry.
    */
-  public async storeNewVc(vcData: VcDocumentTemplate): Promise<VcDocument> {
-    const vcId = await this.buyVcId();
+  public async setVc(vcData: VcDocumentTemplate): Promise<VcDocument> {
+    const vcId = await this.createId();
     const types = vcData.type ? vcData.type : ['VerifiableCredential']
 
     const w3cMandatoryContext = 'https://www.w3.org/2018/credentials/v1';
@@ -241,12 +241,12 @@ export class Vc extends Logger {
    *
    * @return     {Promise<string>}  The reserved ID.
    */
-  private async buyVcId(): Promise<string> {
+  private async createId(): Promise<string> {
     return await this.options.executor.executeContractTransaction(
       await this.getRegistryContract(),
       'createId', {
         from: this.options.signerIdentity.activeIdentity,
-        event: { target: 'VCRegistry', eventName: 'VCIdRegistered', },
+        event: { target: 'VcRegistry', eventName: 'VcIdRegistered', },
         getEventResult: (event, args) => args.vcId,
       },
     );
@@ -266,7 +266,7 @@ export class Vc extends Logger {
         exp: vc.validUntil
       },{
         alg: JWTProofMapping[proofType],
-        issuer: vc.issuer.did,
+        issuer: vc.issuer.id,
         signer
       }).then( response => { jwt = response });
 
@@ -286,7 +286,7 @@ export class Vc extends Logger {
   private async createProofForVc(vc: VcDocument,
     proofType: VcProofType = VcProofType.EcdsaPublicKeySecp256k1): Promise<VcProof> {
 
-    const issuerIdentity = await this.did.convertDidToIdentity(vc.issuer.did)
+    const issuerIdentity = await this.did.convertDidToIdentity(vc.issuer.id)
     const accountIdentity = await this.options.verifications.getIdentityForAccount(this.options.activeAccount, true);
 
     if (accountIdentity !== issuerIdentity) {
@@ -295,7 +295,7 @@ export class Vc extends Logger {
 
     const jwt = await this.createJWTForVc(vc, proofType);
 
-    const verMethod = await this.getPublicKeyURIFromDid(vc.issuer.did);
+    const verMethod = await this.getPublicKeyUriFromDid(vc.issuer.id);
 
     const proof: VcProof = {
       type: `${proofType}`,
@@ -316,7 +316,7 @@ export class Vc extends Logger {
    * @throws           If there is no authentication material given in the DID or no key matching the
    *                   active identity is found.
    */
-  private async getPublicKeyURIFromDid(issuerDid: string): Promise<string> {
+  private async getPublicKeyUriFromDid(issuerDid: string): Promise<string> {
     const signaturePublicKey =
       await this.options.signerIdentity.getPublicKey(this.options.signerIdentity.underlyingAccount);
     const doc = await this.did.getDidDocument(issuerDid);
@@ -346,7 +346,7 @@ export class Vc extends Logger {
       const vcRegistryAddress = await this.options.nameResolver.getAddress(vcRegistryDomain);
 
       this.cache.vcRegistryContract = this.options.contractLoader.loadContract(
-        'VCRegistry', vcRegistryAddress);
+        'VcRegistry', vcRegistryAddress);
     }
 
     return this.cache.vcRegistryContract;
@@ -363,7 +363,7 @@ export class Vc extends Logger {
     const didResolver = this.did;
     const resolver = {
       async resolve() {
-        const doc = await didResolver.getDidDocument(document.issuer.did);
+        const doc = await didResolver.getDidDocument(document.issuer.id);
         return doc as any;
       }
     };
@@ -379,16 +379,16 @@ export class Vc extends Logger {
    */
   private async validateVcDocument(document: VcDocument): Promise<void> {
     // Subject
-    if (!document.credentialSubject.did) {
+    if (!document.credentialSubject.id) {
       throw new Error('No Subject ID provided');
     }
-    await this.did.validateDid(document.credentialSubject.did);
+    await this.did.validateDid(document.credentialSubject.id);
 
     // Issuer
-    if (!document.issuer.did) {
+    if (!document.issuer.id) {
       throw new Error('No Issuer ID provided');
     }
-    await this.did.validateDid(document.issuer.did);
+    await this.did.validateDid(document.issuer.id);
 
     // Proof
     if (!document.proof || !document.proof.jws || document.proof.jws === '') {
