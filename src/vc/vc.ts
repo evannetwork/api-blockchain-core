@@ -509,4 +509,35 @@ export class Vc extends Logger {
       throw Error(`Active identity is not the owner of the given VC ID ${await this.convertInternalVcIdToUri(vcId)}`);
     }
   }
+  /**
+   * Revokes a given VC document
+   *
+   * @param      {string}  vcId    The registry ID the VC document is associated with.
+   * @return     {VcCredentialStatus}  An object containing URL and revokation status.
+   */
+  public async RevokeVc(vcId: string): Promise<VcCredentialStatus> {
+    await this.validateVcIdOwnership(vcId);
+    const revokeProcessed = await this.options.executor.executeContractTransaction(
+      await this.getRegistryContract(),
+      'revokeVC',
+      vcId);
+
+    return revokeProcessed;
+  }
+
+  /**
+   * get the Revoke status of a given VC document
+   *
+   * @param      {string}  vcId    The registry ID the VC document is associated with.
+   * @return     {revokationStatus}  A boolean value. False = not revoked, True = revoked
+   */
+  public async getRevokeVcStatus(vcId: string): Promise<void> {
+
+    const revokationStatus = await this.options.executor.executeContractCall(
+      await this.getRegistryContract(),
+      'vcRevoke',
+      vcId);
+
+    return revokationStatus;
+  }    
 }
