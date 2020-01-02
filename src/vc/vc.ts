@@ -175,7 +175,7 @@ export class Vc extends Logger {
    * Returns a VC document for a given ID.
    *
    * @param      {string}  vcId    The registry ID the VC document is associated with.
-   * @return     {Promise<VcDocument}  A VC document stored in the registry.
+   * @returns     {Promise<VcDocument}  A VC document stored in the registry.
    * @throws           If an invalid VC ID is given or no document is registered under this ID.
    */
   public async getVc(vcId: string): Promise<VcDocument> {
@@ -214,7 +214,7 @@ export class Vc extends Logger {
    *
    * @param      {VcDocumentTemplate}  vcData  Template for the VC document containing the relevant
    *                                           data.
-   * @return     {Promise<VcDocument}  The final VC document as it is stored in the registry.
+   * @returns     {Promise<VcDocument}  The final VC document as it is stored in the registry.
    */
   public async createVc(vcData: VcDocumentTemplate): Promise<VcDocument> {
     const types = vcData.type ? vcData.type : ['VerifiableCredential']
@@ -245,7 +245,7 @@ export class Vc extends Logger {
    *
    * @param      {VcDocumentTemplate}  vcData  Template for the VC document containing the relevant
    *                                           data.
-   * @return     {Promise<VcDocument}  The final VC document as it is stored in the registry.
+   * @returns     {Promise<VcDocument}  The final VC document as it is stored in the registry.
    */
   public async storeVc(vcData: VcDocumentTemplate, shouldRegisterNewId = false): Promise<VcDocument> {
     const documentToStore = await this.createVc(vcData);
@@ -258,9 +258,9 @@ export class Vc extends Logger {
       // We prefix the ID specified in the document with the evan identifier (vc:evan:[core|testcore]:)
       // However, we only need the actual ID to address the registry
       const sections = await this.validateVcIdAndGetSections(vcData.id);
-
+      internalId = sections.internalId;
       // Is the given VC ID valid and the active identity the owner of the VC ID?
-      await this.validateVcIdOwnership(sections.internalId);
+      await this.validateVcIdOwnership(internalId);
     }
 
     const vcDfsAddress = await this.options.dfs.add('vc',
@@ -276,6 +276,13 @@ export class Vc extends Logger {
     return documentToStore;
   }
 
+  /**
+   * Validates whether a given ID is a valid evan VC ID and returns
+   * its sections (environment and internal ID)
+   *
+   * @param vcId VC ID
+   * @returns {VcIdSections} Sections of the ID
+   */
   private async validateVcIdAndGetSections(vcId: string): Promise<VcIdSections> {
     const groups = vcRegEx.exec(vcId);
     if (!groups) {
@@ -294,7 +301,7 @@ export class Vc extends Logger {
   /**
    * Associates the active identity with a new ID in the registry to store a VC at.
    *
-   * @return     {Promise<string>}  The reserved ID.
+   * @returns     {Promise<string>}  The reserved ID.
    */
   public async createId(): Promise<string> {
     const id = await this.options.executor.executeContractTransaction(
@@ -305,9 +312,8 @@ export class Vc extends Logger {
         getEventResult: (event, args) => args.vcId,
       },
     );
-    const environment = await this.getEnvironment();
 
-    return `vc:evan:${environment}:${id}`;
+    return await this.convertInternalVcIdToUri(id);
   }
 
   /**
@@ -338,13 +344,17 @@ export class Vc extends Logger {
    * @param      {VcDocument}   vc         The VC document to create the proof for.
    * @param      {VcProofType}  proofType  Specify if you want a proof type different from the
    *                                       default one.
-   * @return     {VcProof}  A proof object containing a JWT.
+   * @returns     {VcProof}  A proof object containing a JWT.
    * @throws           If the VC issuer identity and the signer identity differ from each other
    */
   private async createProofForVc(vc: VcDocument,
     proofType: VcProofType = VcProofType.EcdsaPublicKeySecp256k1): Promise<VcProof> {
-
-    const issuerIdentity = await this.did.convertDidToIdentity(vc.issuer.id)
+    let issuerIdentity;
+    try {
+      issuerIdentity = await this.did.convertDidToIdentity(vc.issuer.id);
+    } catch(e) {
+      throw Error(`Invalid issuer DID: ${vc.issuer.id}`);
+    }
     const accountIdentity = await this.options.verifications.getIdentityForAccount(this.options.activeAccount, true);
 
     if (accountIdentity !== issuerIdentity) {
@@ -369,7 +379,7 @@ export class Vc extends Logger {
   /**
    * Get current environment ('testcore:' || 'core'). Result is cached.
    *
-   * @return     {Promise<string>}  current environment
+   * @returns     {Promise<string>}  current environment
    */
   private async getEnvironment(): Promise<string> {
     if (!this.cache.environment) {
@@ -407,7 +417,7 @@ export class Vc extends Logger {
   /**
    * Get web3 contract instance for VC registry contract via ENS. Result is cached.
    *
-   * @return     {Promise<any>}  VC registry contract
+   * @returns     {Promise<any>}  VC registry contract
    */
   private async getRegistryContract(): Promise<any> {
     if (!this.cache.vcRegistryContract) {
@@ -426,7 +436,7 @@ export class Vc extends Logger {
    * Validates the JWS of a VC Document proof
    *
    * @param      {VcDocument}  document  The VC Document
-   * @return     {Promise<void>}  Resolves when done
+   * @returns     {Promise<void>}  Resolves when done
    */
   private async validateProof(document: VcDocument): Promise<void> {
     // Mock the did-resolver package that did-jwt usually requires
@@ -444,18 +454,18 @@ export class Vc extends Logger {
    * Checks various criteria a VC document has to meet
    *
    * @param      {VcDocument}  document  The VC document to check.
-   * @return     {Promise<void>}  If the checks are succesfull.
+   * @returns     {Promise<void>}  If the checks are succesfull.
    * @throws           If any of the criteria is not met.
    */
   private async validateVcDocument(document: VcDocument): Promise<void> {
     // Subject
-    if (!document.credentialSubject.id) {
+    if (!document.credentialSubject.id || document.credentialSubject.id === '') {
       throw new Error('No Subject ID provided');
     }
     await this.did.validateDid(document.credentialSubject.id);
 
     // Issuer
-    if (!document.issuer.id) {
+    if (!document.issuer.id || document.issuer.id === '') {
       throw new Error('No Issuer ID provided');
     }
     await this.did.validateDid(document.issuer.id);
@@ -467,6 +477,18 @@ export class Vc extends Logger {
       throw new Error('VC proof misses type');
     }
     await this.validateProof(document);
+  }
+
+  /**
+   * Converts an interal VC ID (0x...) to a URI (vc:evan:...)
+   *
+   * @param internalVcId Internal 32bytes ID
+   * @returns The VC's URI
+   */
+  private async convertInternalVcIdToUri(internalVcId: string): Promise<string> {
+    const environment = await this.getEnvironment();
+
+    return `vc:evan:${environment}:${internalVcId}`;
   }
 
   /**
@@ -484,7 +506,7 @@ export class Vc extends Logger {
     );
 
     if (this.options.signerIdentity.activeIdentity !== ownerAddress) {
-      throw Error(`Active identity is not the owner of the given VC ID ${vcId}`);
+      throw Error(`Active identity is not the owner of the given VC ID ${await this.convertInternalVcIdToUri(vcId)}`);
     }
   }
 }

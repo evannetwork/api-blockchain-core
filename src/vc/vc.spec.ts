@@ -27,7 +27,6 @@ import { VcDocumentTemplate } from './vc';
 import { Verifications } from '../verifications/verifications';
 import { accounts } from '../test/accounts';
 
-
 use(chaiAsPromised);
 
 describe('VC Resolver', function() {
@@ -75,7 +74,7 @@ describe('VC Resolver', function() {
       expect(didJWT.verifyJWT(createdVcDoc.proof.jws, {resolver: evanResolver})).to.be.eventually.fulfilled;
     });
 
-    it('allows me to store a valid VC on-chain', async () => {
+    it('allows me to store a valid VC on-chain (and registering an ID implicitly)', async () => {
       const promise = runtime.vc.storeVc(minimalValidVcData, true);
       await expect(promise).to.not.be.rejected;
       await expect(didJWT.verifyJWT((await promise).proof.jws, {resolver: evanResolver})).to.not.be.rejected;
@@ -92,12 +91,26 @@ describe('VC Resolver', function() {
     });
 
     it('does not allow me to store a valid VC on-chain under an invalid ID', async () => {
-      const myRegisteredId = 'invalidId';
+      const invalidId = 'invalidId';
       const myDoc: VcDocumentTemplate = {...minimalValidVcData};
-      myDoc.id = myRegisteredId;
+      myDoc.id = invalidId;
       const promise = runtime.vc.storeVc(myDoc);
 
-      await expect(promise).to.be.rejected;
+      await expect(promise).to.be.rejectedWith(`Given VC ID ("${invalidId}") is no valid evan VC ID`);
+    });
+
+    it('does not allow me to store a VC under an ID I do not own', async() => {
+      // Have another identity create a VC that we then want to store
+      const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
+      const someoneElsesId = await otherRuntime.vc.createId();
+
+      const vcData = {
+        ...minimalValidVcData,
+        id: someoneElsesId
+      }
+
+      const promise = runtime.vc.storeVc(vcData);
+      await expect(promise).to.be.rejectedWith(`Active identity is not the owner of the given VC ID ${someoneElsesId}`);
     });
 
     it('allows me to get an existing VC using the full VC ID URI', async () => {
@@ -116,11 +129,11 @@ describe('VC Resolver', function() {
       expect((await promise).id).to.eq(storedVcDoc.id);
     });
 
-    it('does not allow me to get a non existing VC', async () => {
+    it('does not allow me to get a valid but non-existing VC', async () => {
       const nonExistingVcId = '0x2a838a6961be98f6a182f375bb9158848ee9760ca97a379939ccdf03fc442a23'
       const fetchedVcDoc = runtime.vc.getVc(nonExistingVcId);
 
-      await expect(fetchedVcDoc).to.be.rejected
+      expect(fetchedVcDoc).to.be.rejectedWith(`VC for address ${nonExistingVcId} does not exist`);
     });
 
     it('does not allow me to get an existing VC in the wrong environment', async () => {
@@ -130,21 +143,28 @@ describe('VC Resolver', function() {
       await expect(fetchedVcDoc).to.be.rejectedWith('Given VC ID environment "core" does not match current "testcore"');
     });
 
-    // it('should not create and store VC with wrong data', async () => {
+    it('does not allow me to create a VC without an issuer', async() => {
+      const vc = {
+        ...minimalValidVcData,
+        issuer: {
+          id: ''
+        }
+      };
+      const promise = runtime.vc.createVc(vc);
 
-    //   const createdVcDoc = runtime.vc.createVc(minimalVcData);
+      await expect(promise).to.be.rejectedWith(`Invalid issuer DID: ${vc.issuer.id}`);
+    });
 
-    //   await expect(Error).to.exist;
-    //   await expect(createdVcDoc).to.be.rejected
-    // });
+    it('does not allow me to create a VC without a subject', async() => {
+      const vc = {
+        ...minimalValidVcData,
+        credentialSubject: {
+          id: ''
+        }
+      };
+      const promise = runtime.vc.createVc(vc);
 
-    // it.skip('should not allow to store a VC where you are not the issuer', async () => {
-    // });
-
-    // (it.skip('should not allow to store a VC where you are not the issuer on smart contract level', async () => {
-    // });
-
-    // it.skip('should not create a VC with invalid proof', async () => {
-    // });
+      await expect(promise).to.be.rejectedWith('No Subject ID provided');
+    });
   });
 });

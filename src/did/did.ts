@@ -153,10 +153,11 @@ export class Did extends Logger {
       'didDocuments',
       identity,
     );
-    if (documentHash !== nullBytes32) {
-      result = JSON.parse(await this.options.dfs.get(documentHash) as any);
-      result = await this.removePublicKeyTypeArray(result);
+    if (documentHash === nullBytes32) {
+      throw Error(`There is no DID document associated to ${did} yet`);
     }
+    result = JSON.parse(await this.options.dfs.get(documentHash) as any);
+    result = await this.removePublicKeyTypeArray(result);
     return result;
   }
 
