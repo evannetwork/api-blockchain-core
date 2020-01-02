@@ -136,8 +136,8 @@ export interface VcOptions extends LoggerOptions {
   accountStore: AccountStore;
   activeAccount: string;
   contractLoader: ContractLoader;
-  dfs: DfsInterface;
   credentialStatusEndpoint: string;
+  dfs: DfsInterface;
   executor: Executor;
   nameResolver: NameResolver;
   signerIdentity: SignerIdentity;
