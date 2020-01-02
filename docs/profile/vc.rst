@@ -43,6 +43,7 @@ Parameters
     * ``accountStore`` - |source accountStore|_: |source accountStore|_ instance
     * ``activeAccount`` - ``string``: ID of the active account
     * ``contractLoader`` - |source contractLoader|_: |source contractLoader|_ instance
+    * ``credentialStatusEndpoint`` - ``string``: URL of the credential status endpoint
     * ``dfs`` - |source dfsInterface|_: |source dfsInterface|_ instance
     * ``executor`` - |source executor|_: |source executor|_ instance
     * ``nameResolver`` - |source nameResolver|_: |source nameResolver|_ instance
@@ -71,6 +72,7 @@ Example
     accountStore,
     activeIdentity
     contractLoader,
+    credentialStatusEndpoint,
     dfs,
     executor,
     nameResolver,
@@ -86,16 +88,49 @@ Example
 = Working with VC documents =
 ==============================
 
-.. _vc_setVc:
+.. _vc_createId:
 
-setVc
+createId
 ================================================================================
+
+Claim a new ID in the VC registry which can be used later to store a VC **on-chain**.
 
 .. code-block:: typescript
 
-  vc.setVc(vcData);
+  vc.createId();
 
-Store a new VC that holds the given data.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``string``: A new ID string
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const newRegisteredId = await runtime.vc.createId();
+  const myVcDocument = {
+    // Data here,
+    id: newRegisteredId
+  };
+  await runtime.vc.storeVc(myVcDocument);
+
+--------------------------------------------------------------------------------
+
+.. _vc_createVc:
+
+createVc
+================================================================================
+
+Create a signed **off-chain** VC document
+
+.. code-block:: typescript
+
+  vc.createVc(vcData);
 
 ----------
 Parameters
@@ -107,7 +142,7 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``VcDocument``: Returns the actual saved VC document.
+``Promise`` returns ``VcDocument``: The final VC document
 
 -------
 Example
@@ -117,17 +152,14 @@ Example
 
   const minimalVcData = {
       issuer: {
-        did: "someDid",
+        did: 'someDid',
       },
       credentialSubject: {
-        did: "someOtherDid",
+        did: 'someOtherDid',
       },
       validFrom: new Date(Date.now()).toISOString()
   };
-  const createdVcDoc = await runtime.vc.setVc(minimalVcData);
-  const permanentVcAddress = createdVcDoc.id;
-
-
+  const offchainVc = await runtime.vc.createVc(minimalVcData);
 
 --------------------------------------------------------------------------------
 
@@ -136,17 +168,17 @@ Example
 getVc
 ================================================================================
 
+Get VC document for given VC ID.
+
 .. code-block:: typescript
 
   vc.getVc(vcId);
-
-Get VC document for given VC ID.
 
 ----------
 Parameters
 ----------
 
-#. ``vcId`` - ``string``: ID to fetch VC document for.
+#. ``vcId`` - ``string``: ID to fetch VC document for. Can be either a full VC URI (starting with ``vc:evan:``) or just the VC ID (starting with ``0x``)
 
 -------
 Returns
@@ -160,19 +192,69 @@ Example
 
 .. code-block:: typescript
 
+  const storedVcDoc = await vc.getVc('0x2a838a6961be98f6a182f375bb9158848ee9760ca97a379939ccdf03fc442a23');
+  const otherStoredVcDoc = await vc.getVc('vc:evan:testcore:0x2a838a6961be98f6a182f375bb9158848ee9760ca97a379939ccdf03fc442a23');
+
+--------------------------------------------------------------------------------
+
+
+.. _vc_storeVc:
+
+storeVc
+================================================================================
+
+.. code-block:: typescript
+
+  vc.storeVc(vcData, shouldRegisterNewId);
+
+Create a new VC that holds the given data and **store it on the chain**.
+
+----------
+Parameters
+----------
+
+#. ``vcData`` - ``VcDocumentTemplate``: Collection of mandatory and optional VC properties to store in the VC document
+#. ``shouldRegisterNewId`` - ``boolean``: Whether a new ID should be registered with the VC registry or the given ID in the document should be used (default: false). If true, the method calls ``createId()``.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``VcDocument``: Returns the VC document as stored on the chain.
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
   const minimalVcData = {
       issuer: {
-        did: "someDid",
+        did: 'someDid',
       },
       credentialSubject: {
-        did: "someOtherDid",
+        did: 'someOtherDid',
       },
       validFrom: new Date(Date.now()).toISOString()
   };
-  const createdVcDoc = await vc.setVc(minimalVcData);
+  const createdVcDoc = await runtime.vc.storeVc(minimalVcData, true);
   const permanentVcAddress = createdVcDoc.id;
 
-  const storedVcDoc = await vc.getVc(permanentVcAddress);
+.. code-block:: typescript
+  const myRegisteredId = await runtime.vc.createId();
+  const minimalVcData = {
+      issuer: {
+        did: 'someDid',
+      },
+      credentialSubject: {
+        did: 'someOtherDid'
+      },
+      validFrom: new Date(Date.now()).toISOString()
+  };
+  minimalVcData.id = myRegisteredId;
+  const createdVcDoc = await runtime.vc.storeVc(minimalVcData);
+  const permanentVcAddress = createdVcDoc.id;
+
 
 
 
