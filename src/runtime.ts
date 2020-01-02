@@ -455,6 +455,7 @@ export async function createDefaultRuntime(
       accountStore,
       contractLoader,
       dfs,
+      credentialStatusEndpoint: config.smartAgents.didAndVc.vcRevokationStatusEndpoint,
       executor,
       nameResolver,
       signerIdentity: signer,

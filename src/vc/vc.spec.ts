@@ -80,6 +80,15 @@ describe('VC Resolver', function() {
       await expect(didJWT.verifyJWT((await promise).proof.jws, {resolver: evanResolver})).to.not.be.rejected;
     });
 
+    it('adds a credentialStatus property to the VC document when storing on-chain', async () => {
+      const promise = runtime.vc.storeVc(minimalValidVcData, true);
+      const endpointUrl = runtime.vc.options.credentialStatusEndpoint;
+      await expect(promise).to.not.be.rejected;
+
+      const doc = await promise;
+      expect(doc.credentialStatus.id).to.eq(`${endpointUrl}${doc.id}`);
+    });
+
     it('allows me to store a valid VC on-chain under my registered ID', async () => {
       const myRegisteredId = await runtime.vc.createId();
       const myDoc: VcDocumentTemplate = {...minimalValidVcData};
