@@ -92,11 +92,25 @@ describe('VC Resolver', function() {
 
     it('does not allow me to store a valid VC on-chain under an invalid ID', async () => {
       const invalidId = 'invalidId';
-      const myDoc: VcDocumentTemplate = {...minimalValidVcData};
-      myDoc.id = invalidId;
+      const myDoc: VcDocumentTemplate = {
+        ...minimalValidVcData,
+        id: invalidId
+      };
       const promise = runtime.vc.storeVc(myDoc);
 
       await expect(promise).to.be.rejectedWith(`Given VC ID ("${invalidId}") is no valid evan VC ID`);
+    });
+
+    it('does not allow me to issue a VC under a different issuer ID', async () => {
+      const myDoc: VcDocumentTemplate = {
+        ...minimalValidVcData,
+        issuer: {
+          id: await runtime.did.convertIdentityToDid(subjectIdentityId)
+        }
+      };
+      const promise = runtime.vc.createVc(myDoc);
+
+      await expect(promise).to.be.rejectedWith('You are not authorized to issue this VC');
     });
 
     it('does not allow me to store a VC under an ID I do not own', async() => {
