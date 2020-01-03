@@ -319,7 +319,7 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``revokationStatus``: A boolean true or false
+``Promise`` returns ``bool``: true for revoked, false for not revoked
 
 -------
 Example
