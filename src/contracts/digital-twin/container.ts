@@ -854,7 +854,7 @@ export class Container extends Logger {
       // (accountId, read, readWrite, removeListEntries)
       const shareConfig: ContainerShareConfig = { accountId: newConfigParam.accountId };
       const unshareConfig: ContainerShareConfig = { accountId: newConfigParam.accountId };
-      let originalConfig = (originalConfigs as ContainerShareConfig[])
+      let originalConfig = (originalConfigsParameter as ContainerShareConfig[])
         .filter((orgConf) => orgConf.accountId === newConfigParam.accountId)[0];
 
       // load latest share configuration to buil delta against
