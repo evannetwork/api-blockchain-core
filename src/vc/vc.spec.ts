@@ -122,7 +122,7 @@ describe('VC Resolver', function() {
       await expect(promise).to.be.rejectedWith('You are not authorized to issue this VC');
     });
 
-    it('does not allow me to store a VC under an ID I do not own', async() => {
+    it('(API level) does not allow me to store a VC under an ID I do not own', async() => {
       // Have another identity create a VC that we then want to store
       const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
       const someoneElsesId = await otherRuntime.vc.createId();
@@ -134,6 +134,24 @@ describe('VC Resolver', function() {
 
       const promise = runtime.vc.storeVc(vcData);
       await expect(promise).to.be.rejectedWith(`Active identity is not the owner of the given VC ID ${someoneElsesId}`);
+    });
+
+    it('(contract level) does not allow me to store a VC under an ID I do not own', async() => {
+      // Have another identity create a VC that we then want to store
+      const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
+      const someoneElsesId = (await otherRuntime.vc.createId()).replace('vc:evan:testcore:', '');
+
+      // Try to write a fake dfs hash under someone else's registered ID
+      const promise =  runtime.executor.executeContractTransaction(
+        await (runtime.vc as any).getRegistryContract(),
+        'setVc',
+        { from: runtime.vc.options.signerIdentity.activeIdentity },
+        someoneElsesId,
+        '0x2a838a6961be98f6a182f375bb9158848ee9760ca97a379939ccdf03fc442a23', // fake address
+      );
+
+      // Expect that the transaction is rejected since we do not own the address
+      await expect(promise).to.be.rejectedWith(`could not estimate gas usage`);
     });
 
     it('allows me to get an existing VC using the full VC ID URI', async () => {
@@ -203,7 +221,7 @@ describe('VC Resolver', function() {
         vcId,
       );
       expect(vcRevokeStatus).to.be.false;
-                 
+
       const revokeProcessed = runtime.executor.executeContractTransaction(
         await (runtime.vc as any).getRegistryContract(),
         'revokeVC',
@@ -229,7 +247,7 @@ describe('VC Resolver', function() {
 
       const vcRevokeStatus = await runtime.vc.getRevokeVcStatus(vcId);
       expect(vcRevokeStatus).to.be.false;
-                 
+
       const revokeProcessed = runtime.vc.revokeVc(vcId);
       await expect(revokeProcessed).to.be.not.rejected;
 
@@ -243,7 +261,7 @@ describe('VC Resolver', function() {
 
       const vcRevokeStatus = await runtime.vc.getRevokeVcStatus(nonExistingVcId);
       expect(vcRevokeStatus).to.be.false;
-                 
+
       const revokeProcessed = runtime.vc.revokeVc(nonExistingVcId);
       await expect(revokeProcessed).to.be.rejected;
 
@@ -266,7 +284,7 @@ describe('VC Resolver', function() {
         vcId,
       );
       expect(vcRevokeStatus).to.be.false;
-                 
+
       const revokeProcessed = otherRuntime.executor.executeContractTransaction(
         await (otherRuntime.vc as any).getRegistryContract(),
         'revokeVC',
@@ -293,7 +311,7 @@ describe('VC Resolver', function() {
 
       const vcRevokeStatus = await runtime.vc.getRevokeVcStatus(vcId);
       expect(vcRevokeStatus).to.be.false;
-                 
+
       const revokeProcessed = otherRuntime.vc.revokeVc(vcId);
       await expect(revokeProcessed).to.be.rejected;
 
