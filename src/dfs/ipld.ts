@@ -129,7 +129,6 @@ export class Ipld extends Logger {
         }
         const key = await this.keyProvider.getKey(cryptoInfo);
         const encrypted = await cryptor.encrypt(args[0], { key });
-        data = encrypted.toString(this.encodingEncrypted);
         const envelope: Envelope = {
           private: encrypted,
           cryptoInfo,
