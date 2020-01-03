@@ -8,7 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
         with:
-          fetch-depth:1
+          fetch-depth: 1
       - uses: S3bb1/eslint-action@master
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
