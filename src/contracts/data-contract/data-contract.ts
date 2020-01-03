@@ -239,7 +239,7 @@ export class DataContract extends BaseContract {
       });
       // push grouped by key
       for (let i = 0; i < Object.keys(groupedKeys).length; i += 1) {
-        const key = groupedKeys[i];
+        const key = Object.keys(groupedKeys)[i];
         const ipfsFiles = [];
         for (let j = 0; j < hashes.length; j += 1) {
           const value = hashes[j];

@@ -137,7 +137,7 @@ export class Ipld extends Logger {
         data = Buffer.from(JSON.stringify(envelope));
       }
       // add file to ipfs instead of dag put because js-ipfs-api don't supports dag at the moment
-      return this.ipfs.add('dag', args[0])
+      return this.ipfs.add('dag', data)
         .then((hash) => {
           this.hashLog.push(hash);
           const bufferHash = bs58.decode(Ipfs.bytes32ToIpfsHash(hash));
