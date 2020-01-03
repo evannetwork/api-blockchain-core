@@ -1483,8 +1483,9 @@ describe('Verifications handler', function test() {
       const txInfos = [];
       for (const path of paths) {
         txInfos.push(await verifications.signSetVerificationTransaction(
-          accounts[0], accounts[1], path, 0, null, null, false, false, nonce += 1,
+          accounts[0], accounts[1], path, 0, null, null, false, false, nonce,
         ));
+        nonce += 1;
       }
 
       // on account[2]s side
