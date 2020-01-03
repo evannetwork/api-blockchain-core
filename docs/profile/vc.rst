@@ -15,7 +15,7 @@ VC
    * - Tests
      - `vc.spec.ts <https://github.com/evannetwork/api-blockchain-core/blob/master/src/vc/vc.spec.ts>`_
 
-The `Vc` module allows to create, store, and retrieve VCs on evan.network.
+The `Vc` module allows to create, store, retrieve and revoke VCs on evan.network.
 As development of identities, and DID and VC handling on evan.network is an ongoing process, this document
 describes the current interoperability of VCs on evan.network and can be seen as a work-in-progress state
 of the current implementation.
