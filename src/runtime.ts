@@ -122,16 +122,16 @@ export async function createDefaultRuntime(
     if (typeof global === 'undefined' || !(global as any).localStorage) {
       // get/compile smart contracts
       // It is possible to load contracts from non-default locations
-      const solcCfg = { compileContracts: false, destinationPath: '' };
+      const solcCfg = { compileContracts: false };
       if (runtimeConfig.contractsLoadPath) {
-        solcCfg.destinationPath = runtimeConfig.contractsLoadPath;
+        (solcCfg as any).destinationPath = runtimeConfig.contractsLoadPath;
       }
 
       // eslint-disable-next-line
       const smartContract = require('@evan.network/smart-contracts-core');
       const solc = new smartContract.Solc({ config: solcCfg, log });
       await solc.ensureCompiled(
-        runtimeConfig.additionalContractsPaths || [], solcCfg.destinationPath,
+        runtimeConfig.additionalContractsPaths || [], (solcCfg as any).destinationPath,
       );
 
       contracts = solc.getContracts();
