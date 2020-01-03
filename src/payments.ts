@@ -133,6 +133,7 @@ export class Payments extends Logger {
    * [[loadChannelFromBlockchain]], or stored and set manually with [[setChannel]]
    */
   public channel: MicroChannel;
+
   public channelManager: any;
 
   public startBlock: any;
