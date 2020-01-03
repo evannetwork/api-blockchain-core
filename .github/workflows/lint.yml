@@ -9,17 +9,6 @@ jobs:
       - uses: actions/checkout@v1
         with:
           fetch-depth: 1
-      - uses: actions/setup-node@v1
-        with:
-          node-version: 12
-      - run: rm -f .yarnclean
-      - run: yarn --frozen-lockfile --ignore-engines --ignore-optional --no-bin-links --non-interactive --silent --ignore-scripts --production=false
-        env:
-          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: true
-          HUSKY_SKIP_INSTALL: true
-      - run: yarn build
-      # Alternative: if you use npm instead of yarn
-      # - run: npm ci --no-audit --prefer-offline
       - uses: S3bb1/eslint-action@master
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
