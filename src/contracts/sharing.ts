@@ -702,13 +702,13 @@ export class Sharing extends Logger {
           continue;
         }
         result[partnerHashKey][sectionHashKey] = {};
-        const sectionElem = partner[sectionHashKey];
+        const sectionElem = partnerElem[sectionHashKey];
         for (const blockKey of Object.keys(sectionElem)) {
           if (block && block !== parseInt(blockKey, 10)) {
             // eslint-disable-next-line no-continue
             continue;
           }
-          const blockElem = section[blockKey];
+          const blockElem = sectionElem[blockKey];
           const cryptor = this.options.cryptoProvider.getCryptorByCryptoInfo(blockElem.cryptoInfo);
           const decryptKey = await this.options.keyProvider.getKey(blockElem.cryptoInfo);
           if (decryptKey) {

@@ -965,7 +965,7 @@ export class Container extends Logger {
     )
       .filter((property) => property !== undefined);
     const missingProperties = sharedProperties
-      .filter((property) => !Object.prototype.isPrototypeOf.call(schemaProperties, property));
+      .filter((property) => !Object.prototype.hasOwnProperty.call(schemaProperties, property));
     if (missingProperties.length) {
       throw new Error(
         `tried to share properties, but missing one or more in schema: ${missingProperties}`,
@@ -1308,7 +1308,7 @@ export class Container extends Logger {
     )
       .filter((property) => property !== undefined);
     const missingProperties = sharedProperties
-      .filter((property) => !Object.prototype.isPrototypeOf.call(schemaProperties, property));
+      .filter((property) => !Object.prototype.hasOwnProperty.call(schemaProperties, property));
     if (missingProperties.length) {
       throw new Error(
         `tried to share properties, but missing one or more in schema: ${missingProperties}`,
@@ -1977,7 +1977,7 @@ async function applyPlugin(
   const tasks = [];
   for (const propertyName of propertyNames) {
     const property: ContainerTemplateProperty = properties[propertyName];
-    if (Object.prototype.isPrototypeOf.call(property, 'value')) {
+    if (Object.prototype.hasOwnProperty.call(property, 'value')) {
       tasks.push(async () => container.setEntry(propertyName, property.value, false));
     }
   }
@@ -1995,7 +1995,7 @@ async function applyPlugin(
  */
 function checkConfigProperties(config: ContainerConfig, properties: string[]): void {
   const missing = properties.filter(
-    (property) => !Object.prototype.isPrototypeOf.call(config, property),
+    (property) => !Object.prototype.hasOwnProperty.call(config, property),
   );
   if (missing.length === 1) {
     throw new Error(`missing property in config: "${missing[0]}"`);
