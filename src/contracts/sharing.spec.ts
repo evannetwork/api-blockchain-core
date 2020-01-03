@@ -35,7 +35,7 @@ import { Sharing } from './sharing';
 use(chaiAsPromised);
 
 
-describe('Sharing handler', function() {
+describe('Sharing handler', function test() {
   this.timeout(300000);
   let executor: Executor;
   let dfs: DfsInterface;
@@ -59,20 +59,21 @@ describe('Sharing handler', function() {
       executor,
       dfs,
       keyProvider: TestUtils.getKeyProvider(),
-      nameResolver: nameResolver,
+      nameResolver,
       defaultCryptoAlgo: 'aes',
     });
   });
 
   function runContractTests(isMultiShared) {
     const contractName = !isMultiShared ? 'Shared' : 'MultiSharedTest';
-    const sharingId = !isMultiShared ?
-      null : `0x${Math.floor(Math.random() * 255 * 255 * 255).toString(16).padStart(64, '0')}`;
+    const sharingId = !isMultiShared
+      ? null : `0x${Math.floor(Math.random() * 255 * 255 * 255).toString(16).padStart(64, '0')}`;
 
     it('should be able to add a sharing', async () => {
       const randomSecret = `super secret; ${Math.random()}`;
       const contract = await executor.createContract(
-        contractName, [], { from: accounts[0], gas: 500000, });
+        contractName, [], { from: accounts[0], gas: 500000 },
+      );
       await sharing.addSharing(
         contract.options.address,
         accounts[0],
@@ -89,7 +90,8 @@ describe('Sharing handler', function() {
     it('should be able to get a sharing key', async () => {
       const randomSecret = `super secret; ${Math.random()}`;
       const contract = await executor.createContract(
-        contractName, [], { from: accounts[0], gas: 500000, });
+        contractName, [], { from: accounts[0], gas: 500000 },
+      );
       await sharing.addSharing(
         contract.options.address,
         accounts[0],
@@ -108,7 +110,8 @@ describe('Sharing handler', function() {
     it('should be able to list all sharings', async () => {
       const randomSecret = `super secret; ${Math.random()}`;
       const contract = await executor.createContract(
-        contractName, [], { from: accounts[0], gas: 500000, });
+        contractName, [], { from: accounts[0], gas: 500000 },
+      );
       await sharing.addSharing(contract.options.address,
         accounts[0],
         accounts[1],
@@ -117,17 +120,18 @@ describe('Sharing handler', function() {
         randomSecret,
         null,
         false,
-        sharingId,
-      );
+        sharingId);
       const sharings = await sharing.getSharings(
-        contract.options.address, null, null, null, sharingId);
+        contract.options.address, null, null, null, sharingId,
+      );
       expect(sharings).not.to.be.undefined;
     });
 
     it('should be able to remove a sharing', async () => {
       const randomSecret = `super secret; ${Math.random()}`;
       const contract = await executor.createContract(
-        contractName, [], { from: accounts[0], gas: 500000, });
+        contractName, [], { from: accounts[0], gas: 500000 },
+      );
       await sharing.addSharing(
         contract.options.address,
         accounts[0],
@@ -140,18 +144,22 @@ describe('Sharing handler', function() {
         sharingId,
       );
       let sharings = await sharing.getSharings(
-        contract.options.address, null, null, null, sharingId);
+        contract.options.address, null, null, null, sharingId,
+      );
       expect(Object.keys(sharings).length).to.eq(1);
       expect(Object.keys(sharings[nameResolver.soliditySha3(accounts[1])]).length).to.eq(1);
       expect(
         Object.keys(
-          sharings[nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('*')]).length)
+          sharings[nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('*')],
+        ).length,
+      )
         .to.eq(1);
       expect(sharings[nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('*')][0])
         .to.eq(randomSecret);
 
       await sharing.removeSharing(
-        contract.options.address, accounts[0], accounts[1], '*', sharingId);
+        contract.options.address, accounts[0], accounts[1], '*', sharingId,
+      );
       sharings = await sharing.getSharings(contract.options.address, null, null, null, sharingId);
       expect(Object.keys(sharings).length).to.eq(0);
       const key1 = await sharing.getKey(contract.options.address, accounts[1], '*', 0, sharingId);
@@ -161,7 +169,8 @@ describe('Sharing handler', function() {
     it('should be able to store sharings under a given context', async () => {
       const randomSecret = `super secret; ${Math.random()}`;
       const contract = await executor.createContract(
-        contractName, [], { from: accounts[0], gas: 500000, });
+        contractName, [], { from: accounts[0], gas: 500000 },
+      );
       await sharing.addSharing(
         contract.options.address,
         accounts[0],
@@ -177,7 +186,8 @@ describe('Sharing handler', function() {
       expect(key).to.eq(randomSecret);
 
       const contract2 = await executor.createContract(
-        contractName, [], { from: accounts[0], gas: 500000, });
+        contractName, [], { from: accounts[0], gas: 500000 },
+      );
       const unknownContext = 'I have not been added to any config';
       let err;
       try {
@@ -193,7 +203,8 @@ describe('Sharing handler', function() {
           sharingId,
         );
         await sharing.getKey(
-          contract2.options.address, accounts[1], '*', 0, sharingId);
+          contract2.options.address, accounts[1], '*', 0, sharingId,
+        );
       } catch (ex) {
         err = ex;
       }
@@ -207,7 +218,8 @@ describe('Sharing handler', function() {
         `super secret; ${Math.random()}`,
       ];
       const contract = await executor.createContract(
-        contractName, [], { from: accounts[0], gas: 500000, });
+        contractName, [], { from: accounts[0], gas: 500000 },
+      );
       await sharing.addSharing(
         contract.options.address,
         accounts[0],
@@ -242,27 +254,34 @@ describe('Sharing handler', function() {
         sharingId,
       );
       const sharings = await sharing.getSharings(
-        contract.options.address, null, null, null, sharingId);
+        contract.options.address, null, null, null, sharingId,
+      );
       // object checks
       expect(Object.keys(sharings)).to.deep.eq([nameResolver.soliditySha3(accounts[1])]);
       expect(
-        sharings[nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('sectionOne')])
-        .to.deep.eq({ '0': randomSecret[0], });
+        sharings[nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('sectionOne')],
+      )
+        .to.deep.eq({ 0: randomSecret[0] });
       expect(
-        sharings[nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('sectionTwo')])
-        .to.deep.eq({ '0': randomSecret[1], });
+        sharings[nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('sectionTwo')],
+      )
+        .to.deep.eq({ 0: randomSecret[1] });
       expect(
-        sharings[nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('sectionThree')])
-        .to.deep.eq({ '0': randomSecret[2], });
+        sharings[nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('sectionThree')],
+      )
+        .to.deep.eq({ 0: randomSecret[2] });
       // getKey checks
       expect(
-        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 1000, sharingId))
+        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 1000, sharingId),
+      )
         .to.eq(randomSecret[0]);
       expect(
-        await sharing.getKey(contract.options.address, accounts[1], 'sectionTwo', 1000, sharingId))
+        await sharing.getKey(contract.options.address, accounts[1], 'sectionTwo', 1000, sharingId),
+      )
         .to.eq(randomSecret[1]);
       expect(
-        await sharing.getKey(contract.options.address, accounts[1], 'sectionThree', 1000, sharingId))
+        await sharing.getKey(contract.options.address, accounts[1], 'sectionThree', 1000, sharingId),
+      )
         .to.eq(randomSecret[2]);
     });
 
@@ -272,7 +291,8 @@ describe('Sharing handler', function() {
         `super secret; ${Math.random()}`,
       ];
       const contract = await executor.createContract(
-        contractName, [], { from: accounts[0], gas: 500000, });
+        contractName, [], { from: accounts[0], gas: 500000 },
+      );
       await sharing.addSharing(
         contract.options.address,
         accounts[0],
@@ -296,41 +316,48 @@ describe('Sharing handler', function() {
         sharingId,
       );
       const sharings = await sharing.getSharings(
-        contract.options.address, null, null, null, sharingId);
+        contract.options.address, null, null, null, sharingId,
+      );
       // object checks
       expect(Object.keys(sharings)).to.deep.eq([nameResolver.soliditySha3(accounts[1])]);
       expect(
-        sharings
-          [nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('sectionOne')]['100'])
+        sharings[nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('sectionOne')]['100'],
+      )
         .to.eq(randomSecret[0]);
       expect(
-        sharings
-          [nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('sectionOne')]['200'])
+        sharings[nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('sectionOne')]['200'],
+      )
         .to.eq(randomSecret[1]);
       // getKey checks
       // exactly in block 0
       expect(
-        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 0, sharingId))
+        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 0, sharingId),
+      )
         .to.eq(undefined);
       // between before block 100
       expect(
-        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 12, sharingId))
+        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 12, sharingId),
+      )
         .to.eq(undefined);
       // exactly in block 100
       expect(
-        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 100, sharingId))
+        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 100, sharingId),
+      )
         .to.eq(randomSecret[0]);
       // between block 100 and block 200
       expect(
-        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 123, sharingId))
+        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 123, sharingId),
+      )
         .to.eq(randomSecret[0]);
       // exactly in block 200
       expect(
-        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 200, sharingId))
+        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 200, sharingId),
+      )
         .to.eq(randomSecret[1]);
       // after block 200
       expect(
-        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 234, sharingId))
+        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 234, sharingId),
+      )
         .to.eq(randomSecret[1]);
     });
 
@@ -340,7 +367,8 @@ describe('Sharing handler', function() {
         `super secret; ${Math.random()}`,
       ];
       const contract = await executor.createContract(
-        contractName, [], { from: accounts[0], gas: 500000, });
+        contractName, [], { from: accounts[0], gas: 500000 },
+      );
       await sharing.addSharing(
         contract.options.address,
         accounts[0],
@@ -364,24 +392,31 @@ describe('Sharing handler', function() {
         sharingId,
       );
       const sharings = await sharing.getSharings(
-        contract.options.address, null, null, null, sharingId);
+        contract.options.address, null, null, null, sharingId,
+      );
       // object checks
       expect(Object.keys(sharings).sort())
         .to.deep.eq(
-          [nameResolver.soliditySha3(accounts[1]), nameResolver.soliditySha3(accounts[0])].sort());
+          [nameResolver.soliditySha3(accounts[1]), nameResolver.soliditySha3(accounts[0])].sort(),
+        );
       expect(
-        sharings[nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('sectionOne')])
+        sharings[nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('sectionOne')],
+      )
         .to.deep.eq(
-          { '0': randomSecret[0], });
+          { 0: randomSecret[0] },
+        );
       expect(
-        sharings[nameResolver.soliditySha3(accounts[0])][nameResolver.soliditySha3('sectionOne')])
-        .to.deep.eq({ '0': randomSecret[1], });
+        sharings[nameResolver.soliditySha3(accounts[0])][nameResolver.soliditySha3('sectionOne')],
+      )
+        .to.deep.eq({ 0: randomSecret[1] });
       // getKey checks
       expect(
-        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 0, sharingId))
+        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 0, sharingId),
+      )
         .to.eq(randomSecret[0]);
       expect(
-        await sharing.getKey(contract.options.address, accounts[0], 'sectionOne', 0, sharingId))
+        await sharing.getKey(contract.options.address, accounts[0], 'sectionOne', 0, sharingId),
+      )
         .to.eq(randomSecret[1]);
     });
 
@@ -391,7 +426,8 @@ describe('Sharing handler', function() {
         `super secret; ${Math.random()}`,
       ];
       const contract = await executor.createContract(
-        contractName, [], { from: accounts[0], gas: 500000, });
+        contractName, [], { from: accounts[0], gas: 500000 },
+      );
       await sharing.addSharing(
         contract.options.address,
         accounts[0],
@@ -404,41 +440,48 @@ describe('Sharing handler', function() {
         sharingId,
       );
       let sharings = await sharing.getSharings(
-        contract.options.address, null, null, null, sharingId);
+        contract.options.address, null, null, null, sharingId,
+      );
       // object checks
       expect(Object.keys(sharings)).to.deep.eq([nameResolver.soliditySha3(accounts[1])]);
       expect(
-        sharings
-          [nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('sectionOne')]['100'])
+        sharings[nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('sectionOne')]['100'],
+      )
         .to.eq(randomSecret[0]);
       expect(
-        sharings
-          [nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('sectionOne')]['200'])
+        sharings[nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('sectionOne')]['200'],
+      )
         .to.eq(undefined);
       // initial keys setup
       // exactly in block 0
       expect(
-        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 0, sharingId))
+        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 0, sharingId),
+      )
         .to.eq(undefined);
       // between before block 100
       expect(
-        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 12, sharingId))
+        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 12, sharingId),
+      )
         .to.eq(undefined);
       // exactly in block 100
       expect(
-        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 100, sharingId))
+        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 100, sharingId),
+      )
         .to.eq(randomSecret[0]);
       // between block 100 and block 200
       expect(
-        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 123, sharingId))
+        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 123, sharingId),
+      )
         .to.eq(randomSecret[0]);
       // exactly in block 200
       expect(
-        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 200, sharingId))
+        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 200, sharingId),
+      )
         .to.eq(randomSecret[0]);
       // after block 200
       expect(
-        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 234, sharingId))
+        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 234, sharingId),
+      )
         .to.eq(randomSecret[0]);
 
       // add new key, valid in and after block 200
@@ -457,36 +500,42 @@ describe('Sharing handler', function() {
       sharings = await sharing.getSharings(contract.options.address, null, null, null, sharingId);
       expect(Object.keys(sharings)).to.deep.eq([nameResolver.soliditySha3(accounts[1])]);
       expect(
-        sharings
-          [nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('sectionOne')]['100'])
+        sharings[nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('sectionOne')]['100'],
+      )
         .to.eq(randomSecret[0]);
       expect(
-        sharings
-          [nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('sectionOne')]['200'])
+        sharings[nameResolver.soliditySha3(accounts[1])][nameResolver.soliditySha3('sectionOne')]['200'],
+      )
         .to.eq(randomSecret[1]);
       // exactly in block 0
       expect(
-        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 0, sharingId))
+        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 0, sharingId),
+      )
         .to.eq(undefined);
       // between before block 100
       expect(
-        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 12, sharingId))
+        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 12, sharingId),
+      )
         .to.eq(undefined);
       // exactly in block 100
       expect(
-        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 100, sharingId))
+        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 100, sharingId),
+      )
         .to.eq(randomSecret[0]);
       // between block 100 and block 200
       expect(
-        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 123, sharingId))
+        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 123, sharingId),
+      )
         .to.eq(randomSecret[0]);
       // exactly in block 200
       expect(
-        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 200, sharingId))
+        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 200, sharingId),
+      )
         .to.eq(randomSecret[1]);
       // after block 200
       expect(
-        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 234, sharingId))
+        await sharing.getKey(contract.options.address, accounts[1], 'sectionOne', 234, sharingId),
+      )
         .to.eq(randomSecret[1]);
     });
 
@@ -497,11 +546,14 @@ describe('Sharing handler', function() {
         `super secret; ${Math.random()}`,
       ];
       const contract = await executor.createContract(
-        contractName, [], { from: accounts[0], gas: 500000, });
+        contractName, [], { from: accounts[0], gas: 500000 },
+      );
       // if no sharings added, key is undefined
       expect(
         await sharing.getKey(
-          contract.options.address, accounts[1], 'sectionOne', Number.MAX_SAFE_INTEGER, sharingId))
+          contract.options.address, accounts[1], 'sectionOne', Number.MAX_SAFE_INTEGER, sharingId,
+        ),
+      )
         .to.eq(undefined);
       // add a key, this will be the latest key
       await sharing.addSharing(
@@ -517,7 +569,9 @@ describe('Sharing handler', function() {
       );
       expect(
         await sharing.getKey(
-          contract.options.address, accounts[1], 'sectionOne', Number.MAX_SAFE_INTEGER, sharingId))
+          contract.options.address, accounts[1], 'sectionOne', Number.MAX_SAFE_INTEGER, sharingId,
+        ),
+      )
         .to.eq(randomSecret[0]);
       // add a key before the first one --> latest key should not change
       await sharing.addSharing(
@@ -533,7 +587,9 @@ describe('Sharing handler', function() {
       );
       expect(
         await sharing.getKey(
-          contract.options.address, accounts[1], 'sectionOne', Number.MAX_SAFE_INTEGER, sharingId))
+          contract.options.address, accounts[1], 'sectionOne', Number.MAX_SAFE_INTEGER, sharingId,
+        ),
+      )
         .to.eq(randomSecret[0]);
       // add a key after the first one --> latest key should change
       await sharing.addSharing(
@@ -549,30 +605,37 @@ describe('Sharing handler', function() {
       );
       expect(
         await sharing.getKey(
-          contract.options.address, accounts[1], 'sectionOne', Number.MAX_SAFE_INTEGER, sharingId))
+          contract.options.address, accounts[1], 'sectionOne', Number.MAX_SAFE_INTEGER, sharingId,
+        ),
+      )
         .to.eq(randomSecret[2]);
     });
 
     it('should be able to share hash keys', async () => {
       const contract = await executor.createContract(
-        contractName, [], { from: accounts[0], gas: 500000, });
+        contractName, [], { from: accounts[0], gas: 500000 },
+      );
       const hashCryptor = cryptoProvider.getCryptorByCryptoAlgo('aesEcb');
       const hashKey = await hashCryptor.generateKey();
       await sharing.ensureHashKey(
-        contract.options.address, accounts[0], accounts[0], hashKey, null, sharingId);
+        contract.options.address, accounts[0], accounts[0], hashKey, null, sharingId,
+      );
       await sharing.ensureHashKey(
-        contract.options.address, accounts[0], accounts[1], hashKey, null, sharingId);
+        contract.options.address, accounts[0], accounts[1], hashKey, null, sharingId,
+      );
       const key = await sharing.getHashKey(contract.options.address, accounts[1], sharingId);
       expect(key).to.eq(hashKey);
     });
 
     it('should be able to share hash implicitely when sharing other keys', async () => {
       const contract = await executor.createContract(
-        contractName, [], { from: accounts[0], gas: 500000, });
+        contractName, [], { from: accounts[0], gas: 500000 },
+      );
       const hashCryptor = cryptoProvider.getCryptorByCryptoAlgo('aesEcb');
       const hashKey = await hashCryptor.generateKey();
       await sharing.ensureHashKey(
-        contract.options.address, accounts[0], accounts[0], hashKey, null, sharingId);
+        contract.options.address, accounts[0], accounts[0], hashKey, null, sharingId,
+      );
       // await sharing.ensureHashKey(contract.options.address, accounts[0], accounts[1], hashKey);
       const randomSecret = `super secret; ${Math.random()}`;
       await sharing.addSharing(
@@ -588,11 +651,13 @@ describe('Sharing handler', function() {
       );
       // check shared key
       const sharedKey = await sharing.getKey(
-        contract.options.address, accounts[1], '*', 0, sharingId);
+        contract.options.address, accounts[1], '*', 0, sharingId,
+      );
       expect(sharedKey).to.eq(randomSecret);
       // check hash key
       const hashKeyRetrieved = await sharing.getHashKey(
-        contract.options.address, accounts[1], sharingId);
+        contract.options.address, accounts[1], sharingId,
+      );
       expect(hashKeyRetrieved).to.eq(hashKey);
     });
 
@@ -606,7 +671,8 @@ describe('Sharing handler', function() {
         200: randomSecret[1],
       };
       const contract = await executor.createContract(
-        contractName, [], { from: accounts[0], gas: 500000, });
+        contractName, [], { from: accounts[0], gas: 500000 },
+      );
       await sharing.addSharing(
         contract.options.address,
         accounts[0],
@@ -630,7 +696,8 @@ describe('Sharing handler', function() {
         sharingId,
       );
       const history = await sharing.getKeyHistory(
-        contract.options.address, accounts[1], 'sectionOne', sharingId);
+        contract.options.address, accounts[1], 'sectionOne', sharingId,
+      );
 
       expect(history).to.deep.eq(target);
     });
@@ -640,7 +707,8 @@ describe('Sharing handler', function() {
         const randomSecret = `super secret; ${Math.random()}`;
         // create a contract with a sharing
         const contract = await executor.createContract(
-          contractName, [], { from: accounts[0], gas: 500000, });
+          contractName, [], { from: accounts[0], gas: 500000 },
+        );
         await sharing.addSharing(
           contract.options.address,
           accounts[0],
@@ -661,26 +729,28 @@ describe('Sharing handler', function() {
           executor,
           dfs,
           keyProvider: TestUtils.getKeyProvider(),
-          nameResolver: nameResolver,
+          nameResolver,
           defaultCryptoAlgo: 'aes',
         });
 
         // add sharing key
-        const sharingHash = await (sharingId ?
-          executor.executeContractCall(contract, 'multiSharings', sharingId) :
-          executor.executeContractCall(contract, 'sharing')
+        const sharingHash = await (sharingId
+          ? executor.executeContractCall(contract, 'multiSharings', sharingId)
+          : executor.executeContractCall(contract, 'sharing')
         );
         const sharings = await dfs.get(sharingHash);
         newSharing.addHashToCache(
-          contract.options.address, JSON.parse(sharings.toString()), sharingId);
+          contract.options.address, JSON.parse(sharings.toString()), sharingId,
+        );
         const key = await newSharing.getKey(
-          contract.options.address, accounts[1], '*', 0, sharingId);
+          contract.options.address, accounts[1], '*', 0, sharingId,
+        );
         expect(key).to.eq(randomSecret);
       });
     });
   }
 
-  describe('for contracts that inherit from "Shared"', function() {
+  describe('for contracts that inherit from "Shared"', () => {
     runContractTests(false);
 
     it('should be able to bump keys (add a new key for given section to all given accounts',
@@ -690,7 +760,8 @@ describe('Sharing handler', function() {
           `super secret; ${Math.random()}`,
         ];
         const contract = await executor.createContract(
-          'Shared', [], { from: accounts[0], gas: 500000, });
+          'Shared', [], { from: accounts[0], gas: 500000 },
+        );
         await sharing.addSharing(
           contract.options.address,
           accounts[0],
@@ -717,7 +788,7 @@ describe('Sharing handler', function() {
         await sharing.bumpSharings(
           contract.options.address,
           accounts[0],
-          [ accounts[1] ],
+          [accounts[1]],
           'sectionOne',
           block,
           bumpKey,
@@ -729,17 +800,19 @@ describe('Sharing handler', function() {
       });
   });
 
-  describe('for contracts that inherit from "MultiShared"', function() {
+  describe('for contracts that inherit from "MultiShared"', () => {
     runContractTests(true);
 
     it('can manage multiple sharings autonomously', async () => {
       const count = 3;
       const sharingIds = [...Array(count)].map(
-        () => `0x${Math.floor(Math.random() * 255 * 255 * 255).toString(16).padStart(64, '0')}`);
+        () => `0x${Math.floor(Math.random() * 255 * 255 * 255).toString(16).padStart(64, '0')}`,
+      );
       const randomSecrets = [...Array(count)].map(() => `super secret; ${Math.random()}`);
       const contract = await executor.createContract(
-        'MultiSharedTest', [], { from: accounts[0], gas: 500000, });
-      for (let i = 0; i < count; i++) {
+        'MultiSharedTest', [], { from: accounts[0], gas: 500000 },
+      );
+      for (let i = 0; i < count; i += 1) {
         await sharing.addSharing(
           contract.options.address,
           accounts[0],
@@ -752,9 +825,10 @@ describe('Sharing handler', function() {
           sharingIds[i],
         );
       }
-      for (let i = 0; i < count; i++) {
+      for (let i = 0; i < count; i += 1) {
         const key = await sharing.getKey(
-          contract.options.address, accounts[1], '*', 0, sharingIds[i]);
+          contract.options.address, accounts[1], '*', 0, sharingIds[i],
+        );
         expect(key).to.eq(randomSecrets[i]);
       }
     });

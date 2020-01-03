@@ -93,7 +93,7 @@ export interface Runtime {
   verifications?: Verifications;
   votings?: Votings;
   web3?: any;
-};
+}
 
 /**
  * create new runtime instance
@@ -104,7 +104,7 @@ export interface Runtime {
  * @return     {Promise<Runtime>}  runtime instance
  */
 export async function createDefaultRuntime(
-  web3: any, dfs: DfsInterface, runtimeConfig: any, options: Runtime = { }
+  web3: any, dfs: DfsInterface, runtimeConfig: any, options: Runtime = { },
 ): Promise<Runtime> {
   // determine chain this runtime is created for
   const environment = await getEnvironment(web3);
@@ -117,28 +117,29 @@ export async function createDefaultRuntime(
   // if this function is used within node and no browser context exists, load the
   // @evan.network/smart-contracts-core normally and use the Solc functionalities to parse and
   // retrieve contracts
-  let contracts = options.contracts;
+  let { contracts } = options;
   if (!contracts) {
     if (typeof global === 'undefined' || !(global as any).localStorage) {
       // get/compile smart contracts
       // It is possible to load contracts from non-default locations
-      const solcCfg = { compileContracts: false, }
+      const solcCfg = { compileContracts: false, destinationPath: '' };
       if (runtimeConfig.contractsLoadPath) {
-        solcCfg['destinationPath'] = runtimeConfig.contractsLoadPath;
+        solcCfg.destinationPath = runtimeConfig.contractsLoadPath;
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // eslint-disable-next-line
       const smartContract = require('@evan.network/smart-contracts-core');
-      const solc = new smartContract.Solc({ config: solcCfg, log, });
+      const solc = new smartContract.Solc({ config: solcCfg, log });
       await solc.ensureCompiled(
-        runtimeConfig.additionalContractsPaths || [], solcCfg['destinationPath']);
+        runtimeConfig.additionalContractsPaths || [], solcCfg.destinationPath,
+      );
 
       contracts = solc.getContracts();
     } else {
       // if this lib is used within the browser using browserify, smart-contracts-core needs to be
       // defined externaly (normally defined by @evan.network/ui-dapp-browser) to return the abis
       // directly as json
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // eslint-disable-next-line
       const originalContracts = require('@evan.network/smart-contracts-core');
       contracts = { };
 
@@ -151,59 +152,69 @@ export async function createDefaultRuntime(
   }
 
   // web3 contract interfaces
-  const contractLoader = options.contractLoader ||
-    new ContractLoader({ contracts, log, web3, });
+  const contractLoader = options.contractLoader
+    || new ContractLoader({ contracts, log, web3 });
 
   // check if mnemonic and password are given
   if (runtimeConfig.mnemonic && runtimeConfig.password) {
     const tempConfig: any = await Onboarding.generateRuntimeConfig(
       runtimeConfig.mnemonic,
       runtimeConfig.password,
-      web3
+      web3,
     );
     if (!runtimeConfig.accountMap) {
-      runtimeConfig.accountMap = {};
+      // eslint-disable-next-line no-param-reassign
+      (runtimeConfig as any).accountMap = {};
     }
     if (!runtimeConfig.keyConfig) {
-      runtimeConfig.keyConfig = {};
+      // eslint-disable-next-line no-param-reassign
+      (runtimeConfig as any).keyConfig = {};
     }
     Object.assign(runtimeConfig.accountMap, tempConfig.accountMap);
     Object.assign(runtimeConfig.keyConfig, tempConfig.keyConfig);
-  } else if (!runtimeConfig.accountMap ||
-       !(Object.keys(runtimeConfig.accountMap).length)) {
+  } else if (!runtimeConfig.accountMap
+       || !(Object.keys(runtimeConfig.accountMap).length)) {
     throw new Error('accountMap invalid');
   }
 
   const activeAccount = Object.keys(runtimeConfig.accountMap)[0];
 
   // executor
-  const accountStore = options.accountStore ||
-    new AccountStore({ accounts: runtimeConfig.accountMap, log, });
+  const accountStore = options.accountStore
+    || new AccountStore({ accounts: runtimeConfig.accountMap, log });
   const signerConfig = {} as any;
-  if (runtimeConfig.hasOwnProperty('gasPrice')) {
+  if (Object.prototype.hasOwnProperty.call(runtimeConfig, 'gasPrice')) {
     signerConfig.gasPrice = runtimeConfig.gasPrice;
   } else {
     signerConfig.gasPrice = `${200e9}`;
   }
 
-  const signerInternal = options.signer ||
-    new SignerInternal({ accountStore, contractLoader, config: signerConfig, log, web3, });
+  const signerInternal = options.signer
+    || new SignerInternal({
+      accountStore, contractLoader, config: signerConfig, log, web3,
+    });
   let signer;
   if (runtimeConfig.useIdentity) {
     signer = new SignerIdentity(
       {
         contractLoader,
-        verifications: null,  // filled later on
+        verifications: null, // filled later on
         web3,
-      }
+      },
     );
   } else {
     signer = signerInternal;
   }
 
   const executor = options.executor || new Executor(
-    Object.assign({ config, log, signer, web3, },
-      runtimeConfig.options ? runtimeConfig.options.Executor : {}));
+    {
+      config,
+      log,
+      signer,
+      web3,
+      ...(runtimeConfig.options ? runtimeConfig.options.Executor : {}),
+    },
+  );
   await executor.init({});
   const nameResolver = options.nameResolver || new NameResolver({
     config: runtimeConfig.nameResolver || config.nameResolver,
@@ -222,16 +233,21 @@ export async function createDefaultRuntime(
 
   // check if the dfs remoteNode matches our ipfslib
   if (!((dfs as Ipfs).remoteNode as any instanceof IpfsLib)) {
+    // eslint-disable-next-line no-param-reassign
     (dfs as Ipfs).remoteNode = new IpfsLib(config.ipfsConfig);
   }
-  (dfs as Ipfs).setRuntime({signer, activeAccount, web3});
+  (dfs as Ipfs).setRuntime({ signer, activeAccount, web3 });
 
   // encryption
   const cryptoConfig = {};
-  cryptoConfig['aes'] = new Aes({ log });
-  cryptoConfig['unencrypted'] = new Unencrypted({ log });
-  cryptoConfig['aesBlob'] = new AesBlob({ dfs, log });
-  cryptoConfig['aesEcb'] = new AesEcb({ log });
+  // eslint-disable-next-line no-param-reassign
+  (cryptoConfig as any).aes = new Aes({ log });
+  // (cryptoConfig as any)-disable-next-line no-param-reassign
+  (cryptoConfig as any).unencrypted = new Unencrypted({ log });
+  // eslint-disable-next-line no-param-reassign
+  (cryptoConfig as any).aesBlob = new AesBlob({ dfs, log });
+  // eslint-disable-next-line no-param-reassign
+  (cryptoConfig as any).aesEcb = new AesEcb({ log });
   const cryptoProvider = new CryptoProvider(cryptoConfig);
 
   // check and modify if any accountid with password is provided
@@ -243,26 +259,29 @@ export async function createDefaultRuntime(
           web3.utils.soliditySha3,
           [
             web3.utils.soliditySha3(accountId),
-            web3.utils.soliditySha3(accountId)
-          ].sort()
+            web3.utils.soliditySha3(accountId),
+          ].sort(),
         );
-        const sha3Account = web3.utils.soliditySha3(accountId)
+        const sha3Account = web3.utils.soliditySha3(accountId);
         const dataKey = web3.utils
           .keccak256(accountId + runtimeConfig.keyConfig[accountId])
           .replace(/0x/g, '');
         // now add the different hashed accountids and datakeys to the runtimeconfig
+        // eslint-disable-next-line no-param-reassign
         runtimeConfig.keyConfig[sha3Account] = dataKey;
+        // eslint-disable-next-line no-param-reassign
         runtimeConfig.keyConfig[sha9Account] = dataKey;
 
         // at least delete the old key
+        // eslint-disable-next-line no-param-reassign
         delete runtimeConfig.keyConfig[accountId];
       }
     }
   }
 
 
-  const keyProvider = options.keyProvider ||
-    new KeyProvider({ keys: runtimeConfig.keyConfig, log });
+  const keyProvider = options.keyProvider
+    || new KeyProvider({ keys: runtimeConfig.keyConfig, log });
 
   // description
   const description = options.description || new Description({
@@ -328,7 +347,7 @@ export async function createDefaultRuntime(
 
   // 'own' key provider, that won't be linked to profile and used in 'own' ipld
   // this prevents key lookup infinite loops
-  const keyProviderOwn = new KeyProvider({ keys: runtimeConfig.keyConfig, log, });
+  const keyProviderOwn = new KeyProvider({ keys: runtimeConfig.keyConfig, log });
   const ipldOwn = new Ipld({
     ipfs: dfs as Ipfs,
     keyProvider: keyProviderOwn,
@@ -412,15 +431,15 @@ export async function createDefaultRuntime(
   });
 
   const verifications = options.verifications || new Verifications({
-    accountStore: accountStore,
-    contractLoader: contractLoader,
+    accountStore,
+    contractLoader,
     config,
     description,
-    dfs: dfs,
-    executor: executor,
+    dfs,
+    executor,
     log,
-    nameResolver: nameResolver,
-  })
+    nameResolver,
+  });
 
   let activeIdentity: string;
   let underlyingAccount: string;
@@ -458,13 +477,14 @@ export async function createDefaultRuntime(
       );
     } catch (ex) {
       logger.log(
-        `fetching keys for ${activeAccount} failed with "${ex.msg || ex}", ` +
-        `removing profile from runtime`, 'warning');
+        `fetching keys for ${activeAccount} failed with "${ex.msg || ex}", `
+        + 'removing profile from runtime', 'warning',
+      );
       profile = null;
       keyProvider.profile = null;
     }
   } else {
-    logger.log(`profile for ${activeAccount} doesn't exist`, 'debug')
+    logger.log(`profile for ${activeAccount} doesn't exist`, 'debug');
   }
 
   const onboarding = options.onboarding || new Onboarding({
@@ -486,7 +506,7 @@ export async function createDefaultRuntime(
     contractLoader,
     executor,
     log,
-    web3
+    web3,
   });
 
   const encryptionWrapper = options.encryptionWrapper || new EncryptionWrapper({
@@ -529,8 +549,8 @@ export async function createDefaultRuntime(
     votings,
     web3,
     // optional properties
-    ...(activeIdentity && {activeIdentity}),
-    ...(didResolver && {didResolver}),
-    ...(underlyingAccount && {underlyingAccount}),
+    ...(activeIdentity && { activeIdentity }),
+    ...(didResolver && { didResolver }),
+    ...(underlyingAccount && { underlyingAccount }),
   };
-};
+}

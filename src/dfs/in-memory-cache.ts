@@ -18,7 +18,7 @@
 */
 
 import {
-  DfsCacheInterface
+  DfsCacheInterface,
 } from '@evan.network/dbcp';
 
 
@@ -28,6 +28,7 @@ import {
  *
  * @class      InMemoryCache (name)
  */
+// eslint-disable-next-line import/prefer-default-export
 export class InMemoryCache implements DfsCacheInterface {
   private cache;
 

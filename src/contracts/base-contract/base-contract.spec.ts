@@ -37,7 +37,7 @@ import { TestUtils } from '../../test/test-utils';
 
 use(chaiAsPromised);
 
-describe('BaseContract', function() {
+describe('BaseContract', function test() {
   this.timeout(60000);
   let baseContract: BaseContract;
   let executor: Executor;
@@ -72,14 +72,14 @@ describe('BaseContract', function() {
     profile = await TestUtils.getProfile(web3, ipfs);
     await profile.loadForAccount();
     // await profile.setContactKnownState(accounts[0], true);
-    if (!await executor.executeContractCall(businessCenter, 'isMember', accounts[0], { from: accounts[0], })) {
-      await executor.executeContractTransaction(businessCenter, 'join', { from: accounts[0], autoGas: 1.1, });
+    if (!await executor.executeContractCall(businessCenter, 'isMember', accounts[0], { from: accounts[0] })) {
+      await executor.executeContractTransaction(businessCenter, 'join', { from: accounts[0], autoGas: 1.1 });
     }
-    if (!await executor.executeContractCall(businessCenter, 'isMember', accounts[1], { from: accounts[1], })) {
-      await executor.executeContractTransaction(businessCenter, 'join', { from: accounts[1], autoGas: 1.1, });
+    if (!await executor.executeContractCall(businessCenter, 'isMember', accounts[1], { from: accounts[1] })) {
+      await executor.executeContractTransaction(businessCenter, 'join', { from: accounts[1], autoGas: 1.1 });
     }
-    if (!await executor.executeContractCall(businessCenter, 'isMember', accounts[2], { from: accounts[2], })) {
-      await executor.executeContractTransaction(businessCenter, 'join', { from: accounts[2], autoGas: 1.1, });
+    if (!await executor.executeContractCall(businessCenter, 'isMember', accounts[2], { from: accounts[2] })) {
+      await executor.executeContractTransaction(businessCenter, 'join', { from: accounts[2], autoGas: 1.1 });
     }
   });
 
@@ -87,7 +87,8 @@ describe('BaseContract', function() {
     const contractId = await baseContract.createUninitialized(
       'testdatacontract',
       accounts[0],
-      businessCenterDomain);
+      businessCenterDomain,
+    );
     expect(contractId).not.to.be.undefined;
   });
 
@@ -95,7 +96,8 @@ describe('BaseContract', function() {
     const contractPromise = baseContract.createUninitialized(
       'testdatacontract',
       accounts[0],
-      'testdatacontract.factory.testbc.evan');
+      'testdatacontract.factory.testbc.evan',
+    );
     expect(contractPromise).to.be.rejected;
   });
 
@@ -103,7 +105,8 @@ describe('BaseContract', function() {
     const contractId = await baseContract.createUninitialized(
       'testdatacontract',
       accounts[0],
-      businessCenterDomain);
+      businessCenterDomain,
+    );
     const contract = loader.loadContract('BaseContractInterface', contractId);
     let isMember = await executor.executeContractCall(contract, 'isConsumer', accounts[1]);
     expect(isMember).to.be.false;
@@ -121,7 +124,8 @@ describe('BaseContract', function() {
     const contractId = await baseContract.createUninitialized(
       'testdatacontract',
       accounts[0],
-      businessCenterDomain);
+      businessCenterDomain,
+    );
     const contract = loader.loadContract('BaseContractInterface', contractId);
     let isMember = await executor.executeContractCall(contract, 'isConsumer', accounts[1]);
     expect(isMember).to.be.false;
@@ -147,7 +151,8 @@ describe('BaseContract', function() {
     const contractId = await baseContract.createUninitialized(
       'testdatacontract',
       accounts[0],
-      businessCenterDomain);
+      businessCenterDomain,
+    );
     await baseContract.inviteToContract(
       businessCenterDomain,
       contractId,
@@ -167,7 +172,8 @@ describe('BaseContract', function() {
     const contractId = await baseContract.createUninitialized(
       'testdatacontract',
       accounts[0],
-      businessCenterDomain);
+      businessCenterDomain,
+    );
     const promise = baseContract.inviteToContract(
       businessCenterDomain,
       contractId,
@@ -182,7 +188,8 @@ describe('BaseContract', function() {
     const contractId = await baseContract.createUninitialized(
       'testdatacontract',
       accounts[0],
-      businessCenterDomain);
+      businessCenterDomain,
+    );
     const contract = loader.loadContract('BaseContractInterface', contractId);
     const isMember = await executor.executeContractCall(contract, 'isConsumer', accounts[1]);
     expect(isMember).to.be.false;
@@ -201,7 +208,8 @@ describe('BaseContract', function() {
     const contractId = await baseContract.createUninitialized(
       'testdatacontract',
       accounts[0],
-      businessCenterDomain);
+      businessCenterDomain,
+    );
     await baseContract.changeContractState(contractId, accounts[0], ContractState.PendingApproval);
   });
 
@@ -209,14 +217,19 @@ describe('BaseContract', function() {
     const contractId = await baseContract.createUninitialized(
       'testdatacontract',
       accounts[0],
-      businessCenterDomain);
+      businessCenterDomain,
+    );
     await baseContract.inviteToContract(
       businessCenterDomain,
       contractId,
       accounts[0],
       accounts[1],
     );
-    const promise = baseContract.changeContractState(contractId, accounts[1], ContractState.PendingApproval);
+    const promise = baseContract.changeContractState(
+      contractId,
+      accounts[1],
+      ContractState.PendingApproval,
+    );
     await expect(promise).to.be.rejected;
   });
 
@@ -224,7 +237,8 @@ describe('BaseContract', function() {
     const contractId = await baseContract.createUninitialized(
       'testdatacontract',
       accounts[0],
-      businessCenterDomain);
+      businessCenterDomain,
+    );
     const promise = baseContract.changeContractState(contractId, accounts[1], 1);
     await expect(promise).to.be.rejected;
   });
@@ -233,8 +247,14 @@ describe('BaseContract', function() {
     const contractId = await baseContract.createUninitialized(
       'testdatacontract',
       accounts[0],
-      businessCenterDomain);
-    await baseContract.changeConsumerState(contractId, accounts[0], accounts[0], ConsumerState.Active);
+      businessCenterDomain,
+    );
+    await baseContract.changeConsumerState(
+      contractId,
+      accounts[0],
+      accounts[0],
+      ConsumerState.Active,
+    );
   });
 
   describe('when used without a business center', () => {
@@ -242,15 +262,22 @@ describe('BaseContract', function() {
       const contractId = await baseContract.createUninitialized(
         'testdatacontract',
         accounts[0],
-        null);
-      await baseContract.changeConsumerState(contractId, accounts[0], accounts[0], ConsumerState.Active);
+        null,
+      );
+      await baseContract.changeConsumerState(
+        contractId,
+        accounts[0],
+        accounts[0],
+        ConsumerState.Active,
+      );
     });
 
     it('can have new members invited to it by the owner', async () => {
       const contractId = await baseContract.createUninitialized(
         'testdatacontract',
         accounts[0],
-        null);
+        null,
+      );
       const contract = loader.loadContract('BaseContractInterface', contractId);
       let isMember = await executor.executeContractCall(contract, 'isConsumer', accounts[1]);
       expect(isMember).to.be.false;
@@ -268,7 +295,8 @@ describe('BaseContract', function() {
       const contractId = await baseContract.createUninitialized(
         'testdatacontract',
         accounts[0],
-        null);
+        null,
+      );
       const contract = loader.loadContract('BaseContractInterface', contractId);
       let isMember = await executor.executeContractCall(contract, 'isConsumer', accounts[1]);
       expect(isMember).to.be.false;
@@ -290,18 +318,21 @@ describe('BaseContract', function() {
       expect(isMember).to.be.false;
     });
 
+    // eslint-disable-next-line
     it('triggers contract events from on its own instead of letting the bc do this', async () => {
+      // eslint-disable-next-line
       return new Promise(async (resolve, reject) => {
         try {
           const contractId = await baseContract.createUninitialized(
             'testdatacontract',
             accounts[0],
-            null);
+            null,
+          );
           // reject on timeout
           let resolved;
           setTimeout(() => {
             if (!resolved) {
-              reject('timeout during waiting for ContractEvent');
+              reject(new Error('timeout during waiting for ContractEvent'));
             }
           }, 10000);
           // if event is triggered, resolve test
@@ -310,8 +341,9 @@ describe('BaseContract', function() {
               const { sender, eventType } = event.returnValues;
               return sender === contractId && eventType.toString() === '0';
             },
-            () => { resolved = true; resolve(); }
-          );
+            () => {
+              resolved = true; resolve();
+            });
           await baseContract.inviteToContract(
             null,
             contractId,

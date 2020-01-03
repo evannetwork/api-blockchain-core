@@ -17,7 +17,6 @@
   the following URL: https://evan.network/license/
 */
 
-import crypto = require('crypto-browserify');
 import {
   Cryptor,
   CryptoInfo,
@@ -25,11 +24,13 @@ import {
   LoggerOptions as AesOptions,
 } from '@evan.network/dbcp';
 
+import crypto = require('crypto-browserify');
+
 /**
  * aes instance options
  */
 export {
-  LoggerOptions as AesOptions
+  LoggerOptions as AesOptions,
 } from '@evan.network/dbcp';
 
 
@@ -47,13 +48,16 @@ export class Aes extends Logger implements Cryptor {
     keyLength: 256,
     algorithm: 'aes-256-cbc',
   };
+
   public options: any;
+
   private readonly encodingUnencrypted = 'utf-8';
+
   private readonly encodingEncrypted = 'hex';
 
   public constructor(options?: AesOptions) {
     super(options);
-    this.options = Object.assign({}, Aes.defaultOptions, options || {});
+    this.options = { ...Aes.defaultOptions, ...options || {} };
   }
 
 
@@ -65,8 +69,8 @@ export class Aes extends Logger implements Cryptor {
    */
   public stringToArrayBuffer(str) {
     const len = str.length;
-    const bytes = new Uint8Array( len );
-    for (let i = 0; i < len; i++) {
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i += 1) {
       bytes[i] = str.charCodeAt(i);
     }
     return bytes.buffer;
@@ -74,7 +78,7 @@ export class Aes extends Logger implements Cryptor {
 
 
   public getCryptoInfo(originator: string): CryptoInfo {
-    return Object.assign({ originator, }, this.options);
+    return { originator, ...this.options };
   }
 
   /**
@@ -89,11 +93,11 @@ export class Aes extends Logger implements Cryptor {
         if (err) {
           reject(err);
         } else {
-          const hexString = buf.toString('hex')
+          const hexString = buf.toString('hex');
           resolve(hexString);
         }
       });
-    })
+    });
   }
 
   /**

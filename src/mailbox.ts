@@ -79,14 +79,23 @@ export interface MailboxOptions extends LoggerOptions {
  */
 export class Mailbox extends Logger {
   public contractLoader: ContractLoader;
+
   public cryptoProvider: CryptoProvider;
+
   public defaultCryptoAlgo: string;
+
   public executor: Executor;
+
   public initialized: boolean;
+
   public ipfs: Ipfs;
+
   public keyProvider: KeyProvider;
+
   public mailboxContract: any;
+
   public mailboxOwner: string;
+
   public nameResolver: NameResolver;
 
   public constructor(options: MailboxOptions) {
@@ -117,7 +126,8 @@ export class Mailbox extends Logger {
     };
 
     const listAddressHash = await this.executor.executeContractCall(
-      this.mailboxContract, 'getAnswersForMail', mailId, { from: this.mailboxOwner, });
+      this.mailboxContract, 'getAnswersForMail', mailId, { from: this.mailboxOwner },
+    );
     if (listAddressHash !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
       const listAddress = this.nameResolver.bytes32ToAddress(listAddressHash);
       const listContract = this.contractLoader.loadContract('DataStoreList', listAddress);
@@ -125,12 +135,14 @@ export class Mailbox extends Logger {
       results.totalResultCount = parseInt(listLength, 10);
       if (results.totalResultCount) {
         const mailIds = await this.nameResolver.getArrayFromListContract(
-          listContract, count, offset, true);
+          listContract, count, offset, true,
+        );
         const originator = this.nameResolver.soliditySha3(
           ...[
             this.nameResolver.soliditySha3(this.mailboxOwner),
             this.nameResolver.soliditySha3(this.mailboxOwner),
-          ].sort());
+          ].sort(),
+        );
         const ipld = new Ipld({
           ipfs: this.ipfs,
           keyProvider: this.keyProvider,
@@ -142,12 +154,13 @@ export class Mailbox extends Logger {
         for (const answerId of mailIds) {
           try {
             const mailResult = await this.executor.executeContractCall(
-              this.mailboxContract, 'getMail', answerId);
+              this.mailboxContract, 'getMail', answerId,
+            );
             const mail = await ipld.getLinkedGraph(mailResult.data);
             const hashedSender = this.nameResolver.soliditySha3(mail.content.from);
             if (hashedSender !== mailResult.sender) {
-              throw new Error(`mail claims to be sent from ${hashedSender}, ` +
-                `but was sent from ${mailResult.sender}`);
+              throw new Error(`mail claims to be sent from ${hashedSender}, `
+                + `but was sent from ${mailResult.sender}`);
             } else {
               results.mails[answerId] = mail;
             }
@@ -176,7 +189,7 @@ export class Mailbox extends Logger {
       this.mailboxContract,
       'getBalanceFromMail',
       mailId,
-      { from: this.mailboxOwner, },
+      { from: this.mailboxOwner },
     );
   }
 
@@ -192,7 +205,8 @@ export class Mailbox extends Logger {
       ...[
         this.nameResolver.soliditySha3(this.mailboxOwner),
         this.nameResolver.soliditySha3(this.mailboxOwner),
-      ].sort());
+      ].sort(),
+    );
     const ipld = new Ipld({
       ipfs: this.ipfs,
       keyProvider: this.keyProvider,
@@ -205,15 +219,14 @@ export class Mailbox extends Logger {
     try {
       if (mail.startsWith('Qm')) {
         return await ipld.getLinkedGraph(mail);
+      }
+      const mailResult = await this.executor.executeContractCall(this.mailboxContract, 'getMail', mail);
+      const mailItem = await ipld.getLinkedGraph(mailResult.data);
+      const hashedSender = this.nameResolver.soliditySha3(mailItem.content.from);
+      if (hashedSender !== mailResult.sender) {
+        throw new Error(`mail claims to be sent from ${hashedSender}, but was sent from ${mailResult.sender}`);
       } else {
-        const mailResult = await this.executor.executeContractCall(this.mailboxContract, 'getMail', mail);
-        const mailItem = await ipld.getLinkedGraph(mailResult.data);
-        const hashedSender = this.nameResolver.soliditySha3(mailItem.content.from);
-        if (hashedSender !== mailResult.sender) {
-          throw new Error(`mail claims to be sent from ${hashedSender}, but was sent from ${mailResult.sender}`);
-        } else {
-          return mailItem;
-        }
+        return mailItem;
       }
     } catch (ex) {
       this.log(`could not decrypt mail: "${mail}"; ${ex.message || ex}`, 'warning');
@@ -237,19 +250,23 @@ export class Mailbox extends Logger {
     };
 
     const listAddressHash = await this.executor.executeContractCall(
-      this.mailboxContract, `getMy${type}Mails`, { from: this.mailboxOwner, });
+      this.mailboxContract, `getMy${type}Mails`, { from: this.mailboxOwner },
+    );
     if (listAddressHash !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
       const listAddress = this.nameResolver.bytes32ToAddress(listAddressHash);
       const listContract = this.contractLoader.loadContract('DataStoreList', listAddress);
       const listLength = await this.executor.executeContractCall(listContract, 'length');
       results.totalResultCount = parseInt(listLength.toString(), 10);
       if (results.totalResultCount) {
-        const mailIds = await this.nameResolver.getArrayFromListContract(listContract, count, offset, true);
+        const mailIds = await this.nameResolver.getArrayFromListContract(
+          listContract, count, offset, true,
+        );
         const originator = this.nameResolver.soliditySha3(
           ...[
             this.nameResolver.soliditySha3(this.mailboxOwner),
             this.nameResolver.soliditySha3(this.mailboxOwner),
-          ].sort());
+          ].sort(),
+        );
         const ipld = new Ipld({
           ipfs: this.ipfs,
           keyProvider: this.keyProvider,
@@ -286,11 +303,11 @@ export class Mailbox extends Logger {
    * @return     {Promise<MailboxResult>}  The received mails.
    */
   public async getReceivedMails(count = 10, offset = 0) {
-    return await this.getMails(count, offset, 'Received');
+    return this.getMails(count, offset, 'Received');
   }
 
   public async getSentMails(count = 10, offset = 0) {
-    return await this.getMails(count, offset, 'Sent');
+    return this.getMails(count, offset, 'Sent');
   }
 
   /**
@@ -299,9 +316,7 @@ export class Mailbox extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async init(): Promise<void> {
-    if (this.initialized) {
-      return;
-    } else {
+    if (!this.initialized) {
       const domain = this.nameResolver.getDomainName(this.nameResolver.config.domains.mailbox);
       const address = await this.nameResolver.getAddress(domain);
       this.mailboxContract = this.contractLoader.loadContract('MailBoxInterface', address);
@@ -321,12 +336,14 @@ export class Mailbox extends Logger {
    */
   public async sendAnswer(mail: Mail, from: string, to: string, value = '0'): Promise<void> {
     await this.init();
+    // eslint-disable-next-line no-param-reassign
     mail.content.sent = new Date().getTime();
     const combinedHash = this.nameResolver.soliditySha3(
       ...[
         this.nameResolver.soliditySha3(to),
         this.nameResolver.soliditySha3(this.mailboxOwner),
-      ].sort());
+      ].sort(),
+    );
     const ipld: Ipld = new Ipld({
       ipfs: this.ipfs,
       keyProvider: this.keyProvider,
@@ -335,13 +352,13 @@ export class Mailbox extends Logger {
       defaultCryptoAlgo: this.defaultCryptoAlgo,
       nameResolver: this.nameResolver,
     });
-    const parentId = mail.parentId;
+    const { parentId } = mail;
     const hash = await ipld.store(mail);
     await this.executor.executeContractTransaction(
       this.mailboxContract,
       'sendAnswer',
       { from, autoGas: 1.1, value },
-      [ to ],
+      [to],
       hash,
       parentId,
     );
@@ -360,14 +377,18 @@ export class Mailbox extends Logger {
    */
   public async sendMail(mail: Mail, from: string, to: string, value = '0', context?: string): Promise<void> {
     await this.init();
+    // eslint-disable-next-line no-param-reassign
     mail.content.from = from;
+    // eslint-disable-next-line no-param-reassign
     mail.content.sent = new Date().getTime();
+    // eslint-disable-next-line no-param-reassign
     mail.content.to = to;
     const combinedHash = this.nameResolver.soliditySha3(
       ...[
         this.nameResolver.soliditySha3(to),
         this.nameResolver.soliditySha3(this.mailboxOwner),
-      ].sort());
+      ].sort(),
+    );
     const ipld: Ipld = new Ipld({
       ipfs: this.ipfs,
       keyProvider: this.keyProvider,
@@ -381,7 +402,7 @@ export class Mailbox extends Logger {
       this.mailboxContract,
       'sendMail',
       { from, autoGas: 1.1, value },
-      [ to ],
+      [to],
       hash,
     );
   }

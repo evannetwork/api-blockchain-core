@@ -20,10 +20,10 @@
 import 'mocha';
 import * as fs from 'fs';
 import { expect } from 'chai';
-import { promisify } from'util';
+import { promisify } from 'util';
 
-import { AesBlob } from './aes-blob'
-import { TestUtils } from '../test/test-utils'
+import { AesBlob } from './aes-blob';
+import { TestUtils } from '../test/test-utils';
 
 
 let sampleFile;
@@ -33,7 +33,7 @@ let ipfs;
 const sampleKey = '346c22768f84f3050f5c94cec98349b3c5cbfa0b7315304e13647a49181fd1ef';
 let encryptedFile;
 
-describe('Blob Encryption', function() {
+describe('Blob Encryption', function test() {
   this.timeout(300000);
 
   before(async () => {
@@ -41,37 +41,37 @@ describe('Blob Encryption', function() {
     fileDescription = {
       name: 'testfile.spec.jpg',
       fileType: 'image/jpeg',
-      file: sampleFile
+      file: sampleFile,
     };
     fileValidation = {
       name: 'testfile.spec.jpg',
       fileType: 'image/jpeg',
-      file: sampleFile
+      file: sampleFile,
     };
     ipfs = await TestUtils.getIpfs();
   });
 
 
   it('should be able to be created', () => {
-    const aes = new AesBlob({dfs: ipfs});
+    const aes = new AesBlob({ dfs: ipfs });
     expect(aes).not.to.be.undefined;
   });
 
   it('should be able to generate keys', async () => {
-    const aes = new AesBlob({dfs: ipfs});
+    const aes = new AesBlob({ dfs: ipfs });
     const key = await aes.generateKey();
     expect(key).not.to.be.undefined;
   });
 
   it('should be able to encrypt a sample message', async () => {
-    const aes = new AesBlob({dfs: ipfs});
-    encryptedFile = await aes.encrypt(fileDescription, { key: sampleKey, });
+    const aes = new AesBlob({ dfs: ipfs });
+    encryptedFile = await aes.encrypt(fileDescription, { key: sampleKey });
     expect(encryptedFile.toString('hex')).not.to.be.undefined;
   });
 
   it('should be able to decrypt a sample message', async () => {
-    const aes = new AesBlob({dfs: ipfs});
-    const decrypted = await aes.decrypt(Buffer.from(encryptedFile, 'hex'), { key: sampleKey, });
+    const aes = new AesBlob({ dfs: ipfs });
+    const decrypted = await aes.decrypt(Buffer.from(encryptedFile, 'hex'), { key: sampleKey });
     expect(decrypted).to.deep.equal(fileValidation);
   });
 });

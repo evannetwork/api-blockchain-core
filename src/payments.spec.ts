@@ -20,13 +20,12 @@
 import 'mocha';
 import { expect } from 'chai';
 
+import * as BigNumber from 'bignumber.js';
 import { accounts } from './test/accounts';
 import { TestUtils } from './test/test-utils';
 
 
-import * as BigNumber from 'bignumber.js';
-
-describe('Payment Channels', function() {
+describe('Payment Channels', function test() {
   this.timeout(600000);
   let payments1;
   let payments2;
@@ -46,7 +45,7 @@ describe('Payment Channels', function() {
     const channelManager = await executor.createContract(
       'RaidenMicroTransferChannels',
       [500, []],
-      { from: accounts[0], gas: 3000000, }
+      { from: accounts[0], gas: 3000000 },
     );
     payments1.setChannelManager(channelManager.options.address);
     payments2.setChannelManager(channelManager.options.address);

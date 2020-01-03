@@ -43,7 +43,7 @@ use(chaiAsPromised);
 
 const ownedDomain = 'twintest.fifs.registrar.test.evan';
 
-describe('DigitalTwin', function() {
+describe('DigitalTwin', function test() {
   this.timeout(60000);
   let dfs: Ipfs;
   let defaultConfig: DigitalTwinConfig;
@@ -93,7 +93,6 @@ describe('DigitalTwin', function() {
     // create factory for test
     const factory = await executor.createContract('DigitalTwinFactory', [], { from: accounts[0], gas: 3e6 });
     defaultConfig.factoryAddress = factory.options.address;
-    console.log(`using twin factory: ${defaultConfig.factoryAddress}`);
   });
 
   describe('working with twins', () => {
@@ -185,12 +184,12 @@ describe('DigitalTwin', function() {
 
       it('can get multiple entries from index', async () => {
         const samples = {};
-        for (let i = 0; i < 3; i++) {
-          samples['sample ' + i.toString().padStart(2, '0')] = {
+        for (let i = 0; i < 3; i += 1) {
+          samples[`sample ${i.toString().padStart(2, '0')}`] = {
             value: TestUtils.getRandomBytes32().replace(/.{4}$/, i.toString().padStart(4, '0')),
             entryType: DigitalTwinEntryType.Hash,
-          }
-        };
+          };
+        }
         const twin = await DigitalTwin.create(runtime, defaultConfig);
         await twin.setEntries(samples);
         const result = await twin.getEntries();
@@ -212,12 +211,12 @@ describe('DigitalTwin', function() {
       };
       const createTwinWithEntries = async (entryCount): Promise<any> => {
         const samples = {};
-        for (let i = 0; i < entryCount; i++) {
-          samples['sample ' + i.toString().padStart(2, '0')] = {
+        for (let i = 0; i < entryCount; i += 1) {
+          samples[`sample ${i.toString().padStart(2, '0')}`] = {
             value: TestUtils.getRandomBytes32().replace(/.{4}$/, i.toString().padStart(4, '0')),
             entryType: DigitalTwinEntryType.Hash,
-          }
-        };
+          };
+        }
         const twin = await DigitalTwin.create(runtime, defaultConfig);
         await twin.setEntries(samples);
         return { twin, samples };
@@ -302,11 +301,12 @@ describe('DigitalTwin', function() {
     describe('when adding containers', () => {
       before(async () => {
         const factory = await executor.createContract(
-          'ContainerDataContractFactory', [], { from: accounts[0], gas: 6e6 });
+          'ContainerDataContractFactory', [], { from: accounts[0], gas: 6e6 },
+        );
         defaultConfig.containerConfig.factoryAddress = factory.options.address;
       });
 
-      it('creates new containers automatically', async() => {
+      it('creates new containers automatically', async () => {
         const twin = await DigitalTwin.create(runtime, defaultConfig);
         const customPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
         customPlugin.template.properties.type = {
@@ -336,16 +336,18 @@ describe('DigitalTwin', function() {
     it('can set verifications to twin', async () => {
       const twin = await DigitalTwin.create(runtime, defaultConfig);
       const verifications: DigitalTwinVerificationEntry[] = [...Array(3)].map(
-        (_, i) => ({ topic: `verifcation_${i}` } as DigitalTwinVerificationEntry));
+        (_, i) => ({ topic: `verifcation_${i}` } as DigitalTwinVerificationEntry),
+      );
       await twin.addVerifications(verifications);
       const verificationsResults = await twin.getVerifications();
       expect(verificationsResults.length).to.eq(3);
       // all verification lists should have at least 1 valid verification
-      const allValid = verificationsResults.every(vs => vs.some(v => v.valid));
+      const allValid = verificationsResults.every((vs) => vs.some((v) => v.valid));
       expect(allValid).to.be.true;
       // all verifications should be confirmed, as issuing account is owner
       const allConfirmed = verificationsResults.every(
-        vs => vs.some(v => v.status === VerificationsStatus.Confirmed));
+        (vs) => vs.some((v) => v.status === VerificationsStatus.Confirmed),
+      );
       expect(allConfirmed).to.be.true;
     });
   });
@@ -355,7 +357,8 @@ describe('DigitalTwin', function() {
     // get address for tests
     ens = runtime.contractLoader.loadContract('AbstractENS', config.nameResolver.ensAddress);
     const domainOwner = await executor.executeContractCall(
-      ens, 'owner', runtime.nameResolver.namehash(ownedDomain));
+      ens, 'owner', runtime.nameResolver.namehash(ownedDomain),
+    );
     if (domainOwner === '0x0000000000000000000000000000000000000000') {
       await runtime.nameResolver.claimAddress(ownedDomain, accounts[0]);
     }
@@ -369,7 +372,8 @@ describe('DigitalTwin', function() {
 
       expect(await twin.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
       expect(await twin.getContractAddress()).to.eq(
-        await runtime.nameResolver.getAddress(address));
+        await runtime.nameResolver.getAddress(address),
+      );
     });
 
     it('can load indicdes from ENS', async () => {
@@ -380,7 +384,8 @@ describe('DigitalTwin', function() {
 
       expect(await loadedTwin.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
       expect(await loadedTwin.getContractAddress()).to.eq(
-        await runtime.nameResolver.getAddress(address));
+        await runtime.nameResolver.getAddress(address),
+      );
     });
 
     it('loading an empty ens address should throw an error', async () => {

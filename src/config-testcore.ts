@@ -56,7 +56,8 @@ const configTestcore = {
   alwaysAutoGasLimit: 10,
   // owner of the evan root verification domain
   ensRootOwner: '0x4a6723fC5a926FA150bAeAf04bfD673B056Ba83D',
-  ipfsConfig: {host: 'ipfs.test.evan.network', port: '443', protocol: 'https'},
-}
+  ipfsConfig: { host: 'ipfs.test.evan.network', port: '443', protocol: 'https' },
+};
 
-export { configTestcore }
+// eslint-disable-next-line import/prefer-default-export
+export { configTestcore };
