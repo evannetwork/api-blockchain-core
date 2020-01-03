@@ -64,7 +64,6 @@ export interface VcDocumentTemplate {
   validFrom: string;
   validUntil?: string;
   credentialSubject: VcCredentialSubject;
-  credentialStatus?: VcCredentialStatus;
 }
 
 /**
@@ -138,6 +137,7 @@ export interface VcOptions extends LoggerOptions {
   activeAccount: string;
   contractLoader: ContractLoader;
   dfs: DfsInterface;
+  credentialStatusEndpoint: string;
   executor: Executor;
   nameResolver: NameResolver;
   signerIdentity: SignerIdentity;
@@ -146,6 +146,8 @@ export interface VcOptions extends LoggerOptions {
 }
 
 const vcRegEx = /^vc:evan:(?:(testcore|core):)?(0x(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64}))$/;
+
+const w3cMandatoryContext = 'https://www.w3.org/2018/credentials/v1';
 
 /**
  * Module for storing VCs in and retrieving VCs from the VC registry
@@ -219,7 +221,6 @@ export class Vc extends Logger {
   public async createVc(vcData: VcDocumentTemplate): Promise<VcDocument> {
     const types = vcData.type ? vcData.type : ['VerifiableCredential']
 
-    const w3cMandatoryContext = 'https://www.w3.org/2018/credentials/v1';
     const context = vcData["@context"] ? vcData["@context"] : [w3cMandatoryContext];
     if (!context.includes(w3cMandatoryContext)) {
       context.push(w3cMandatoryContext);
@@ -249,8 +250,8 @@ export class Vc extends Logger {
    */
   public async storeVc(vcData: VcDocumentTemplate, shouldRegisterNewId = false): Promise<VcDocument> {
     const documentToStore = await this.createVc(vcData);
-    let internalId;
 
+    let internalId;
     if (shouldRegisterNewId) {
       documentToStore.id = await this.createId();
       internalId = (await this.validateVcIdAndGetSections(documentToStore.id)).internalId;
@@ -262,6 +263,12 @@ export class Vc extends Logger {
       // Is the given VC ID valid and the active identity the owner of the VC ID?
       await this.validateVcIdOwnership(internalId);
     }
+
+    documentToStore.credentialStatus = {
+      id: `${this.options.credentialStatusEndpoint}${documentToStore.id}`,
+      type: '' // TODO: Add to evan context
+    }
+
 
     const vcDfsAddress = await this.options.dfs.add('vc',
       Buffer.from(JSON.stringify(documentToStore), 'utf-8'));
@@ -540,5 +547,5 @@ export class Vc extends Logger {
       vcId);
 
     return revokationStatus;
-  }    
+  }
 }
