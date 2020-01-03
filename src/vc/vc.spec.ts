@@ -189,5 +189,116 @@ describe('VC Resolver', function() {
 
       await expect(promise).to.be.rejectedWith('No Subject ID provided');
     });
+
+    it('allows me to store online VC and revoke it using the bcc', async () => {
+
+      const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData, true);
+      const issuerId = storedVcDoc.issuer.id.replace('did:evan:testcore:', '');
+      expect(issuerId).to.be.eq(issuerIdentityId);
+
+      const vcId = storedVcDoc.id.replace('vc:evan:testcore:', '')
+      const vcRevokeStatus = await runtime.executor.executeContractCall(
+        await (runtime.vc as any).getRegistryContract(),
+        'vcRevoke',
+        vcId,
+      );
+      expect(vcRevokeStatus).to.be.false;
+                 
+      const revokeProcessed = runtime.executor.executeContractTransaction(
+        await (runtime.vc as any).getRegistryContract(),
+        'revokeVC',
+        { from: runtime.vc.options.signerIdentity.activeIdentity },
+        vcId);
+      await expect(revokeProcessed).to.be.not.rejected;
+
+      const vcRevokeStatusNew = await runtime.executor.executeContractCall(
+        await (runtime.vc as any).getRegistryContract(),
+        'vcRevoke',
+        vcId,
+      );
+      expect(vcRevokeStatusNew).to.be.not.false;
+    });
+
+    it('allows me to store online VC and revoke it using the vc api', async () => {
+
+      const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData, true);
+      const issuerId = storedVcDoc.issuer.id.replace('did:evan:testcore:', '');
+      expect(issuerId).to.be.eq(issuerIdentityId);
+
+      const vcId = storedVcDoc.id.replace('vc:evan:testcore:', '')
+
+      const vcRevokeStatus = await runtime.vc.getRevokeVcStatus(vcId);
+      expect(vcRevokeStatus).to.be.false;
+                 
+      const revokeProcessed = runtime.vc.revokeVc(vcId);
+      await expect(revokeProcessed).to.be.not.rejected;
+
+      const vcRevokeStatusNew = await runtime.vc.getRevokeVcStatus(vcId);
+      expect(vcRevokeStatusNew).to.be.not.false;
+    });
+
+    it('does not allow me to revoke a non existing VC using the vc api', async () => {
+
+      const nonExistingVcId = '0x2a838a6961be98f6a182f375bb9158848ee9760ca97a379939ccdf03fc442a23'
+
+      const vcRevokeStatus = await runtime.vc.getRevokeVcStatus(nonExistingVcId);
+      expect(vcRevokeStatus).to.be.false;
+                 
+      const revokeProcessed = runtime.vc.revokeVc(nonExistingVcId);
+      await expect(revokeProcessed).to.be.rejected;
+
+      const vcRevokeStatusNew = await runtime.vc.getRevokeVcStatus(nonExistingVcId);
+      expect(vcRevokeStatusNew).to.be.false;
+    });
+
+    it('does not allow me to revoke VC using non issuer account via bcc', async () => {
+
+      const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData, true);
+      const issuerId = storedVcDoc.issuer.id.replace('did:evan:testcore:', '');
+      expect(issuerId).to.be.eq(issuerIdentityId);
+      const vcId = storedVcDoc.id.replace('vc:evan:testcore:', '');
+
+      const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
+
+      const vcRevokeStatus = await runtime.executor.executeContractCall(
+        await (runtime.vc as any).getRegistryContract(),
+        'vcRevoke',
+        vcId,
+      );
+      expect(vcRevokeStatus).to.be.false;
+                 
+      const revokeProcessed = otherRuntime.executor.executeContractTransaction(
+        await (otherRuntime.vc as any).getRegistryContract(),
+        'revokeVC',
+        { from: otherRuntime.vc.options.signerIdentity.activeIdentity },
+        vcId);
+      await expect(revokeProcessed).to.be.rejected;
+
+      const vcRevokeStatusNew = await runtime.executor.executeContractCall(
+        await (runtime.vc as any).getRegistryContract(),
+        'vcRevoke',
+        vcId,
+      );
+      expect(vcRevokeStatusNew).to.be.false;
+    });
+
+    it('allows me to store online VC but not revoke it using non issuer account via vc api', async () => {
+
+      const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData, true);
+      const issuerId = storedVcDoc.issuer.id.replace('did:evan:testcore:', '');
+      expect(issuerId).to.be.eq(issuerIdentityId);
+
+      const vcId = storedVcDoc.id.replace('vc:evan:testcore:', '')
+      const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
+
+      const vcRevokeStatus = await runtime.vc.getRevokeVcStatus(vcId);
+      expect(vcRevokeStatus).to.be.false;
+                 
+      const revokeProcessed = otherRuntime.vc.revokeVc(vcId);
+      await expect(revokeProcessed).to.be.rejected;
+
+      const vcRevokeStatusNew = await runtime.vc.getRevokeVcStatus(vcId);
+      expect(vcRevokeStatusNew).to.be.false;
+    });
   });
 });
