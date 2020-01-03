@@ -523,12 +523,14 @@ export class Vc extends Logger {
    * @return     {revokeProcessed}  A Boolean value. true = successful
    */
   public async revokeVc(vcId: string): Promise<void> {
-    await this.validateVcIdOwnership(vcId);
+    const environment = await this.getEnvironment();
+    const vcIdHash = vcId.replace(`vc:evan:${environment}:`, '');
+    await this.validateVcIdOwnership(vcIdHash);
     const revokeProcessed = await this.options.executor.executeContractTransaction(
       await this.getRegistryContract(),
       'revokeVC',
       { from: this.options.signerIdentity.activeIdentity },
-      vcId);
+      vcIdHash);
 
     return revokeProcessed;
   }
@@ -540,11 +542,12 @@ export class Vc extends Logger {
    * @return     {revokationStatus}  A boolean value. False = not revoked, True = revoked
    */
   public async getRevokeVcStatus(vcId: string): Promise<void> {
-
+    const environment = await this.getEnvironment();
+    const vcIdHash = vcId.replace(`vc:evan:${environment}:`, '');
     const revokationStatus = await this.options.executor.executeContractCall(
       await this.getRegistryContract(),
       'vcRevoke',
-      vcId);
+      vcIdHash);
 
     return revokationStatus;
   }
