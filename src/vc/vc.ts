@@ -513,13 +513,14 @@ export class Vc extends Logger {
    * Revokes a given VC document
    *
    * @param      {string}  vcId    The registry ID the VC document is associated with.
-   * @return     {VcCredentialStatus}  An object containing URL and revokation status.
+   * @return     {revokeProcessed}  A Boolean value. true = successful
    */
-  public async RevokeVc(vcId: string): Promise<VcCredentialStatus> {
+  public async revokeVc(vcId: string): Promise<void> {
     await this.validateVcIdOwnership(vcId);
     const revokeProcessed = await this.options.executor.executeContractTransaction(
       await this.getRegistryContract(),
       'revokeVC',
+      { from: this.options.signerIdentity.activeIdentity },
       vcId);
 
     return revokeProcessed;
