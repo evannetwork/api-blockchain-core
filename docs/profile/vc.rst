@@ -258,6 +258,82 @@ Example
 
 
 
+--------------------------------------------------------------------------------
+
+.. _vc_revokeVc:
+
+revokeVc
+================================================================================
+
+.. code-block:: typescript
+
+  vc.revokeVc(vcId);
+
+Sets a revoke status flag for the VC.
+
+----------
+Parameters
+----------
+
+#. ``vcId`` - ``string``: ID for VC document to be revoked.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const storedVcDoc = await vc.getVc(permanentVcAddress);
+  const vcId = storedVcDoc.id;
+
+  const revokeProcessed = await vc.revokeVc(vcId);
+
+
+
+--------------------------------------------------------------------------------
+
+.. _vc_getRevokeVcStatus:
+
+getRevokeVcStatus
+================================================================================
+
+.. code-block:: typescript
+
+  vc.getRevokeVcStatus(vcId);
+
+Gets the revoke status flag for the VC.
+
+----------
+Parameters
+----------
+
+#. ``vcId`` - ``string``: ID for VC document whose status needs to be retrieved.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``revokationStatus``: A boolean true or false
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const storedVcDoc = await vc.getVc(permanentVcAddress);
+  const vcId = storedVcDoc.id;
+
+  const vcRevokeStatus = await vc.getRevokeVcStatus(vcId);
+
+
+
 
 .. required for building markup
 
