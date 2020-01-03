@@ -62,15 +62,6 @@ describe('VC Resolver', function() {
       },
       validFrom: new Date(Date.now()).toISOString()
     };
-
-    // create a new registry contract for vcs
-   /* const newRegistry = await runtime.executor.createContract(
-      'VcRegistry', [], { from: runtime.activeAccount, gas: 2000000, },
-    );
-
-    console.log(newRegistry.options.address);
-    // set the predefined contract for vcs to the new deployed registry
-    (runtime.vc as any).cache.vcRegistryContract = newRegistry;*/
   });
 
   describe('When creating a VC', async () => {
