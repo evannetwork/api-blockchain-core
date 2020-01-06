@@ -265,7 +265,7 @@ describe('VC Resolver', function() {
       const issuerId = storedVcDoc.issuer.id.replace('did:evan:testcore:', '');
       expect(issuerId).to.be.eq(issuerIdentityId);
 
-      const vcId = storedVcDoc.id.replace('vc:evan:testcore:', '')
+      const vcId = storedVcDoc.id
 
       const vcRevokeStatus = await runtime.vc.getRevokeVcStatus(vcId);
       expect(vcRevokeStatus).to.be.false;
@@ -289,6 +289,17 @@ describe('VC Resolver', function() {
 
       const vcRevokeStatusNew = await runtime.vc.getRevokeVcStatus(nonExistingVcId);
       expect(vcRevokeStatusNew).to.be.false;
+    });
+
+    it('allows me to get revoke status of an existing VC using the vc api', async () => {
+
+      const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData, true);
+      const issuerId = storedVcDoc.issuer.id.replace('did:evan:testcore:', '');
+      expect(issuerId).to.be.eq(issuerIdentityId);
+      const vcId = storedVcDoc.id;
+
+      const vcRevokeStatus = await runtime.vc.getRevokeVcStatus(vcId);
+      expect(vcRevokeStatus).to.be.false;
     });
 
     it('does not allow me to revoke VC using non issuer account via bcc', async () => {
@@ -328,7 +339,7 @@ describe('VC Resolver', function() {
       const issuerId = storedVcDoc.issuer.id.replace('did:evan:testcore:', '');
       expect(issuerId).to.be.eq(issuerIdentityId);
 
-      const vcId = storedVcDoc.id.replace('vc:evan:testcore:', '')
+      const vcId = storedVcDoc.id
       const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
 
       const vcRevokeStatus = await runtime.vc.getRevokeVcStatus(vcId);
