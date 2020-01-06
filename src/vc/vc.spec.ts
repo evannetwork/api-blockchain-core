@@ -59,6 +59,12 @@ describe('VC Resolver', function() {
       },
       credentialSubject: {
         id: await runtime.did.convertIdentityToDid(subjectIdentityId),
+        data: [
+          {
+            name: 'isTrustedSupplier',
+            value: 'true'
+          }
+        ]
       },
       validFrom: new Date(Date.now()).toISOString()
     };
@@ -77,7 +83,23 @@ describe('VC Resolver', function() {
     it('allows me to store a valid VC on-chain (and registering an ID implicitly)', async () => {
       const promise = runtime.vc.storeVc(minimalValidVcData, true);
       await expect(promise).to.not.be.rejected;
-      await expect(didJWT.verifyJWT((await promise).proof.jws, {resolver: evanResolver})).to.not.be.rejected;
+      const storedVc = await promise;
+      await expect(didJWT.verifyJWT(storedVc.proof.jws, {resolver: evanResolver})).to.not.be.rejected;
+      const verifiedSignature = await didJWT.verifyJWT(storedVc.proof.jws, {resolver: evanResolver});
+
+
+      // fails if signed VC and proof-carrying VC not matching
+      const payload = {
+        ...verifiedSignature.payload.vc
+      }
+      const prooflessDocument = {
+        ...storedVc
+      }
+      delete payload.proof;
+      delete prooflessDocument.proof;
+      const proofPayloadHash = await runtime.nameResolver.soliditySha3(JSON.stringify(payload));
+      const documentHash = await runtime.nameResolver.soliditySha3(JSON.stringify(prooflessDocument));
+      expect(proofPayloadHash).eq(documentHash);
     });
 
     it('adds a credentialStatus property to the VC document when storing on-chain', async () => {

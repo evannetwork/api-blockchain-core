@@ -64,6 +64,7 @@ export interface VcDocumentTemplate {
   validFrom: string;
   validUntil?: string;
   credentialSubject: VcCredentialSubject;
+  credentialStatus?: VcCredentialStatus;
 }
 
 /**
@@ -249,26 +250,29 @@ export class Vc extends Logger {
    * @returns     {Promise<VcDocument}  The final VC document as it is stored in the registry.
    */
   public async storeVc(vcData: VcDocumentTemplate, shouldRegisterNewId = false): Promise<VcDocument> {
-    const documentToStore = await this.createVc(vcData);
+    const dataTemplate = {
+      ...vcData
+    };
 
-    let internalId;
+    let internalId: string;
     if (shouldRegisterNewId) {
-      documentToStore.id = await this.createId();
-      internalId = (await this.validateVcIdAndGetSections(documentToStore.id)).internalId;
+      dataTemplate.id = await this.createId();
+      internalId = (await this.validateVcIdAndGetSections(dataTemplate.id)).internalId;
     } else {
       // We prefix the ID specified in the document with the evan identifier (vc:evan:[core|testcore]:)
       // However, we only need the actual ID to address the registry
-      const sections = await this.validateVcIdAndGetSections(vcData.id);
+      const sections = await this.validateVcIdAndGetSections(dataTemplate.id);
       internalId = sections.internalId;
       // Is the given VC ID valid and the active identity the owner of the VC ID?
       await this.validateVcIdOwnership(internalId);
     }
 
-    documentToStore.credentialStatus = {
-      id: `${this.options.credentialStatusEndpoint}${documentToStore.id}`,
-      type: '' // TODO: Add to evan context
+    dataTemplate.credentialStatus = {
+      id: `${this.options.credentialStatusEndpoint}${dataTemplate.id}`,
+      type: 'evanCredentialStatusService' // TODO: Add to evan context
     }
 
+    const documentToStore = await this.createVc(dataTemplate);
 
     const vcDfsAddress = await this.options.dfs.add('vc',
       Buffer.from(JSON.stringify(documentToStore), 'utf-8'));
@@ -454,7 +458,25 @@ export class Vc extends Logger {
         return doc as any;
       }
     };
-    await didJWT.verifyJWT(document.proof.jws, {resolver: resolver})
+
+    // fails if invalid signature
+    const verifiedSignature = await didJWT.verifyJWT(document.proof.jws, {resolver: resolver});
+
+    // fails if signed payload and the VC differ
+    const payload = {
+      ...verifiedSignature.payload.vc
+    };
+    delete payload.proof;
+    const prooflessDocument = {
+      ...document
+    };
+    delete prooflessDocument.proof;
+
+    const proofPayloadHash = await this.options.nameResolver.soliditySha3(JSON.stringify(payload));
+    const documentHash = await this.options.nameResolver.soliditySha3(JSON.stringify(prooflessDocument));
+    if(proofPayloadHash !== documentHash) {
+      throw Error('Invalid proof. Signed payload does not match given document.');
+    }
   }
 
   /**
