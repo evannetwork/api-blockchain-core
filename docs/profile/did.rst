@@ -293,7 +293,7 @@ convertIdentityToDid
 
 .. code-block:: typescript
 
-  did.convertIdentityToDid(did);
+  did.convertIdentityToDid(identity);
 
 Converts given evan.network identity hash to DID.
 
