@@ -17,12 +17,12 @@
   the following URL: https://evan.network/license/
 */
 
-import  * as didJWT from 'did-jwt';
+import * as didJWT from 'did-jwt';
 import { cloneDeep } from 'lodash';
 
 import {
   nullBytes32,
-  getEnvironment
+  getEnvironment,
 } from '../common/utils';
 
 import {
@@ -151,7 +151,7 @@ export const enum VcProofType {
 }
 
 const JWTProofMapping = {};
-JWTProofMapping[(VcProofType.EcdsaPublicKeySecp256k1)] =  'ES256K-R';
+JWTProofMapping[(VcProofType.EcdsaPublicKeySecp256k1)] = 'ES256K-R';
 
 const vcRegEx = /^vc:evan:(?:(testcore|core):)?(0x(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64}))$/;
 
@@ -164,7 +164,7 @@ const w3cMandatoryContext = 'https://www.w3.org/2018/credentials/v1';
  */
 export class Vc extends Logger {
   public credentialStatusEndpoint: string;
-  
+
   private cache: any = {};
 
   private config: VcConfig;
@@ -193,12 +193,12 @@ export class Vc extends Logger {
       await this.getRegistryContract(),
       'createId', {
         from: this.options.signerIdentity.activeIdentity,
-        event: { target: 'VcRegistry', eventName: 'VcIdRegistered', },
+        event: { target: 'VcRegistry', eventName: 'VcIdRegistered' },
         getEventResult: (event, args) => args.vcId,
       },
     );
 
-    return await this.convertInternalVcIdToUri(id);
+    return this.convertInternalVcIdToUri(id);
   }
 
   /**
@@ -213,9 +213,9 @@ export class Vc extends Logger {
       throw new Error('VC misses id');
     }
 
-    const types = vcData.type ? vcData.type : ['VerifiableCredential']
+    const types = vcData.type ? vcData.type : ['VerifiableCredential'];
 
-    const context = vcData["@context"] ? vcData["@context"] : [w3cMandatoryContext];
+    const context = vcData['@context'] ? vcData['@context'] : [w3cMandatoryContext];
     if (!context.includes(w3cMandatoryContext)) {
       context.push(w3cMandatoryContext);
     }
@@ -240,11 +240,11 @@ export class Vc extends Logger {
    * @return     {revokationStatus}  A boolean value. False = not revoked, True = revoked
    */
   public async getRevokeVcStatus(vcId: string): Promise<void> {
-
     const revokationStatus = await this.options.executor.executeContractCall(
       await this.getRegistryContract(),
       'vcRevoke',
-      vcId);
+      vcId,
+    );
 
     return revokationStatus;
   }
@@ -259,16 +259,16 @@ export class Vc extends Logger {
   public async getVc(vcId: string): Promise<VcDocument> {
     // Check whether the full URI (vc:evan:[vcId]) or just the internal ID was given
     let identityAddress = vcId;
-    if(!identityAddress.startsWith('0x')) {
+    if (!identityAddress.startsWith('0x')) {
       const groups = vcRegEx.exec(vcId);
       if (!groups) {
         throw new Error(`Given VC ID ("${vcId}") is no valid evan VC ID`);
       }
-      const [ , vcEnvironment = 'core', address ] = groups;
+      const [, vcEnvironment = 'core', address] = groups;
       identityAddress = address;
       const environment = await this.getEnvironment();
-      if (environment === 'testcore' && vcEnvironment !== 'testcore' ||
-          environment === 'core' && vcEnvironment !== 'core') {
+      if ((environment === 'testcore' && vcEnvironment !== 'testcore')
+          || (environment === 'core' && vcEnvironment !== 'core')) {
         throw new Error(`Given VC ID environment "${vcEnvironment}" does not match current "${environment}"`);
       }
     }
@@ -298,7 +298,8 @@ export class Vc extends Logger {
     const revokeProcessed = await this.options.executor.executeContractTransaction(
       await this.getRegistryContract(),
       'revokeVc',
-      vcId);
+      vcId,
+    );
 
     return revokeProcessed;
   }
@@ -320,7 +321,8 @@ export class Vc extends Logger {
       localVcData.id = await this.createId();
       internalId = (await this.validateVcIdAndGetSections(localVcData.id)).internalId;
     } else {
-      // We prefix the ID specified in the document with the evan identifier (vc:evan:[core|testcore]:)
+      // We prefix the ID specified in the document with
+      // the evan identifier (vc:evan:[core|testcore]:)
       // However, we only need the actual ID to address the registry
       const sections = await this.validateVcIdAndGetSections(localVcData.id);
       internalId = sections.internalId;
@@ -332,8 +334,8 @@ export class Vc extends Logger {
 
     documentToStore.credentialStatus = {
       id: `${this.credentialStatusEndpoint}${documentToStore.id}`,
-      type: 'evan:evanCredential'
-    }
+      type: 'evan:evanCredential',
+    };
 
 
     const vcDfsAddress = await this.options.dfs.add('vc',
@@ -368,16 +370,20 @@ export class Vc extends Logger {
    * @param      {VcProofType}  proofType  The type of algorithm used for generating the JWT
    */
   private async createJwtForVc(vc: VcDocument, proofType: VcProofType): Promise<string> {
-    const signer = didJWT.SimpleSigner(await this.options.accountStore.getPrivateKey(this.options.activeAccount));
+    const signer = didJWT.SimpleSigner(
+      await this.options.accountStore.getPrivateKey(this.options.activeAccount),
+    );
     let jwt = '';
     await didJWT.createJWT(
-      { vc: vc,
-        exp: vc.validUntil
-      },{
+      {
+        vc,
+        exp: vc.validUntil,
+      }, {
         alg: JWTProofMapping[proofType],
         issuer: vc.issuer.id,
-        signer
-      }).then( response => { jwt = response });
+        signer,
+      },
+    ).then((response) => { jwt = response; });
 
     return jwt;
   }
@@ -397,10 +403,13 @@ export class Vc extends Logger {
     let issuerIdentity;
     try {
       issuerIdentity = await this.options.did.convertDidToIdentity(vc.issuer.id);
-    } catch(e) {
+    } catch (e) {
       throw Error(`Invalid issuer DID: ${vc.issuer.id}`);
     }
-    const accountIdentity = await this.options.verifications.getIdentityForAccount(this.options.activeAccount, true);
+    const accountIdentity = await this.options.verifications.getIdentityForAccount(
+      this.options.activeAccount,
+      true,
+    );
 
     if (accountIdentity !== issuerIdentity) {
       throw Error('You are not authorized to issue this VC');
@@ -415,7 +424,7 @@ export class Vc extends Logger {
       created: new Date(Date.now()).toISOString(),
       proofPurpose: 'assertionMethod',
       verificationMethod: verMethod,
-      jws: jwt
+      jws: jwt,
     };
 
     return proof;
@@ -438,19 +447,21 @@ export class Vc extends Logger {
    * identity's public key.
    *
    * @param      {string}  issuerDid  DID of the VC issuer.
-   * @throws           If there is no authentication material given in the DID or no key matching the
-   *                   active identity is found.
+   * @throws           If there is no authentication material given in the DID or no key matching
+   *                   the active identity is found.
    */
   private async getPublicKeyUriFromDid(issuerDid: string): Promise<string> {
-    const signaturePublicKey =
-      await this.options.signerIdentity.getPublicKey(this.options.signerIdentity.underlyingAccount);
+    const signaturePublicKey = await this.options.signerIdentity.getPublicKey(
+      this.options.signerIdentity.underlyingAccount,
+    );
     const doc = await this.options.did.getDidDocument(issuerDid);
 
-    if (!(doc.authentication || doc.publicKey || doc.publicKey.length == 0)) {
-      throw Error(`Document for ${issuerDid} does not provide authentication material. Cannot sign VC.`);
+    if (!(doc.authentication || doc.publicKey || doc.publicKey.length === 0)) {
+      throw Error(`Document for ${issuerDid}`
+        + 'does not provide authentication material. Cannot sign VC.');
     }
 
-    const key = doc.publicKey.filter(key => {return key.publicKeyHex === signaturePublicKey})[0];
+    const key = doc.publicKey.filter((entry) => entry.publicKeyHex === signaturePublicKey)[0];
 
     if (!key) {
       throw Error('The signature key for the active account is not associated to its DID document. Cannot sign VC.');
@@ -467,11 +478,13 @@ export class Vc extends Logger {
   private async getRegistryContract(): Promise<any> {
     if (!this.cache.vcRegistryContract) {
       const vcRegistryDomain = this.options.nameResolver.getDomainName(
-        this.options.nameResolver.config.domains.vcRegistry);
+        this.options.nameResolver.config.domains.vcRegistry,
+      );
       const vcRegistryAddress = await this.options.nameResolver.getAddress(vcRegistryDomain);
 
       this.cache.vcRegistryContract = this.options.contractLoader.loadContract(
-        'VcRegistry', vcRegistryAddress);
+        'VcRegistry', vcRegistryAddress,
+      );
     }
 
     return this.cache.vcRegistryContract;
@@ -490,9 +503,9 @@ export class Vc extends Logger {
       async resolve() {
         const doc = await didResolver.getDidDocument(document.issuer.id);
         return doc as any;
-      }
+      },
     };
-    await didJWT.verifyJWT(document.proof.jws, {resolver: resolver})
+    await didJWT.verifyJWT(document.proof.jws, { resolver });
   }
 
   /**
@@ -536,14 +549,14 @@ export class Vc extends Logger {
     if (!groups) {
       throw new Error(`Given VC ID ("${vcId}") is no valid evan VC ID`);
     }
-    const [ , vcEnvironment = 'core', internalId ] = groups;
+    const [, vcEnvironment = 'core', internalId] = groups;
     const environment = await this.getEnvironment();
-    if (environment === 'testcore' && vcEnvironment !== 'testcore' ||
-        environment === 'core' && vcEnvironment !== 'core') {
+    if ((environment === 'testcore' && vcEnvironment !== 'testcore')
+        || (environment === 'core' && vcEnvironment !== 'core')) {
       throw new Error(`VCs environment "${environment} does not match ${vcEnvironment}`);
     }
 
-    return {environment: vcEnvironment, internalId: internalId};
+    return { environment: vcEnvironment, internalId };
   }
 
   /**

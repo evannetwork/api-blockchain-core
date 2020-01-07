@@ -55,13 +55,14 @@ const configCore = {
       accountId: '0x063fB42cCe4CA5448D69b4418cb89E663E71A139',
     },
     didAndVc: {
-      vcRevokationStatusEndpoint: ''
+      vcRevokationStatusEndpoint: '',
     },
   },
   alwaysAutoGasLimit: 10,
   // owner of the evan root verification domain
   ensRootOwner: '0xBa5384267A175542CB0E98a37875C106decDc3C3',
-  ipfsConfig: {host: 'ipfs.evan.network', port: '443', protocol: 'https'},
-}
+  ipfsConfig: { host: 'ipfs.evan.network', port: '443', protocol: 'https' },
+};
 
-export { configCore }
+// eslint-disable-next-line import/prefer-default-export
+export { configCore };

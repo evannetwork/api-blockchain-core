@@ -1,6 +1,7 @@
 bundles/*
 discify/*
 dist/*
+dist-test/*
 docs/_build/*
 docs/blockchain/account-store.rst
 docs/blockchain/event-hub.rst

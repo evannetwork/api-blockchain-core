@@ -29,7 +29,8 @@ import { accounts } from '../test/accounts';
 
 use(chaiAsPromised);
 
-describe('VC Resolver', function() {
+// eslint-disable-next-line func-names
+describe('VC Resolver', function () {
   this.timeout(600000);
   let runtime: Runtime;
   let verifications: Verifications;
@@ -44,8 +45,8 @@ describe('VC Resolver', function() {
   const evanResolver = {
     async resolve(did) {
       return (await runtime.did.getDidDocument(did)) as any;
-    }
-  }
+    },
+  };
 
   before(async () => {
     runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity: true });
@@ -59,7 +60,7 @@ describe('VC Resolver', function() {
       credentialSubject: {
         id: await runtime.did.convertIdentityToDid(subjectIdentityId),
       },
-      validFrom: new Date(Date.now()).toISOString()
+      validFrom: new Date(Date.now()).toISOString(),
     };
   });
 
@@ -74,14 +75,14 @@ describe('VC Resolver', function() {
       expect(createdVcDoc.id).to.eq(myDoc.id);
       expect(createdVcDoc.issuer.id).to.eq(myDoc.issuer.id);
       expect(createdVcDoc.credentialSubject.id).to.eq(myDoc.credentialSubject.id);
-      await expect(didJWT.verifyJWT(createdVcDoc.proof.jws, {resolver: evanResolver}))
+      await expect(didJWT.verifyJWT(createdVcDoc.proof.jws, { resolver: evanResolver }))
         .to.be.eventually.fulfilled;
     });
 
     it('allows me to store a valid VC on-chain (and registering an ID implicitly)', async () => {
       const promise = runtime.vc.storeVc(minimalValidVcData);
       await expect(promise).to.not.be.rejected;
-      await expect(didJWT.verifyJWT((await promise).proof.jws, {resolver: evanResolver}))
+      await expect(didJWT.verifyJWT((await promise).proof.jws, { resolver: evanResolver }))
         .to.not.be.rejected;
     });
 
@@ -96,7 +97,7 @@ describe('VC Resolver', function() {
 
     it('allows me to store a valid VC on-chain under my registered ID', async () => {
       const myRegisteredId = await runtime.vc.createId();
-      const myDoc: VcDocumentTemplate = {...minimalValidVcData};
+      const myDoc: VcDocumentTemplate = { ...minimalValidVcData };
       myDoc.id = myRegisteredId;
       const promise = runtime.vc.storeVc(myDoc);
 
@@ -108,7 +109,7 @@ describe('VC Resolver', function() {
       const invalidId = 'invalidId';
       const myDoc: VcDocumentTemplate = {
         ...minimalValidVcData,
-        id: invalidId
+        id: invalidId,
       };
       const promise = runtime.vc.storeVc(myDoc);
 
@@ -126,7 +127,7 @@ describe('VC Resolver', function() {
         ...minimalValidVcData,
         id: 'randomCustomId',
         issuer: {
-          id: await runtime.did.convertIdentityToDid(subjectIdentityId)
+          id: await runtime.did.convertIdentityToDid(subjectIdentityId),
         },
       };
       const promise = runtime.vc.createVc(myDoc);
@@ -134,24 +135,25 @@ describe('VC Resolver', function() {
       await expect(promise).to.be.rejectedWith('You are not authorized to issue this VC');
     });
 
-    it('does not allow me to store a VC under an ID I do not own', async() => {
+    it('does not allow me to store a VC under an ID I do not own', async () => {
       // Have another identity create a VC that we then want to store
       const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
       const someoneElsesId = await otherRuntime.vc.createId();
 
       const vcData = {
         ...minimalValidVcData,
-        id: someoneElsesId
+        id: someoneElsesId,
       };
 
       const promise = runtime.vc.storeVc(vcData);
       await expect(promise).to.be.rejectedWith(
-        `Active identity is not the owner of the given VC ID ${someoneElsesId}`);
+        `Active identity is not the owner of the given VC ID ${someoneElsesId}`,
+      );
     });
 
     it('allows me to get an existing VC using the full VC ID URI', async () => {
       const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData);
-      const promise =  runtime.vc.getVc(storedVcDoc.id);
+      const promise = runtime.vc.getVc(storedVcDoc.id);
 
       await expect(promise).to.not.be.rejected;
       expect((await promise).id).to.eq(storedVcDoc.id);
@@ -159,7 +161,7 @@ describe('VC Resolver', function() {
 
     it('allows me to get an existing VC using only the VC ID (discarding vc:evan prefix)', async () => {
       const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData);
-      const promise =  runtime.vc.getVc(storedVcDoc.id.replace('vc:evan:testcore:', ''));
+      const promise = runtime.vc.getVc(storedVcDoc.id.replace('vc:evan:testcore:', ''));
 
       await expect(promise).to.not.be.rejected;
       expect((await promise).id).to.eq(storedVcDoc.id);
@@ -180,26 +182,26 @@ describe('VC Resolver', function() {
         .to.be.rejectedWith('Given VC ID environment "core" does not match current "testcore"');
     });
 
-    it('does not allow me to create a VC without an issuer', async() => {
+    it('does not allow me to create a VC without an issuer', async () => {
       const vc = {
         ...minimalValidVcData,
         id: 'randomCustomId',
         issuer: {
-          id: ''
-        }
+          id: '',
+        },
       };
       const promise = runtime.vc.createVc(vc);
 
       await expect(promise).to.be.rejectedWith(`Invalid issuer DID: ${vc.issuer.id}`);
     });
 
-    it('does not allow me to create a VC without a subject', async() => {
+    it('does not allow me to create a VC without a subject', async () => {
       const vc = {
         ...minimalValidVcData,
         id: 'randomCustomId',
         credentialSubject: {
-          id: ''
-        }
+          id: '',
+        },
       };
       const promise = runtime.vc.createVc(vc);
 

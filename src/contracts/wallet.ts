@@ -49,18 +49,23 @@ export interface WalletOptions extends LoggerOptions {
  */
 export class Wallet extends Logger {
   public options: WalletOptions;
+
   public defaultOptions: any;
+
   public defaultDescription: any = {
-    'public': {
-      'name': 'MultiSigWallet contract',
-      'description': 'allows multiple accounts to agree on transactions',
-      'author': 'evan.network GmbH',
-      'version': '0.0.1',
-      'dbcpVersion': 1,
-    }
+    public: {
+      name: 'MultiSigWallet contract',
+      description: 'allows multiple accounts to agree on transactions',
+      author: 'evan.network GmbH',
+      version: '0.0.1',
+      dbcpVersion: 1,
+    },
   };
+
   public receipts = {};
+
   public walletType: string;
+
   public walletContract: any;
 
   public get walletAddress() {
@@ -74,23 +79,24 @@ export class Wallet extends Logger {
     this.defaultDescription.public.abis = {
       own: JSON.parse(this.options.contractLoader.contracts.MultiSigWallet.interface),
     };
-    const signAndExecuteTransaction = this.options.executor.signer.signAndExecuteTransaction;
-    this.options.executor.signer.signAndExecuteTransaction =
-      (contract, functionName, functionArguments, innerOptions, handleTxResult) => {
-        signAndExecuteTransaction.call(
-          this.options.executor.signer,
-          contract,
-          functionName,
-          functionArguments,
-          innerOptions,
-          (error, receipt) => {
-            if (receipt) {
-              this.receipts[receipt.transactionHash] = receipt;
-            }
-            handleTxResult(error, receipt);
-          },
-        );
-      };
+    const { signAndExecuteTransaction } = this.options.executor.signer;
+    this.options.executor.signer.signAndExecuteTransaction = (
+      contract, functionName, functionArguments, innerOptions, handleTxResult,
+    ) => {
+      signAndExecuteTransaction.call(
+        this.options.executor.signer,
+        contract,
+        functionName,
+        functionArguments,
+        innerOptions,
+        (error, receipt) => {
+          if (receipt) {
+            this.receipts[receipt.transactionHash] = receipt;
+          }
+          handleTxResult(error, receipt);
+        },
+      );
+    };
   }
 
   /**
@@ -105,8 +111,8 @@ export class Wallet extends Logger {
       await this.options.executor.executeContractTransaction(
         this.ensureContract(),
         'addOwner',
-        { from: accountId, },
-        toAdd
+        { from: accountId },
+        toAdd,
       );
     } else if (this.walletType === 'MultiSigWalletSG') {
       await this.submitTransaction(
@@ -122,7 +128,8 @@ export class Wallet extends Logger {
 
   public async confirmTransaction(accountId: string, transactionId: string|number): Promise<any> {
     return this.submitAndHandleConfirmation(
-      null, 'confirmTransaction', { from: accountId }, transactionId);
+      null, 'confirmTransaction', { from: accountId }, transactionId,
+    );
   }
 
   /**
@@ -135,7 +142,11 @@ export class Wallet extends Logger {
    *                                             transaction, defaults to 1
    * @return     {Promise<void>}  resolved when done
    */
-  public async create(accountId: string, manager: string, owners: string[], confirmations = 1
+  public async create(
+    accountId: string,
+    manager: string,
+    owners: string[],
+    confirmations = 1,
   ): Promise<void> {
     // get factory
     const factoryDomain = [
@@ -145,8 +156,8 @@ export class Wallet extends Logger {
     ].join('.');
     const factoryAddress = await this.options.nameResolver.getAddress(factoryDomain);
     if (!factoryAddress) {
-      throw new Error(`factory '${factoryDomain}' for creating wallets not found in ` +
-        `'${this.options.nameResolver.config.labels.businessCenterRoot}'`);
+      throw new Error(`factory '${factoryDomain}' for creating wallets not found in `
+        + `'${this.options.nameResolver.config.labels.businessCenterRoot}'`);
     }
     const factory = this.options.contractLoader.loadContract('MultiSigWalletFactory', factoryAddress);
     // create contract via factory
@@ -155,7 +166,7 @@ export class Wallet extends Logger {
       'createContract', {
         from: accountId,
         autoGas: 1.1,
-        event: { target: 'MultiSigWalletFactory', eventName: 'ContractCreated', },
+        event: { target: 'MultiSigWalletFactory', eventName: 'ContractCreated' },
         getEventResult: (event, args) => args.newAddress,
       },
       manager,
@@ -164,7 +175,8 @@ export class Wallet extends Logger {
     );
     // add description
     await this.options.description.setDescriptionToContract(
-      contractId, this.defaultDescription, accountId);
+      contractId, this.defaultDescription, accountId,
+    );
 
     this.walletType = 'MultiSigWallet';
     this.walletContract = this.options.contractLoader.loadContract(this.walletType, contractId);
@@ -203,8 +215,8 @@ export class Wallet extends Logger {
       await this.options.executor.executeContractTransaction(
         this.ensureContract(),
         'removeOwner',
-        { from: accountId, },
-        toRemove
+        { from: accountId },
+        toRemove,
       );
     } else if (this.walletType === 'MultiSigWalletSG') {
       await this.submitTransaction(
@@ -229,10 +241,10 @@ export class Wallet extends Logger {
    *                                                transaction
    * @return     {Promise<any>}  status information about transaction
    */
-  public async submitRawTransaction(target: any, encoded: string, inputOptions: any
-  ): Promise<any> {
+  public async submitRawTransaction(target: any, encoded: string, inputOptions: any): Promise<any> {
     return this.submitAndHandleConfirmation(
-      target, 'submitTransaction', inputOptions, encoded);
+      target, 'submitTransaction', inputOptions, encoded,
+    );
   }
 
   /**
@@ -259,10 +271,10 @@ export class Wallet extends Logger {
     if (contractInstance.abiModel) {
       functionAbi = contractInstance.abiModel.getMethod(functionName).abiItem;
     } else {
-      functionAbi = contractInstance.options.jsonInterface
-        .filter(json => json.name === functionName && json.inputs.length === params.length)[0]
+      [functionAbi] = contractInstance.options.jsonInterface
+        .filter((json) => json.name === functionName && json.inputs.length === params.length);
     }
-    const types = functionAbi.inputs.map(input => input.type);
+    const types = functionAbi.inputs.map((input) => input.type);
     const signature = this.options.executor.web3.eth.abi.encodeFunctionSignature(functionAbi);
 
     return `${signature}${coder.encodeParameters(types, params).replace('0x', '')}`;
@@ -273,12 +285,13 @@ export class Wallet extends Logger {
   ): Promise<any> {
     const subscriptions = [];
     let receipt;
-    const walletOptions = Object.assign(
-      { timeout: 300000 },
-      this.defaultOptions || {},
-      inputOptions,
-    );
+    const walletOptions = {
+      timeout: 300000,
+      ...this.defaultOptions || {},
+      ...inputOptions,
+    };
     try {
+      // eslint-disable-next-line no-async-promise-executor
       receipt = await new Promise(async (resolve, reject) => {
         try {
           let txResolved;
@@ -286,7 +299,7 @@ export class Wallet extends Logger {
           setTimeout(() => {
             if (!txResolved) {
               txResolved = true;
-              reject(`wallet timeout after ${transactionTimeout}ms`);
+              reject(new Error(`wallet timeout after ${transactionTimeout}ms`));
             }
           }, transactionTimeout);
 
@@ -296,14 +309,16 @@ export class Wallet extends Logger {
           const transactionResults = {};
 
           // helper functions
+          // eslint-disable-next-line consistent-return
           const resolveIfPossible = () => {
-            if (transactionHash &&                                // from Confirmation event
-                walletTransactionId &&                            // from Confirmation event
-                this.receipts[transactionHash] &&                 // from signer receipt fetching
-                transactionResults[walletTransactionId].event) {  // from Execution/ExecutionFailure
+            if (transactionHash // from Confirmation event
+                && walletTransactionId // from Confirmation event
+                && this.receipts[transactionHash] // from signer receipt fetching
+                // from Execution/ExecutionFailure
+                && transactionResults[walletTransactionId].event) {
               txResolved = true;
               if (transactionResults[walletTransactionId].event.event === 'ExecutionFailure') {
-                return reject('ExecutionFailure');
+                return reject(new Error('ExecutionFailure'));
               }
               resolve(transactionResults[walletTransactionId]);
             }
@@ -311,43 +326,43 @@ export class Wallet extends Logger {
 
           // subscribe to events for status tracking
           const walletInstance = this.ensureContract();
-          const handleConfirmation = async(event) => {
+          const handleConfirmation = async (event) => {
             try {
               // get all events from block
               const events = {};
               const eventNames = [];
               let eventList = await walletInstance.getPastEvents(
                 'allEvents',
-                { fromBlock: event.blockNumber, toBlock: event.blockNumber });
-              eventList = eventList.filter(ev => ev.transactionHash === event.transactionHash);
+                { fromBlock: event.blockNumber, toBlock: event.blockNumber },
+              );
+              eventList = eventList.filter((ev) => ev.transactionHash === event.transactionHash);
               eventList.forEach((entry) => {
                 events[entry.event] = entry;
                 eventNames.push(entry.event);
               });
               transactionResults[event.returnValues.transactionId] = { event };
               if (eventNames.includes('ContractCreated')) {
-                this.log('received MultiSigWallet ContractCreated event with txid: ' +
-                  `${event.returnValues.transactionId} ${event.transactionHash}`, 'debug');
-                transactionResults[event.returnValues.transactionId].result =
-                  eventList.filter(ev => ev.event === 'ContractCreated')[0].returnValues.contractId;
+                this.log('received MultiSigWallet ContractCreated event with txid: '
+                  + `${event.returnValues.transactionId} ${event.transactionHash}`, 'debug');
+                transactionResults[event.returnValues.transactionId].result = eventList.filter((ev) => ev.event === 'ContractCreated')[0].returnValues.contractId;
               } else if (eventNames.includes('Execution')) {
-                this.log('received MultiSigWallet Execution event with txid: ' +
-                  `${event.returnValues.transactionId} ${event.transactionHash}`, 'debug');
+                this.log('received MultiSigWallet Execution event with txid: '
+                  + `${event.returnValues.transactionId} ${event.transactionHash}`, 'debug');
               } else if (eventNames.includes('ExecutionFailure')) {
-                this.log('received MultiSigWallet ExecutionFailure event with txid: ' +
-                  `${event.returnValues.transactionId} ${event.transactionHash}`, 'debug');
+                this.log('received MultiSigWallet ExecutionFailure event with txid: '
+                  + `${event.returnValues.transactionId} ${event.transactionHash}`, 'debug');
               } else {
-                this.log('received MultiSigWallet Confirmation event with hash: ' +
-                  `${event.transactionHash} and txid: ${event.returnValues.transactionId}`, 'debug');
+                this.log('received MultiSigWallet Confirmation event with hash: '
+                  + `${event.transactionHash} and txid: ${event.returnValues.transactionId}`, 'debug');
                 transactionResults[event.returnValues.transactionId].result = {
                   status: 'pending',
                   transactionId: event.returnValues.transactionId,
                 };
               }
             } catch (ex) {
-              const msg = 'handling of confirmation of ' +
-                (target ? `transaction to "${target.options.address}"` : 'constructor') +
-                ` with ${ex.message || ex}`;
+              const msg = `handling of confirmation of ${
+                target ? `transaction to "${target.options.address}"` : 'constructor'
+              } with ${ex.message || ex}`;
               this.log(msg, 'error');
               throw new Error(msg);
             }
@@ -355,20 +370,20 @@ export class Wallet extends Logger {
 
           // execute to contract
           const options = Object.assign(JSON.parse(JSON.stringify(walletOptions)), {
-            event: { target: 'MultiSigWallet', eventName: 'Confirmation', },
+            event: { target: 'MultiSigWallet', eventName: 'Confirmation' },
             getEventResult: async (event, args) => {
-              this.log('received MultiSigWallet Confirmation event with hash: ' +
-                `${event.transactionHash} and txid: ${args.transactionId}`, 'debug');
+              this.log('received MultiSigWallet Confirmation event with hash: '
+                + `${event.transactionHash} and txid: ${args.transactionId}`, 'debug');
               transactionHash = event.transactionHash;
               walletTransactionId = args.transactionId;
               await handleConfirmation(event);
               resolveIfPossible();
-            }
+            },
           });
           let value = 0;
           if (options.value) {
-            this.log('wallet transaction has "value" set, removing this from tx options ' +
-              'and passing it as argument', 'debug');
+            this.log('wallet transaction has "value" set, removing this from tx options '
+              + 'and passing it as argument', 'debug');
             value = options.value;
             delete options.value;
           }
@@ -377,8 +392,8 @@ export class Wallet extends Logger {
               walletInstance,
               functionName,
               options,
-              (target && target.options) ?
-                target.options.address : '0x0000000000000000000000000000000000000000',
+              (target && target.options)
+                ? target.options.address : '0x0000000000000000000000000000000000000000',
               value,
               ...functionArguments,
             );
@@ -399,7 +414,8 @@ export class Wallet extends Logger {
     } finally {
       // cleanup subscriptions
       await Promise.all(
-        subscriptions.map(s => this.options.eventHub.unsubscribe({ subscription: s })));
+        subscriptions.map((s) => this.options.eventHub.unsubscribe({ subscription: s })),
+      );
     }
 
     return receipt;

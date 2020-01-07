@@ -55,9 +55,13 @@ export interface SignerIdentityOptions extends LoggerOptions {
  */
 export class SignerIdentity extends Logger implements SignerInterface {
   public activeIdentity: string;
+
   public underlyingAccount: string;
+
   private coder: any = new AbiCoder();
+
   private config: SignerIdentityConfig;
+
   private options: SignerIdentityOptions;
 
   /**
@@ -98,20 +102,29 @@ export class SignerIdentity extends Logger implements SignerInterface {
       throw new Error(`cannot find contract bytecode for contract "${contractName}"`);
     }
     // build bytecode and arguments for constructor
-    options.input = `0x${compiledContract.bytecode}` +
-      this.encodeConstructorParams(JSON.parse(compiledContract.interface), functionArguments);
+    // eslint-disable-next-line no-param-reassign
+    options.input = `0x${compiledContract.bytecode}${
+      this.encodeConstructorParams(JSON.parse(compiledContract.interface), functionArguments)}`;
 
-    const { blockNumber, transactionHash } = await this.handleIdentityTransaction(null, null, [], options);
+    const { blockNumber, transactionHash } = await this.handleIdentityTransaction(
+      null,
+      null,
+      [],
+      options,
+    );
     const keyHolderLibrary = this.options.contractLoader.loadContract(
-      'KeyHolderLibrary', this.activeIdentity);
+      'KeyHolderLibrary', this.activeIdentity,
+    );
     const events = await keyHolderLibrary.getPastEvents(
-      'ContractCreated', { fromBlock: blockNumber, toBlock: blockNumber });
-    const matches = events.filter(ev => ev.transactionHash === transactionHash);
+      'ContractCreated', { fromBlock: blockNumber, toBlock: blockNumber },
+    );
+    const matches = events.filter((ev) => ev.transactionHash === transactionHash);
     if (matches.length !== 1) {
       throw new Error('contract creation failed');
     }
     return this.options.contractLoader.loadContract(
-      contractName, matches[0].returnValues.contractId);
+      contractName, matches[0].returnValues.contractId,
+    );
   }
 
   /**
@@ -135,6 +148,7 @@ export class SignerIdentity extends Logger implements SignerInterface {
    * @param      {Function}  handleTxResult  result handler function
    * @return     {Promise<void>}  resolved when done
    */
+  // eslint-disable-next-line consistent-return
   public async signAndExecuteSend(
     options: any,
     handleTxResult: Function,
@@ -165,6 +179,7 @@ export class SignerIdentity extends Logger implements SignerInterface {
    * @param      {Function}  handleTxResult     callback(error, result)
    * @return     {Promise<void>}  resolved when done
    */
+  // eslint-disable-next-line consistent-return
   public async signAndExecuteTransaction(
     contract: any,
     functionName: string,
@@ -174,7 +189,8 @@ export class SignerIdentity extends Logger implements SignerInterface {
   ): Promise<void> {
     if (options.from === this.underlyingAccount) {
       return this.config.underlyingSigner.signAndExecuteTransaction(
-        contract, functionName, functionArguments, options, handleTxResult);
+        contract, functionName, functionArguments, options, handleTxResult,
+      );
     }
 
     try {
@@ -234,14 +250,12 @@ export class SignerIdentity extends Logger implements SignerInterface {
   private encodeConstructorParams(abi: any[], params: any[]) {
     if (params.length) {
       return abi
-        .filter(json => json.type === 'constructor' && json.inputs.length === params.length)
-        .map(json => json.inputs.map(input => input.type))
-        .map(types => this.coder.encodeParameters(types, params))
-        .map(encodedParams => encodedParams.replace(/^0x/, ''))[0] || ''
-      ;
-    } else {
-      return '';
+        .filter((json) => json.type === 'constructor' && json.inputs.length === params.length)
+        .map((json) => json.inputs.map((input) => input.type))
+        .map((types) => this.coder.encodeParameters(types, params))
+        .map((encodedParams) => encodedParams.replace(/^0x/, ''))[0] || '';
     }
+    return '';
   }
 
   /**
@@ -268,7 +282,7 @@ export class SignerIdentity extends Logger implements SignerInterface {
       contract,
       functionName,
       optionsClone,
-      ...functionArguments
+      ...functionArguments,
     );
     const txResult = await this.options.verifications.executeTransaction(
       this.underlyingAccount,
@@ -276,12 +290,14 @@ export class SignerIdentity extends Logger implements SignerInterface {
       {
         event: {
           contract: this.options.contractLoader.loadContract(
-            'VerificationHolder', this.activeIdentity),
+            'VerificationHolder', this.activeIdentity,
+          ),
           eventName: 'ExecutionRequested',
         },
-        getEventResult: ({ transactionHash }) =>
-          this.options.web3.eth.getTransactionReceipt(transactionHash),
-      }
+        getEventResult: ({ transactionHash }) => this.options.web3.eth.getTransactionReceipt(
+          transactionHash,
+        ),
+      },
     );
     return txResult;
   }
