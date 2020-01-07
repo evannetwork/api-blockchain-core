@@ -193,9 +193,8 @@ export class Payments extends Logger {
       proof = this.channel.proof;
     }
 
-    // eslint-disable-next-line
-    closingSig
-      ? await this.options.executor.executeContractTransaction(
+    if (closingSig) {
+      await this.options.executor.executeContractTransaction(
         this.channelManager,
         'cooperativeClose',
         { from: this.channel.account },
@@ -204,8 +203,9 @@ export class Payments extends Logger {
         this.options.web3.utils.toHex(proof.balance),
         proof.sig,
         closingSig,
-      )
-      : await this.options.executor.executeContractTransaction(
+      );
+    } else {
+      await this.options.executor.executeContractTransaction(
         this.channelManager,
         'uncooperativeClose',
         { from: this.channel.account },
@@ -213,6 +213,7 @@ export class Payments extends Logger {
         this.channel.block,
         this.options.web3.utils.toHex(proof.balance),
       );
+    }
   }
 
   /**

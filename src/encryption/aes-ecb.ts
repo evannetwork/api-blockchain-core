@@ -154,8 +154,7 @@ export class AesEcb extends Logger implements Cryptor {
   private computeSecret(passphrase: Buffer): string {
     let nkey = 32;
     let niv = 0;
-    // eslint-disable-next-line
-    for (let key = '', iv = '', p = ''; ;) {
+    for (let key = '', p = ''; ;) {
       const h = crypto.createHash('md5');
       h.update(p, 'hex');
       h.update(passphrase);
@@ -168,7 +167,6 @@ export class AesEcb extends Logger implements Cryptor {
       i += n;
       n = Math.min(p.length - i, 2 * niv);
       niv -= n / 2;
-      iv += p.slice(i, i + n);
       i += n;
       if (nkey + niv === 0) {
         return key;

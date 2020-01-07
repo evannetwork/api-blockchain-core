@@ -237,8 +237,8 @@ describe('Rights and Roles handler', function test() {
       await rar.removeAccountFromRole(contract, accounts[0], accounts[1], 0);
 
       contractParticipants = await rar.getMembers(contract);
-      // eslint-disable-next-line
-      owners = contractParticipants[0];
+
+      owners = contractParticipants['0'];
       expect(owners.length).to.eq(1);
       expect(owners[0]).to.eq(accounts[0]);
 

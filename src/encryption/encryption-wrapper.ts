@@ -186,11 +186,9 @@ export class EncryptionWrapper extends Logger {
           block: await this.options.web3.eth.getBlockNumber(),
           originator: `${keyType}:${keyContext}`,
         };
-      case EncryptionWrapperKeyType.Sharing:
+      case EncryptionWrapperKeyType.Sharing: {
         this.checkProperties(artifacts, ['sharingContractId']);
-        // eslint-disable-next-line no-case-declarations
         const { sharingContractId, sharingId } = artifacts;
-        // eslint-disable-next-line no-case-declarations
         const originator = typeof sharingId !== 'undefined'
           ? `${keyType}:${sharingContractId}:${sharingId}`
           : `${keyType}:${sharingContractId}`;
@@ -199,6 +197,7 @@ export class EncryptionWrapper extends Logger {
           block: await this.options.web3.eth.getBlockNumber(),
           originator,
         };
+      }
       default:
         throw new Error(`unknown key type "${keyType}"`);
     }
@@ -224,11 +223,9 @@ export class EncryptionWrapper extends Logger {
       case 'profile':
         result = await this.options.profile.getEncryptionKey(split[1]);
         break;
-      case 'sharing':
+      case 'sharing': {
         this.checkProperties(artifacts, ['accountId']);
-        // eslint-disable-next-line no-case-declarations
         const [contractid, sharingId = null] = split.slice(1);
-        // eslint-disable-next-line no-case-declarations
         const { accountId, propertyName = '*' } = artifacts as any;
         result = await this.options.sharing.getKey(
           contractid,
@@ -238,12 +235,13 @@ export class EncryptionWrapper extends Logger {
           sharingId,
         );
         break;
-      case 'custom':
+      }
+      case 'custom': {
         this.checkProperties(artifacts, ['key']);
-        // eslint-disable-next-line no-case-declarations
         const { key } = artifacts as any;
         result = key;
         break;
+      }
       default:
         throw new Error(`unknown key type "${split[0]}"`);
     }
