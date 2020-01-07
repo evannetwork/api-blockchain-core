@@ -23,9 +23,10 @@ import { expect, use } from 'chai';
 
 import { Runtime } from '../index';
 import { TestUtils } from '../test/test-utils';
-import { VcDocumentTemplate } from './vc';
+import { VcDocumentTemplate, VcDocument } from './vc';
 import { Verifications } from '../verifications/verifications';
 import { accounts } from '../test/accounts';
+import { sign } from 'crypto';
 
 use(chaiAsPromised);
 
@@ -45,6 +46,20 @@ describe('VC Resolver', function() {
     async resolve(did) {
       return (await runtime.did.getDidDocument(did)) as any;
     }
+  }
+
+  async function compareDocuments(original: VcDocument, signedPayload: any): Promise<void> {
+    const sig = {
+      ...signedPayload
+    }
+    const orig = {
+      ...original
+    }
+    delete sig.proof;
+    delete orig.proof;
+    const proofPayloadHash = await runtime.nameResolver.soliditySha3(JSON.stringify(sig));
+    const documentHash = await runtime.nameResolver.soliditySha3(JSON.stringify(orig));
+    expect(proofPayloadHash).eq(documentHash);
   }
 
   before(async () => {
@@ -78,6 +93,13 @@ describe('VC Resolver', function() {
       expect(createdVcDoc.issuer.id).to.eq(minimalValidVcData.issuer.id);
       expect(createdVcDoc.credentialSubject.id).to.eq(minimalValidVcData.credentialSubject.id);
       expect(didJWT.verifyJWT(createdVcDoc.proof.jws, {resolver: evanResolver})).to.be.eventually.fulfilled;
+
+      await expect(didJWT.verifyJWT(createdVcDoc.proof.jws, {resolver: evanResolver})).to.not.be.rejected;
+      const verifiedSignature = await didJWT.verifyJWT(createdVcDoc.proof.jws, {resolver: evanResolver});
+
+
+      // fails if signed VC and proof-carrying VC not matching
+      await compareDocuments(createdVcDoc, verifiedSignature.payload.vc);
     });
 
     it('allows me to store a valid VC on-chain (and registering an ID implicitly)', async () => {
@@ -89,17 +111,7 @@ describe('VC Resolver', function() {
 
 
       // fails if signed VC and proof-carrying VC not matching
-      const payload = {
-        ...verifiedSignature.payload.vc
-      }
-      const prooflessDocument = {
-        ...storedVc
-      }
-      delete payload.proof;
-      delete prooflessDocument.proof;
-      const proofPayloadHash = await runtime.nameResolver.soliditySha3(JSON.stringify(payload));
-      const documentHash = await runtime.nameResolver.soliditySha3(JSON.stringify(prooflessDocument));
-      expect(proofPayloadHash).eq(documentHash);
+      await compareDocuments(storedVc, verifiedSignature.payload.vc);
     });
 
     it('adds a credentialStatus property to the VC document when storing on-chain', async () => {
