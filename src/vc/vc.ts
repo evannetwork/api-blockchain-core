@@ -18,6 +18,7 @@
 */
 
 import  * as didJWT from 'did-jwt';
+import { cloneDeep } from 'lodash';
 
 import {
   nullBytes32,
@@ -39,6 +40,13 @@ import {
 
 
 /**
+ * custom configuration for VC resolver
+ */
+export interface VcConfig {
+  credentialStatusEndpoint: string;
+}
+
+/**
  * A valid VC document
  */
 export interface VcDocument {
@@ -58,7 +66,7 @@ export interface VcDocument {
  */
 export interface VcDocumentTemplate {
   '@context'?: string[];
-  id: string;
+  id?: string;
   type?: string[];
   issuer: VcIssuer;
   validFrom: string;
@@ -130,14 +138,14 @@ const JWTProofMapping = {};
 JWTProofMapping[(VcProofType.EcdsaPublicKeySecp256k1)] =  'ES256K-R';
 
 /**
- * Options for the VcResolver
+ * Options for VC resolver
  */
 export interface VcOptions extends LoggerOptions {
   accountStore: AccountStore;
   activeAccount: string;
   contractLoader: ContractLoader;
-  credentialStatusEndpoint: string;
   dfs: DfsInterface;
+  did: Did;
   executor: Executor;
   nameResolver: NameResolver;
   signerIdentity: SignerIdentity;
@@ -155,11 +163,13 @@ const w3cMandatoryContext = 'https://www.w3.org/2018/credentials/v1';
  * @class Vc
  */
 export class Vc extends Logger {
-  public did: Did;
-
-  public options: VcOptions;
-
+  public credentialStatusEndpoint: string;
+  
   private cache: any = {};
+
+  private config: VcConfig;
+
+  private options: VcOptions;
 
   /**
    * Creates a new `Vc` instance
@@ -167,10 +177,10 @@ export class Vc extends Logger {
    * @param      {VcOptions}  options  options for `Vc`
    * @param      {Did}        did      Instance of `Did` used for resolving DIDs
    */
-  public constructor(options: VcOptions, did: Did) {
+  public constructor(options: VcOptions, config: VcConfig) {
     super(options as LoggerOptions);
     this.options = options;
-    this.did = did;
+    this.credentialStatusEndpoint = config.credentialStatusEndpoint;
   }
 
   /**
@@ -219,6 +229,10 @@ export class Vc extends Logger {
    * @returns     {Promise<VcDocument}  The final VC document as it is stored in the registry.
    */
   public async createVc(vcData: VcDocumentTemplate): Promise<VcDocument> {
+    if (!vcData.id) {
+      throw new Error('VC misses id');
+    }
+
     const types = vcData.type ? vcData.type : ['VerifiableCredential']
 
     const context = vcData["@context"] ? vcData["@context"] : [w3cMandatoryContext];
@@ -229,7 +243,7 @@ export class Vc extends Logger {
     const vcDocument: VcDocument = {
       '@context': context,
       type: types,
-      ...vcData
+      ...(vcData as VcDocument),
     };
 
     vcDocument.proof = await this.createProofForVc(vcDocument);
@@ -248,25 +262,27 @@ export class Vc extends Logger {
    *                                           data.
    * @returns     {Promise<VcDocument}  The final VC document as it is stored in the registry.
    */
-  public async storeVc(vcData: VcDocumentTemplate, shouldRegisterNewId = false): Promise<VcDocument> {
-    const documentToStore = await this.createVc(vcData);
-
+  public async storeVc(vcData: VcDocumentTemplate): Promise<VcDocument> {
+    const localVcData: VcDocumentTemplate = cloneDeep(vcData);
     let internalId;
-    if (shouldRegisterNewId) {
-      documentToStore.id = await this.createId();
-      internalId = (await this.validateVcIdAndGetSections(documentToStore.id)).internalId;
+
+    if (!localVcData.id) {
+      localVcData.id = await this.createId();
+      internalId = (await this.validateVcIdAndGetSections(localVcData.id)).internalId;
     } else {
       // We prefix the ID specified in the document with the evan identifier (vc:evan:[core|testcore]:)
       // However, we only need the actual ID to address the registry
-      const sections = await this.validateVcIdAndGetSections(vcData.id);
+      const sections = await this.validateVcIdAndGetSections(localVcData.id);
       internalId = sections.internalId;
       // Is the given VC ID valid and the active identity the owner of the VC ID?
       await this.validateVcIdOwnership(internalId);
     }
 
+    const documentToStore = await this.createVc(localVcData);
+
     documentToStore.credentialStatus = {
-      id: `${this.options.credentialStatusEndpoint}${documentToStore.id}`,
-      type: '' // TODO: Add to evan context
+      id: `${this.credentialStatusEndpoint}${documentToStore.id}`,
+      type: 'evan:evanCredential'
     }
 
 
@@ -329,7 +345,7 @@ export class Vc extends Logger {
    * @param      {VcDocument}   vc         The VC document
    * @param      {VcProofType}  proofType  The type of algorithm used for generating the JWT
    */
-  private async createJWTForVc(vc: VcDocument, proofType: VcProofType): Promise<string> {
+  private async createJwtForVc(vc: VcDocument, proofType: VcProofType): Promise<string> {
     const signer = didJWT.SimpleSigner(await this.options.accountStore.getPrivateKey(this.options.activeAccount));
     let jwt = '';
     await didJWT.createJWT(
@@ -358,7 +374,7 @@ export class Vc extends Logger {
     proofType: VcProofType = VcProofType.EcdsaPublicKeySecp256k1): Promise<VcProof> {
     let issuerIdentity;
     try {
-      issuerIdentity = await this.did.convertDidToIdentity(vc.issuer.id);
+      issuerIdentity = await this.options.did.convertDidToIdentity(vc.issuer.id);
     } catch(e) {
       throw Error(`Invalid issuer DID: ${vc.issuer.id}`);
     }
@@ -368,7 +384,7 @@ export class Vc extends Logger {
       throw Error('You are not authorized to issue this VC');
     }
 
-    const jwt = await this.createJWTForVc(vc, proofType);
+    const jwt = await this.createJwtForVc(vc, proofType);
 
     const verMethod = await this.getPublicKeyUriFromDid(vc.issuer.id);
 
@@ -406,7 +422,7 @@ export class Vc extends Logger {
   private async getPublicKeyUriFromDid(issuerDid: string): Promise<string> {
     const signaturePublicKey =
       await this.options.signerIdentity.getPublicKey(this.options.signerIdentity.underlyingAccount);
-    const doc = await this.did.getDidDocument(issuerDid);
+    const doc = await this.options.did.getDidDocument(issuerDid);
 
     if (!(doc.authentication || doc.publicKey || doc.publicKey.length == 0)) {
       throw Error(`Document for ${issuerDid} does not provide authentication material. Cannot sign VC.`);
@@ -447,7 +463,7 @@ export class Vc extends Logger {
    */
   private async validateProof(document: VcDocument): Promise<void> {
     // Mock the did-resolver package that did-jwt usually requires
-    const didResolver = this.did;
+    const didResolver = this.options.did;
     const resolver = {
       async resolve() {
         const doc = await didResolver.getDidDocument(document.issuer.id);
@@ -469,13 +485,13 @@ export class Vc extends Logger {
     if (!document.credentialSubject.id || document.credentialSubject.id === '') {
       throw new Error('No Subject ID provided');
     }
-    await this.did.validateDid(document.credentialSubject.id);
+    await this.options.did.validateDid(document.credentialSubject.id);
 
     // Issuer
     if (!document.issuer.id || document.issuer.id === '') {
       throw new Error('No Issuer ID provided');
     }
-    await this.did.validateDid(document.issuer.id);
+    await this.options.did.validateDid(document.issuer.id);
 
     // Proof
     if (!document.proof || !document.proof.jws || document.proof.jws === '') {

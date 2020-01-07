@@ -450,18 +450,21 @@ export async function createDefaultRuntime(
       signerIdentity: signer,
       web3,
     });
-    vc = new Vc({
-      activeAccount,
-      accountStore,
-      contractLoader,
-      dfs,
-      credentialStatusEndpoint: config.smartAgents.didAndVc.vcRevokationStatusEndpoint,
-      executor,
-      nameResolver,
-      signerIdentity: signer,
-      verifications,
-      web3
-    }, did);
+    vc = new Vc(
+      {
+        activeAccount,
+        accountStore,
+        contractLoader,
+        dfs,
+        did,
+        executor,
+        nameResolver,
+        signerIdentity: signer,
+        verifications,
+        web3,
+      },
+      { credentialStatusEndpoint: config.smartAgents.didAndVc.vcRevokationStatusEndpoint },
+    ); 
   }
 
 

@@ -43,8 +43,8 @@ Parameters
     * ``accountStore`` - |source accountStore|_: |source accountStore|_ instance
     * ``activeAccount`` - ``string``: ID of the active account
     * ``contractLoader`` - |source contractLoader|_: |source contractLoader|_ instance
-    * ``credentialStatusEndpoint`` - ``string``: URL of the credential status endpoint
     * ``dfs`` - |source dfsInterface|_: |source dfsInterface|_ instance
+    * ``did`` - |source Did|_: |source Did|_ instance for resolving and validating
     * ``executor`` - |source executor|_: |source executor|_ instance
     * ``nameResolver`` - |source nameResolver|_: |source nameResolver|_ instance
     * ``signerIdentity`` - |source signerIdentity|_: |source signerIdentity|_ instance
@@ -54,7 +54,7 @@ Parameters
     * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
     * ``logLogLevel`` - |source logLevel|_ (optional): messages with this level will be pushed to ``logLog``
-#. ``did`` - |source Did|_: |source Did|_ instance for resolving and validating
+#. ``credentialStatusEndpoint`` - ``string``: URL of the credential status endpoint
 
 -------
 Returns
@@ -68,18 +68,21 @@ Example
 
 .. code-block:: typescript
 
-  const vc = new Vc({
-    accountStore,
-    activeIdentity
-    contractLoader,
-    credentialStatusEndpoint,
-    dfs,
-    executor,
-    nameResolver,
-    signerIdentity,
-    verifications,
-    web3,
-  }, did);
+  const vc = new Vc(
+    {
+      accountStore,
+      activeIdentity
+      contractLoader,
+      dfs,
+      did,
+      executor,
+      nameResolver,
+      signerIdentity,
+      verifications,
+      web3,
+    },
+    { credentialStatusEndpoint },
+  );
 
 
 
@@ -151,6 +154,7 @@ Example
 .. code-block:: typescript
 
   const minimalVcData = {
+      id: 'randomCustomId',
       issuer: {
         did: 'someDid',
       },
@@ -208,13 +212,13 @@ storeVc
   vc.storeVc(vcData, shouldRegisterNewId);
 
 Create a new VC that holds the given data and **store it on the chain**.
+Whether a new ID should be registered with the VC registry or the given ID in the document should be used depends of if ``vcData.id`` is set. If set, the method calls ``createId()`` to generate a new ID.
 
 ----------
 Parameters
 ----------
 
 #. ``vcData`` - ``VcDocumentTemplate``: Collection of mandatory and optional VC properties to store in the VC document
-#. ``shouldRegisterNewId`` - ``boolean``: Whether a new ID should be registered with the VC registry or the given ID in the document should be used (default: false). If true, the method calls ``createId()``.
 
 -------
 Returns
@@ -237,7 +241,7 @@ Example
       },
       validFrom: new Date(Date.now()).toISOString()
   };
-  const createdVcDoc = await runtime.vc.storeVc(minimalVcData, true);
+  const createdVcDoc = await runtime.vc.storeVc(minimalVcData);
   const permanentVcAddress = createdVcDoc.id;
 
 .. code-block:: typescript
