@@ -26,8 +26,8 @@ import {
   NameResolver,
 } from '@evan.network/dbcp';
 
-import { accountMap } from '../test/accounts';
-import { accounts } from '../test/accounts';
+import { accountMap, accounts } from '../test/accounts';
+
 import { configTestcore as config } from '../config-testcore';
 import { createDefaultRuntime } from '../runtime';
 import { Onboarding } from '../onboarding';
@@ -35,7 +35,7 @@ import { TestUtils } from '../test/test-utils';
 
 use(chaiAsPromised);
 
-describe('Profile helper', function() {
+describe('Profile helper', function test() {
   this.timeout(600000);
   let ipfs;
   let ipld;
@@ -98,7 +98,7 @@ describe('Profile helper', function() {
     const templates = {
       templates: 'can',
       have: {
-        any: 'format'
+        any: 'format',
       },
       depending: ['on', 'your', 'needs'],
     };
@@ -147,11 +147,11 @@ describe('Profile helper', function() {
     const contract = nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
     const valueToSet = '0x0000000000000000000000000000000000000004';
     const from = Object.keys(accountMap)[0];
-    const hash = await nameResolver.executor.executeContractCall(contract, 'getProfile', from, { from, });
+    const hash = await nameResolver.executor.executeContractCall(contract, 'getProfile', from, { from });
     await nameResolver.executor.executeContractTransaction(
       contract,
       'setMyProfile',
-      { from, autoGas: 1.1, },
+      { from, autoGas: 1.1 },
       valueToSet,
     );
     const newHash = await nameResolver.executor.executeContractCall(contract, 'getProfile', from, { from });
@@ -172,8 +172,8 @@ describe('Profile helper', function() {
       accountDetails: {
         profileType: 'company',
         accountName: 'test account',
-      }
-    })
+      },
+    });
     const profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await profile.loadForAccount();
     await profile.addContactKey(accounts[0], 'context a', 'key 0x01_a');
@@ -225,7 +225,7 @@ describe('Profile helper', function() {
       accountDetails: {
         profileType: 'company',
         accountName: 'test account',
-      }
+      },
     });
 
     // simulate a different account with a different keyStore
@@ -246,14 +246,13 @@ describe('Profile helper', function() {
   });
 
   it.skip('should be able to set a contact as known', async () => {
-
     const initRuntime = await TestUtils.getRuntime(accounts[0]);
     const profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await Onboarding.createProfile(initRuntime, {
       accountDetails: {
         profileType: 'company',
         accountName: 'test account',
-      }
+      },
     });
 
     await profile.loadForAccount();
@@ -269,7 +268,7 @@ describe('Profile helper', function() {
       accountDetails: {
         profileType: 'company',
         accountName: 'test account',
-      }
+      },
     });
 
     await profile.loadForAccount();
@@ -289,29 +288,29 @@ describe('Profile helper', function() {
     const dateString = Date.now().toString();
     const companyProfileProperties = {
       registration: {
-        court: `trst ${ dateString }`,
+        court: `trst ${dateString}`,
         register: 'hra',
-        registerNumber: `qwer ${ dateString }`,
-        salesTaxID: `qw ${ dateString }`,
+        registerNumber: `qwer ${dateString}`,
+        salesTaxID: `qw ${dateString}`,
       },
       contact: {
         country: 'DE',
-        city: `City ${ dateString }`,
+        city: `City ${dateString}`,
         postalCode: '12345',
-        streetAndNumber: `Street ${ dateString }`,
-        website: 'https://evan.network'
-      }
+        streetAndNumber: `Street ${dateString}`,
+        website: 'https://evan.network',
+      },
     };
     const deviceProfileProperties = {
       deviceDetails: {
-        dataStreamSettings: `dataStreamSettings ${ dateString }`,
-        location: `location ${ dateString }`,
-        manufacturer: `manufacturer ${ dateString }`,
+        dataStreamSettings: `dataStreamSettings ${dateString}`,
+        location: `location ${dateString}`,
+        manufacturer: `manufacturer ${dateString}`,
         owner: '0xcA4f9fF9e32a768BC68399B9F46d8A884089997d',
-        serialNumber: `serialNumber ${ dateString }`,
+        serialNumber: `serialNumber ${dateString}`,
         settings: { files: [] },
-        type: { files: [] }
-      }
+        type: { files: [] },
+      },
     };
 
     /**
@@ -324,7 +323,7 @@ describe('Profile helper', function() {
       return createDefaultRuntime(
         await TestUtils.getWeb3(),
         await TestUtils.getIpfs(),
-        { mnemonic, password, }
+        { mnemonic, password },
       );
     }
 
@@ -336,7 +335,7 @@ describe('Profile helper', function() {
         accountDetails: {
           profileType: 'user',
           accountName: 'test account',
-        }
+        },
       });
       const runtime = await getProfileRuntime(newMnemonic);
 
@@ -344,7 +343,7 @@ describe('Profile helper', function() {
         accountDetails: {
           accountName: 'New company',
           profileType: 'company',
-        }
+        },
       });
       const accountDetails = await runtime.profile.getProfileProperty('accountDetails');
       await expect(accountDetails.accountName).to.be.eq('New company');
@@ -358,7 +357,7 @@ describe('Profile helper', function() {
         accountDetails: {
           profileType: 'user',
           accountName: 'test account',
-        }
+        },
       });
       const runtime = await getProfileRuntime(newMnemonic);
 
@@ -366,7 +365,7 @@ describe('Profile helper', function() {
         accountDetails: {
           accountName: 'New company',
           profileType: 'company',
-        }
+        },
       });
       const accountDetails = await runtime.profile.getProfileProperty('accountDetails');
       await expect(accountDetails.accountName).to.be.eq('New company');
@@ -375,7 +374,7 @@ describe('Profile helper', function() {
         accountDetails: {
           accountName: 'Now it\'s a device',
           profileType: 'device',
-        }
+        },
       });
 
       await expect(promise).to.be.rejected;
@@ -389,7 +388,7 @@ describe('Profile helper', function() {
         accountDetails: {
           profileType: 'user',
           accountName: 'test account',
-        }
+        },
       });
       const runtime = await getProfileRuntime(newMnemonic);
 
@@ -397,7 +396,7 @@ describe('Profile helper', function() {
         accountDetails: {
           accountName: 'New device',
           profileType: 'device',
-        }
+        },
       });
       const accountDetails = await runtime.profile.getProfileProperty('accountDetails');
       await expect(accountDetails.accountName).to.be.eq('New device');
@@ -411,7 +410,7 @@ describe('Profile helper', function() {
         accountDetails: {
           profileType: 'user',
           accountName: 'test account',
-        }
+        },
       });
       const runtime = await getProfileRuntime(newMnemonic);
 
@@ -419,7 +418,7 @@ describe('Profile helper', function() {
         accountDetails: {
           accountName: 'custom profile',
           profileType: 'my own type',
-        }
+        },
       });
 
       await expect(promise).to.be.rejected;
@@ -428,9 +427,9 @@ describe('Profile helper', function() {
     it('can save company profile specific properties to a profile of type company', async () => {
       const runtime = await getProfileRuntime(mnemonics.company);
       await runtime.profile.setProfileProperties(companyProfileProperties);
-      const [accountDetails, contact, registration] =
-        await Promise.all(['accountDetails', 'contact', 'registration'].map(
-          p => runtime.profile.getProfileProperty(p)));
+      const [accountDetails, contact, registration] = await Promise.all(['accountDetails', 'contact', 'registration'].map(
+        (p) => runtime.profile.getProfileProperty(p),
+      ));
       await expect(accountDetails.profileType).to.be.eq('company');
       await expect(isEqual(companyProfileProperties.registration, registration)).to.be.true;
       await expect(isEqual(companyProfileProperties.contact, contact)).to.be.true;
@@ -445,9 +444,9 @@ describe('Profile helper', function() {
     it('can save device profile specific properties to a profile of type device', async () => {
       const runtime = await getProfileRuntime(mnemonics.device);
       await runtime.profile.setProfileProperties(deviceProfileProperties);
-      const [accountDetails, deviceDetails] =
-        await Promise.all(['accountDetails', 'deviceDetails'].map(
-          p => runtime.profile.getProfileProperty(p)));
+      const [accountDetails, deviceDetails] = await Promise.all(['accountDetails', 'deviceDetails'].map(
+        (p) => runtime.profile.getProfileProperty(p),
+      ));
       await expect(accountDetails.profileType).to.be.eq('device');
       await expect(isEqual(deviceProfileProperties.deviceDetails, deviceDetails)).to.be.true;
     });

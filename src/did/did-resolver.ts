@@ -88,6 +88,7 @@ export interface DidResolverOptions extends LoggerOptions {
  */
 export class DidResolver extends Logger {
   private cached: any;
+
   private options: DidResolverOptions;
 
   /**
@@ -114,10 +115,10 @@ export class DidResolver extends Logger {
     if (!groups) {
       throw new Error(`given did ("${did}") is no valid evan DID`);
     }
-    const [ , didEnvironment = 'core', identity ] = groups;
+    const [, didEnvironment = 'core', identity] = groups;
     const environment = await this.getEnvironment();
-    if (environment === 'testcore' && didEnvironment !== 'testcore' ||
-        environment === 'core' && didEnvironment !== 'core') {
+    if ((environment === 'testcore' && didEnvironment !== 'testcore')
+        || (environment === 'core' && didEnvironment !== 'core')) {
       throw new Error(`DIDs environment "${environment} does not match ${didEnvironment}`);
     }
 
@@ -130,7 +131,7 @@ export class DidResolver extends Logger {
    * @param      {string}  identity  evan.network identity like
    *                                 "0x000000000000000000000000000000000000001234"
    * @return     {Promise<string>}   DID like
-   *                                 "did:evan:testcore:0x000000000000000000000000000000000000001234"
+   *                                 did:evan:testcore:0x000000000000000000000000000000000000001234
    */
   public async convertIdentityToDid(identity: string): Promise<string> {
     return `did:evan:${await this.getDidInfix()}${identity}`;
@@ -152,7 +153,7 @@ export class DidResolver extends Logger {
    * @return     {Promise<DidResolverDocumentTemplate>}  a DID document template
    */
   public async getDidResolverDocumentTemplate(
-    did?: string, controllerDid?: string, authenticationKey?: string
+    did?: string, controllerDid?: string, authenticationKey?: string,
   ): Promise<DidResolverDocumentTemplate> {
     if (did && controllerDid && authenticationKey) {
       // use given key to create a contract DID document
@@ -164,12 +165,13 @@ export class DidResolver extends Logger {
           "${authenticationKey}"
         ]
       }`);
-    } else if (!(did || controllerDid || authenticationKey)) {
+    } if (!(did || controllerDid || authenticationKey)) {
       const identity = this.options.signerIdentity.activeIdentity;
-      const [ didInfix, publicKey ] = await Promise.all([
+      const [didInfix, publicKey] = await Promise.all([
         this.getDidInfix(),
         this.options.signerIdentity.getPublicKey(
-          this.options.signerIdentity.underlyingAccount),
+          this.options.signerIdentity.underlyingAccount,
+        ),
       ]);
 
       return JSON.parse(`{
@@ -184,23 +186,22 @@ export class DidResolver extends Logger {
           "did:evan:${didInfix}${identity}#key-1"
         ]
       }`);
-    } else {
-      throw new Error('invalid config for template document');
     }
+    throw new Error('invalid config for template document');
   }
 
   /**
    * Get DID document for given DID.
    *
    * @param      {string}  did     DID to fetch DID document for
-   * @return     {Promise<any>}    a DID document that MAY resemble `DidResolverDocumentTemplate` format
+   * @return     {Promise<any>}    a DID document that MAY resemble `DidResolverDocumentTemplate`
+   *                               format
    */
   public async getDidDocument(did: string): Promise<any> {
     let result = null;
-    const identity = this.padIdentity(did ?
-      await this.convertDidToIdentity(did) :
-      this.options.signerIdentity.activeIdentity
-    );
+    const identity = this.padIdentity(did
+      ? await this.convertDidToIdentity(did)
+      : this.options.signerIdentity.activeIdentity);
     const documentHash = await this.options.executor.executeContractCall(
       await this.getRegistryContract(),
       'didDocuments',
@@ -218,7 +219,8 @@ export class DidResolver extends Logger {
    * @param      {string}  did     DID name to get service for
    * @return     {Promise<DidResolverServiceEntry[] | DidResolverServiceEntry>}   service
    */
-  public async getService(did: string
+  public async getService(
+    did: string,
   ): Promise<DidResolverServiceEntry[] | DidResolverServiceEntry> {
     return (await this.getDidDocument(did)).service;
   }
@@ -231,12 +233,12 @@ export class DidResolver extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async setDidDocument(did: string, document: any): Promise<void> {
-    const identity = this.padIdentity(did ?
-      await this.convertDidToIdentity(did) :
-      this.options.signerIdentity.activeIdentity
-    );
+    const identity = this.padIdentity(did
+      ? await this.convertDidToIdentity(did)
+      : this.options.signerIdentity.activeIdentity);
     const documentHash = await this.options.dfs.add(
-      'did-document', Buffer.from(JSON.stringify(document), 'utf8'));
+      'did-document', Buffer.from(JSON.stringify(document), 'utf8'),
+    );
     await this.options.executor.executeContractTransaction(
       await this.getRegistryContract(),
       'setDidDocument',
@@ -255,9 +257,9 @@ export class DidResolver extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async setService(
-    did: string, service: DidResolverServiceEntry[] | DidResolverServiceEntry
+    did: string, service: DidResolverServiceEntry[] | DidResolverServiceEntry,
   ): Promise<void> {
-    await this.setDidDocument(did, { ...(await this.getDidDocument(did)), service, });
+    await this.setDidDocument(did, { ...(await this.getDidDocument(did)), service });
   }
 
   /**
@@ -267,8 +269,7 @@ export class DidResolver extends Logger {
    */
   private async getDidInfix(): Promise<string> {
     if (typeof this.cached.didInfix === 'undefined') {
-      this.cached.didInfix =
-        (await this.getEnvironment()) === 'testcore' ? 'testcore:' : '';
+      this.cached.didInfix = (await this.getEnvironment()) === 'testcore' ? 'testcore:' : '';
     }
     return this.cached.didInfix;
   }
@@ -293,10 +294,12 @@ export class DidResolver extends Logger {
   private async getRegistryContract(): Promise<any> {
     if (!this.cached.didRegistryContract) {
       const didRegistryDomain = this.options.nameResolver.getDomainName(
-        this.options.nameResolver.config.domains.didRegistry);
+        this.options.nameResolver.config.domains.didRegistry,
+      );
       const didRegistryAddress = await this.options.nameResolver.getAddress(didRegistryDomain);
       this.cached.didRegistryContract = this.options.contractLoader.loadContract(
-        'DidRegistry', didRegistryAddress);
+        'DidRegistry', didRegistryAddress,
+      );
     }
     return this.cached.didRegistryContract;
   }
@@ -309,8 +312,8 @@ export class DidResolver extends Logger {
    * @return     {string}  padded identity value
    */
   private padIdentity(identity: string): string {
-    return identity.length !== 66 ?
-      `0x${identity.replace(/^0x/, '').padStart(64, '0')}` :
-      identity;
+    return identity.length !== 66
+      ? `0x${identity.replace(/^0x/, '').padStart(64, '0')}`
+      : identity;
   }
 }

@@ -23,7 +23,7 @@ import * as chaiAsPromised from 'chai-as-promised';
 import { SignerInternal } from '@evan.network/dbcp';
 
 import { ExecutorAgent } from './executor-agent';
-import { TestUtils } from '../test/test-utils'
+import { TestUtils } from '../test/test-utils';
 
 
 const agentUser = '0x24Ac71311c9F9a6148944a921551686291aF5BC8';
@@ -38,7 +38,7 @@ let web3;
 
 use(chaiAsPromised);
 
-describe.skip('Executor handler', function() {
+describe.skip('Executor handler', function test() {
   this.timeout(300000);
   let executor: ExecutorAgent;
 
@@ -69,9 +69,9 @@ describe.skip('Executor handler', function() {
 
   it('should be able to create a contract', async () => {
     // create token for creating contract
-    const token = await executor.generateToken(password, [{ signature: 'Owned', }]);
+    const token = await executor.generateToken(password, [{ signature: 'Owned' }]);
     executor.token = token;
-    contract = await executor.createContract('Owned', [], { gas: 2000000, });
+    contract = await executor.createContract('Owned', [], { gas: 2000000 });
     expect(contract).not.to.be.undefined;
     const owner = await executor.executeContractCall(contract, 'owner');
     expect(owner).to.eq(agentUser);
@@ -82,10 +82,10 @@ describe.skip('Executor handler', function() {
     expect(owner).to.eq(agentUser);
 
     // grant tx token
-    const token = await executor.generateToken(password, [{ contract, functionName: 'transferOwnership', }]);
+    const token = await executor.generateToken(password, [{ contract, functionName: 'transferOwnership' }]);
     executor.token = token;
     // try to transfer ownership
-    await executor.executeContractTransaction(contract, 'transferOwnership', { gas: 2000000, }, randomAccount);
+    await executor.executeContractTransaction(contract, 'transferOwnership', { gas: 2000000 }, randomAccount);
     owner = await executor.executeContractCall(contract, 'owner');
     expect(owner.toLowerCase()).to.eq(randomAccount);
   });
@@ -93,19 +93,19 @@ describe.skip('Executor handler', function() {
   describe('when managing tokens', () => {
     it('should allow contract creation and transactions, when token has been granted', async () => {
       // create token for creating contract
-      let token = await executor.generateToken(password, [{ signature: 'Owned', }]);
+      let token = await executor.generateToken(password, [{ signature: 'Owned' }]);
       executor.token = token;
       // allowed, as token has been set
-      const localContract = await executor.createContract('Owned', [], { gas: 2000000, });
+      const localContract = await executor.createContract('Owned', [], { gas: 2000000 });
       expect(localContract).not.to.be.undefined;
       let owner = await executor.executeContractCall(localContract, 'owner');
       expect(owner).to.eq(agentUser);
 
       // grant tx token
-      token = await executor.generateToken(password, [{ contract: localContract, functionName: 'transferOwnership', }]);
+      token = await executor.generateToken(password, [{ contract: localContract, functionName: 'transferOwnership' }]);
       executor.token = token;
       // allowed, as token has been set
-      await executor.executeContractTransaction(localContract, 'transferOwnership', { gas: 2000000, }, randomAccount);
+      await executor.executeContractTransaction(localContract, 'transferOwnership', { gas: 2000000 }, randomAccount);
       owner = await executor.executeContractCall(localContract, 'owner');
       expect(owner.toLowerCase()).to.eq(randomAccount);
     });
@@ -113,76 +113,77 @@ describe.skip('Executor handler', function() {
     it('should not allow contract creation, when token has been granted', async () => {
       // allowed, as token has been set
       delete executor.token;
-      const localContractPromise = executor.createContract('Owned', [], { gas: 2000000, });
+      const localContractPromise = executor.createContract('Owned', [], { gas: 2000000 });
       await expect(localContractPromise).to.be.rejected;
     });
 
     it('should not allow transactions, when token has not been granted', async () => {
       // create token for creating contract
-      const token = await executor.generateToken(password, [{ signature: 'Owned', }]);
+      const token = await executor.generateToken(password, [{ signature: 'Owned' }]);
       executor.token = token;
       // allowed, as token has been set
-      const localContract = await executor.createContract('Owned', [], { gas: 2000000, });
+      const localContract = await executor.createContract('Owned', [], { gas: 2000000 });
       expect(localContract).not.to.be.undefined;
       const owner = await executor.executeContractCall(localContract, 'owner');
       expect(owner).to.eq(agentUser);
 
       // allowed, as token has been set
       delete executor.token;
-      const txPromise = executor.executeContractTransaction(localContract, 'transferOwnership', { gas: 2000000, }, randomAccount);
+      const txPromise = executor.executeContractTransaction(localContract, 'transferOwnership', { gas: 2000000 }, randomAccount);
       await expect(txPromise).to.be.rejected;
     });
 
     it('should allow multiple transactions, when matching token has been granted', async () => {
       // create token for creating contract
-      let token = await executor.generateToken(password, [{ signature: 'Owned', }]);
+      let token = await executor.generateToken(password, [{ signature: 'Owned' }]);
       executor.token = token;
       // allowed, as token has been set
-      const localContract = await executor.createContract('Owned', [], { gas: 2000000, });
+      const localContract = await executor.createContract('Owned', [], { gas: 2000000 });
       expect(localContract).not.to.be.undefined;
       const owner = await executor.executeContractCall(localContract, 'owner');
       expect(owner).to.eq(agentUser);
 
       // grant tx token
-      token = await executor.generateToken(password, [{ contract: localContract, functionName: 'transferOwnership', count: 3, }]);
+      token = await executor.generateToken(password, [{ contract: localContract, functionName: 'transferOwnership', count: 3 }]);
       executor.token = token;
       // allowed (1/3), as token has been set
-      await executor.executeContractTransaction(localContract, 'transferOwnership', { gas: 2000000, }, agentUser);
+      await executor.executeContractTransaction(localContract, 'transferOwnership', { gas: 2000000 }, agentUser);
       // allowed (2/3), as token has been set
-      await executor.executeContractTransaction(localContract, 'transferOwnership', { gas: 2000000, }, agentUser);
+      await executor.executeContractTransaction(localContract, 'transferOwnership', { gas: 2000000 }, agentUser);
       // allowed (3/3), as token has been set
-      await executor.executeContractTransaction(localContract, 'transferOwnership', { gas: 2000000, }, agentUser);
+      await executor.executeContractTransaction(localContract, 'transferOwnership', { gas: 2000000 }, agentUser);
       // will fail
-      const txPromise = executor.executeContractTransaction(localContract, 'transferOwnership', { gas: 2000000, }, agentUser);
+      const txPromise = executor.executeContractTransaction(localContract, 'transferOwnership', { gas: 2000000 }, agentUser);
       await expect(txPromise).to.be.rejected;
     });
 
-    it('rejects contract creations, when value has been set', async() => {
+    it('rejects contract creations, when value has been set', async () => {
       // create token for creating contract
-      const token = await executor.generateToken(password, [{ signature: 'Owned', }]);
+      const token = await executor.generateToken(password, [{ signature: 'Owned' }]);
       executor.token = token;
       // fails, as value has been given
-      const localContractPromise = executor.createContract('Owned', [], { gas: 2000000, value: 1000, });
+      const localContractPromise = executor.createContract('Owned', [], { gas: 2000000, value: 1000 });
       await expect(localContractPromise).to.be.rejected;
     });
 
-    it('rejects contract transactions, when value has been set', async() => {
+    it('rejects contract transactions, when value has been set', async () => {
       // create token for creating contract
-      let token = await executor.generateToken(password, [{ signature: 'Owned', }]);
+      let token = await executor.generateToken(password, [{ signature: 'Owned' }]);
       executor.token = token;
       // allowed, as token has been set
-      const localContract = await executor.createContract('Owned', [], { gas: 2000000, });
+      const localContract = await executor.createContract('Owned', [], { gas: 2000000 });
       expect(localContract).not.to.be.undefined;
       const owner = await executor.executeContractCall(localContract, 'owner');
       expect(owner).to.eq(agentUser);
 
       // grant tx token
-      token = await executor.generateToken(password, [{ contract: localContract, functionName: 'transferOwnership', }]);
+      token = await executor.generateToken(password, [{ contract: localContract, functionName: 'transferOwnership' }]);
       executor.token = token;
 
       // fails, as value has been given
       const txPromise = executor.executeContractTransaction(
-        localContract, 'transferOwnership', { gas: 2000000, value: 1000, }, randomAccount);
+        localContract, 'transferOwnership', { gas: 2000000, value: 1000 }, randomAccount,
+      );
       await expect(txPromise).to.be.rejected;
     });
   });

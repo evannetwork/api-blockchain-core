@@ -19,19 +19,18 @@
 
 import 'mocha';
 import * as chaiAsPromised from 'chai-as-promised';
-import * as IpfsApi from 'ipfs-api';
 import { expect, use } from 'chai';
 
-import { Ipfs } from './ipfs'
-import { InMemoryCache } from './in-memory-cache'
-import { TestUtils } from '../test/test-utils'
+import { Ipfs } from './ipfs';
+import { InMemoryCache } from './in-memory-cache';
+import { TestUtils } from '../test/test-utils';
 
 use(chaiAsPromised);
 
 
 let ipfs: Ipfs;
 
-describe('IPFS handler', function() {
+describe('IPFS handler', function test() {
   this.timeout(300000);
 
   before(async () => {
@@ -56,23 +55,23 @@ describe('IPFS handler', function() {
     const randomContent = Math.random().toString();
     const fileHash = await ipfs.add('test', Buffer.from(randomContent, 'utf-8'));
     expect(fileHash).not.to.be.undefined;
-    await ipfs.pinFileHash({hash: fileHash});
+    await ipfs.pinFileHash({ hash: fileHash });
   });
 
   it('should be able to unpin a file', async () => {
     const randomContent = Math.random().toString();
     const fileHash = await ipfs.add('test', Buffer.from(randomContent, 'utf-8'));
     expect(fileHash).not.to.be.undefined;
-    await ipfs.pinFileHash({hash: fileHash});
+    await ipfs.pinFileHash({ hash: fileHash });
     await ipfs.remove(fileHash);
   });
 
   it('should throw an error when unpinning unknown hash', async () => {
     const unkownHash = 'QmZYJJTAV8JgVoMggSuQSSdGU4PrZSvuuXckvqpnHfpR75';
     const unpinUnkown = ipfs.remove(unkownHash);
-    await expect(unpinUnkown).to.be.rejectedWith(`problem with IPFS request: tried to remove hash ` +
-      `"${ unkownHash }" for account "${ ipfs.runtime.activeAccount }", but no matching ` +
-      `entries found in redis`);
+    await expect(unpinUnkown).to.be.rejectedWith('problem with IPFS request: tried to remove hash '
+      + `"${unkownHash}" for account "${ipfs.runtime.activeAccount}", but no matching `
+      + 'entries found in redis');
   });
 
   it('should be able to add a file with special characters', async () => {
@@ -90,14 +89,14 @@ describe('IPFS handler', function() {
       Math.random().toString(),
       Math.random().toString(),
     ];
-    const hashes = await ipfs.addMultiple(randomContents.map(content => (
-      { path: content, content: Buffer.from(content, 'utf-8')}
+    const hashes = await ipfs.addMultiple(randomContents.map((content) => (
+      { path: content, content: Buffer.from(content, 'utf-8') }
     )));
     expect(hashes).not.to.be.undefined;
     let hashesToCheck = randomContents.length;
-    for (const [ , hash] of hashes.entries()) {
+    for (const [, hash] of hashes.entries()) {
       expect(randomContents).to.contain(await ipfs.get(hash));
-      hashesToCheck--;
+      hashesToCheck -= 1;
     }
     expect(hashesToCheck).to.eq(0);
   });
@@ -119,10 +118,4 @@ describe('IPFS handler', function() {
     // remove cache after test
     delete ipfs.cache;
   });
-
-  it('should set the cache when passed via options', async () => {
-    const remoteNode = IpfsApi({host: 'ipfs.test.evan.network', port: '443', protocol: 'https'});
-    const customIpfs =  new Ipfs({ remoteNode, cache: new InMemoryCache()});
-    expect(customIpfs.cache).to.be.ok;
-  })
 });

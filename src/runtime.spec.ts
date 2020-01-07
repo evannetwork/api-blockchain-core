@@ -18,16 +18,16 @@
 */
 
 import 'mocha';
-import { expect, use, } from 'chai';
+import { expect, use } from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
 
 import { createDefaultRuntime } from './runtime';
 import { TestUtils } from './test/test-utils';
 import { accountMap, accounts } from './test/accounts';
 
-use (chaiAsPromised);
+use(chaiAsPromised);
 
-describe('Runtime', function() {
+describe('Runtime', function test() {
   this.timeout(600000);
 
   let web3;
@@ -41,8 +41,8 @@ describe('Runtime', function() {
     runtimeConfig = {
       accountMap,
       keyConfig: {
-        [web3.utils.soliditySha3(accounts[1])]: '0030c5e7394585400b1f00d1267b27c3a80080f9000000000000000000000012'
-      }
+        [web3.utils.soliditySha3(accounts[1])]: '0030c5e7394585400b1f00d1267b27c3a80080f9000000000000000000000012',
+      },
     };
   });
 
@@ -52,9 +52,8 @@ describe('Runtime', function() {
   });
 
   it('should create a new runtime and parse accountid and password in keyConfig', async () => {
-
     const tmpRuntimeConfig = runtimeConfig;
-    tmpRuntimeConfig.keyConfig[accounts[0]] =  'Test1234';
+    tmpRuntimeConfig.keyConfig[accounts[0]] = 'Test1234';
     const runtime = await createDefaultRuntime(web3, dfs, runtimeConfig);
     expect(runtime).to.be.ok;
     expect(Object.keys(runtime.keyProvider.keys).length).to.eq(3);
@@ -63,7 +62,7 @@ describe('Runtime', function() {
   it('should create a new and valid runtime with a mnemonic and a password', async () => {
     const runtime = await createDefaultRuntime(web3, dfs, {
       mnemonic: 'annual lyrics orbit slight object space jeans ethics broccoli umbrella entry couch',
-      password: 'Test1234'
+      password: 'Test1234',
     });
     expect(runtime).to.be.ok;
     expect(Object.keys(runtime.keyProvider.keys).length).to.eq(2);
@@ -71,7 +70,7 @@ describe('Runtime', function() {
 
   it('should create a new and valid runtime with a mnemonic and a password and merge with given accounts', async () => {
     const tmpRuntimeConfig = runtimeConfig;
-    tmpRuntimeConfig.keyConfig[accounts[0]] =  'Test1234';
+    tmpRuntimeConfig.keyConfig[accounts[0]] = 'Test1234';
     tmpRuntimeConfig.mnemonic = 'annual lyrics orbit slight object space jeans ethics broccoli umbrella entry couch';
     tmpRuntimeConfig.password = 'Test1234';
     const runtime = await createDefaultRuntime(web3, dfs, tmpRuntimeConfig);
@@ -82,14 +81,14 @@ describe('Runtime', function() {
   it('should NOT create a new and valid runtime with only passing mnemonic and empty account map', async () => {
     const runtimePromise = createDefaultRuntime(web3, dfs, {
       mnemonic: 'annual lyrics orbit slight object space jeans ethics broccoli umbrella entry couch',
-      accountMap: { }
+      accountMap: { },
     });
     await expect(runtimePromise).to.be.rejected;
   });
 
   it('should NOT create a new and valid runtime with account map is invalid', async () => {
     const runtimePromise = createDefaultRuntime(web3, dfs, {
-      accountMap: { }
+      accountMap: { },
     });
     await expect(runtimePromise).to.be.rejectedWith('accountMap invalid');
   });

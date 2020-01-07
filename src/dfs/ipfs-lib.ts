@@ -22,21 +22,24 @@ import * as https from 'https';
 
 import {
   FileToAdd,
-} from '@evan.network/dbcp'
+} from '@evan.network/dbcp';
 
 
 /**
  * @brief      IPFS library for add/pin
  */
+// eslint-disable-next-line import/prefer-default-export
 export class IpfsLib {
   /**
    * compatible IPFS files api
    */
   public files: any;
+
   /**
    * compatible IPFS pin api
    */
   public pin: any;
+
   /**
    * holds the provider
    */
@@ -52,24 +55,25 @@ export class IpfsLib {
    * @param      {any}  provider  The provider
    */
   public setProvider(provider: any): void {
-    const data = Object.assign({
+    const data = {
       host: '127.0.0.1',
       pinning: true,
       port: '5001',
       protocol: 'http',
       base: '/api/v0',
       headers: {},
-    }, provider || {});
+      ...provider || {},
+    };
     this.provider = data;
     this.files = {
       add: this.add.bind(this),
-      cat: this.cat.bind(this)
+      cat: this.cat.bind(this),
     };
     this.pin = {
       add: this.pinAdd.bind(this),
-      rm: this.pinRm.bind(this)
+      rm: this.pinRm.bind(this),
     };
-  };
+  }
 
 
   /**
@@ -83,7 +87,7 @@ export class IpfsLib {
       const reqOptions: http.RequestOptions = {};
       reqOptions.hostname = this.provider.host;
       reqOptions.path = `${this.provider.base}${opts.uri}`;
-      reqOptions.headers = Object.assign({}, this.provider.headers);
+      reqOptions.headers = { ...this.provider.headers };
       if (opts.payload) {
         reqOptions.method = 'POST';
         reqOptions.headers['Content-Type'] = `multipart/form-data; boundary=${opts.boundary}`;
@@ -92,26 +96,27 @@ export class IpfsLib {
       }
 
       if (opts.accept) {
-        reqOptions.headers['accept'] = opts.accept;
+        reqOptions.headers.accept = opts.accept;
       }
-      const req: http.ClientRequest = requestLib.request(reqOptions, (res: http.IncomingMessage) => {
-        const data  = [];
-        res.on('data', (chunk) => {
-          data.push(chunk);
-        });
-        res.on('end', () => {
-          const binary = Buffer.concat(data);
-          if (res.statusCode >= 200 && res.statusCode < 400) {
-            try {
-              resolve((opts.jsonParse ? JSON.parse(binary.toString()) : binary));
-            } catch (jsonError) {
-              reject(new Error(`error while parsing ipfs binary data: '${String(binary)}', error: ${String(jsonError)}'`));
+      const req: http.ClientRequest = requestLib.request(reqOptions,
+        (res: http.IncomingMessage) => {
+          const data = [];
+          res.on('data', (chunk) => {
+            data.push(chunk);
+          });
+          res.on('end', () => {
+            const binary = Buffer.concat(data);
+            if (res.statusCode >= 200 && res.statusCode < 400) {
+              try {
+                resolve((opts.jsonParse ? JSON.parse(binary.toString()) : binary));
+              } catch (jsonError) {
+                reject(new Error(`error while parsing ipfs binary data: '${String(binary)}', error: ${String(jsonError)}'`));
+              }
+            } else {
+              reject(new Error(`problem with IPFS request: ${String(binary)}'`));
             }
-          } else {
-            reject(new Error(`problem with IPFS request: ${String(binary)}'`));
-          }
+          });
         });
-      });
 
       req.on('error', (e) => {
         reject(new Error(`problem with request: ${e.message}`));
@@ -133,7 +138,7 @@ export class IpfsLib {
   public async add(input: FileToAdd[]) {
     let files = input;
     if (!Array.isArray(files)) {
-      files = [].concat(files)
+      files = [].concat(files);
     }
     const response = [];
     for (const file of files) {
@@ -143,7 +148,7 @@ export class IpfsLib {
         `Content-Disposition: form-data; name="${file.path}"`,
         'Content-Type: application/octet-stream',
         '',
-        ''
+        '',
       ].join('\r\n');
 
       const footer = `\r\n--${boundary}--`;
@@ -151,8 +156,8 @@ export class IpfsLib {
       const payload = Buffer.concat([
         Buffer.from(header),
         file.content,
-        Buffer.from(footer)
-      ])
+        Buffer.from(footer),
+      ]);
 
       response.push(await this.sendAsync({
         jsonParse: true,

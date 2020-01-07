@@ -17,9 +17,6 @@
   the following URL: https://evan.network/license/
 */
 
-import crypto = require('crypto');
-import prottle = require('prottle');
-
 import {
   DfsInterface,
   Envelope,
@@ -33,6 +30,9 @@ import {
   Description,
   Sharing,
 } from '../../index';
+
+import crypto = require('crypto');
+import prottle = require('prottle');
 
 
 const requestWindowSize = 10;
@@ -57,9 +57,13 @@ export interface DataContractOptions extends BaseContractOptions {
  */
 export class DataContract extends BaseContract {
   protected options: DataContractOptions;
+
   private readonly encodingUnencrypted = 'utf-8';
+
   private readonly encodingEncrypted = 'hex';
+
   private readonly encodingUnencryptedHash = 'hex';
+
   private readonly cryptoAlgorithHashes = 'aesEcb';
 
   public constructor(optionsInput: DataContractOptions) {
@@ -94,29 +98,38 @@ export class DataContract extends BaseContract {
     sharingsHash = null,
   ): Promise<any> {
     const contractP = (async () => {
-      const descriptionHash = (typeof contractDescription === 'object') ?
-        '0x0000000000000000000000000000000000000000000000000000000000000000' : contractDescription;
+      const descriptionHash = (typeof contractDescription === 'object')
+        ? '0x0000000000000000000000000000000000000000000000000000000000000000' : contractDescription;
       const contractId = await super.createUninitialized(
-        factoryName, accountId, businessCenterDomain, descriptionHash);
+        factoryName, accountId, businessCenterDomain, descriptionHash,
+      );
       const contractInterface = this.options.loader.loadContract('DataContractInterface', contractId);
       const rootDomain = this.options.nameResolver.namehash(
-        this.options.nameResolver.getDomainName(this.options.nameResolver.config.domains.root));
+        this.options.nameResolver.getDomainName(this.options.nameResolver.config.domains.root),
+      );
       await this.options.executor.executeContractTransaction(
         contractInterface,
         'init',
-        { from: accountId, autoGas: 1.1, },
+        { from: accountId, autoGas: 1.1 },
         rootDomain,
         allowConsumerInvite,
       );
       return contractInterface;
     })();
-    const [contract, sharingInfo] = await Promise.all([contractP, sharingsHash ? { sharingsHash, } : this.createSharing(accountId)]);
+    const [contract, sharingInfo] = await Promise.all(
+      [contractP, sharingsHash ? { sharingsHash } : this.createSharing(accountId)],
+    );
     if (sharingInfo.sharingsHash !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
       await this.options.executor.executeContractTransaction(
-        contract, 'setSharing', { from: accountId, autoGas: 1.1, }, sharingInfo.sharingsHash);
+        contract, 'setSharing', { from: accountId, autoGas: 1.1 }, sharingInfo.sharingsHash,
+      );
     }
     if (typeof contractDescription === 'object') {
-      await this.options.description.setDescriptionToContract(contract.options.address, contractDescription, accountId);
+      await this.options.description.setDescriptionToContract(
+        contract.options.address,
+        contractDescription,
+        accountId,
+      );
     }
     return contract;
   }
@@ -129,12 +142,17 @@ export class DataContract extends BaseContract {
    */
   public async createSharing(accountId: string, skipUpload = false): Promise<any> {
     // create sharing key for owner
-    const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(this.options.defaultCryptoAlgo);
-    const hashCryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(this.cryptoAlgorithHashes);
+    const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(
+      this.options.defaultCryptoAlgo,
+    );
+    const hashCryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(
+      this.cryptoAlgorithHashes,
+    );
     const [contentKey, hashKey, blockNr] = await Promise.all(
-      [cryptor.generateKey(), hashCryptor.generateKey(), this.options.web3.eth.getBlockNumber()]);
+      [cryptor.generateKey(), hashCryptor.generateKey(), this.options.web3.eth.getBlockNumber()],
+    );
 
-    const sharings =  {};
+    const sharings = {};
     await this.options.sharing.extendSharings(sharings, accountId, accountId, '*', blockNr, contentKey);
     await this.options.sharing.extendSharings(sharings, accountId, accountId, '*', 'hashKey', hashKey);
 
@@ -173,61 +191,87 @@ export class DataContract extends BaseContract {
     encryption: string = this.options.defaultCryptoAlgo,
     encryptionContext = accountId,
   ): Promise<void> {
-    const dataContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('DataContractInterface', contract);
+    const dataContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('DataContractInterface', contract);
     const listNames = Array.isArray(listName) ? listName : [listName];
 
     let hashes = values;
     if (!dfsStorage) {
       if (encryptedHashes) {
-        hashes = await Promise.all(hashes.map(hash => this.encryptHash(hash, dataContract, encryptionContext)));
+        hashes = await Promise.all(
+          hashes.map((hash) => this.encryptHash(hash, dataContract, encryptionContext)),
+        );
       }
       // store as is
       await this.options.executor.executeContractTransaction(
         dataContract,
         'addListEntries',
-        { from: accountId, autoGas: 1.1, },
-        listNames.map(name => this.options.web3.utils.sha3(name)),
+        { from: accountId, autoGas: 1.1 },
+        listNames.map((name) => this.options.web3.utils.sha3(name)),
         hashes,
       );
     } else {
       // upload to ipfs
-      const [ description, blockNr ] = await Promise.all([
-        this.options.description.getDescriptionFromContract(dataContract.options.address, encryptionContext),
+      const [description, blockNr] = await Promise.all([
+        this.options.description.getDescriptionFromContract(
+          dataContract.options.address,
+          encryptionContext,
+        ),
         this.options.web3.eth.getBlockNumber(),
       ]);
-      await Promise.all((listNames).map(name => this.validate(description, name, hashes)));
+      await Promise.all((listNames).map((name) => this.validate(description, name, hashes)));
       // get all keys and check if they differ
-      const keys = await Promise.all(listNames.map(name =>
-        this.options.sharing.getKey(dataContract.options.address, encryptionContext, name, blockNr)));
+      const keys = await Promise.all(
+        listNames.map((name) => this.options.sharing.getKey(
+          dataContract.options.address,
+          encryptionContext,
+          name,
+          blockNr,
+        )),
+      );
       const groupedKeys = {};
       keys.forEach((key, index) => {
         if (groupedKeys[key]) {
           groupedKeys[key].push(listNames[index]);
         } else {
-          groupedKeys[key] = [ listNames[index] ];
+          groupedKeys[key] = [listNames[index]];
         }
       });
       // push grouped by key
-      for (const key of Object.keys(groupedKeys)) {
+      for (let i = 0; i < Object.keys(groupedKeys).length; i += 1) {
+        const key = Object.keys(groupedKeys)[i];
         const ipfsFiles = [];
-        for (const value of hashes) {
-          const encrypted = await this.encrypt({private: value}, dataContract, encryptionContext, groupedKeys[key][0], blockNr, encryption);
+        for (let j = 0; j < hashes.length; j += 1) {
+          const value = hashes[j];
+          // eslint-disable-next-line no-await-in-loop
+          const encrypted = await this.encrypt(
+            { private: value },
+            dataContract,
+            encryptionContext,
+            groupedKeys[key][0],
+            blockNr,
+            encryption,
+          );
           const stateMd5 = crypto.createHash('md5').update(encrypted).digest('hex');
           ipfsFiles.push({
             path: stateMd5,
             content: Buffer.from(encrypted),
           });
-        };
+        }
+        // eslint-disable-next-line no-await-in-loop
         hashes = await this.options.dfs.addMultiple(ipfsFiles);
         if (encryptedHashes) {
-          hashes = await Promise.all(hashes.map(hash => this.encryptHash(hash, dataContract, encryptionContext)));
+          // eslint-disable-next-line no-await-in-loop
+          hashes = await Promise.all(
+            hashes.map((hash) => this.encryptHash(hash, dataContract, encryptionContext)),
+          );
         }
+        // eslint-disable-next-line no-await-in-loop
         await this.options.executor.executeContractTransaction(
           dataContract,
           'addListEntries',
-          { from: accountId, autoGas: 1.1, },
-          groupedKeys[key].map(name => this.options.web3.utils.sha3(name)),
+          { from: accountId, autoGas: 1.1 },
+          groupedKeys[key].map((name) => this.options.web3.utils.sha3(name)),
           hashes,
         );
       }
@@ -251,9 +295,14 @@ export class DataContract extends BaseContract {
    * @param      {string}        propertyName  property in contract that is decrypted
    * @return     {Promise<any>}  decrypted envelope
    */
-  public async decrypt(toDecrypt: string, contract: any, accountId: string, propertyName: string): Promise<Envelope> {
-    const dataContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('DataContractInterface', contract);
+  public async decrypt(
+    toDecrypt: string,
+    contract: any,
+    accountId: string,
+    propertyName: string,
+  ): Promise<Envelope> {
+    const dataContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('DataContractInterface', contract);
     // decode envelope
     const envelope: Envelope = JSON.parse(toDecrypt);
     if (envelope.cryptoInfo) {
@@ -272,7 +321,8 @@ export class DataContract extends BaseContract {
       }
 
       const decryptedBuffer = await cryptor.decrypt(
-        Buffer.from(envelope.private, this.encodingEncrypted), { key: contentKey, });
+        Buffer.from(envelope.private, this.encodingEncrypted), { key: contentKey },
+      );
       envelope.private = decryptedBuffer;
     }
     return envelope;
@@ -287,8 +337,8 @@ export class DataContract extends BaseContract {
    * @return     {Promise<string>}  decrypted hash
    */
   public async decryptHash(toDecrypt: string, contract: any, accountId: string): Promise<string> {
-    const dataContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('DataContractInterface', contract);
+    const dataContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('DataContractInterface', contract);
     // decode hash
     const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(this.cryptoAlgorithHashes);
     const hashKey = await this.options.sharing.getHashKey(dataContract.options.address, accountId);
@@ -297,7 +347,8 @@ export class DataContract extends BaseContract {
       throw new Error(`no hashKey key found for contract "${dataContract.options.address}" and account "${accountId}"`);
     }
     const decryptedBuffer = await cryptor.decrypt(
-      Buffer.from(toDecrypt.substr(2), this.encodingEncrypted), { key: hashKey, });
+      Buffer.from(toDecrypt.substr(2), this.encodingEncrypted), { key: hashKey },
+    );
     return `0x${decryptedBuffer.toString(this.encodingUnencryptedHash)}`;
   }
 
@@ -320,11 +371,13 @@ export class DataContract extends BaseContract {
     block: number,
     encryption: string = this.options.defaultCryptoAlgo,
   ): Promise<string> {
-    const dataContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('DataContractInterface', contract);
+    const dataContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('DataContractInterface', contract);
 
     // get content key from contract
-    const contentKey = await this.options.sharing.getKey(dataContract.options.address, accountId, propertyName, block);
+    const contentKey = await this.options.sharing.getKey(
+      dataContract.options.address, accountId, propertyName, block,
+    );
 
     if (!contentKey) {
       throw new Error(`no content key found for contract "${dataContract.options.address}" and account "${accountId}"`);
@@ -332,11 +385,13 @@ export class DataContract extends BaseContract {
 
     // encrypt with content key
     const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(encryption);
-    const encryptedBuffer = await cryptor.encrypt(toEncrypt.private, { key: contentKey, });
+    const encryptedBuffer = await cryptor.encrypt(toEncrypt.private, { key: contentKey });
     const encrypted = encryptedBuffer.toString(this.encodingEncrypted);
     const envelope: Envelope = {
       private: encrypted,
-      cryptoInfo: cryptor.getCryptoInfo(this.options.nameResolver.soliditySha3(dataContract.options.address)),
+      cryptoInfo: cryptor.getCryptoInfo(
+        this.options.nameResolver.soliditySha3(dataContract.options.address),
+      ),
     };
     envelope.cryptoInfo.block = block;
     if (toEncrypt.public) {
@@ -366,7 +421,10 @@ export class DataContract extends BaseContract {
     }
     // encrypt with hashKkey
     const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(this.cryptoAlgorithHashes);
-    const encryptedBuffer = await cryptor.encrypt(Buffer.from(toEncrypt.substr(2), this.encodingUnencryptedHash), { key: hashKey, });
+    const encryptedBuffer = await cryptor.encrypt(
+      Buffer.from(toEncrypt.substr(2), this.encodingUnencryptedHash),
+      { key: hashKey },
+    );
     return `0x${encryptedBuffer.toString(this.encodingEncrypted)}`;
   }
 
@@ -387,8 +445,8 @@ export class DataContract extends BaseContract {
     dfsStorage = true,
     encryptedHashes = true,
   ): Promise<any> {
-    const dataContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('DataContractInterface', contract);
+    const dataContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('DataContractInterface', contract);
     const entryRaw = await this.options.executor.executeContractCall(
       dataContract,
       'getEntry',
@@ -404,16 +462,15 @@ export class DataContract extends BaseContract {
     }
     if (!dfsStorage) {
       return hash;
-    } else {
-      const encryptedContent = (await this.options.dfs.get(hash)).toString('utf-8');
-      const decrypted = await this.decrypt(
-        encryptedContent,
-        dataContract,
-        accountId,
-        entryName
-      );
-      return decrypted.private;
     }
+    const encryptedContent = (await this.options.dfs.get(hash)).toString('utf-8');
+    const decrypted = await this.decrypt(
+      encryptedContent,
+      dataContract,
+      accountId,
+      entryName,
+    );
+    return decrypted.private;
   }
 
   /**
@@ -435,8 +492,8 @@ export class DataContract extends BaseContract {
     dfsStorage = true,
     encryptedHashes = true,
   ): Promise<any> {
-    const dataContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('DataContractInterface', contract);
+    const dataContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('DataContractInterface', contract);
     const entryRaw = await this.options.executor.executeContractCall(
       dataContract,
       'getMappingValue',
@@ -453,16 +510,15 @@ export class DataContract extends BaseContract {
     }
     if (!dfsStorage) {
       return entryRaw;
-    } else {
-      const encryptedContent = (await this.options.dfs.get(hash)).toString('utf-8');
-      const decrypted = await this.decrypt(
-        encryptedContent,
-        dataContract,
-        accountId,
-        mappingName
-      );
-      return decrypted.private;
     }
+    const encryptedContent = (await this.options.dfs.get(hash)).toString('utf-8');
+    const decrypted = await this.decrypt(
+      encryptedContent,
+      dataContract,
+      accountId,
+      mappingName,
+    );
+    return decrypted.private;
   }
 
   /**
@@ -488,8 +544,8 @@ export class DataContract extends BaseContract {
     offset = 0,
     reverse = false,
   ): Promise<any[]> {
-    const dataContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('DataContractInterface', contract);
+    const dataContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('DataContractInterface', contract);
     const listKey = this.options.web3.utils.sha3(listName);
 
     const elements = await this.options.nameResolver.getArrayFromUintMapping(
@@ -506,22 +562,23 @@ export class DataContract extends BaseContract {
     }
     let hashes = elements;
     if (encryptedHashes) {
-      hashes = await Promise.all(elements.map(element => this.decryptHash(element, dataContract, accountId)));
+      hashes = await Promise.all(
+        elements.map((element) => this.decryptHash(element, dataContract, accountId)),
+      );
     }
     if (!dfsStorage) {
       return hashes;
-    } else {
-      const envelopes = await prottle(requestWindowSize, hashes.map((hash) => async () => {
-        const decrypted = await this.decrypt(
-          (await this.options.dfs.get(hash)).toString('utf-8'),
-          dataContract,
-          accountId,
-          listName
-        );
-        return decrypted;
-      }));
-      return envelopes.map(envelope => envelope.private);
     }
+    const envelopes = await prottle(requestWindowSize, hashes.map((hash) => async () => {
+      const decrypted = await this.decrypt(
+        (await this.options.dfs.get(hash)).toString('utf-8'),
+        dataContract,
+        accountId,
+        listName,
+      );
+      return decrypted;
+    }));
+    return envelopes.map((envelope) => envelope.private);
   }
 
   /**
@@ -543,8 +600,8 @@ export class DataContract extends BaseContract {
     dfsStorage = true,
     encryptedHashes = true,
   ): Promise<any> {
-    const dataContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('DataContractInterface', contract);
+    const dataContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('DataContractInterface', contract);
     const listKey = this.options.web3.utils.sha3(listName);
     const entryRaw = await this.options.executor.executeContractCall(dataContract, 'getListEntry', listKey, index);
     let hash = entryRaw;
@@ -553,15 +610,14 @@ export class DataContract extends BaseContract {
     }
     if (!dfsStorage) {
       return hash;
-    } else {
-      const decrypted = await this.decrypt(
-        (await this.options.dfs.get(hash)).toString('utf-8'),
-        dataContract,
-        accountId,
-        listName
-      );
-      return decrypted.private;
     }
+    const decrypted = await this.decrypt(
+      (await this.options.dfs.get(hash)).toString('utf-8'),
+      dataContract,
+      accountId,
+      listName,
+    );
+    return decrypted.private;
   }
 
   /**
@@ -575,8 +631,8 @@ export class DataContract extends BaseContract {
     contract: any|string,
     listName: string,
   ): Promise<number> {
-    const dataContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('DataContractInterface', contract);
+    const dataContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('DataContractInterface', contract);
     const listKey = this.options.web3.utils.sha3(listName);
     return parseInt(await this.options.executor.executeContractCall(dataContract, 'getListEntryCount', listKey), 10);
   }
@@ -598,15 +654,15 @@ export class DataContract extends BaseContract {
     listNamesTo: string[],
     accountId: string,
   ): Promise<void> {
-    const dataContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('DataContractInterface', contract);
+    const dataContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('DataContractInterface', contract);
     await this.options.executor.executeContractTransaction(
       dataContract,
       'moveListEntry',
-      { from: accountId, gas: 2000000, },
+      { from: accountId, gas: 2000000 },
       this.options.web3.utils.sha3(listNameFrom),
       entryIndex,
-      listNamesTo.map(name => this.options.web3.utils.sha3(name)),
+      listNamesTo.map((name) => this.options.web3.utils.sha3(name)),
     );
   }
 
@@ -625,12 +681,12 @@ export class DataContract extends BaseContract {
     entryIndex: number,
     accountId: string,
   ): Promise<void> {
-    const dataContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('DataContractInterface', contract);
+    const dataContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('DataContractInterface', contract);
     await this.options.executor.executeContractTransaction(
       dataContract,
       'removeListEntry',
-      { from: accountId, gas: 2000000, },
+      { from: accountId, gas: 2000000 },
       this.options.web3.utils.sha3(listName),
       entryIndex,
     );
@@ -658,20 +714,30 @@ export class DataContract extends BaseContract {
     encryption: string = this.options.defaultCryptoAlgo,
     encryptionContext = accountId,
   ): Promise<void> {
-    const dataContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('DataContractInterface', contract);
+    const dataContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('DataContractInterface', contract);
     let toSet;
 
     if (!dfsStorage) {
       // store as is
       toSet = value;
     } else {
-      const [ description, blockNr ] = await Promise.all([
-        this.options.description.getDescriptionFromContract(dataContract.options.address, encryptionContext),
+      const [description, blockNr] = await Promise.all([
+        this.options.description.getDescriptionFromContract(
+          dataContract.options.address,
+          encryptionContext,
+        ),
         this.options.web3.eth.getBlockNumber(),
       ]);
       await this.validate(description, entryName, value);
-      const encrypted = await this.encrypt({ private: value }, dataContract, encryptionContext, entryName, blockNr, encryption);
+      const encrypted = await this.encrypt(
+        { private: value },
+        dataContract,
+        encryptionContext,
+        entryName,
+        blockNr,
+        encryption,
+      );
       const stateMd5 = crypto.createHash('md5').update(encrypted).digest('hex');
       toSet = await this.options.dfs.add(stateMd5, Buffer.from(encrypted));
     }
@@ -681,7 +747,7 @@ export class DataContract extends BaseContract {
     await this.options.executor.executeContractTransaction(
       dataContract,
       'setEntry',
-      { from: accountId, autoGas: 1.1, },
+      { from: accountId, autoGas: 1.1 },
       this.options.web3.utils.sha3(entryName),
       toSet,
     );
@@ -711,22 +777,24 @@ export class DataContract extends BaseContract {
     encryption: string = this.options.defaultCryptoAlgo,
     encryptionContext = accountId,
   ): Promise<void> {
-    const dataContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('DataContractInterface', contract);
+    const dataContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('DataContractInterface', contract);
     let toSet;
 
     if (!dfsStorage) {
       // store as is
       toSet = value;
     } else {
-      const [ description, blockNr ] = await Promise.all([
+      const [description, blockNr] = await Promise.all([
         this.options.description.getDescriptionFromContract(
-          contract.options.address, encryptionContext),
+          contract.options.address, encryptionContext,
+        ),
         this.options.web3.eth.getBlockNumber(),
       ]);
       await this.validate(description, mappingName, value);
       const encrypted = await this.encrypt(
-        { private: value }, dataContract, accountId, mappingName, blockNr, encryption);
+        { private: value }, dataContract, accountId, mappingName, blockNr, encryption,
+      );
       const stateMd5 = crypto.createHash('md5').update(encrypted).digest('hex');
       toSet = await this.options.dfs.add(stateMd5, Buffer.from(encrypted));
     }
@@ -748,7 +816,7 @@ export class DataContract extends BaseContract {
     if (!description) {
       return true;
     }
-    const merged = {...description.public, ...description.private};
+    const merged = { ...description.public, ...description.private };
     if (merged.dataSchema && merged.dataSchema[fieldName]) {
       // check values if description found
       let schema = merged.dataSchema[fieldName];
@@ -764,12 +832,12 @@ export class DataContract extends BaseContract {
         values = [toCheck];
       }
       const checkFails = values
-        .map(value => validator.validate(value))
-        .filter(result => result !== true)
-      ;
+        .map((value) => validator.validate(value))
+        .filter((result) => result !== true);
       if (checkFails.length) {
         throw new Error(`validation of input values failed with: ${JSON.stringify(checkFails)}`);
       }
     }
+    return true;
   }
 }

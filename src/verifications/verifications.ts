@@ -17,8 +17,6 @@
   the following URL: https://evan.network/license/
 */
 
-import crypto = require('crypto');
-import prottle = require('prottle');
 import { BigNumber } from 'bignumber.js';
 import {
   AccountStore,
@@ -27,7 +25,7 @@ import {
   Logger,
   LoggerOptions,
   NameResolver,
-  DfsInterface
+  DfsInterface,
 } from '@evan.network/dbcp';
 
 import {
@@ -38,6 +36,9 @@ import {
   Description,
   Ipfs,
 } from '../index';
+
+import crypto = require('crypto');
+import prottle = require('prottle');
 
 
 /**
@@ -216,7 +217,8 @@ export interface VerificationsVerificationEntry {
  *
  * @param      {Partial<VerificationsVerificationEntry>} verification   current verification result
  *                                                                      (without status)
- * @param      {Partial<VerificationsResultV2>}          partialResult  options for verifications query
+ * @param      {Partial<VerificationsResultV2>}          partialResult  options for verifications
+ *                                                                      query
  * @return     {Promise<VerificationsStatusV2>}                   status for this verification
  */
 export interface VerificationsVerificationEntryStatusComputer {
@@ -230,7 +232,8 @@ export interface VerificationsVerificationEntryStatusComputer {
  * Computes status from overall verifications result.
  * This function is applied after each verification has received an own computed status.
  *
- * @param      {Partial<VerificationsResultV2>} partialResult  current verification result (without status)
+ * @param      {Partial<VerificationsResultV2>} partialResult  current verification result
+ *                                                             (without status)
  * @param      {VerificationsQueryOptions}      queryOptions   options for verifications query
  * @param      {VerificationsStatusV2}          currentStatus  current status of verification
  * @return     {Promise<VerificationsStatusV2>} updated status, will be used at verification status
@@ -278,32 +281,42 @@ export interface VerificationsOptions extends LoggerOptions {
 export class Verifications extends Logger {
   public readonly defaultValidationOptions: VerificationsValidationOptions = {
     disableSubVerifications: VerificationsStatusV2.Red,
-    expired:                 VerificationsStatusV2.Red,
-    invalid:                 VerificationsStatusV2.Red,
-    issued:                  VerificationsStatusV2.Red,
-    missing:                 VerificationsStatusV2.Red,
-    noIdentity:              VerificationsStatusV2.Red,
-    notEnsRootOwner:         VerificationsStatusV2.Red,
-    parentMissing:           VerificationsStatusV2.Red,
-    parentUntrusted:         VerificationsStatusV2.Red,
-    rejected:                VerificationsStatusV2.Red,
-    selfIssued:              VerificationsStatusV2.Red,
+    expired: VerificationsStatusV2.Red,
+    invalid: VerificationsStatusV2.Red,
+    issued: VerificationsStatusV2.Red,
+    missing: VerificationsStatusV2.Red,
+    noIdentity: VerificationsStatusV2.Red,
+    notEnsRootOwner: VerificationsStatusV2.Red,
+    parentMissing: VerificationsStatusV2.Red,
+    parentUntrusted: VerificationsStatusV2.Red,
+    rejected: VerificationsStatusV2.Red,
+    selfIssued: VerificationsStatusV2.Red,
   };
+
   public readonly defaultQueryOptions: VerificationsQueryOptions = {
     validationOptions: this.defaultValidationOptions,
   };
+
   public cachedIdentities: any = { };
+
   public contracts: any = { };
+
   public encodingEnvelope = 'binary';
+
   /** cache all the ens owners */
   public ensOwners: any = { };
+
   public options: VerificationsOptions;
+
   /** check if currently the storage is ensuring, if yes, don't run it twice */
   public storageEnsuring: Promise<any>;
+
   public subjectTypes: any = { };
+
   /** cache all the verifications using an object of promises, to be sure, that the verification is
    * loaded only once */
   public verificationCache: any = { };
+
   /** backup already loaded verification descriptions */
   public verificationDescriptions: any = { };
 
@@ -322,11 +335,13 @@ export class Verifications extends Logger {
 
     if (options.storage) {
       this.contracts.storage = this.options.contractLoader.loadContract(
-        'V00_UserRegistry', options.storage);
+        'V00_UserRegistry', options.storage,
+      );
     }
     if (options.registry) {
       this.contracts.registry = this.options.contractLoader.loadContract(
-        'VerificationsRegistry', options.registry);
+        'VerificationsRegistry', options.registry,
+      );
     }
   }
 
@@ -353,14 +368,15 @@ export class Verifications extends Logger {
     const computed: any = {
       creationDate: null,
       disableSubVerifications: verifications.filter(
-        verification => verification.disableSubVerifications).length > 0,
+        (verification) => verification.disableSubVerifications,
+      ).length > 0,
       displayName: topic.split('/').pop() || 'evan',
-      loading: verifications.filter(verification => verification.loading).length > 0,
+      loading: verifications.filter((verification) => verification.loading).length > 0,
       name: topic,
       status: -1,
-      subjects: [ ],
-      verifications: verifications,
-      warnings: [ ],
+      subjects: [],
+      verifications,
+      warnings: [],
     };
 
     // load the description for the given topic
@@ -368,8 +384,12 @@ export class Verifications extends Logger {
 
     // keep creationDates of all verifications, so we can check after the final combined status was
     // set, which creation date should be used
-    const creationDates = { '-1': [ ], '0': [ ], '1': [ ], '2': [ ]};
-    const expirationDates = { '-1': [ ], '0': [ ], '1': [ ], '2': [ ]};
+    const creationDates = {
+      '-1': [], 0: [], 1: [], 2: [],
+    };
+    const expirationDates = {
+      '-1': [], 0: [], 1: [], 2: [],
+    };
 
     // iterate through all verifications and check for warnings and the latest creation date of an
     // verification
@@ -382,13 +402,11 @@ export class Verifications extends Logger {
         if (computed.status === -1) {
           computed.status = 2;
         }
+      } else if (computed.status === 2) {
+        computed.status = verification.status;
       } else {
-        if (computed.status === 2) {
-          computed.status = verification.status;
-        } else {
-          computed.status = computed.status < verification.status ?
-            verification.status : computed.status;
-        }
+        computed.status = computed.status < verification.status
+          ? verification.status : computed.status;
       }
 
       // search one subject of all
@@ -409,7 +427,7 @@ export class Verifications extends Logger {
 
     // use the latest creationDate for the specific status
     if (creationDates[computed.status].length > 0) {
-      computed.creationDate = creationDates[computed.status].sort()[0];
+      [computed.creationDate] = creationDates[computed.status].sort();
     }
 
     // use the latest creationDate for the specific status
@@ -477,18 +495,19 @@ export class Verifications extends Logger {
     if (!contractId && linkContract) {
       // create Identity contract
       const identityContract = await this.options.executor.createContract(
-        'VerificationHolder', [ accountId ], { from: accountId, gas: 3000000, });
+        'VerificationHolder', [accountId], { from: accountId, gas: 3000000 },
+      );
 
-      const identityStorage = this.contracts.storage.options.address !== nullAddress ?
-        this.options.contractLoader.loadContract(
-          'V00_UserRegistry', this.contracts.storage.options.address) :
-        null
-      ;
+      const identityStorage = this.contracts.storage.options.address !== nullAddress
+        ? this.options.contractLoader.loadContract(
+          'V00_UserRegistry', this.contracts.storage.options.address,
+        )
+        : null;
       // register the new user in the registry
       await this.options.executor.executeContractTransaction(
         identityStorage,
         'registerUser',
-        { from: accountId, },
+        { from: accountId },
         identityContract.options.address,
       );
       identity = identityContract.options.address;
@@ -537,22 +556,23 @@ export class Verifications extends Logger {
   public deleteFromVerificationCache(subject: string, topic: string) {
     // prepend starting slash if it does not exists
     if (topic.indexOf('/') !== 0) {
-      topic = '/' + topic;
+      // eslint-disable-next-line no-param-reassign
+      topic = `/${topic}`;
     }
 
     // search for all parents, that could have links to the topic, so remove them
-    Object.keys(this.verificationCache).forEach(key => {
+    Object.keys(this.verificationCache).forEach((key) => {
       // if the key is equal to the topic that should be checked, delete only the cache for the
       // given subject
       if (key === topic) {
         // delete all related subjects for the given topic, or remove all, when subject is a
         // wildcard
-        if (this.verificationCache[topic] &&
-            (this.verificationCache[topic][subject] || subject === '*')) {
+        if (this.verificationCache[topic]
+            && (this.verificationCache[topic][subject] || subject === '*')) {
           delete this.verificationCache[topic][subject];
         }
 
-        return;
+
       // else remove all child topics
       } else if (key.indexOf(topic) !== -1) {
         delete this.verificationCache[key];
@@ -607,8 +627,8 @@ export class Verifications extends Logger {
     if (!verification.description) {
       // if the description could not be loaded, the cache will set to false, so we do not need to
       // load again
-      if (!this.verificationDescriptions[ensAddress] &&
-          this.verificationDescriptions[ensAddress] !== false) {
+      if (!this.verificationDescriptions[ensAddress]
+          && this.verificationDescriptions[ensAddress] !== false) {
         this.verificationDescriptions[ensAddress] = (async () => {
           try {
             // load the description
@@ -618,21 +638,24 @@ export class Verifications extends Logger {
           }
         })();
       }
-
+      // eslint-disable-next-line no-param-reassign
       verification.description = await this.verificationDescriptions[ensAddress];
     }
 
     if (verification.description) {
       // map the properties to a flat description
       if (verification.description.public) {
+        // eslint-disable-next-line no-param-reassign
         verification.description = verification.description.public;
       }
 
       // move the img to the basic verification
       if (verification.description.imgSquare) {
+        // eslint-disable-next-line no-param-reassign
         verification.icon = verification.description.imgSquare;
       }
     } else {
+      // eslint-disable-next-line no-param-reassign
       verification.description = {
         author: nullAddress,
         dbcpVersion: 1,
@@ -641,28 +664,34 @@ export class Verifications extends Logger {
         version: '1.0.0',
       };
     }
-
+    // eslint-disable-next-line no-param-reassign
     verification.description.i18n = verification.description.i18n || { };
+    // eslint-disable-next-line no-param-reassign
     verification.description.i18n.name = verification.description.i18n.name || { };
-    verification.description.i18n.name.en =
-      verification.description.i18n.name.en || verification.name.split('/').pop();
+    // eslint-disable-next-line no-param-reassign
+    verification.description.i18n.name.en = verification.description.i18n.name.en || verification.name.split('/').pop();
 
     // try to load a clear name
     try {
+      // eslint-disable-next-line no-param-reassign
       verification.displayName = verification.description.i18n.name.en;
-    } catch (ex) { }
+    } catch (ex) {
+      this.log(ex, 'debug');
+    }
 
     // if the top level ens owner was not loaded before, load it!
     if (!this.ensOwners[topLevelDomain]) {
       this.ensOwners[topLevelDomain] = (async () => {
         // transform the ens domain into a namehash and load the ens top level topic owner
-        const namehash = this.options.nameResolver.namehash(topLevelDomain + '.verifications.evan');
-        return await this.options.executor.executeContractCall(
-          this.options.nameResolver.ensContract, 'owner', namehash);
+        const namehash = this.options.nameResolver.namehash(`${topLevelDomain}.verifications.evan`);
+        return this.options.executor.executeContractCall(
+          this.options.nameResolver.ensContract, 'owner', namehash,
+        );
       })();
     }
-
+    // eslint-disable-next-line no-param-reassign
     verification.ensAddress = ensAddress;
+    // eslint-disable-next-line no-param-reassign
     verification.topLevelEnsOwner = await this.ensOwners[topLevelDomain];
   }
 
@@ -677,9 +706,9 @@ export class Verifications extends Logger {
    */
   public async executeVerification(
     accountId: string,
-    txInfo: VerificationsDelegationInfo
+    txInfo: VerificationsDelegationInfo,
   ): Promise<any> {
-    return await this.executeTransaction(
+    return this.executeTransaction(
       accountId,
       txInfo,
       {
@@ -688,7 +717,8 @@ export class Verifications extends Logger {
           targetAddress: txInfo.targetIdentity,
           eventName: 'VerificationAdded',
           contract: this.options.contractLoader.loadContract(
-            'VerificationHolderLibrary', txInfo.targetIdentity),
+            'VerificationHolderLibrary', txInfo.targetIdentity,
+          ),
         },
         getEventResult: (_, args) => args.verificationId,
       },
@@ -705,7 +735,8 @@ export class Verifications extends Logger {
    * @param      {VerificationsDelegationInfo}  txInfo          details about the transaction
    * @param      {<type>}                       event           The event
    * @param      {Function}                     getEventResult  The get event result
-   * @param      {any}                          partialOptions  (optional) data for handling event triggered by this transaction
+   * @param      {any}                          partialOptions  (optional) data for handling event
+   *                                                            triggered by this transaction
    */
   public async executeTransaction(
     accountId: string,
@@ -721,12 +752,9 @@ export class Verifications extends Logger {
       targetIdentity,
     } = txInfo;
 
-    const transactionTarget = to ?
-      to :  // to given directly
-      targetIdentity.length === 42 ?
-        targetIdentity :  // target identity contract given
-        this.contracts.registry.options.address  // contract/pseudonym identity given
-    ;
+    const transactionTarget = to || (targetIdentity.length === 42
+      ? targetIdentity // target identity contract given
+      : this.contracts.registry.options.address); // contract/pseudonym identity given
 
     return this.executeAndHandleEventResult(
       accountId,
@@ -751,9 +779,9 @@ export class Verifications extends Logger {
    *                        displayName
    */
   public async getComputedVerification(subject: string, topic: string, isIdentity?: boolean) {
-    return await this.computeVerifications(
+    return this.computeVerifications(
       topic,
-      await this.getNestedVerifications(subject, topic, isIdentity)
+      await this.getNestedVerifications(subject, topic, isIdentity),
     );
   }
 
@@ -769,7 +797,8 @@ export class Verifications extends Logger {
     await this.ensureStorage();
     const identity = isIdentity ? issuer : await this.getIdentityForAccount(issuer, true);
     const identityContract = this.options.contractLoader.loadContract(
-      'VerificationHolder', identity);
+      'VerificationHolder', identity,
+    );
     return this.options.executor.executeContractCall(identityContract, 'getExecutionNonce');
   }
 
@@ -794,15 +823,16 @@ export class Verifications extends Logger {
       if (targetIdentity !== nullAddress) {
         this.subjectTypes[subject] = 'account';
         this.cachedIdentities[subject] = this.options.contractLoader.loadContract(
-          'VerificationHolder', targetIdentity);
+          'VerificationHolder', targetIdentity,
+        );
       } else {
         let description;
         try {
           description = await this.options.description.getDescription(subject, null);
         } catch (_) {
           throw new Error(
-            `could not get identity for "${subject}" use either an account with an identity, ` +
-            'a contract with a description or work with the 32Bytes identity instead of contractId',
+            `could not get identity for "${subject}" use either an account with an identity, `
+            + 'a contract with a description or work with the 32Bytes identity instead of contractId',
           );
         }
 
@@ -815,11 +845,12 @@ export class Verifications extends Logger {
             // we got an identity from description, now check, that contract id matches
             // linked address
             const linked = await this.options.executor.executeContractCall(
-              this.contracts.registry, 'getLink', description.public.identity);
+              this.contracts.registry, 'getLink', description.public.identity,
+            );
             if (!(new RegExp(`${subject.substr(2)}$`, 'i')).test(linked)) {
-              const msg = `subject description of "${subject}" points to identity ` +
-                `"${description.public.identity}", but this identity is linked to address ` +
-                `"${linked}"`;
+              const msg = `subject description of "${subject}" points to identity `
+                + `"${description.public.identity}", but this identity is linked to address `
+                + `"${linked}"`;
               this.log(msg, 'error');
               throw new Error(msg);
             }
@@ -839,9 +870,8 @@ export class Verifications extends Logger {
 
     if (onlyAddress && this.cachedIdentities[subject].options) {
       return this.cachedIdentities[subject].options.address;
-    } else {
-      return this.cachedIdentities[subject];
     }
+    return this.cachedIdentities[subject];
   }
 
   /**
@@ -913,7 +943,8 @@ export class Verifications extends Logger {
   public async getNestedVerifications(subject: string, topic: string, isIdentity?: boolean) {
     // prepend starting slash if it does not exist
     if (topic.indexOf('/') !== 0) {
-      topic = '/' + topic;
+      // eslint-disable-next-line no-param-reassign
+      topic = `/${topic}`;
     }
 
     // if no storage was ensured before, run it only once
@@ -924,7 +955,7 @@ export class Verifications extends Logger {
     if (!this.verificationCache[topic][subject]) {
       // load the verifications and store promise within the verification cache object
       this.verificationCache[topic][subject] = (async () => {
-        let verifications = [ ];
+        let verifications = [];
         let subjectIdentity;
 
         if (isIdentity) {
@@ -933,7 +964,7 @@ export class Verifications extends Logger {
           try {
             subjectIdentity = await this.getIdentityForAccount(subject, true);
           } catch (ex) {
-            verifications = [ ];
+            verifications = [];
           }
         }
         if (subjectIdentity !== nullAddress) {
@@ -942,36 +973,44 @@ export class Verifications extends Logger {
 
         if (verifications.length > 0) {
           // build display name for verifications and apply computed states for ui status
-          await prottle(10, verifications.map(verification => async () => {
+          await prottle(10, verifications.map((verification) => async () => {
             const splitName = verification.name.split('/');
-
+            // eslint-disable-next-line no-param-reassign
             verification.displayName = splitName.pop();
+            // eslint-disable-next-line no-param-reassign
             verification.parent = splitName.join('/');
-            verification.warnings = [ ];
-            verification.creationDate = verification.creationDate * 1000;
+            // eslint-disable-next-line no-param-reassign
+            verification.warnings = [];
+            // eslint-disable-next-line no-param-reassign
+            verification.creationDate *= 1000;
 
             // if expiration date is given, format the unix timestamp
             if (verification.expirationDate) {
-              verification.expirationDate = verification.expirationDate * 1000;
+              // eslint-disable-next-line no-param-reassign
+              verification.expirationDate *= 1000;
             }
 
             // recover the original account id for the identity issuer
+            // eslint-disable-next-line no-param-reassign
             verification.subjectIdentity = subjectIdentity;
 
             if (this.subjectTypes[subject] === 'contract') {
+              // eslint-disable-next-line no-param-reassign
               verification.subjectType = 'contract';
+              // eslint-disable-next-line no-param-reassign
               verification.subjectOwner = await this.options.executor.executeContractCall(
                 await this.options.contractLoader.loadContract('BaseContract', subject),
-                'owner'
+                'owner',
               );
             } else {
+              // eslint-disable-next-line no-param-reassign
               verification.subjectType = 'account';
             }
 
             const dataHash = this.options.nameResolver
               .soliditySha3(verification.subjectIdentity, verification.topic, verification.data)
-              .replace('0x', '')
-            ;
+              .replace('0x', '');
+            // eslint-disable-next-line no-param-reassign
             verification.issuerAccount = this.options.executor.web3.eth.accounts
               .recover(dataHash, verification.signature);
 
@@ -993,8 +1032,8 @@ export class Verifications extends Logger {
 
             // if issuer === subject and only if a parent is passed, so if the root one is empty
             // and no slash is available
-            if (verification.issuerAccount === verification.subject && verification.parent &&
-                verification.issuerAccount !== this.options.config.ensRootOwner) {
+            if (verification.issuerAccount === verification.subject && verification.parent
+                && verification.issuerAccount !== this.options.config.ensRootOwner) {
               verification.warnings.push('selfIssued');
             }
 
@@ -1004,11 +1043,13 @@ export class Verifications extends Logger {
 
             if (verification.parent) {
               // load all sub verifications
+              // eslint-disable-next-line no-param-reassign
               verification.parents = await this.getNestedVerifications(verification.issuerAccount,
                 verification.parent, false);
 
               // load the computed status of all parent verifications,
               // to check if the parent tree is valid
+              // eslint-disable-next-line no-param-reassign
               verification.parentComputed = await this.computeVerifications(verification.parent,
                 verification.parents);
               if (verification.parentComputed.status === -1) {
@@ -1018,29 +1059,33 @@ export class Verifications extends Logger {
               }
 
               // is the sub verification creation is disabled?
-              if (verification.parentComputed.disableSubVerifications ||
-                  verification.parentComputed.warnings.indexOf('disableSubVerifications') !== -1) {
+              if (verification.parentComputed.disableSubVerifications
+                  || verification.parentComputed.warnings.indexOf('disableSubVerifications') !== -1) {
                 verification.warnings.push('disableSubVerifications');
               }
             } else {
-              verification.parents = [ ];
+              // eslint-disable-next-line no-param-reassign
+              verification.parents = [];
 
-              if (verification.name === '/evan' &&
-                verification.issuerAccount !== this.options.config.ensRootOwner) {
-                verification.warnings = [ 'notEnsRootOwner' ];
+              if (verification.name === '/evan'
+                && verification.issuerAccount !== this.options.config.ensRootOwner) {
+                // eslint-disable-next-line no-param-reassign
+                verification.warnings = ['notEnsRootOwner'];
               } else {
-                const whitelistWarnings = [ 'expired', 'rejected', 'invalid', 'noIdentity',
-                  'issued' ];
+                const whitelistWarnings = ['expired', 'rejected', 'invalid', 'noIdentity',
+                  'issued'];
 
                 // if it's a root verification, remove parent, selfIssued and issued warnings
-                verification.warnings = verification.warnings.filter(warning =>
-                  whitelistWarnings.indexOf(warning) !== -1
+                // eslint-disable-next-line no-param-reassign
+                verification.warnings = verification.warnings.filter(
+                  (warning) => whitelistWarnings.indexOf(warning) !== -1,
                 );
               }
             }
 
             if (verification.status !== 2) {
               // set computed status
+              // eslint-disable-next-line no-param-reassign
               verification.status = verification.warnings.length > 0 ? 0 : 1;
             }
           }));
@@ -1048,7 +1093,8 @@ export class Verifications extends Logger {
           // calculate the computed level around all verifications,
           // so we can check all verifications for this user (used for issuing)
           const computed = await this.computeVerifications(topic, verifications);
-          verifications.forEach(verification => verification.levelComputed = computed);
+          // eslint-disable-next-line no-param-reassign,no-return-assign
+          verifications.forEach((verification) => verification.levelComputed = computed);
         }
 
         // if no verifications are available the status would be "no verification issued"
@@ -1056,11 +1102,11 @@ export class Verifications extends Logger {
           verifications.push({
             displayName: topic.split('/').pop() || 'evan',
             name: topic,
-            parents: [ ],
+            parents: [],
             status: -1,
-            subject: subject,
-            tree: [ ],
-            warnings: [ 'missing' ],
+            subject,
+            tree: [],
+            warnings: ['missing'],
             subjectIdentity: subjectIdentity || nullAddress,
           });
 
@@ -1068,7 +1114,7 @@ export class Verifications extends Logger {
             verifications[0].subjectType = 'contract';
             verifications[0].subjectOwner = await this.options.executor.executeContractCall(
               await this.options.contractLoader.loadContract('BaseContract', subject),
-              'owner'
+              'owner',
             );
           } else {
             verifications[0].subjectType = 'account';
@@ -1085,7 +1131,7 @@ export class Verifications extends Logger {
       })();
     }
 
-    return await this.verificationCache[topic][subject];
+    return this.verificationCache[topic][subject];
   }
 
   /**
@@ -1112,8 +1158,8 @@ export class Verifications extends Logger {
   /**
     * Builds required data for a transaction from an identity (offchain) and returns data, that can
     * be used to submit it later on. Return value can be passed to ``executeTransaction``.
-    * Transaction information is not signed and therefore can only be submitted by an appropriate key
-    * hold of given identity.
+    * Transaction information is not signed and therefore can only be submitted by an appropriate
+    * key hold of given identity.
     *
     * Note that, when creating multiple signed transactions, the ``nonce`` argument **has to be
     * specified and incremented between calls**, as the nonce is included in transaction data and
@@ -1137,16 +1183,16 @@ export class Verifications extends Logger {
     const sourceIdentity = await this.getIdentityForAccount(options.from, true);
 
     // fetch nonce as late as possible
-    const nonce = (typeof options.nonce !== 'undefined' && options.nonce !== -1) ?
-      `${options.nonce}` : await this.getExecutionNonce(sourceIdentity, true);
+    const nonce = (typeof options.nonce !== 'undefined' && options.nonce !== -1)
+      ? `${options.nonce}` : await this.getExecutionNonce(sourceIdentity, true);
 
-    const input = contract ?
-      contract.methods[functionName](...args).encodeABI() :
-      options.input;
+    const input = contract
+      ? contract.methods[functionName](...args).encodeABI()
+      : options.input;
 
-    const to = contract ?
-      contract.options.address :
-      (options.to || nullAddress);
+    const to = contract
+      ? contract.options.address
+      : (options.to || nullAddress);
 
     const value = options.value || 0;
 
@@ -1173,9 +1219,9 @@ export class Verifications extends Logger {
     // if a reverse domain is available, add it and separate using a dot
     let domain = 'verifications.evan';
     if (clearedTopic.length > 0) {
-      domain = `${ clearedTopic.split('/').reverse().join('.') }.${ domain }`;
+      domain = `${clearedTopic.split('/').reverse().join('.')}.${domain}`;
     } else if (topic.indexOf('/evan') === 0 || topic.indexOf('evan') === 0) {
-      domain = `evan.${ domain }`;
+      domain = `evan.${domain}`;
     }
 
     return domain;
@@ -1216,27 +1262,27 @@ export class Verifications extends Logger {
         'getDisableSubVerifications',
         'getVerificationExpirationDate',
         'isVerificationRejected',
-      ].map(fun => this.callOnIdentity(subject, isIdentity, fun, verificationId));
+      ].map((fun) => this.callOnIdentity(subject, isIdentity, fun, verificationId));
       verificationDetails.push((async () => {
         const descriptionNodeHash = await this.callOnIdentity(
-          subject, isIdentity, 'getVerificationDescription', verificationId);
+          subject, isIdentity, 'getVerificationDescription', verificationId,
+        );
         if (descriptionNodeHash === nullBytes32) {
           return null;
-        } else {
-          const resolverAddress = await this.options.executor.executeContractCall(
-            this.options.nameResolver.ensContract, 'resolver', descriptionNodeHash);
-          if (resolverAddress === nullAddress) {
-            return null;
-          } else {
-            const resolver =
-              this.options.contractLoader.loadContract('PublicResolver', resolverAddress);
-            const descriptionHash = await this.options.executor.executeContractCall(
-              resolver, 'content', descriptionNodeHash);
-            const envelope = (await this.options.dfs.get(descriptionHash))
-              .toString(this.encodingEnvelope);
-            return JSON.parse(envelope).public;
-          }
         }
+        const resolverAddress = await this.options.executor.executeContractCall(
+          this.options.nameResolver.ensContract, 'resolver', descriptionNodeHash,
+        );
+        if (resolverAddress === nullAddress) {
+          return null;
+        }
+        const resolver = this.options.contractLoader.loadContract('PublicResolver', resolverAddress);
+        const descriptionHash = await this.options.executor.executeContractCall(
+          resolver, 'content', descriptionNodeHash,
+        );
+        const envelope = (await this.options.dfs.get(descriptionHash))
+          .toString(this.encodingEnvelope);
+        return JSON.parse(envelope).public;
       })());
 
       const [
@@ -1265,8 +1311,8 @@ export class Verifications extends Logger {
         return false;
       }
 
-      let verificationFlag = verificationStatus ?
-        VerificationsStatus.Confirmed : VerificationsStatus.Issued;
+      let verificationFlag = verificationStatus
+        ? VerificationsStatus.Confirmed : VerificationsStatus.Issued;
       let rejectReason;
       if (rejected.rejected) {
         verificationFlag = VerificationsStatus.Rejected;
@@ -1304,7 +1350,7 @@ export class Verifications extends Logger {
     }));
 
     // drop null values
-    return verifications.filter(el => el);
+    return verifications.filter((el) => el);
   }
 
   /**
@@ -1320,14 +1366,13 @@ export class Verifications extends Logger {
     const identity = await this.options.executor.executeContractCall(
       this.contracts.storage,
       'users',
-      subject
+      subject,
     );
 
     if (!identity || identity === nullAddress) {
       return false;
-    } else {
-      return true;
     }
+    return true;
   }
 
   /**
@@ -1353,12 +1398,14 @@ export class Verifications extends Logger {
       try {
         const stringified = JSON.stringify(rejectReason);
         const stateMd5 = crypto.createHash('md5').update(stringified).digest('hex');
+        // eslint-disable-next-line no-param-reassign
         rejectReason = await this.options.dfs.add(stateMd5, Buffer.from(stringified));
       } catch (e) {
         const msg = `error parsing verificationValue -> ${e.message}`;
         this.log(msg, 'info');
       }
     } else {
+      // eslint-disable-next-line no-param-reassign
       rejectReason = nullBytes32;
     }
 
@@ -1436,18 +1483,18 @@ export class Verifications extends Logger {
     this.deleteFromVerificationCache(subject, topic);
 
     // add the verification to the target identity
-    return await this.executeOnIdentity(
+    return this.executeOnIdentity(
       targetIdentity,
       true,
       'addVerificationWithMetadata',
       {
         from: issuer,
         event: {
-          target: subjectType === 'contract' ?
-            'VerificationsRegistryLibrary' : 'VerificationHolderLibrary',
+          target: subjectType === 'contract'
+            ? 'VerificationsRegistryLibrary' : 'VerificationHolderLibrary',
           eventName: 'VerificationAdded',
         },
-        getEventResult: (_, args) => { return args.verificationId; },
+        getEventResult: (_, args) => args.verificationId,
       },
       uint256VerificationName,
       '1',
@@ -1474,10 +1521,10 @@ export class Verifications extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async setVerificationDescription(
-    accountId: string, topic: string, domain: string, description: any
+    accountId: string, topic: string, domain: string, description: any,
   ): Promise<void> {
     let toSet = JSON.parse(JSON.stringify(description));
-    if (!toSet.hasOwnProperty('public')) {
+    if (!Object.prototype.hasOwnProperty.call(toSet, 'public')) {
       toSet = { public: toSet };
     }
     const domainWithHash = this.getFullDescriptionDomainWithHash(topic, domain);
@@ -1519,7 +1566,8 @@ export class Verifications extends Logger {
 
     // note that issuer is given for signing, as this ACCOUNT is used to sign the message
     const signedTransactionInfo = await this.signPackedHash(
-      options.from , [sourceIdentity, nonce, to, value, input]);
+      options.from, [sourceIdentity, nonce, to, value, input],
+    );
 
     return {
       sourceIdentity,
@@ -1553,7 +1601,8 @@ export class Verifications extends Logger {
    *                                                 to 'example.verifications.evan'
    * @param      {boolean}  disableSubVerifications  if true, verifications created under this path
    *                                                 are invalid
-   * @param      {boolean}  isIdentity               (optional) true if given subject is an identity, defaults to ``false``
+   * @param      {boolean}  isIdentity               (optional) true if given subject is an
+   *                                                 identity, defaults to ``false``
    *                                                 are invalid
    * @param      {number}   nonce                    issuer identities execution nonce, will be
    *                                                 automatically retrieved if if omitted or set to
@@ -1597,22 +1646,21 @@ export class Verifications extends Logger {
     );
 
     // sign arguments for on-chain check
-    const targetIdentityContract =
-      this.options.contractLoader.loadContract('VerificationHolder', targetIdentity);
+    const targetIdentityContract = this.options.contractLoader.loadContract('VerificationHolder', targetIdentity);
 
     const txInfo = await this.signTransaction(
       targetIdentityContract,
       'addVerificationWithMetadata',
       { from: issuer, nonce: executionNonce },
-      uint256VerificationName,  // uint256 _topic,
-      '1',  // uint256 _scheme,
-      sourceIdentity,  // address _issuer,
-      signature,  // bytes _signature,
-      verificationData,  // bytes _data,
-      verificationDataUrl,  // string _uri,
-      expirationDate,  // uint256 _expirationDate,
-      ensFullNodeHash,  // bytes32 _description,
-      disableSubVerifications,  // bool _disableSubVerifications
+      uint256VerificationName, // uint256 _topic,
+      '1', // uint256 _scheme,
+      sourceIdentity, // address _issuer,
+      signature, // bytes _signature,
+      verificationData, // bytes _data,
+      verificationDataUrl, // string _uri,
+      expirationDate, // uint256 _expirationDate,
+      ensFullNodeHash, // bytes32 _description,
+      disableSubVerifications, // bool _disableSubVerifications
     );
 
     return {
@@ -1635,7 +1683,7 @@ export class Verifications extends Logger {
   public trimToStatusTree(inputResult: VerificationsResultV2): any {
     const trimmed: any = {
       status: inputResult.status,
-      verifications: inputResult.verifications.map(v => ({
+      verifications: inputResult.verifications.map((v) => ({
         details: {
           status: v.details.status,
           topic: inputResult.levelComputed.topic,
@@ -1655,10 +1703,11 @@ export class Verifications extends Logger {
    * @param      {string}   subject         the subject of the verification
    * @param      {string}   verificationId  verification identifier
    * @param      {boolean}  isIdentity      optional indicates if the subject is already an identity
-   * @return     {Promise<boolean>}  resolves with true if the verification is valid, otherwise false
+   * @return     {Promise<boolean>}  resolves with true if the verification is valid,
+   *                                 otherwise false
    */
   public async validateVerification(
-    subject: string, verificationId: string, isIdentity?: boolean
+    subject: string, verificationId: string, isIdentity?: boolean,
   ): Promise<boolean> {
     await this.ensureStorage();
 
@@ -1668,20 +1717,23 @@ export class Verifications extends Logger {
       subject,
       isIdentity,
       'getVerification',
-      verificationId
+      verificationId,
     );
 
     const dataHash = this.options.nameResolver.soliditySha3(
-      subjectIdentity, verification.topic.toString(), verification.data).replace('0x', '');
+      subjectIdentity, verification.topic.toString(), verification.data,
+    ).replace('0x', '');
     const recoveredAddress = this.options.executor.web3.eth.accounts.recover(
-      dataHash, verification.signature);
+      dataHash, verification.signature,
+    );
     const issuerContract = this.options.contractLoader.loadContract(
-      'VerificationHolder', verification.issuer);
+      'VerificationHolder', verification.issuer,
+    );
     const keyHasPurpose = await this.options.executor.executeContractCall(
       issuerContract,
       'keyHasPurpose',
       this.options.nameResolver.soliditySha3(recoveredAddress),
-      '1'
+      '1',
     );
     return keyHasPurpose;
   }
@@ -1697,6 +1749,7 @@ export class Verifications extends Logger {
    *                                         VerificationsRegistry functions))
    * @return     {Promise<any>}  result of called function
    */
+  // eslint-disable-next-line consistent-return
   private async callOnIdentity(
     subject: string,
     isIdentity: boolean,
@@ -1712,12 +1765,12 @@ export class Verifications extends Logger {
         isIdentity ? subject : await this.getIdentityForAccount(subject),
         ...args,
       );
-    } else if (subjectType === 'account') {
+    } if (subjectType === 'account') {
       // account identity
       return this.options.executor.executeContractCall(
-        isIdentity ?
-          this.options.contractLoader.loadContract('VerificationHolder', subject) :
-          await this.getIdentityForAccount(subject),
+        isIdentity
+          ? this.options.contractLoader.loadContract('VerificationHolder', subject)
+          : await this.getIdentityForAccount(subject),
         fun,
         ...args,
       );
@@ -1739,8 +1792,8 @@ export class Verifications extends Logger {
 
     let bestReachableStatus = VerificationsStatusV2.Green;
     // 'inherit' parent status only if parent actually has verifications
-    if (partialResult.levelComputed.parents &&
-        partialResult.levelComputed.parents.verifications.length) {
+    if (partialResult.levelComputed.parents
+        && partialResult.levelComputed.parents.verifications.length) {
       bestReachableStatus = partialResult.levelComputed.parents.status;
     }
 
@@ -1751,8 +1804,8 @@ export class Verifications extends Logger {
     for (const verification of partialResult.verifications) {
       // check this levels trustworthiness
       let currentVerificationStatus;
-      if (verification.statusFlags &&
-          verification.statusFlags.length) {
+      if (verification.statusFlags
+          && verification.statusFlags.length) {
         // flags found, set to false and start to prove trustworthiness
         currentVerificationStatus = VerificationsStatusV2.Red;
         for (const statusFlag of verification.statusFlags) {
@@ -1761,18 +1814,20 @@ export class Verifications extends Logger {
           // use defined status or function for check
           if (typeof queryOptions.validationOptions[statusFlag] === 'function') {
             tempStatus = await (queryOptions.validationOptions[statusFlag] as Function)(
-              verification, partialResult);
+              verification, partialResult,
+            );
           } else if (typeof queryOptions.validationOptions[statusFlag] === 'string') {
             tempStatus = queryOptions.validationOptions[statusFlag] as VerificationsStatusV2;
           } else if (typeof this.defaultValidationOptions[statusFlag] === 'function') {
             tempStatus = await (this.defaultValidationOptions[statusFlag] as Function)(
-              verification, partialResult);
+              verification, partialResult,
+            );
           } else if (typeof this.defaultValidationOptions[statusFlag] === 'string') {
             tempStatus = this.defaultValidationOptions[statusFlag] as VerificationsStatusV2;
           }
 
-          if (tempStatus === VerificationsStatusV2.Red ||
-              bestReachableStatus === VerificationsStatusV2.Red) {
+          if (tempStatus === VerificationsStatusV2.Red
+              || bestReachableStatus === VerificationsStatusV2.Red) {
             // if one status flag results red status, instant return, other flags does not need to
             // be checked
             currentVerificationStatus = VerificationsStatusV2.Red;
@@ -1796,10 +1851,10 @@ export class Verifications extends Logger {
     // bestReachableStatus has already been taken into consideration in last block,
     // so we can just take status flag here
     if (partialResult.verifications
-      .filter(v => v.details.status === VerificationsStatusV2.Green).length) {
+      .filter((v) => v.details.status === VerificationsStatusV2.Green).length) {
       status = VerificationsStatusV2.Green;
     } else if (partialResult.verifications
-      .filter(v => v.details.status === VerificationsStatusV2.Yellow).length) {
+      .filter((v) => v.details.status === VerificationsStatusV2.Yellow).length) {
       status = VerificationsStatusV2.Yellow;
     } else {
       status = VerificationsStatusV2.Red;
@@ -1824,14 +1879,14 @@ export class Verifications extends Logger {
       if (!this.storageEnsuring) {
         this.storageEnsuring = Promise.all([
           this.options.storage || this.options.nameResolver
-            .getAddress(`identities.${ this.options.nameResolver.config.labels.ensRoot }`),
+            .getAddress(`identities.${this.options.nameResolver.config.labels.ensRoot}`),
           this.options.registry || this.options.nameResolver
-            .getAddress(`contractidentities.${ this.options.nameResolver.config.labels.ensRoot }`),
+            .getAddress(`contractidentities.${this.options.nameResolver.config.labels.ensRoot}`),
         ]);
       }
 
       // await storage address
-      const [ identityStorage, contractIdentityStorage ] = await this.storageEnsuring;
+      const [identityStorage, contractIdentityStorage] = await this.storageEnsuring;
       if (!this.contracts.storage) {
         this.contracts.storage = this.options.contractLoader.loadContract('V00_UserRegistry',
           identityStorage);
@@ -1857,6 +1912,7 @@ export class Verifications extends Logger {
    * @return     {Promise<any>}  if `eventInfo` and `getEventResults`, result of `getEventResults`,
    *                             otherwise void
    */
+  // eslint-disable-next-line consistent-return
   private async executeAndHandleEventResult(
     accountId: string,
     data: string,
@@ -1868,9 +1924,9 @@ export class Verifications extends Logger {
     signedTransactionInfo?: string,
   ): Promise<any> {
     // get users identity
-    const userIdentity = sourceIdentity ?
-      this.options.contractLoader.loadContract('VerificationHolder', sourceIdentity) :
-      await this.getIdentityForAccount(accountId);
+    const userIdentity = sourceIdentity
+      ? this.options.contractLoader.loadContract('VerificationHolder', sourceIdentity)
+      : await this.getIdentityForAccount(accountId);
 
     // prepare success + result event handling
     const options = {
@@ -1881,7 +1937,8 @@ export class Verifications extends Logger {
     };
 
     // run tx
-    const [executionId, blockNumber] = await (this.options.executor.executeContractTransaction as any)(...[
+    const { executor } = this.options;
+    const [executionId, blockNumber] = await (executor.executeContractTransaction as any)(...[
       userIdentity,
       signedTransactionInfo ? 'executeDelegated' : 'execute',
       options,
@@ -1893,47 +1950,51 @@ export class Verifications extends Logger {
     // fetch result from event
     // load user identity as a library, to retrieve library events from users identity
     const keyHolderLibrary = this.options.contractLoader.loadContract(
-      'KeyHolderLibrary', userIdentity.options.address);
-    const [ executed, failed ] = await Promise.all([
+      'KeyHolderLibrary', userIdentity.options.address,
+    );
+    const [executed, failed] = await Promise.all([
       keyHolderLibrary.getPastEvents(
-        'Executed', { fromBlock: blockNumber, toBlock: blockNumber }),
+        'Executed', { fromBlock: blockNumber, toBlock: blockNumber },
+      ),
       keyHolderLibrary.getPastEvents(
-        'ExecutionFailed', { fromBlock: blockNumber, toBlock: blockNumber }),
+        'ExecutionFailed', { fromBlock: blockNumber, toBlock: blockNumber },
+      ),
     ]);
     // flatten and filter events on execution id from identity tx
-    const filtered = [ ...executed, ...failed ].filter(
+    const filtered = [...executed, ...failed].filter(
       (event) => {
         if (event.returnValues && event.returnValues.executionId) {
           // check if executionId is a BigNumber object
           if (event.returnValues.executionId.eq) {
-            return event.returnValues.executionId.eq(executionId)
-          } else {
-            // otherwise check normal equality
-            return event.returnValues.executionId === executionId
+            return event.returnValues.executionId.eq(executionId);
           }
+          // otherwise check normal equality
+          return event.returnValues.executionId === executionId;
         }
         return false;
-      }
+      },
     );
     if (filtered.length && filtered[0].event === 'Executed') {
       // if execution was successful
       if (eventInfo) {
         // if original options had an event property for retrieving event results
         let targetIdentityEvents = await eventInfo.contract.getPastEvents(
-          eventInfo.eventName, { fromBlock: blockNumber, toBlock: blockNumber });
+          eventInfo.eventName, { fromBlock: blockNumber, toBlock: blockNumber },
+        );
         targetIdentityEvents = targetIdentityEvents.filter(
-          event => event.transactionHash === filtered[0].transactionHash);
+          (event) => event.transactionHash === filtered[0].transactionHash,
+        );
         if (targetIdentityEvents.length) {
           return getEventResults(targetIdentityEvents[0], targetIdentityEvents[0].returnValues);
         }
       }
     } else if (filtered.length && filtered[0].event === 'ExecutionFailed') {
       const values = filtered[0].returnValues;
-      throw new Error('executeOnIdentity failed; ExecutionFailed event was triggered: ' +
-        `executionId: "${values.executionId}", to: "${values.to}", value: "${values.value}"`);
+      throw new Error('executeOnIdentity failed; ExecutionFailed event was triggered: '
+        + `executionId: "${values.executionId}", to: "${values.to}", value: "${values.value}"`);
     } else {
-      throw new Error('executeOnIdentity failed; subject type was \'account\', ' +
-        'but no proper identity tx status event could be retrieved');
+      throw new Error('executeOnIdentity failed; subject type was \'account\', '
+        + 'but no proper identity tx status event could be retrieved');
     }
   }
 
@@ -1948,6 +2009,7 @@ export class Verifications extends Logger {
    *                                      VerificationsRegistry functions))
    * @return     {Promise<any>}  result of called function
    */
+  // eslint-disable-next-line consistent-return
   private async executeOnIdentity(
     subject: string,
     isIdentity: boolean,
@@ -1958,22 +2020,23 @@ export class Verifications extends Logger {
     const subjectType = await this.getSubjectType(subject, isIdentity);
     if (subjectType === 'contract') {
       const targetIdentity = isIdentity ? subject : await this.getIdentityForAccount(subject);
-      const abiOnRegistry = this.contracts.registry.methods[fun](targetIdentity, ...args).encodeABI();
+      const abiOnRegistry = this.contracts.registry.methods[fun](targetIdentity, ...args)
+        .encodeABI();
       if (options.event) {
         return this.executeAndHandleEventResult(
           options.from,
           abiOnRegistry,
           {
             contract: this.options.contractLoader.loadContract(
-              'VerificationsRegistryLibrary', this.contracts.registry.options.address),
+              'VerificationsRegistryLibrary', this.contracts.registry.options.address,
+            ),
             eventName: options.event.eventName,
           },
           options.getEventResult,
         );
-      } else {
-        return this.executeAndHandleEventResult(options.from, abiOnRegistry);
       }
-    } else if (subjectType === 'account') {
+      return this.executeAndHandleEventResult(options.from, abiOnRegistry);
+    } if (subjectType === 'account') {
       // account identity
       let targetIdentityAddress;
       if (isIdentity) {
@@ -1989,65 +2052,70 @@ export class Verifications extends Logger {
       // get encoded abi for passing it to identity tx
       const abi = targetIdentity.methods[fun].apply(
         targetIdentity.methods[fun],
-        args
+        args,
       ).encodeABI();
 
       // backup original event data and set event data for handling identity tx
       const originalEvent = options.event;
       const originalGetEventResult = options.getEventResult;
+      // eslint-disable-next-line no-param-reassign
       options.event = {
         // event Approved(uint256 indexed executionId, bool approved);
         eventName: 'Approved',
         target: 'KeyHolderLibrary', // VerificationsRegistryLibrary
       };
-      options.getEventResult = (event, eventArgs) => {
-        return [eventArgs.executionId, event.blockNumber];
-      };
+      // eslint-disable-next-line no-param-reassign
+      options.getEventResult = (event, eventArgs) => [eventArgs.executionId, event.blockNumber];
 
       const identity = await this.getIdentityForAccount(options.from);
       const [executionId, blockNumber] = await this.options.executor.executeContractTransaction(
-        identity, 'execute', options, targetIdentity.options.address, 0, abi);
+        identity, 'execute', options, targetIdentity.options.address, 0, abi,
+      );
       const keyHolderLibrary = this.options.contractLoader.loadContract(
-        'KeyHolderLibrary', identity.options.address);
-      const [ executed, failed ] = await Promise.all([
+        'KeyHolderLibrary', identity.options.address,
+      );
+      const [executed, failed] = await Promise.all([
         keyHolderLibrary.getPastEvents(
-          'Executed', { fromBlock: blockNumber, toBlock: blockNumber }),
+          'Executed', { fromBlock: blockNumber, toBlock: blockNumber },
+        ),
         keyHolderLibrary.getPastEvents(
-          'ExecutionFailed', { fromBlock: blockNumber, toBlock: blockNumber }),
+          'ExecutionFailed', { fromBlock: blockNumber, toBlock: blockNumber },
+        ),
       ]);
       // flatten and filter events on execution id from identity tx
-      const filtered = [ ...executed, ...failed ].filter(
+      const filtered = [...executed, ...failed].filter(
         (event) => {
           if (event.returnValues && event.returnValues.executionId) {
             // check if executionId is a BigNumber object
             if (event.returnValues.executionId.eq) {
-              return event.returnValues.executionId.eq(executionId)
-            } else {
-              // otherwise check normal equality
-              return event.returnValues.executionId === executionId
+              return event.returnValues.executionId.eq(executionId);
             }
+            // otherwise check normal equality
+            return event.returnValues.executionId === executionId;
           }
           return false;
-        }
+        },
       );
       if (filtered.length && filtered[0].event === 'Executed') {
         // if execution was successful
         if (originalEvent) {
           // if original options had an event property for retrieving event results
           const targetIdentityEvents = await targetIdentity.getPastEvents(
-            originalEvent.eventName, { fromBlock: blockNumber, toBlock: blockNumber });
+            originalEvent.eventName, { fromBlock: blockNumber, toBlock: blockNumber },
+          );
           if (targetIdentityEvents.length) {
             return originalGetEventResult(
-              targetIdentityEvents[0], targetIdentityEvents[0].returnValues);
+              targetIdentityEvents[0], targetIdentityEvents[0].returnValues,
+            );
           }
         }
       } else if (filtered.length && filtered[0].event === 'ExecutionFailed') {
         const values = filtered[0].returnValues;
-        throw new Error('executeOnIdentity failed; ExecutionFailed event was triggered: ' +
-          `executionId: "${values.executionId}", to: "${values.to}", value: "${values.value}"`);
+        throw new Error('executeOnIdentity failed; ExecutionFailed event was triggered: '
+          + `executionId: "${values.executionId}", to: "${values.to}", value: "${values.value}"`);
       } else {
-        throw new Error('executeOnIdentity failed; subject type was \'account\', ' +
-          'but no proper identity tx status event could be retrieved');
+        throw new Error('executeOnIdentity failed; subject type was \'account\', '
+          + 'but no proper identity tx status event could be retrieved');
       }
     }
   }
@@ -2064,7 +2132,8 @@ export class Verifications extends Logger {
     queryOptions: VerificationsQueryOptions,
   ): Promise<VerificationsResultV2> {
     const nestedVerifications = nestedVerificationsInput.filter(
-      verification => verification.status !== -1);
+      (verification) => verification.status !== -1,
+    );
     if (!nestedVerifications.length) {
       return {
         status: VerificationsStatusV2.Red,
@@ -2076,8 +2145,8 @@ export class Verifications extends Logger {
 
     if (nestedVerifications.length) {
       let parents;
-      if (nestedVerifications[0].parents &&
-          nestedVerifications[0].parents.length) {
+      if (nestedVerifications[0].parents
+          && nestedVerifications[0].parents.length) {
         parents = await this.formatToV2(nestedVerifications[0].parents, queryOptions);
       }
       levelComputed = {
@@ -2112,9 +2181,9 @@ export class Verifications extends Logger {
         },
         raw: {
           creationBlock: nestedVerification.creationBlock,
-          creationDate: typeof nestedVerification.creationDate === 'number' ?
-            `${nestedVerification.creationDate}`.replace(/...$/, '') :
-            nestedVerification.creationDate,
+          creationDate: typeof nestedVerification.creationDate === 'number'
+            ? `${nestedVerification.creationDate}`.replace(/...$/, '')
+            : nestedVerification.creationDate,
           data: nestedVerification.data,
           disableSubVerifications: nestedVerification.disableSubVerifications,
           signature: nestedVerification.signature,
@@ -2134,8 +2203,10 @@ export class Verifications extends Logger {
       }
       if (nestedVerification.data && nestedVerification.data !== nullBytes32) {
         verification.details.data = await this.options.dfs.get(
-          Ipfs.bytes32ToIpfsHash(nestedVerification.data));
+          Ipfs.bytes32ToIpfsHash(nestedVerification.data),
+        );
       }
+      // eslint-disable-next-line
       ['expirationDate', 'rejectReason'].map((property) => {
         if (nestedVerification[property]) {
           verification.details[property] = nestedVerification[property];
@@ -2190,7 +2261,7 @@ export class Verifications extends Logger {
     verificationValue?: any,
     descriptionDomain?: string,
     isIdentity = false,
-    uri = ''
+    uri = '',
   ): Promise<{
       targetIdentity: string;
       subjectType: string;
@@ -2206,29 +2277,28 @@ export class Verifications extends Logger {
     let targetIdentity;
     if (isIdentity) {
       targetIdentity = subject;
+    } else if (subjectType === 'contract') {
+      targetIdentity = (await this.options.description.getDescription(
+        subject, issuer,
+      )).public.identity;
     } else {
-      if (subjectType === 'contract') {
-        targetIdentity = (await this.options.description.getDescription(
-          subject, issuer)).public.identity;
-      } else {
-        targetIdentity = await this.options.executor.executeContractCall(
-          this.contracts.storage,
-          'users',
-          subject
-        );
-      }
+      targetIdentity = await this.options.executor.executeContractCall(
+        this.contracts.storage,
+        'users',
+        subject,
+      );
     }
 
     // get the issuer identity contract
     const sourceIdentity = await this.options.executor.executeContractCall(
       this.contracts.storage,
       'users',
-      issuer
+      issuer,
     );
     // check if target and source identity are existing
     if (!targetIdentity || targetIdentity === nullAddress) {
-      const msg = `trying to set verification ${topic} with account ${issuer}, ` +
-        `but target identity for account ${subject} does not exist`;
+      const msg = `trying to set verification ${topic} with account ${issuer}, `
+        + `but target identity for account ${subject} does not exist`;
       this.log(msg, 'error');
       throw new Error(msg);
     }
@@ -2253,15 +2323,17 @@ export class Verifications extends Logger {
     // create the signature for the verification
     const signedSignature = await this.options.executor.web3.eth.accounts.sign(
       this.options.nameResolver.soliditySha3(
-        targetIdentity, uint256VerificationName, verificationData).replace('0x', ''),
-      '0x' + await this.options.accountStore.getPrivateKey(issuer)
+        targetIdentity, uint256VerificationName, verificationData,
+      ).replace('0x', ''),
+      `0x${await this.options.accountStore.getPrivateKey(issuer)}`,
     );
 
     // build description hash if required
     let ensFullNodeHash;
     if (descriptionDomain) {
       ensFullNodeHash = this.options.nameResolver.namehash(
-        this.getFullDescriptionDomainWithHash(topic, descriptionDomain));
+        this.getFullDescriptionDomainWithHash(topic, descriptionDomain),
+      );
     }
 
     // return arguments for setting verification
@@ -2274,7 +2346,7 @@ export class Verifications extends Logger {
       verificationData,
       verificationDataUrl,
       ensFullNodeHash: ensFullNodeHash || nullBytes32,
-    }
+    };
   }
 
   /**
@@ -2287,9 +2359,9 @@ export class Verifications extends Logger {
   private async getSubjectType(subject: string, isIdentity?: boolean): Promise<string> {
     if (subject.length === 66) {
       return 'contract';
-    } else if (isIdentity && subject.length === 42) {
+    } if (isIdentity && subject.length === 42) {
       return 'account';
-    } else if (!this.subjectTypes[subject]) {
+    } if (!this.subjectTypes[subject]) {
       // fills subject type upon retrieval
       await this.getIdentityForAccount(subject);
     }
@@ -2307,6 +2379,7 @@ export class Verifications extends Logger {
    */
   private async signPackedHash(accountId: string, toSign: any): Promise<any> {
     return this.options.executor.signer.signMessage(
-      accountId, this.options.nameResolver.soliditySha3(...toSign));
+      accountId, this.options.nameResolver.soliditySha3(...toSign),
+    );
   }
 }

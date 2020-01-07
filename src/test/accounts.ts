@@ -25,7 +25,7 @@ const accountMap1 = {
   '0x00D1267B27C3A80080f9E1B6Ba01DE313b53Ab58':
     'a76a2b068fb715830d042ca40b1a4dab8d088b217d11af91d15b972a7afaf202',
   '0x0ab4F29ef71E591e209b1386CaDFc5B7CCB5102A':
-    '70adb5e0424148e2b490776143a6a93662d3f40c3d9597690bdd3472863b7625'
+    '70adb5e0424148e2b490776143a6a93662d3f40c3d9597690bdd3472863b7625',
 };
 
 const accountMap2 = {
@@ -35,7 +35,7 @@ const accountMap2 = {
     'D9734AFE9168C37481A977C91FE25B9C7D814789F515D78DC084A27BD2137E14',
   '0x04B1Ee1b9D5283B2694B739DA5b49DBC88199750':
     '68475374AC69364D64F94A47D66410936F63971FE5EEAEFDF85913D153799EE5',
-}
+};
 
 const accountMap3 = {
   '0xC2ee94f6cf046B02D530cf1cd16A2b32b8A4340d':
@@ -44,20 +44,20 @@ const accountMap3 = {
     'E29C1E4A683CC629E39CE219CFB1F35BBA898605E1B197162F0EECF0F1139630',
   '0x35f8220bC83577458aEa4a1085A8b832DEa79b7a':
     '340BA316637FD01A1AFD54D4491A899F6D8EA0FB89A1D7BA94682F7D68B21B20',
-}
-
+};
+// eslint-disable-next-line
 let accountMap;
 if (process.env && process.env.ACCOUNT_MAP) {
   accountMap = JSON.parse(process.env.ACCOUNT_MAP);
 } else if (process.env && process.env.TESTSPEC === 'contracts') {
-  accountMap =  accountMap1;
+  accountMap = accountMap1;
 } else if (process.env && process.env.TESTSPEC === 'datacontract') {
-  accountMap =  accountMap2;
+  accountMap = accountMap2;
 } else if (process.env && process.env.TESTSPEC === 'services') {
-  accountMap =  accountMap3;
+  accountMap = accountMap3;
 } else {
-  accountMap =  accountMap1;
+  accountMap = accountMap1;
 }
 const accounts = Object.keys(accountMap);
 
-export { accounts, accountMap }
+export { accounts, accountMap };

@@ -17,10 +17,6 @@
   the following URL: https://evan.network/license/
 */
 
-import _ = require('lodash');
-import crypto = require('crypto');
-import prottle = require('prottle');
-
 import {
   DfsInterface,
   Envelope,
@@ -28,9 +24,13 @@ import {
   Validator,
 } from '@evan.network/dbcp';
 
-import { BaseContract, BaseContractOptions, } from '../base-contract/base-contract';
+import { BaseContract, BaseContractOptions } from '../base-contract/base-contract';
 import { CryptoProvider } from '../../encryption/crypto-provider';
 import { Sharing } from '../sharing';
+
+import _ = require('lodash');
+import crypto = require('crypto');
+import prottle = require('prottle');
 
 
 const requestWindowSize = 10;
@@ -40,9 +40,9 @@ const serviceSchema = {
   type: 'object',
   additionalProperties: false,
   properties: {
-    serviceName: { type: 'string', },
-    requestParameters: { type: 'object', },
-    responseParameters: { type: 'object', },
+    serviceName: { type: 'string' },
+    requestParameters: { type: 'object' },
+    responseParameters: { type: 'object' },
   },
 };
 
@@ -90,10 +90,15 @@ export interface ServiceContractOptions extends BaseContractOptions {
  */
 export class ServiceContract extends BaseContract {
   public options: ServiceContractOptions;
+
   private readonly encodingUnencrypted = 'utf-8';
+
   private readonly encodingEncrypted = 'hex';
+
   private readonly encodingUnencryptedHash = 'hex';
+
   private readonly cryptoAlgorithHashes = 'aesEcb';
+
   private serviceDefinition;
 
   public constructor(optionsInput: ServiceContractOptions) {
@@ -122,27 +127,33 @@ export class ServiceContract extends BaseContract {
     contentKey?: string,
     section = '*',
   ): Promise<void> {
-    const serviceContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+    const serviceContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('ServiceContractInterface', contract);
     const callIdHash = this.numberToBytes32(callId);
     const [blockNr, hashKeyToShare] = await Promise.all([
       this.options.web3.eth.getBlockNumber(),
       hashKey || this.options.sharing.getHashKey(
-        serviceContract.options.address, accountId, callIdHash),
+        serviceContract.options.address, accountId, callIdHash,
+      ),
     ]);
-    const contentKeyToShare = contentKey ||
-      (await this.options.sharing.getKey(
-        serviceContract.options.address, accountId, section, blockNr, callIdHash));
+    const contentKeyToShare = contentKey
+      || (await this.options.sharing.getKey(
+        serviceContract.options.address, accountId, section, blockNr, callIdHash,
+      ));
     const sharings = await this.options.sharing.getSharingsFromContract(
-      serviceContract, callIdHash);
+      serviceContract, callIdHash,
+    );
     for (const target of to) {
       await this.options.sharing.extendSharings(
-        sharings, accountId, target, section, 0, contentKeyToShare, null);
+        sharings, accountId, target, section, 0, contentKeyToShare, null,
+      );
       await this.options.sharing.extendSharings(
-        sharings, accountId, target, '*', 'hashKey', hashKeyToShare, null);
+        sharings, accountId, target, '*', 'hashKey', hashKeyToShare, null,
+      );
     }
     await this.options.sharing.saveSharingsToContract(
-      serviceContract.options.address, sharings, accountId, callIdHash);
+      serviceContract.options.address, sharings, accountId, callIdHash,
+    );
   }
 
   /**
@@ -162,7 +173,7 @@ export class ServiceContract extends BaseContract {
     descriptionDfsHash = '0x0000000000000000000000000000000000000000000000000000000000000000',
   ): Promise<any> {
     // validate service definition
-    const validator = new Validator({ schema: serviceSchema, });
+    const validator = new Validator({ schema: serviceSchema });
     const checkFails = validator.validate(service);
     if (checkFails !== true) {
       throw new Error(`validation of service values failed with: ${JSON.stringify(checkFails)}`);
@@ -170,21 +181,27 @@ export class ServiceContract extends BaseContract {
 
     const contractP = (async () => {
       const contractId = await super.createUninitialized(
-        'service', accountId, businessCenterDomain, descriptionDfsHash);
+        'service', accountId, businessCenterDomain, descriptionDfsHash,
+      );
       return this.options.loader.loadContract('ServiceContractInterface', contractId);
     })();
 
     // create sharing key for owner
     const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(
-      this.options.defaultCryptoAlgo);
+      this.options.defaultCryptoAlgo,
+    );
     const hashCryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(
-      this.cryptoAlgorithHashes);
+      this.cryptoAlgorithHashes,
+    );
     const [contentKey, hashKey, contract] = await Promise.all(
-      [cryptor.generateKey(), hashCryptor.generateKey(), contractP]);
+      [cryptor.generateKey(), hashCryptor.generateKey(), contractP],
+    );
     await this.options.sharing.addSharing(
-      contract.options.address, accountId, accountId, '*', 0, contentKey);
+      contract.options.address, accountId, accountId, '*', 0, contentKey,
+    );
     await this.options.sharing.ensureHashKey(
-      contract.options.address, accountId, accountId, hashKey);
+      contract.options.address, accountId, accountId, hashKey,
+    );
 
     // add service after sharing has been added
     await this.setService(contract, accountId, service, businessCenterDomain, true);
@@ -207,20 +224,22 @@ export class ServiceContract extends BaseContract {
     callId: number,
     answerIndex: number,
   ): Promise<any> {
-    const serviceContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+    const serviceContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('ServiceContractInterface', contract);
     const queryResult = await this.options.executor.executeContractCall(
-      serviceContract, 'getAnswers', callId, answerIndex);
+      serviceContract, 'getAnswers', callId, answerIndex,
+    );
     const result: any = {};
-    ['hash', 'owner', 'created', 'parent'].forEach((key) => { result[key] = queryResult[key][0]; });
+    ['hash', 'owner', 'created', 'parent'].forEach((key) => { [result[key]] = queryResult[key]; });
     const decryptedHash = await this.decryptHash(
-      queryResult.hash[0], serviceContract, accountId, this.numberToBytes32(callId));
+      queryResult.hash[0], serviceContract, accountId, this.numberToBytes32(callId),
+    );
     if (decryptedHash) {
       result.data = await this.decrypt(
         (await this.options.dfs.get(decryptedHash)).toString('utf-8'),
         serviceContract,
         accountId,
-        '*'
+        '*',
       );
     }
     return result;
@@ -234,10 +253,11 @@ export class ServiceContract extends BaseContract {
    * @return     {Promise<number>}  number of answers
    */
   public async getAnswerCount(contract: any|string, callId: number): Promise<number> {
-    const serviceContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('ServiceContractInterface', contract);
-    const { answerCount}  = await this.options.executor.executeContractCall(
-      serviceContract, 'calls', callId);
+    const serviceContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+    const { answerCount } = await this.options.executor.executeContractCall(
+      serviceContract, 'calls', callId,
+    );
     return parseInt(answerCount, 10);
   }
 
@@ -260,12 +280,13 @@ export class ServiceContract extends BaseContract {
     offset = 0,
     reverse = false,
   ): Promise<AnswerResult> {
-    const serviceContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+    const serviceContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('ServiceContractInterface', contract);
 
     // get entries
     const { entries, indices } = await this.getEntries(
-      serviceContract, 'answers', callId, count, offset, reverse);
+      serviceContract, 'answers', callId, count, offset, reverse,
+    );
 
     // decrypt contents
     const result = {};
@@ -273,7 +294,8 @@ export class ServiceContract extends BaseContract {
     const callIdString = this.numberToBytes32(callId);
     const tasks = indices.map((index) => async () => {
       const decryptedHash = await this.decryptHash(
-        entries[index].hash, serviceContract, accountId, callIdString);
+        entries[index].hash, serviceContract, accountId, callIdString,
+      );
       result[index] = entries[index];
       if (decryptedHash) {
         result[index].data = await this.decrypt(
@@ -302,13 +324,15 @@ export class ServiceContract extends BaseContract {
    * @return     {Promise<any>}  the call
    */
   public async getCall(contract: any|string, accountId: string, callId: number): Promise<any> {
-    const serviceContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+    const serviceContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('ServiceContractInterface', contract);
     const callIdString = this.numberToBytes32(callId);
     const call = await this.options.executor.executeContractCall(
-      serviceContract, 'calls', callIdString);
+      serviceContract, 'calls', callIdString,
+    );
     const decryptedHash = await this.decryptHash(
-      call.hash, serviceContract, accountId, callIdString);
+      call.hash, serviceContract, accountId, callIdString,
+    );
     if (decryptedHash) {
       call.data = await this.decrypt(
         (await this.options.dfs.get(decryptedHash)).toString('utf-8'),
@@ -338,8 +362,8 @@ export class ServiceContract extends BaseContract {
     offset = 0,
     reverse = false,
   ): Promise<CallResult> {
-    const serviceContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+    const serviceContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('ServiceContractInterface', contract);
 
     // get entries
     const { entries, indices } = await this.getEntries(serviceContract,
@@ -384,8 +408,8 @@ export class ServiceContract extends BaseContract {
    * @return     {Promise<number>}      number of calls
    */
   public async getCallCount(contract: any|string): Promise<number> {
-    const serviceContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+    const serviceContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('ServiceContractInterface', contract);
     const count = await this.options.executor.executeContractCall(serviceContract, 'callCount');
     return parseInt(count, 10);
   }
@@ -398,10 +422,11 @@ export class ServiceContract extends BaseContract {
    * @return     {Promise<string>}  account id of call owner
    */
   public async getCallOwner(contract: any|string, callId: number): Promise<string> {
-    const serviceContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+    const serviceContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('ServiceContractInterface', contract);
     return (await this.options.executor.executeContractCall(
-      serviceContract, 'calls', callId)).owner;
+      serviceContract, 'calls', callId,
+    )).owner;
   }
 
   /**
@@ -412,16 +437,17 @@ export class ServiceContract extends BaseContract {
    * @return     {Promise<string>}  service description
    */
   public async getService(contract: any|string, accountId: string): Promise<string> {
-    const serviceContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+    const serviceContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('ServiceContractInterface', contract);
     const encryptedHash = await this.options.executor.executeContractCall(
-      serviceContract, 'service');
+      serviceContract, 'service',
+    );
     const decryptedHash = await this.decryptHash(encryptedHash, serviceContract, accountId);
     const decrypted = await this.decrypt(
       (await this.options.dfs.get(decryptedHash)).toString('utf-8'),
       serviceContract,
       accountId,
-      '*'
+      '*',
     );
     this.serviceDefinition = decrypted;
     return decrypted;
@@ -445,21 +471,21 @@ export class ServiceContract extends BaseContract {
     callAuthor: string,
     callParent = uintMax,
   ): Promise<number> {
-    const serviceContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+    const serviceContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('ServiceContractInterface', contract);
 
     // validate call
     if (!this.serviceDefinition) {
       // this.serviceDefinition is set and updated via side effects in getService and setService
       await this.getService(serviceContract, accountId);
     }
-    const validator = new Validator({ schema: this.serviceDefinition.responseParameters, });
+    const validator = new Validator({ schema: this.serviceDefinition.responseParameters });
     const checkFails = validator.validate(answer);
     if (checkFails !== true) {
       throw new Error(`validation of input values failed with: ${JSON.stringify(checkFails)}`);
     }
 
-    const blockNr = 0;  // will be ignored as callAuthor is set
+    const blockNr = 0; // will be ignored as callAuthor is set
 
     // subproperties metadata.fnord and payload.fnord use the same key,
     // so track keys for subproperties and cryptors like 'fnord' here
@@ -469,23 +495,25 @@ export class ServiceContract extends BaseContract {
     // encrypt properties
     const genericKey = this.options.nameResolver.soliditySha3('*');
     const contentKey = await this.options.sharing.getKey(
-      serviceContract.options.address, accountId, '*', blockNr, this.numberToBytes32(callId));
+      serviceContract.options.address, accountId, '*', blockNr, this.numberToBytes32(callId),
+    );
     const generateKeys = async (property) => {
       innerPropertiesToEncrpt[property] = [];
       if (answer[property]) {
         for (const key of Object.keys(answer[property])) {
-          if (answer[property][key].hasOwnProperty('private') &&
-              answer[property][key].hasOwnProperty('cryptoInfo') &&
-              !innerPropertiesToEncrpt[property][key]) {
+          if (Object.prototype.hasOwnProperty.call(answer[property][key], 'private')
+              && Object.prototype.hasOwnProperty.call(answer[property][key], 'cryptoInfo')
+              && !innerPropertiesToEncrpt[property][key]) {
             innerPropertiesToEncrpt[property].push(key);
             innerEncryptionData[key] = {};
             innerEncryptionData[key].cryptor = this.options.cryptoProvider.getCryptorByCryptoInfo(
-              answer[property][key].cryptoInfo);
+              answer[property][key].cryptoInfo,
+            );
 
             // if we have properties to be encrypted with the original
             // content key (e.g. files/binaries)
-            if (answer[property][key].cryptoInfo.originator &&
-                answer[property][key].cryptoInfo.originator === genericKey) {
+            if (answer[property][key].cryptoInfo.originator
+                && answer[property][key].cryptoInfo.originator === genericKey) {
               // use the previous generated content key
               innerEncryptionData[key].key = contentKey;
             }
@@ -494,8 +522,9 @@ export class ServiceContract extends BaseContract {
       }
     };
 
-    // run once for metadata and once for payload, await them sequentially to track already generated keys
-    const answerKeys = Object.keys(answer)
+    // run once for metadata and once for payload,
+    // await them sequentially to track already generated keys
+    const answerKeys = Object.keys(answer);
     for (const key of answerKeys) {
       await generateKeys(key);
     }
@@ -515,7 +544,8 @@ export class ServiceContract extends BaseContract {
     const stateMd5 = crypto.createHash('md5').update(encrypted).digest('hex');
     const answerHash = await this.options.dfs.add(stateMd5, Buffer.from(encrypted));
     const hashKey = await this.options.sharing.getHashKey(
-      serviceContract.options.address, accountId, this.numberToBytes32(callId));
+      serviceContract.options.address, accountId, this.numberToBytes32(callId),
+    );
     const encryptdHash = await this.encryptHash(answerHash, serviceContract, accountId, hashKey);
     const answerId = await this.options.executor.executeContractTransaction(
       serviceContract,
@@ -533,7 +563,7 @@ export class ServiceContract extends BaseContract {
       callParent,
     );
     return parseInt(answerId, 16);
-  };
+  }
 
   /**
    * send a call to a service
@@ -549,15 +579,15 @@ export class ServiceContract extends BaseContract {
     call: any,
     to: string[] = [],
   ): Promise<number> {
-    const serviceContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+    const serviceContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('ServiceContractInterface', contract);
 
     // validate call
     if (!this.serviceDefinition) {
       // this.serviceDefinition is set and updated via side effects in getService and setService
       await this.getService(serviceContract, accountId);
     }
-    const validator = new Validator({ schema: this.serviceDefinition.requestParameters, });
+    const validator = new Validator({ schema: this.serviceDefinition.requestParameters });
     const checkFails = validator.validate(call);
     if (checkFails !== true) {
       throw new Error(`validation of input values failed with: ${JSON.stringify(checkFails)}`);
@@ -573,9 +603,11 @@ export class ServiceContract extends BaseContract {
 
     // create keys for new call (outer properties)
     const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(
-      this.options.defaultCryptoAlgo);
+      this.options.defaultCryptoAlgo,
+    );
     const hashCryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(
-      this.cryptoAlgorithHashes);
+      this.cryptoAlgorithHashes,
+    );
     const [contentKey, hashKey, blockNr] = await Promise.all([
       cryptor.generateKey(),
       hashCryptor.generateKey(),
@@ -588,18 +620,19 @@ export class ServiceContract extends BaseContract {
       innerPropertiesToEncrpt[property] = [];
       if (callCopy[property]) {
         for (const key of Object.keys(callCopy[property])) {
-          if (callCopy[property][key].hasOwnProperty('private') &&
-              callCopy[property][key].hasOwnProperty('cryptoInfo') &&
-              !innerPropertiesToEncrpt[property][key]) {
+          if (Object.prototype.hasOwnProperty.call(callCopy[property][key], 'private')
+              && Object.prototype.hasOwnProperty.call(callCopy[property][key], 'cryptoInfo')
+              && !innerPropertiesToEncrpt[property][key]) {
             innerPropertiesToEncrpt[property].push(key);
             innerEncryptionData[key] = {};
             innerEncryptionData[key].cryptor = this.options.cryptoProvider.getCryptorByCryptoInfo(
-              callCopy[property][key].cryptoInfo);
+              callCopy[property][key].cryptoInfo,
+            );
 
             // if we have properties to be encrypted with the
             // original content key (e.g. files/binaries)
-            if (callCopy[property][key].cryptoInfo.originator &&
-                callCopy[property][key].cryptoInfo.originator === genericKey) {
+            if (callCopy[property][key].cryptoInfo.originator
+                && callCopy[property][key].cryptoInfo.originator === genericKey) {
               // use the previous generated content key
               innerEncryptionData[key].key = contentKey;
             } else {
@@ -611,7 +644,7 @@ export class ServiceContract extends BaseContract {
     };
     // run once for metadata and once for payload,
     // await them sequentially to track already generated keys
-    const callKeys = Object.keys(callCopy)
+    const callKeys = Object.keys(callCopy);
     for (const key of callKeys) {
       await generateKeys(key);
     }
@@ -653,17 +686,20 @@ export class ServiceContract extends BaseContract {
 
     // for each to, add sharing keys; owner is added to add his/her keys as well
     await this.addToCallSharing(
-      serviceContract, accountId, callIdUint256, to.concat(accountId), hashKey, contentKey);
+      serviceContract, accountId, callIdUint256, to.concat(accountId), hashKey, contentKey,
+    );
     // if subproperties were encryted, keep them for owner as well
     const innerEncryptionKeys = Object.keys(innerEncryptionData);
     if (innerEncryptionKeys.length) {
       const sharings = await this.options.sharing.getSharingsFromContract(serviceContract, callId);
       for (const propertyName of innerEncryptionKeys) {
         await this.options.sharing.extendSharings(
-          sharings, accountId, accountId, propertyName, 0, innerEncryptionData[propertyName].key);
+          sharings, accountId, accountId, propertyName, 0, innerEncryptionData[propertyName].key,
+        );
       }
       await this.options.sharing.saveSharingsToContract(
-        serviceContract.options.address, sharings, accountId, callId);
+        serviceContract.options.address, sharings, accountId, callId,
+      );
     }
 
     // return id of new call
@@ -689,15 +725,15 @@ export class ServiceContract extends BaseContract {
     businessCenterDomain: string,
     skipValidation?: boolean,
   ): Promise<void> {
-    const serviceContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+    const serviceContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('ServiceContractInterface', contract);
     if (!skipValidation) {
       // validate service definition
-      const validator = new Validator({ schema: serviceSchema, });
+      const validator = new Validator({ schema: serviceSchema });
       const checkFails = validator.validate(service);
       if (checkFails !== true) {
-        throw new Error('validation of service definition failed with: ' +
-          JSON.stringify(checkFails));
+        throw new Error(`validation of service definition failed with: ${
+          JSON.stringify(checkFails)}`);
       }
     }
     const blockNr = await this.options.web3.eth.getBlockNumber();
@@ -705,7 +741,7 @@ export class ServiceContract extends BaseContract {
       const encrypted = await this.encrypt(service, serviceContract, accountId, '*', blockNr);
       const stateMd5 = crypto.createHash('md5').update(encrypted).digest('hex');
       const serviceHash = await this.options.dfs.add(stateMd5, Buffer.from(encrypted));
-      return await this.encryptHash(serviceHash, serviceContract, accountId);
+      return this.encryptHash(serviceHash, serviceContract, accountId);
     })();
     const [businessCenterAddress, encryptdHash] = await Promise.all([
       this.options.nameResolver.getAddress(businessCenterDomain),
@@ -713,7 +749,7 @@ export class ServiceContract extends BaseContract {
     ]);
     await this.options.executor.executeContractTransaction(
       serviceContract,
-      'setService', {from: accountId, autoGas: 1.1, },
+      'setService', { from: accountId, autoGas: 1.1 },
       businessCenterAddress,
       encryptdHash,
     );
@@ -745,32 +781,36 @@ export class ServiceContract extends BaseContract {
       if (!contentKey) {
         // check if encrypted via sharing
         contentKey = await this.options.sharing.getKey(
-          contract.options.address, accountId, propertyName, envelope.cryptoInfo.block, callId);
+          contract.options.address, accountId, propertyName, envelope.cryptoInfo.block, callId,
+        );
       }
       if (!contentKey) {
-        throw new Error(`could not decrypt data, no content key found for contract ` +
-          `"${contract.options.address}" and account "${accountId}"`);
+        throw new Error('could not decrypt data, no content key found for contract '
+          + `"${contract.options.address}" and account "${accountId}"`);
       }
       const decryptedObject = await cryptor.decrypt(
-        Buffer.from(envelope.private, this.encodingEncrypted), { key: contentKey, });
+        Buffer.from(envelope.private, this.encodingEncrypted), { key: contentKey },
+      );
 
       await Promise.all(Object.keys(decryptedObject).map(async (property) => {
         await Promise.all(Object.keys(decryptedObject[property]).map(async (key) => {
-          if (decryptedObject[property][key].hasOwnProperty('private') &&
-              decryptedObject[property][key].hasOwnProperty('cryptoInfo')) {
+          if (Object.prototype.hasOwnProperty.call(decryptedObject[property][key], 'private')
+              && Object.prototype.hasOwnProperty.call(decryptedObject[property][key], 'cryptoInfo')) {
             try {
               const innerCryptor = this.options.cryptoProvider.getCryptorByCryptoInfo(
-                decryptedObject[property][key].cryptoInfo);
+                decryptedObject[property][key].cryptoInfo,
+              );
               const envelopeInner = decryptedObject[property][key];
               const contentKeyInner = await this.options.sharing.getKey(
-                contract.options.address, accountId, key, envelopeInner.cryptoInfo.block, callId);
+                contract.options.address, accountId, key, envelopeInner.cryptoInfo.block, callId,
+              );
               decryptedObject[property][key] = await innerCryptor.decrypt(
                 Buffer.from(envelopeInner.private, this.encodingEncrypted),
                 { key: contentKeyInner },
               );
             } catch (ex) {
-              this.log(`could not decrypt inner service message part ` +
-                `${property}/${key}; ${ex.message || ex}`, 'info')
+              this.log('could not decrypt inner service message part '
+                + `${property}/${key}; ${ex.message || ex}`, 'info');
             }
           }
         }));
@@ -779,9 +819,9 @@ export class ServiceContract extends BaseContract {
       return decryptedObject;
     } catch (ex) {
       this.log(
-        `could not decrypt service contract message "${toDecrypt}" for contract ` +
-        `"${contract.options.address}" with accountId "${accountId}" in section "${propertyName}"` +
-          callId ? (' for call ' + callId) : '',
+        `${`could not decrypt service contract message "${toDecrypt}" for contract `
+        + `"${contract.options.address}" with accountId "${accountId}" in section "${propertyName}"`}${
+          callId}` ? (` for call ${callId}`) : '',
         'debug',
       );
       return null;
@@ -797,28 +837,33 @@ export class ServiceContract extends BaseContract {
    * @param      {string}        callId     (optional) if a call should be decrypted, id of the call
    * @return     {Promise<any>}  decrypted envelope or null (if unable to decyrypt)
    */
-  private async decryptHash(toDecrypt: string, contract: any, accountId: string, callId?: string
+  private async decryptHash(
+    toDecrypt: string,
+    contract: any,
+    accountId: string,
+    callId?: string,
   ): Promise<string> {
-    const dataContract = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('ServiceContractInterface', contract);
+    const dataContract = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('ServiceContractInterface', contract);
     try {
       // decode hash
       const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(this.cryptoAlgorithHashes);
       const hashKey = await this.options.sharing.getHashKey(
-        dataContract.options.address, accountId, callId);
+        dataContract.options.address, accountId, callId,
+      );
       if (!hashKey) {
-        throw new Error(`no hashKey key found for contract "${dataContract.options.address}" ` +
-          `and account "${accountId}"`);
+        throw new Error(`no hashKey key found for contract "${dataContract.options.address}" `
+          + `and account "${accountId}"`);
       }
       const decryptedBuffer = await cryptor.decrypt(
-        Buffer.from(toDecrypt.substr(2), this.encodingEncrypted), { key: hashKey, });
+        Buffer.from(toDecrypt.substr(2), this.encodingEncrypted), { key: hashKey },
+      );
       return `0x${decryptedBuffer.toString(this.encodingUnencryptedHash)}`;
     } catch (ex) {
-      this.log(`could not decrypt service contract hash "${toDecrypt}" for contract ` +
-        `"${dataContract.options.address}" with account id "${accountId}"` +
-        callId ? (' for call ' + callId) : '',
-      'debug',
-      );
+      this.log(`${`could not decrypt service contract hash "${toDecrypt}" for contract `
+        + `"${dataContract.options.address}" with account id "${accountId}"`}${
+        callId}` ? (` for call ${callId}`) : '',
+      'debug');
       return null;
     }
   }
@@ -849,35 +894,40 @@ export class ServiceContract extends BaseContract {
     innerPropertiesToEncrpt?: any,
     innerEncryptionData?: any,
   ): Promise<string> {
+    const toEncryptParameter = toEncrypt;
     // helper for encrypting properties
     const encryptSubProperties = async (property) => {
       if (innerPropertiesToEncrpt[property]) {
         await Promise.all(innerPropertiesToEncrpt[property].map(async (keyInner) => {
-          if (innerPropertiesToEncrpt[property].includes(keyInner) &&
-              toEncrypt[property][keyInner]) {
+          if (innerPropertiesToEncrpt[property].includes(keyInner)
+              && toEncryptParameter[property][keyInner]) {
             // encrypt with content key
             const encryptedBufferInner = await innerEncryptionData[keyInner].cryptor.encrypt(
-              toEncrypt[property][keyInner].private, { key: innerEncryptionData[keyInner].key, });
+              toEncryptParameter[property][keyInner].private,
+              { key: innerEncryptionData[keyInner].key },
+            );
             const encryptedProperty = encryptedBufferInner.toString(this.encodingEncrypted);
             const envelopeInner: Envelope = {
               private: encryptedProperty,
-              cryptoInfo: toEncrypt[property][keyInner].cryptoInfo,
+              cryptoInfo: toEncryptParameter[property][keyInner].cryptoInfo,
             };
             envelopeInner.cryptoInfo.block = block;
-            toEncrypt[property][keyInner] = envelopeInner;
+            toEncryptParameter[property][keyInner] = envelopeInner;
           }
         }));
       }
     };
     // encrypt properties
     if (innerPropertiesToEncrpt) {
-      await Promise.all(Object.keys(toEncrypt).map(
-        async (toEncryptKey) => encryptSubProperties(toEncryptKey)));
+      await Promise.all(Object.keys(toEncryptParameter).map(
+        async (toEncryptKey) => encryptSubProperties(toEncryptKey),
+      ));
     }
 
     // get content key from contract
     const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(
-      this.options.defaultCryptoAlgo);
+      this.options.defaultCryptoAlgo,
+    );
     let cryptoInfo;
     let contentKey;
     if (to) {
@@ -894,22 +944,24 @@ export class ServiceContract extends BaseContract {
     } else {
       // group message, scoped to contract
       cryptoInfo = cryptor.getCryptoInfo(
-        this.options.nameResolver.soliditySha3(contract.options.address));
+        this.options.nameResolver.soliditySha3(contract.options.address),
+      );
       if (key) {
         // encrpted with calls data key from argument
         contentKey = key;
       } else {
         // retrieve calls data key from sharings
         contentKey = await this.options.sharing.getKey(
-          contract.options.address, from, propertyName, block);
+          contract.options.address, from, propertyName, block,
+        );
       }
     }
     if (!contentKey) {
-      throw new Error(`no content key found for contract "${contract.options.address}" ` +
-        `and account "${from}"`);
+      throw new Error(`no content key found for contract "${contract.options.address}" `
+        + `and account "${from}"`);
     }
     // encrypt with content key
-    const encryptedBuffer = await cryptor.encrypt(toEncrypt, { key: contentKey, });
+    const encryptedBuffer = await cryptor.encrypt(toEncryptParameter, { key: contentKey });
     const encrypted = encryptedBuffer.toString(this.encodingEncrypted);
     const envelope: Envelope = {
       private: encrypted,
@@ -929,7 +981,11 @@ export class ServiceContract extends BaseContract {
    *                                           sharings)
    * @return     {Promise<string>}  encrypted envelope or hash as string
    */
-  private async encryptHash(toEncrypt: string, contract: any, accountId: string,  key?: Buffer
+  private async encryptHash(
+    toEncrypt: string,
+    contract: any,
+    accountId: string,
+    key?: Buffer,
   ): Promise<string> {
     // get hashKkey from contract
     let hashKey;
@@ -940,13 +996,14 @@ export class ServiceContract extends BaseContract {
     }
 
     if (!hashKey) {
-      throw new Error(`no hashKey found for contract "${contract.options.address}" and account ` +
-        `"${accountId}"`);
+      throw new Error(`no hashKey found for contract "${contract.options.address}" and account `
+        + `"${accountId}"`);
     }
     // encrypt with hashKkey
     const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo(this.cryptoAlgorithHashes);
     const encryptedBuffer = await cryptor.encrypt(
-      Buffer.from(toEncrypt.substr(2), this.encodingUnencryptedHash), { key: hashKey, });
+      Buffer.from(toEncrypt.substr(2), this.encodingUnencryptedHash), { key: hashKey },
+    );
     return `0x${encryptedBuffer.toString(this.encodingEncrypted)}`;
   }
 
@@ -979,8 +1036,8 @@ export class ServiceContract extends BaseContract {
     let entryCount;
     let queryOffset = offset;
     if (reverse) {
-      entryCount = await (type === 'calls' ?
-        this.getCallCount(serviceContract) : this.getAnswerCount(serviceContract, callId));
+      entryCount = await (type === 'calls'
+        ? this.getCallCount(serviceContract) : this.getAnswerCount(serviceContract, callId));
       queryOffset = Math.max(entryCount - offset - count, 0);
     }
     let itemsRetrieved = 0;
@@ -989,14 +1046,16 @@ export class ServiceContract extends BaseContract {
       let queryResult;
       if (type === 'calls') {
         queryResult = await this.options.executor.executeContractCall(
-          serviceContract, 'getCalls', singleQueryOffset);
+          serviceContract, 'getCalls', singleQueryOffset,
+        );
       } else {
         queryResult = await this.options.executor.executeContractCall(
-          serviceContract, 'getAnswers', callId, singleQueryOffset);
+          serviceContract, 'getAnswers', callId, singleQueryOffset,
+        );
       }
       itemsRetrieved += resultsPerPage;
 
-      for (let i = 0; i < queryResult.hash.length; i++) {
+      for (let i = 0; i < queryResult.hash.length; i += 1) {
         const resultId = i + singleQueryOffset;
         result.indices.push(resultId);
         result.entries[resultId] = {};

@@ -24,5 +24,5 @@ import user from './user';
 export {
   company,
   device,
-  user
-}
+  user,
+};

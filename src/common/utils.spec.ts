@@ -28,38 +28,37 @@ import { TestUtils } from '../test/test-utils';
 
 use(chaiAsPromised);
 
-function parseAuthData (authData) {
+function parseAuthData(authData) {
   const splitAuthHeader = authData.split(',');
   const authComponents = {} as any;
-  splitAuthHeader.forEach(authHeader => {
+  splitAuthHeader.forEach((authHeader) => {
     const splitHeader = authHeader.split(' ');
-    authComponents[splitHeader[0]] = splitHeader[1];
+    [, authComponents[splitHeader[0]]] = splitHeader;
   });
   return authComponents;
 }
-function ensureAuth (web3, authData) {
+function ensureAuth(web3, authData) {
   const authComponents = parseAuthData(authData);
 
-  const signedTime = parseInt(authComponents.EvanMessage, 10)
+  const signedTime = parseInt(authComponents.EvanMessage, 10);
   const maxAge = 1000 * 60 * 5; // max age of signed message is 5m
 
   if (signedTime + maxAge < Date.now()) {
-    throw new Error('signed message has expired')
+    throw new Error('signed message has expired');
   }
 
   const authId = web3.eth.accounts.recover(
     authComponents.EvanMessage,
-    authComponents.EvanSignedMessage
-  )
+    authComponents.EvanSignedMessage,
+  );
   if (authId !== authComponents.EvanAuth) {
-    throw new Error('No verified Account.')
+    throw new Error('No verified Account.');
   }
-  return authComponents
+  return authComponents;
 }
 
 
-
-describe('utils', function() {
+describe('utils', function test() {
   this.timeout(60000);
   let runtime: Runtime;
 
