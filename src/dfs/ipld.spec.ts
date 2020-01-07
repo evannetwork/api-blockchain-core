@@ -21,11 +21,11 @@ import 'mocha';
 import { expect } from 'chai';
 
 import { CryptoProvider } from '../encryption/crypto-provider';
-import { Ipld } from './ipld'
-import { TestUtils } from '../test/test-utils'
+import { Ipld } from './ipld';
+import { TestUtils } from '../test/test-utils';
 
 
-describe('IPLD handler', function() {
+describe('IPLD handler', function test() {
   this.timeout(300000);
   let ipld: Ipld;
   let ipfs;
@@ -44,14 +44,14 @@ describe('IPLD handler', function() {
   });
 
   describe('when creating a graph', () => {
-    it('should return an IPFS file hash with 32 bytes length when storing', async() => {
+    it('should return an IPFS file hash with 32 bytes length when storing', async () => {
       const sampleObject = {
         personalInfo: {
           firstName: 'eris',
         },
       };
 
-      const stored = await ipld.store(Object.assign({}, sampleObject));
+      const stored = await ipld.store({ ...sampleObject });
       expect(stored).to.match(/0x[0-9a-f]{64}/);
     });
 
@@ -62,7 +62,7 @@ describe('IPLD handler', function() {
         },
       };
 
-      const stored = await ipld.store(Object.assign({}, sampleObject));
+      const stored = await ipld.store({ ...sampleObject });
       const loaded = await ipld.getLinkedGraph(stored, '');
       expect(loaded).not.to.be.undefined;
       Ipld.purgeCryptoInfo(loaded);
@@ -76,7 +76,7 @@ describe('IPLD handler', function() {
         },
       };
 
-      const stored = await ipld.store(Object.assign({}, sampleObject));
+      const stored = await ipld.store({ ...sampleObject });
       const loaded = await ipld.getLinkedGraph(stored, '');
       expect(loaded).not.to.be.undefined;
       Ipld.purgeCryptoInfo(loaded);
@@ -92,11 +92,11 @@ describe('IPLD handler', function() {
         },
       };
       const sub = {
-        contracts: ['0x01', '0x02', '0x03']
+        contracts: ['0x01', '0x02', '0x03'],
       };
 
       const extended = await ipld.set(sampleObject, 'dapps', sub);
-      const extendedstored = await ipld.store(Object.assign({}, extended));
+      const extendedstored = await ipld.store({ ...extended });
       const loaded = await ipld.getLinkedGraph(extendedstored, '');
 
       // unlinked (root data)
@@ -122,7 +122,7 @@ describe('IPLD handler', function() {
         },
       };
       const sub = {
-        contracts: ['0x01', '0x02', '0x03']
+        contracts: ['0x01', '0x02', '0x03'],
       };
       const subSub = {
         contracts: '0x02',
@@ -130,12 +130,12 @@ describe('IPLD handler', function() {
 
       // add lv1
       const plusSub = await ipld.set(sampleObject, 'dapps', sub);
-      const plusSubstored = await ipld.store(Object.assign({}, plusSub));
+      const plusSubstored = await ipld.store({ ...plusSub });
       const loadedSub = await ipld.getLinkedGraph(plusSubstored, '');
 
       // add lv2
       const plusSubSub = await ipld.set(loadedSub, 'dapps/favorites', subSub);
-      const plusSubSubstored = await ipld.store(Object.assign({}, plusSubSub));
+      const plusSubSubstored = await ipld.store({ ...plusSubSub });
       const loadedFull = await ipld.getLinkedGraph(plusSubSubstored, '');
 
       // unlinked (root data)
@@ -162,13 +162,13 @@ describe('IPLD handler', function() {
         },
       };
       const sub = {
-        contracts: ['0x01', '0x02', '0x03']
+        contracts: ['0x01', '0x02', '0x03'],
       };
 
       const cryptor = cryptoProvider.getCryptorByCryptoAlgo('aes');
       const cryptoInfo = cryptor.getCryptoInfo(helperWeb3.utils.soliditySha3('context sample'));
       const extended = await ipld.set(sampleObject, 'dapps', sub, false, cryptoInfo);
-      const extendedstored = await ipld.store(Object.assign({}, extended));
+      const extendedstored = await ipld.store({ ...extended });
       const loaded = await ipld.getLinkedGraph(extendedstored, '');
 
       // unlinked (root data)
@@ -196,7 +196,7 @@ describe('IPLD handler', function() {
         },
       };
       const sub = {
-        contracts: ['0x01', '0x02', '0x03']
+        contracts: ['0x01', '0x02', '0x03'],
       };
       const subSub = {
         contracts: '0x02',
@@ -204,12 +204,12 @@ describe('IPLD handler', function() {
 
       // add lv1
       const plusSub = await ipld.set(sampleObject, 'dapps', sub);
-      const plusSubstored = await ipld.store(Object.assign({}, plusSub));
+      const plusSubstored = await ipld.store({ ...plusSub });
       const loadedSub = await ipld.getLinkedGraph(plusSubstored, '');
 
       // add lv2
       const plusSubSub = await ipld.set(loadedSub, 'dapps/favorites', subSub);
-      const plusSubSubstored = await ipld.store(Object.assign({}, plusSubSub));
+      const plusSubSubstored = await ipld.store({ ...plusSubSub });
       const loadedFull = await ipld.getLinkedGraph(plusSubSubstored, '');
 
       // lv1 is linked
@@ -235,7 +235,7 @@ describe('IPLD handler', function() {
         },
       };
       const sub = {
-        contracts: ['0x01', '0x02', '0x03']
+        contracts: ['0x01', '0x02', '0x03'],
       };
       const subSub = {
         contracts: '0x02',
@@ -243,12 +243,12 @@ describe('IPLD handler', function() {
 
       // add lv1
       const plusSub = await ipld.set(sampleObject, 'dapps', sub);
-      const plusSubstored = await ipld.store(Object.assign({}, plusSub));
+      const plusSubstored = await ipld.store({ ...plusSub });
       const loadedSub = await ipld.getLinkedGraph(plusSubstored, '');
 
       // add lv2
       const plusSubSub = await ipld.set(loadedSub, 'dapps/favorites', subSub);
-      const plusSubSubstored = await ipld.store(Object.assign({}, plusSubSub));
+      const plusSubSubstored = await ipld.store({ ...plusSubSub });
       const loadedFull = await ipld.getResolvedGraph(plusSubSubstored, '');
 
       // lv1 is not linked
@@ -270,13 +270,13 @@ describe('IPLD handler', function() {
       const sampleObject = {
         personalInfo: {
           firstName: 'eris',
-          titles: ['eris']
+          titles: ['eris'],
         },
       };
       const sub = {
-        contracts: ['0x01', '0x02', '0x03']
+        contracts: ['0x01', '0x02', '0x03'],
       };
-      const stored = await ipld.store(Object.assign({}, sampleObject));
+      const stored = await ipld.store({ ...sampleObject });
       const graph = await ipld.getLinkedGraph(stored);
       await ipld.set(graph, 'dapps', sub);
 
@@ -289,7 +289,7 @@ describe('IPLD handler', function() {
       const expected = {
         personalInfo: {
           firstName: 'eris',
-          titles: ['eris']
+          titles: ['eris'],
         },
         dapps: {
           '/': {
@@ -308,23 +308,23 @@ describe('IPLD handler', function() {
       const sampleObject = {
         personalInfo: {
           firstName: 'eris',
-          titles: ['eris']
+          titles: ['eris'],
         },
       };
       const sub = {
-        contracts: ['0x01', '0x02', '0x03']
+        contracts: ['0x01', '0x02', '0x03'],
       };
 
       const extended = await ipld.set(sampleObject, 'dapps', sub);
-      const extendedstored = await ipld.store(Object.assign({}, extended));
+      const extendedstored = await ipld.store({ ...extended });
       const loaded = await ipld.getLinkedGraph(extendedstored, '');
 
 
-      const subModified = Object.assign({}, sub);
+      const subModified = { ...sub };
       subModified.contracts.push('0x04');
       const updated = await ipld.set(loaded, 'dapps', subModified);
 
-      const updatedStored = await ipld.store(Object.assign({}, updated));
+      const updatedStored = await ipld.store({ ...updated });
       const loadedUpdated = await ipld.getResolvedGraph(updatedStored, '');
 
       // linked (root data) access
@@ -341,23 +341,23 @@ describe('IPLD handler', function() {
           const sampleObject = {
             personalInfo: {
               firstName: 'eris',
-              titles: ['eris']
+              titles: ['eris'],
             },
           };
           const sub = {
-            contracts: ['0x01', '0x02', '0x03']
+            contracts: ['0x01', '0x02', '0x03'],
           };
 
           const extended = await localIpld.set(sampleObject, 'dapps', sub);
-          const extendedstored = await localIpld.store(Object.assign({}, extended));
+          const extendedstored = await localIpld.store({ ...extended });
           const loaded = await localIpld.getLinkedGraph(extendedstored, '');
 
 
-          const subModified = Object.assign({}, sub);
+          const subModified = { ...sub };
           subModified.contracts.push('0x04');
           const updated = await localIpld.set(loaded, 'dapps', subModified);
 
-          const updatedStored = await localIpld.store(Object.assign({}, updated));
+          const updatedStored = await localIpld.store({ ...updated });
           const loadedUpdated = await localIpld.getResolvedGraph(updatedStored, '');
 
           // linked (root data) access
@@ -414,15 +414,15 @@ describe('IPLD handler', function() {
       let updated;
 
       // store initial
-      stored = await ipld.store(Object.assign({}, initialTree));
+      stored = await ipld.store({ ...initialTree });
       loaded = await ipld.getLinkedGraph(stored, '');
 
       // add subtree
       updated = await ipld.set(loaded, 'gods/eris', eris);
-      stored = await ipld.store(Object.assign({}, updated));
+      stored = await ipld.store({ ...updated });
       loaded = await ipld.getLinkedGraph(stored, '');
       updated = await ipld.set(loaded, 'gods/eris/details', erisDetails);
-      stored = await ipld.store(Object.assign({}, updated));
+      stored = await ipld.store({ ...updated });
       loaded = await ipld.getLinkedGraph(stored, '');
 
       // check loaded
@@ -495,7 +495,7 @@ describe('IPLD handler', function() {
       // delete topmost link
       sampleGraph = await createSampleGraph();
       updated = await ipld.remove(sampleGraph, 'gods/eris');
-      stored = await ipld.store(Object.assign({}, updated));
+      stored = await ipld.store({ ...updated });
       loaded = await ipld.getResolvedGraph(stored, '');
       expect(loaded).not.to.be.undefined;
       Ipld.purgeCryptoInfo(loaded);
@@ -504,7 +504,7 @@ describe('IPLD handler', function() {
       // delete topmost link
       sampleGraph = await createSampleGraph();
       updated = await ipld.remove(sampleGraph, 'gods/eris/details');
-      stored = await ipld.store(Object.assign({}, updated));
+      stored = await ipld.store({ ...updated });
       loaded = await ipld.getResolvedGraph(stored, '');
       expect(loaded).not.to.be.undefined;
       Ipld.purgeCryptoInfo(loaded);
@@ -536,7 +536,7 @@ describe('IPLD handler', function() {
 
       const sampleGraph = await createSampleGraph();
       const updated = await ipld.remove(sampleGraph, deletion);
-      const stored = await ipld.store(Object.assign({}, updated));
+      const stored = await ipld.store({ ...updated });
       const loaded = await ipld.getResolvedGraph(stored, '');
       expect(loaded).not.to.be.undefined;
       Ipld.purgeCryptoInfo(loaded);
@@ -574,7 +574,7 @@ describe('IPLD handler', function() {
 
       const sampleGraph = await createSampleGraph();
       updated = await ipld.remove(sampleGraph, deletion);
-      stored = await ipld.store(Object.assign({}, updated));
+      stored = await ipld.store({ ...updated });
       loaded = await ipld.getResolvedGraph(stored, '');
 
       // add lv2
@@ -583,7 +583,7 @@ describe('IPLD handler', function() {
       const loadedSub = await ipld.getLinkedGraph(plusSub, '');
       updated = await ipld.remove(loadedSub, 'titans/prometeus');
 
-      stored = await ipld.store(Object.assign({}, updated));
+      stored = await ipld.store({ ...updated });
       loaded = await ipld.getResolvedGraph(stored, '');
       Ipld.purgeCryptoInfo(loaded);
       expect(loaded).to.deep.eq(expectedGraph);
@@ -624,7 +624,7 @@ describe('IPLD handler', function() {
 
       const sampleGraph = await createSampleGraph();
       updated = await ipld.remove(sampleGraph, deletion);
-      stored = await ipld.store(Object.assign({}, updated));
+      stored = await ipld.store({ ...updated });
       loaded = await ipld.getResolvedGraph(stored, '');
 
       // add lv3
@@ -634,7 +634,7 @@ describe('IPLD handler', function() {
       const loadedSub = await ipld.getLinkedGraph(plusSub, '');
       updated = await ipld.remove(loadedSub, 'titans/prometeus/punishment');
 
-      stored = await ipld.store(Object.assign({}, updated));
+      stored = await ipld.store({ ...updated });
       loaded = await ipld.getResolvedGraph(stored, '');
       Ipld.purgeCryptoInfo(loaded);
       expect(loaded).to.deep.eq(expectedGraph);
@@ -673,7 +673,7 @@ describe('IPLD handler', function() {
 
       const sampleGraph = await createSampleGraph();
       updated = await ipld.remove(sampleGraph, deletion);
-      stored = await ipld.store(Object.assign({}, updated));
+      stored = await ipld.store({ ...updated });
       loaded = await ipld.getResolvedGraph(stored, '');
 
       // add lv3
@@ -681,7 +681,7 @@ describe('IPLD handler', function() {
       const loadedSub = await ipld.getLinkedGraph(plusSub, '');
       updated = await ipld.remove(loadedSub, 'titans/prometeus/punishment');
 
-      stored = await ipld.store(Object.assign({}, updated));
+      stored = await ipld.store({ ...updated });
       loaded = await ipld.getResolvedGraph(stored, '');
       Ipld.purgeCryptoInfo(loaded);
       expect(loaded).to.deep.eq(expectedGraph);
@@ -706,7 +706,7 @@ describe('IPLD handler', function() {
         titans: {
           prometeus: {
             '/': {
-              'punishment': {
+              punishment: {
                 animal: 'raven',
               },
             },
@@ -719,7 +719,7 @@ describe('IPLD handler', function() {
 
       const sampleGraph = await createSampleGraph();
       updated = await ipld.remove(sampleGraph, deletion);
-      stored = await ipld.store(Object.assign({}, updated));
+      stored = await ipld.store({ ...updated });
       loaded = await ipld.getResolvedGraph(stored, '');
 
       // add lv3
@@ -727,7 +727,7 @@ describe('IPLD handler', function() {
       const loadedSub = await ipld.getLinkedGraph(plusSub, '');
       updated = await ipld.remove(loadedSub, 'gods/eris/details');
 
-      stored = await ipld.store(Object.assign({}, updated));
+      stored = await ipld.store({ ...updated });
       loaded = await ipld.getResolvedGraph(stored, '');
       Ipld.purgeCryptoInfo(loaded);
       expect(loaded).to.deep.eq(expectedGraph);

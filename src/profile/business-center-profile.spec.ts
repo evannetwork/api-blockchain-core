@@ -31,7 +31,7 @@ import {
 } from '../index';
 
 
-describe('BusinessCenterProfile helper', function() {
+describe('BusinessCenterProfile helper', function test() {
   this.timeout(600000);
   let ipld: Ipld;
   let nameResolver: NameResolver;
@@ -54,24 +54,26 @@ describe('BusinessCenterProfile helper', function() {
     const businessCenter = loader.loadContract('BusinessCenter', bcAddress);
     const executor = await TestUtils.getExecutor(web3);
     const isMember = await executor.executeContractCall(
-      businessCenter, 'isMember', accounts[0], { from: accounts[0], gas: 3000000, });
+      businessCenter, 'isMember', accounts[0], { from: accounts[0], gas: 3000000 },
+    );
     if (!isMember) {
       await executor.executeContractTransaction(
-        businessCenter, 'join', { from: accounts[0], autoGas: 1.1, });
+        businessCenter, 'join', { from: accounts[0], autoGas: 1.1 },
+      );
     }
   });
 
   it('should be able to set and load a profile for a given user in a business center', async () => {
     // use own key for test
-    (ipld.keyProvider as KeyProvider).keys[nameResolver.soliditySha3(businessCenterDomain)] =
-      (ipld.keyProvider as KeyProvider).keys[nameResolver.soliditySha3(accounts[0])];
+    // eslint-disable-next-line
+    (ipld.keyProvider as KeyProvider).keys[nameResolver.soliditySha3(businessCenterDomain)] = (ipld.keyProvider as KeyProvider).keys[nameResolver.soliditySha3(accounts[0])];
     // create profile
     const profile = new BusinessCenterProfile({
       ipld,
       nameResolver,
       defaultCryptoAlgo: 'aes',
       bcAddress: businessCenterDomain,
-      cryptoProvider: TestUtils.getCryptoProvider()
+      cryptoProvider: TestUtils.getCryptoProvider(),
     });
     await profile.setContactCard(JSON.parse(JSON.stringify(sampleProfile)));
 
@@ -85,7 +87,7 @@ describe('BusinessCenterProfile helper', function() {
       nameResolver,
       defaultCryptoAlgo: 'aes',
       bcAddress: businessCenterDomain,
-      cryptoProvider: TestUtils.getCryptoProvider()
+      cryptoProvider: TestUtils.getCryptoProvider(),
     });
     await newProfile.loadForBusinessCenter(businessCenterDomain, from);
 

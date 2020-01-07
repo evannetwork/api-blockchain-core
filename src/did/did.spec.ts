@@ -31,7 +31,7 @@ import {
 
 use(chaiAsPromised);
 
-describe('DID Resolver', function() {
+describe('DID Resolver', function test() {
   this.timeout(600000);
   let accounts0Identity: string;
   let accounts0Did: string;
@@ -70,7 +70,10 @@ describe('DID Resolver', function() {
 
     it('does not allow to store a DID document for another identity', async () => {
       const document = await runtimes[0].did.getDidDocumentTemplate();
-      const accounts1Identity = await runtimes[0].verifications.getIdentityForAccount(accounts[1], true);
+      const accounts1Identity = await runtimes[0].verifications.getIdentityForAccount(
+        accounts[1],
+        true,
+      );
       const accounts1Did = await runtimes[0].did.convertIdentityToDid(accounts1Identity);
       const promise = runtimes[0].did.setDidDocument(accounts1Did, document);
       await expect(promise).to.be.rejectedWith(/^could not estimate gas usage for setDidDocument/);
@@ -116,14 +119,17 @@ describe('DID Resolver', function() {
         },
       );
       const twinIdentity = await runtimes[0].verifications.getIdentityForAccount(
-        await twin.getContractAddress(), true);
+        await twin.getContractAddress(), true,
+      );
       const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);
 
       const controllerDid = await runtimes[0].did.convertIdentityToDid(
-        runtimes[0].activeIdentity);
+        runtimes[0].activeIdentity,
+      );
       const controllerDidDocument = await runtimes[0].did.getDidDocument(accounts0Did);
       const document = await runtimes[0].did.getDidDocumentTemplate(
-        twinDid, controllerDid, controllerDidDocument.authentication[0]);
+        twinDid, controllerDid, controllerDidDocument.authentication[0],
+      );
       const promise = runtimes[0].did.setDidDocument(twinDid, document);
       await expect(promise).not.to.be.rejected;
     });
@@ -139,14 +145,17 @@ describe('DID Resolver', function() {
         },
       );
       const twinIdentity = await runtimes[0].verifications.getIdentityForAccount(
-        await twin.getContractAddress(), true);
+        await twin.getContractAddress(), true,
+      );
       const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);
 
       const controllerDid = await runtimes[0].did.convertIdentityToDid(
-        runtimes[0].activeIdentity);
+        runtimes[0].activeIdentity,
+      );
       const controllerDidDocument = await runtimes[0].did.getDidDocument(accounts0Did);
       const document = await runtimes[0].did.getDidDocumentTemplate(
-        twinDid, controllerDid, controllerDidDocument.authentication[0]);
+        twinDid, controllerDid, controllerDidDocument.authentication[0],
+      );
       await runtimes[0].did.setDidDocument(twinDid, document);
       const retrieved = await runtimes[0].did.getDidDocument(twinDid);
       expect(retrieved).to.deep.eq(document);
@@ -163,14 +172,17 @@ describe('DID Resolver', function() {
         },
       );
       const twinIdentity = await runtimes[0].verifications.getIdentityForAccount(
-        await twin.getContractAddress(), true);
+        await twin.getContractAddress(), true,
+      );
       const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);
 
       const controllerDid = await runtimes[0].did.convertIdentityToDid(
-        runtimes[0].activeIdentity);
+        runtimes[0].activeIdentity,
+      );
       const controllerDidDocument = await runtimes[0].did.getDidDocument(accounts0Did);
       const document = await runtimes[0].did.getDidDocumentTemplate(
-        twinDid, controllerDid, controllerDidDocument.authentication[0]);
+        twinDid, controllerDid, controllerDidDocument.authentication[0],
+      );
       await runtimes[0].did.setDidDocument(twinDid, document);
 
       const retrieved = await runtimes[1].did.getDidDocument(twinDid);
@@ -188,14 +200,17 @@ describe('DID Resolver', function() {
         },
       );
       const twinIdentity = await runtimes[0].verifications.getIdentityForAccount(
-        await twin.getContractAddress(), true);
+        await twin.getContractAddress(), true,
+      );
       const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);
 
       const controllerDid = await runtimes[0].did.convertIdentityToDid(
-        runtimes[0].activeIdentity);
+        runtimes[0].activeIdentity,
+      );
       const controllerDidDocument = await runtimes[0].did.getDidDocument(accounts0Did);
       const document = await runtimes[0].did.getDidDocumentTemplate(
-        twinDid, controllerDid, controllerDidDocument.authentication[0]);
+        twinDid, controllerDid, controllerDidDocument.authentication[0],
+      );
       const runtime1 = runtimes[1];
       const promise = runtime1.did.setDidDocument(twinDid, document);
       await expect(promise).to.be.rejectedWith(/^could not estimate gas usage for setDidDocument/);

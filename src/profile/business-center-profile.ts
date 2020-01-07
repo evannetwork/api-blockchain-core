@@ -46,10 +46,15 @@ export interface BusinessCenterProfileOptions extends LoggerOptions {
  */
 export class BusinessCenterProfile extends Logger {
   public bcAddress: string;
+
   public cryptoProvider: CryptoProvider;
+
   public defaultCryptoAlgo: string;
+
   public ipld: Ipld;
+
   public ipldData: any;
+
   public nameResolver: NameResolver;
 
   public constructor(options: BusinessCenterProfileOptions) {
@@ -85,7 +90,7 @@ export class BusinessCenterProfile extends Logger {
     } catch (e) {
       this.log(`Error getting BC Profile ${e}`, 'debug');
       loaded = {
-        alias: {}
+        alias: {},
       };
     }
     this.ipldData = loaded;
@@ -120,18 +125,21 @@ export class BusinessCenterProfile extends Logger {
    * @param      {string}   account               Ethereum account id
    * @return     {Promise}  resolved when done
    */
-  public async storeForBusinessCenter(businessCenterDomain: string, account: string
+  public async storeForBusinessCenter(
+    businessCenterDomain: string,
+    account: string,
   ): Promise<void> {
     const [stored, address] = await Promise.all([
       this.storeToIpld(),
       this.nameResolver.getAddress(businessCenterDomain),
     ]);
     const contract = this.nameResolver.contractLoader.loadContract(
-      'BusinessCenterInterface', address);
+      'BusinessCenterInterface', address,
+    );
     await this.nameResolver.executor.executeContractTransaction(
       contract,
       'setMyProfile',
-      { from: account, autoGas: 1.1, },
+      { from: account, autoGas: 1.1 },
       stored,
     );
   }
@@ -143,20 +151,22 @@ export class BusinessCenterProfile extends Logger {
    * @param      {string}   account               Ethereum account id
    * @return     {Promise}  resolved when done
    */
+  // eslint-disable-next-line consistent-return
   public async loadForBusinessCenter(businessCenterDomain: string, account: string): Promise<any> {
     const address = await this.nameResolver.getAddress(businessCenterDomain);
     const contract = this.nameResolver.contractLoader.loadContract(
-      'BusinessCenterInterface', address);
+      'BusinessCenterInterface', address,
+    );
     const hash = await this.nameResolver.executor.executeContractCall(
-      contract, 'getProfile', account);
+      contract, 'getProfile', account,
+    );
     if (hash === '0x0000000000000000000000000000000000000000000000000000000000000000') {
       this.ipldData = {
         alias: '',
       };
       return Promise.resolve();
-    } else {
-      await this.loadFromIpld(hash);
     }
+    await this.loadFromIpld(hash);
   }
 
   /**
@@ -174,13 +184,17 @@ export class BusinessCenterProfile extends Logger {
   ): Promise<any> {
     const address = await this.nameResolver.getAddress(businessCenterDomain);
     const contract = this.nameResolver.contractLoader.loadContract(
-      'BusinessCenterInterface', address);
+      'BusinessCenterInterface', address,
+    );
     const bcIndex = await this.nameResolver.executor.executeContractCall(
-      contract, 'getMyIndex', {from: account});
+      contract, 'getMyIndex', { from: account },
+    );
     const indexContract = this.nameResolver.contractLoader.loadContract(
-      'DataStoreIndexInterface', bcIndex);
+      'DataStoreIndexInterface', bcIndex,
+    );
     const contracts = await this.nameResolver.getArrayFromIndexContract(
-      indexContract, this.nameResolver.soliditySha3(contractType));
+      indexContract, this.nameResolver.soliditySha3(contractType),
+    );
     return contracts;
   }
 }

@@ -37,6 +37,7 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
  */
 export enum DigitalTwinEntryType {
   AccountId,
+  // eslint-disable-next-line no-shadow
   Container,
   FileHash,
   GenericContract,
@@ -56,7 +57,7 @@ export interface DigitalTwinConfig {
   address?: string;
   /** description has to be passed to ``.create`` to apply it to to contract */
   description?: any;
-  /** factory address can be passed to ``.create`` for customer digital twin factory*/
+  /** factory address can be passed to ``.create`` for customer digital twin factory */
   factoryAddress?: string;
 }
 
@@ -78,7 +79,8 @@ export interface DigitalTwinIndexEntry {
 export interface DigitalTwinVerificationEntry {
   /** name of the verification (full path) */
   topic: string;
-  /** domain of the verification, this is a subdomain under 'verifications.evan', so passing 'example' will link verifications */
+  /** domain of the verification, this is a subdomain under 'verifications.evan',
+   * so passing 'example' will link verifications */
   descriptionDomain?: string;
   /** if true, verifications created under  this path are invalid, defaults to ``false`` */
   disableSubverifications?: boolean;
@@ -108,9 +110,13 @@ export class DigitalTwin extends Logger {
     version: '0.1.0',
     dbcpVersion: 2,
   };
+
   private config: DigitalTwinConfig;
+
   private contract: any;
+
   private options: DigitalTwinOptions;
+
   private mutexes: { [id: string]: Mutex };
 
   /**
@@ -126,7 +132,7 @@ export class DigitalTwin extends Logger {
     const instanceConfig = JSON.parse(JSON.stringify(config));
 
     // ensure, that the evan digital twin tag is set
-    instanceConfig.description.tags = instanceConfig.description.tags || [ ];
+    instanceConfig.description.tags = instanceConfig.description.tags || [];
     if (instanceConfig.description.tags.indexOf('evan-digital-twin') === -1) {
       instanceConfig.description.tags.push('evan-digital-twin');
     }
@@ -144,22 +150,23 @@ export class DigitalTwin extends Logger {
     if (instanceConfig.address && instanceConfig.address.indexOf('0x') !== 0) {
       try {
         const splitEns = config.address.split('.');
-        for (let i = splitEns.length - 1; i > -1; i--) {
+        for (let i = splitEns.length - 1; i > -1; i -= 1) {
           const checkAddress = splitEns.slice(i, splitEns.length).join('.');
 
           const owner = await options.executor.executeContractCall(
-            options.nameResolver.ensContract, 'owner', options.nameResolver.namehash(checkAddress));
+            options.nameResolver.ensContract, 'owner', options.nameResolver.namehash(checkAddress),
+          );
           if (owner === nullAddress) {
             await options.nameResolver.setAddress(
               checkAddress,
               nullAddress,
-              instanceConfig.accountId
+              instanceConfig.accountId,
             );
           }
         }
       } catch (ex) {
         throw new Error(`account is not permitted to create a contract for the ens address
-          ${ config.address }`);
+          ${config.address}`);
       }
     }
 
@@ -169,12 +176,13 @@ export class DigitalTwin extends Logger {
       factoryAddress = instanceConfig.factoryAddress;
     } else {
       factoryAddress = await options.nameResolver.getAddress(
-        instanceConfig.factoryAddress ||
-        options.nameResolver.getDomainName(options.nameResolver.config.domains.indexFactory),
+        instanceConfig.factoryAddress
+        || options.nameResolver.getDomainName(options.nameResolver.config.domains.indexFactory),
       );
     }
     const factory = options.contractLoader.loadContract(
-      'DigitalTwinFactory', factoryAddress);
+      'DigitalTwinFactory', factoryAddress,
+    );
     const contractId = await options.executor.executeContractTransaction(
       factory,
       'createContract', {
@@ -228,13 +236,14 @@ export class DigitalTwin extends Logger {
     options: DigitalTwinOptions,
     ensAddress: string,
   ): Promise<{ valid: boolean; exists: boolean; error: Error }> {
-    let valid = false, exists = false, error = null;
+    let valid = false; let exists = false; let
+      error = null;
 
     // create temporary twin instance, to ensure the contract
     const twinInstance = new DigitalTwin(options, {
       accountId: nullAddress,
       address: ensAddress,
-      containerConfig: { accountId: nullAddress }
+      containerConfig: { accountId: nullAddress },
     });
 
     // try to load the contract, this will throw, when the specification is invalid
@@ -287,7 +296,7 @@ export class DigitalTwin extends Logger {
     await this.ensureContract();
     const owner = await this.options.executor.executeContractCall(this.contract, 'owner');
     const isOwner = owner === this.config.accountId;
-    await Throttle.all(verifications.map(verification => async () => {
+    await Throttle.all(verifications.map((verification) => async () => {
       const verificationId = await this.options.verifications.setVerification(
         this.config.accountId,
         this.contract.options.address,
@@ -309,10 +318,10 @@ export class DigitalTwin extends Logger {
     // update description if current user is owner
     if (owner === this.config.accountId) {
       // update description
-      const verificationTags = verifications.map(verification => `verification:${verification.topic}`);
+      const verificationTags = verifications.map((verification) => `verification:${verification.topic}`);
       const description = await this.getDescription();
       const oldTags = description.tags || [];
-      const toAdd = verificationTags.filter(tag => !oldTags.includes(tag));
+      const toAdd = verificationTags.filter((tag) => !oldTags.includes(tag));
       if (toAdd.length) {
         description.tags = oldTags.concat(toAdd);
         await this.setDescription(description);
@@ -327,7 +336,8 @@ export class DigitalTwin extends Logger {
    *                                                                       create, name is used as
    *                                                                       entry name in twin
    */
-  public async createContainers(containers: { [id: string]: Partial<ContainerConfig> }
+  public async createContainers(
+    containers: { [id: string]: Partial<ContainerConfig> },
   ): Promise<{ [id: string]: Container }> {
     await this.ensureContract();
     const result = {};
@@ -354,30 +364,30 @@ export class DigitalTwin extends Logger {
     if (this.contract) {
       return;
     }
-    const address = this.config.address.startsWith('0x') ?
-      this.config.address : await this.options.nameResolver.getAddress(this.config.address);
-    const baseError = `ens address ${ this.config.address } / contract address ${ address }:`;
+    const address = this.config.address.startsWith('0x')
+      ? this.config.address : await this.options.nameResolver.getAddress(this.config.address);
+    const baseError = `ens address ${this.config.address} / contract address ${address}:`;
     let description;
 
     // if no address is set, throw an error
     if (!address || address === nullAddress) {
-      throw new Error(`${ baseError } contract does not exist`);
+      throw new Error(`${baseError} contract does not exist`);
     } else {
       try {
         description = (await this.options.description
           .getDescription(address, nullAddress)).public;
       } catch (ex) {
         // when the dbcp could not be loaded, throw
-        this.log(`${ baseError } address ${ address }: Could not load dbcp:
-          ${ ex.message }`, 'info');
+        this.log(`${baseError} address ${address}: Could not load dbcp:
+          ${ex.message}`, 'info');
       }
     }
 
     // if the evan digital twin tag does not exist, throw
     if (!description || !description.tags || description.tags
       .indexOf('evan-digital-twin') === -1) {
-      throw new Error(`${ baseError } doesn't match the specification (missing ` +
-        'evan-digital-twin\' tag)');
+      throw new Error(`${baseError} doesn't match the specification (missing `
+        + 'evan-digital-twin\' tag)');
     }
 
     this.contract = this.options.contractLoader.loadContract('DigitalTwin', address);
@@ -397,7 +407,8 @@ export class DigitalTwin extends Logger {
   public async getDescription(): Promise<any> {
     await this.ensureContract();
     return (await this.options.description.getDescription(
-      this.contract.options.address, this.config.accountId)).public;
+      this.contract.options.address, this.config.accountId,
+    )).public;
   }
 
   /**
@@ -416,7 +427,7 @@ export class DigitalTwin extends Logger {
         singleQueryOffset,
       );
       itemsRetrieved += resultsPerPage;
-      for (let i = 0; i < queryResult.names.length; i++) {
+      for (let i = 0; i < queryResult.names.length; i += 1) {
         if (!queryResult.names[i]) {
           // result pages have empty entries after valid results, so drop those
           break;
@@ -444,7 +455,7 @@ export class DigitalTwin extends Logger {
    */
   public async getEntry(name: string): Promise<DigitalTwinIndexEntry> {
     await this.ensureContract();
-    const [ , firstKey, remainder ] = /([^/]+)(?:\/(.+))?/.exec(name);
+    const [, firstKey, remainder] = /([^/]+)(?:\/(.+))?/.exec(name);
     const result: DigitalTwinIndexEntry = {
       raw: await this.options.executor.executeContractCall(
         this.contract,
@@ -455,9 +466,8 @@ export class DigitalTwin extends Logger {
     this.processEntry(result);
     if (remainder && result.entryType === DigitalTwinEntryType.DigitalTwin) {
       return result.value.getEntry(remainder);
-    } else {
-      return result;
     }
+    return result;
   }
 
   /**
@@ -468,14 +478,13 @@ export class DigitalTwin extends Logger {
     const description = await this.getDescription();
     const tags = description.tags || [];
     return Throttle.all(tags
-      .filter(tag => tag.startsWith('verification:'))
-      .map(tag => tag.substr(13))
-      .map(topic => async () => this.options.verifications.getVerifications(
+      .filter((tag) => tag.startsWith('verification:'))
+      .map((tag) => tag.substr(13))
+      .map((topic) => async () => this.options.verifications.getVerifications(
         description.identity,
         topic,
         true,
-      ))
-    );
+      )));
   }
 
   /**
@@ -505,14 +514,16 @@ export class DigitalTwin extends Logger {
   public async setDescription(description: any): Promise<void> {
     await this.ensureContract();
     await this.getMutex('description').runExclusive(async () => {
+      const descriptionParam = description;
       // ensure, that the evan digital twin tag is set
-      description.tags = description.tags || [ ];
-      if (description.tags.indexOf('evan-digital-twin') === -1) {
-        description.tags.push('evan-digital-twin');
+      descriptionParam.tags = descriptionParam.tags || [];
+      if (descriptionParam.tags.indexOf('evan-digital-twin') === -1) {
+        descriptionParam.tags.push('evan-digital-twin');
       }
 
       await this.options.description.setDescription(
-        this.contract.options.address, { public: description }, this.config.accountId);
+        this.contract.options.address, { public: descriptionParam }, this.config.accountId,
+      );
     });
   }
 
@@ -523,8 +534,11 @@ export class DigitalTwin extends Logger {
    */
   public async setEntries(entries: {[id: string]: DigitalTwinIndexEntry}): Promise<void> {
     await this.ensureContract();
-    await Throttle.all(Object.keys(entries).map((name) => async () =>
-      this.setEntry(name, entries[name].value, entries[name].entryType)));
+    await Throttle.all(
+      Object.keys(entries).map(
+        (name) => async () => this.setEntry(name, entries[name].value, entries[name].entryType),
+      ),
+    );
   }
 
   /**
@@ -581,15 +595,16 @@ export class DigitalTwin extends Logger {
    */
   private processEntry(entry: DigitalTwinIndexEntry): void {
     let address;
-    entry.entryType = parseInt(entry.raw.entryType, 10);
-    switch (entry.entryType) {
+    const entryParam = entry;
+    entryParam.entryType = parseInt(entryParam.raw.entryType, 10);
+    switch (entryParam.entryType) {
       case DigitalTwinEntryType.AccountId:
       case DigitalTwinEntryType.GenericContract:
-        entry.value = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
+        entryParam.value = this.options.web3.utils.toChecksumAddress(`0x${entryParam.raw.value.substr(26)}`);
         break;
       case DigitalTwinEntryType.Container:
-        address = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
-        entry.value = new Container(
+        address = this.options.web3.utils.toChecksumAddress(`0x${entryParam.raw.value.substr(26)}`);
+        entryParam.value = new Container(
           this.options,
           {
             accountId: this.config.accountId,
@@ -599,11 +614,11 @@ export class DigitalTwin extends Logger {
         );
         break;
       case DigitalTwinEntryType.DigitalTwin:
-        address = this.options.web3.utils.toChecksumAddress(`0x${entry.raw.value.substr(26)}`);
-        entry.value = new DigitalTwin(this.options, { ...this.config, address });
+        address = this.options.web3.utils.toChecksumAddress(`0x${entryParam.raw.value.substr(26)}`);
+        entryParam.value = new DigitalTwin(this.options, { ...this.config, address });
         break;
       default:
-        entry.value = entry.raw.value;
+        entryParam.value = entryParam.raw.value;
     }
   }
 }

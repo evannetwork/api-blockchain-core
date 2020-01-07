@@ -17,14 +17,14 @@
   the following URL: https://evan.network/license/
 */
 
-import crypto = require('crypto-browserify');
-
 import {
   Cryptor,
   CryptoInfo,
   Logger,
   LoggerOptions,
 } from '@evan.network/dbcp';
+
+import crypto = require('crypto-browserify');
 
 /**
  * generate new intiala vector, length is 16 bytes (aes)
@@ -55,17 +55,20 @@ export class AesBlob extends Logger implements Cryptor {
   };
 
   private readonly encodingUnencrypted = 'utf-8';
+
   private readonly encodingEncrypted = 'hex';
 
   public options: any;
+
   public algorithm: string;
+
   public webCryptoAlgo: string;
 
   public constructor(options?: AesBlobOptions) {
     super(options);
     this.algorithm = 'aes-256-cbc';
     this.webCryptoAlgo = 'AES-CBC';
-    this.options = Object.assign({}, AesBlob.defaultOptions, options || {});
+    this.options = { ...AesBlob.defaultOptions, ...options || {} };
   }
 
 
@@ -78,7 +81,7 @@ export class AesBlob extends Logger implements Cryptor {
   public stringToArrayBuffer(str): any {
     const len = str.length;
     const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
+    for (let i = 0; i < len; i += 1) {
       bytes[i] = str.charCodeAt(i);
     }
     return bytes.buffer;
@@ -86,7 +89,7 @@ export class AesBlob extends Logger implements Cryptor {
 
 
   public getCryptoInfo(originator: string): CryptoInfo {
-    const ret = Object.assign({ originator, }, this.options);
+    const ret = { originator, ...this.options };
     delete ret.dfs;
     return ret;
   }
@@ -103,11 +106,11 @@ export class AesBlob extends Logger implements Cryptor {
         if (err) {
           reject(err);
         } else {
-          const hexString = buf.toString('hex')
+          const hexString = buf.toString('hex');
           resolve(hexString);
         }
       });
-    })
+    });
   }
 
   public async decryptBrowser(algorithm, buffer, decryptKey, iv) {
@@ -119,15 +122,15 @@ export class AesBlob extends Logger implements Cryptor {
         length: 256,
       },
       false,
-      ['decrypt']
+      ['decrypt'],
     );
     const decrypted = await (global as any).crypto.subtle.decrypt(
       {
         name: algorithm,
-        iv: iv,
+        iv,
       },
       key,
-      buffer
+      buffer,
     );
     return Buffer.from(decrypted);
   }
@@ -141,15 +144,15 @@ export class AesBlob extends Logger implements Cryptor {
         length: 256,
       },
       false,
-      ['encrypt']
+      ['encrypt'],
     );
     const encrypted = await (global as any).crypto.subtle.encrypt(
       {
         name: algorithm,
-        iv: iv,
+        iv,
       },
       key,
-      buffer
+      buffer,
     );
     return Buffer.from(encrypted);
   }
@@ -173,7 +176,7 @@ export class AesBlob extends Logger implements Cryptor {
       const cipher = crypto.createCipheriv(
         this.algorithm,
         Buffer.from(options.key, 'hex'),
-        initialVector
+        initialVector,
       );
       if (Array.isArray(message)) {
         const files = [];
@@ -184,7 +187,7 @@ export class AesBlob extends Logger implements Cryptor {
               this.webCryptoAlgo,
               Buffer.from(blob.file),
               Buffer.from(options.key, 'hex'),
-              initialVector
+              initialVector,
             );
           } else {
             encrypted = Buffer.concat([cipher.update(Buffer.from(blob.file)), cipher.final()]);
@@ -193,11 +196,12 @@ export class AesBlob extends Logger implements Cryptor {
           const stateMd5 = crypto.createHash('md5').update(encryptedWithIv).digest('hex');
           files.push({
             path: stateMd5,
-            content: encryptedWithIv
+            content: encryptedWithIv,
           });
         }
         const hashes = await this.options.dfs.addMultiple(files);
-        for (let i = 0; i < message.length; i++) {
+        for (let i = 0; i < message.length; i += 1) {
+          // eslint-disable-next-line no-param-reassign
           message[i].file = hashes[i];
         }
       } else {
@@ -207,7 +211,7 @@ export class AesBlob extends Logger implements Cryptor {
             this.webCryptoAlgo,
             Buffer.from(message.file),
             Buffer.from(options.key, 'hex'),
-            initialVector
+            initialVector,
           );
         } else {
           encrypted = Buffer.concat([cipher.update(Buffer.from(message.file)), cipher.final()]);
@@ -215,6 +219,7 @@ export class AesBlob extends Logger implements Cryptor {
         const encryptedWithIv = Buffer.concat([initialVector, encrypted]);
         const stateMd5 = crypto.createHash('md5').update(encryptedWithIv).digest('hex');
         const hash = await this.options.dfs.add(stateMd5, encryptedWithIv);
+        // eslint-disable-next-line no-param-reassign
         message.file = hash;
       }
       const wrapperMessage = Buffer.from(JSON.stringify(message), this.encodingUnencrypted);
@@ -223,17 +228,17 @@ export class AesBlob extends Logger implements Cryptor {
           this.webCryptoAlgo,
           Buffer.from(wrapperMessage),
           Buffer.from(options.key, 'hex'),
-          initialVector
+          initialVector,
         );
       } else {
         const wrapperDecipher = crypto.createCipheriv(
           this.algorithm,
           Buffer.from(options.key, 'hex'),
-          initialVector
+          initialVector,
         );
         encryptedWrapperMessage = Buffer.concat([
           wrapperDecipher.update(wrapperMessage),
-          wrapperDecipher.final()
+          wrapperDecipher.final(),
         ]);
       }
       return Promise.resolve(Buffer.concat([initialVector, encryptedWrapperMessage]));

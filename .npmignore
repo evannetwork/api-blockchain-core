@@ -1,4 +1,5 @@
 dist/index.js.js.map
+dist-test/*
 bundles/bcc/dbcpPath.json
 discify/
 docs/*

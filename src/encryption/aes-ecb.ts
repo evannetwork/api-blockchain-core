@@ -17,7 +17,6 @@
   the following URL: https://evan.network/license/
 */
 
-import crypto = require('crypto-browserify');
 import {
   Cryptor,
   CryptoInfo,
@@ -25,11 +24,13 @@ import {
   LoggerOptions as AesEcbOptions,
 } from '@evan.network/dbcp';
 
+import crypto = require('crypto-browserify');
+
 /**
  * aes ecb instance options
  */
 export {
-  LoggerOptions as AesEcbOptions
+  LoggerOptions as AesEcbOptions,
 } from '@evan.network/dbcp';
 
 export class AesEcb extends Logger implements Cryptor {
@@ -37,13 +38,16 @@ export class AesEcb extends Logger implements Cryptor {
     keyLength: 256,
     algorithm: 'aes-256-ecb',
   };
+
   public options: any;
+
   private readonly encodingUnencrypted = 'utf-8';
+
   private readonly encodingEncrypted = 'hex';
 
   public constructor(options?: AesEcbOptions) {
     super(options);
-    this.options = Object.assign({}, AesEcb.defaultOptions, options || {});
+    this.options = { ...AesEcb.defaultOptions, ...options || {} };
   }
 
 
@@ -55,8 +59,8 @@ export class AesEcb extends Logger implements Cryptor {
    */
   public stringToArrayBuffer(str) {
     const len = str.length;
-    const bytes = new Uint8Array( len );
-    for (let i = 0; i < len; i++) {
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i += 1) {
       bytes[i] = str.charCodeAt(i);
     }
     return bytes.buffer;
@@ -64,7 +68,7 @@ export class AesEcb extends Logger implements Cryptor {
 
 
   public getCryptoInfo(originator: string): CryptoInfo {
-    return Object.assign({ originator, }, this.options);
+    return { originator, ...this.options };
   }
 
   /**
@@ -79,11 +83,11 @@ export class AesEcb extends Logger implements Cryptor {
         if (err) {
           reject(err);
         } else {
-          const hexString = buf.toString('hex')
+          const hexString = buf.toString('hex');
           resolve(hexString);
         }
       });
-    })
+    });
   }
 
   /**
@@ -102,7 +106,7 @@ export class AesEcb extends Logger implements Cryptor {
       const cipher = crypto.createCipheriv(
         this.options.algorithm,
         Buffer.from(computedKey, 'hex'),
-        ''
+        '',
       );
       cipher.setAutoPadding(false);
       const encrypted = Buffer.concat([cipher.update(message), cipher.final()]);
@@ -129,7 +133,7 @@ export class AesEcb extends Logger implements Cryptor {
       const decipher = crypto.createDecipheriv(
         this.options.algorithm,
         Buffer.from(computedKey, 'hex'),
-        ''
+        '',
       );
       decipher.setAutoPadding(false);
       const decrypted = Buffer.concat([decipher.update(message), decipher.final()]);
@@ -150,16 +154,20 @@ export class AesEcb extends Logger implements Cryptor {
   private computeSecret(passphrase: Buffer): string {
     let nkey = 32;
     let niv = 0;
-    for (let key = '', iv = '', p = '';;) {
+    for (let key = '', p = ''; ;) {
       const h = crypto.createHash('md5');
       h.update(p, 'hex');
       h.update(passphrase);
       p = h.digest('hex');
-      let n, i = 0;
+      let n;
+      let i = 0;
       n = Math.min(p.length - i, 2 * nkey);
-      nkey -= n / 2, key += p.slice(i, i + n), i += n;
+      nkey -= n / 2;
+      key += p.slice(i, i + n);
+      i += n;
       n = Math.min(p.length - i, 2 * niv);
-      niv -= n / 2, iv += p.slice(i, i + n), i += n;
+      niv -= n / 2;
+      i += n;
       if (nkey + niv === 0) {
         return key;
       }
