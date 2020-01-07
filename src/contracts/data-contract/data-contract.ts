@@ -26,14 +26,10 @@ import {
   Validator,
 } from '@evan.network/dbcp';
 
-import {
-  BaseContract,
-  BaseContractOptions,
-  CryptoProvider,
-  Description,
-  Sharing,
-} from '../../index';
-
+import { BaseContract, BaseContractOptions, } from '../base-contract/base-contract';
+import { CryptoProvider } from '../../encryption/crypto-provider';
+import { Description } from '../../shared-description';
+import { Sharing } from '../sharing';
 
 const requestWindowSize = 10;
 
