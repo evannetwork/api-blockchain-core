@@ -47,6 +47,32 @@ export interface VcConfig {
 }
 
 /**
+ * A VC's credential status property
+ */
+export interface VcCredentialStatus {
+  id: string;
+  type: string;
+}
+
+/**
+ * Information about a VC's subject
+ */
+export interface VcCredentialSubject {
+  id: string;
+  data?: VcCredentialSubjectPayload[];
+  description?: string;
+  uri?: string;
+}
+
+/**
+ * (Optional) Payload for a VC credential subject
+ */
+export interface VcCredentialSubjectPayload {
+  name: string;
+  value: string;
+}
+
+/**
  * A valid VC document
  */
 export interface VcDocument {
@@ -75,32 +101,6 @@ export interface VcDocumentTemplate {
 }
 
 /**
- * A VC's credential status property
- */
-export interface VcCredentialStatus {
-  id: string;
-  type: string;
-}
-
-/**
- * Information about a VC's subject
- */
-export interface VcCredentialSubject {
-  id: string;
-  data?: VcCredentialSubjectPayload[];
-  description?: string;
-  uri?: string;
-}
-
-/**
- * (Optional) Payload for a VC credential subject
- */
-export interface VcCredentialSubjectPayload {
-  name: string;
-  value: string;
-}
-
-/**
  * The parts an VC ID in evan is made of
  */
 export interface VcIdSections {
@@ -114,6 +114,22 @@ export interface VcIdSections {
 export interface VcIssuer {
   id: string;
   name?: string;
+}
+
+/**
+ * Options for VC resolver
+ */
+export interface VcOptions extends LoggerOptions {
+  accountStore: AccountStore;
+  activeAccount: string;
+  contractLoader: ContractLoader;
+  dfs: DfsInterface;
+  did: Did;
+  executor: Executor;
+  nameResolver: NameResolver;
+  signerIdentity: SignerIdentity;
+  verifications: Verifications;
+  web3: any;
 }
 
 /**
@@ -136,22 +152,6 @@ export const enum VcProofType {
 
 const JWTProofMapping = {};
 JWTProofMapping[(VcProofType.EcdsaPublicKeySecp256k1)] =  'ES256K-R';
-
-/**
- * Options for VC resolver
- */
-export interface VcOptions extends LoggerOptions {
-  accountStore: AccountStore;
-  activeAccount: string;
-  contractLoader: ContractLoader;
-  dfs: DfsInterface;
-  did: Did;
-  executor: Executor;
-  nameResolver: NameResolver;
-  signerIdentity: SignerIdentity;
-  verifications: Verifications;
-  web3: any;
-}
 
 const vcRegEx = /^vc:evan:(?:(testcore|core):)?(0x(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64}))$/;
 
@@ -181,6 +181,72 @@ export class Vc extends Logger {
     super(options as LoggerOptions);
     this.options = options;
     this.credentialStatusEndpoint = config.credentialStatusEndpoint;
+  }
+
+  /**
+   * Associates the active identity with a new ID in the registry to store a VC at.
+   *
+   * @returns     {Promise<string>}  The reserved ID.
+   */
+  public async createId(): Promise<string> {
+    const id = await this.options.executor.executeContractTransaction(
+      await this.getRegistryContract(),
+      'createId', {
+        from: this.options.signerIdentity.activeIdentity,
+        event: { target: 'VcRegistry', eventName: 'VcIdRegistered', },
+        getEventResult: (event, args) => args.vcId,
+      },
+    );
+
+    return await this.convertInternalVcIdToUri(id);
+  }
+
+  /**
+   * Creates a new VC document from a template.
+   *
+   * @param      {VcDocumentTemplate}  vcData  Template for the VC document containing the relevant
+   *                                           data.
+   * @returns     {Promise<VcDocument}  The final VC document as it is stored in the registry.
+   */
+  public async createVc(vcData: VcDocumentTemplate): Promise<VcDocument> {
+    if (!vcData.id) {
+      throw new Error('VC misses id');
+    }
+
+    const types = vcData.type ? vcData.type : ['VerifiableCredential']
+
+    const context = vcData["@context"] ? vcData["@context"] : [w3cMandatoryContext];
+    if (!context.includes(w3cMandatoryContext)) {
+      context.push(w3cMandatoryContext);
+    }
+
+    const vcDocument: VcDocument = {
+      '@context': context,
+      type: types,
+      ...(vcData as VcDocument),
+    };
+
+    vcDocument.proof = await this.createProofForVc(vcDocument);
+
+    await this.validateVcDocument(vcDocument);
+
+    return vcDocument;
+  }
+
+  /**
+   * get the Revoke status of a given VC document
+   *
+   * @param      {string}  vcId    The registry ID the VC document is associated with.
+   * @return     {revokationStatus}  A boolean value. False = not revoked, True = revoked
+   */
+  public async getRevokeVcStatus(vcId: string): Promise<void> {
+
+    const revokationStatus = await this.options.executor.executeContractCall(
+      await this.getRegistryContract(),
+      'vcRevoke',
+      vcId);
+
+    return revokationStatus;
   }
 
   /**
@@ -222,35 +288,19 @@ export class Vc extends Logger {
   }
 
   /**
-   * Creates a new VC document from a template.
+   * Revokes a given VC document
    *
-   * @param      {VcDocumentTemplate}  vcData  Template for the VC document containing the relevant
-   *                                           data.
-   * @returns     {Promise<VcDocument}  The final VC document as it is stored in the registry.
+   * @param      {string}  vcId    The registry ID the VC document is associated with.
+   * @return     {VcCredentialStatus}  An object containing URL and revokation status.
    */
-  public async createVc(vcData: VcDocumentTemplate): Promise<VcDocument> {
-    if (!vcData.id) {
-      throw new Error('VC misses id');
-    }
+  public async revokeVc(vcId: string): Promise<VcCredentialStatus> {
+    await this.validateVcIdOwnership(vcId);
+    const revokeProcessed = await this.options.executor.executeContractTransaction(
+      await this.getRegistryContract(),
+      'revokeVc',
+      vcId);
 
-    const types = vcData.type ? vcData.type : ['VerifiableCredential']
-
-    const context = vcData["@context"] ? vcData["@context"] : [w3cMandatoryContext];
-    if (!context.includes(w3cMandatoryContext)) {
-      context.push(w3cMandatoryContext);
-    }
-
-    const vcDocument: VcDocument = {
-      '@context': context,
-      type: types,
-      ...(vcData as VcDocument),
-    };
-
-    vcDocument.proof = await this.createProofForVc(vcDocument);
-
-    await this.validateVcDocument(vcDocument);
-
-    return vcDocument;
+    return revokeProcessed;
   }
 
   /**
@@ -300,43 +350,15 @@ export class Vc extends Logger {
   }
 
   /**
-   * Validates whether a given ID is a valid evan VC ID and returns
-   * its sections (environment and internal ID)
+   * Converts an interal VC ID (0x...) to a URI (vc:evan:...)
    *
-   * @param vcId VC ID
-   * @returns {VcIdSections} Sections of the ID
+   * @param internalVcId Internal 32bytes ID
+   * @returns The VC's URI
    */
-  private async validateVcIdAndGetSections(vcId: string): Promise<VcIdSections> {
-    const groups = vcRegEx.exec(vcId);
-    if (!groups) {
-      throw new Error(`Given VC ID ("${vcId}") is no valid evan VC ID`);
-    }
-    const [ , vcEnvironment = 'core', internalId ] = groups;
+  private async convertInternalVcIdToUri(internalVcId: string): Promise<string> {
     const environment = await this.getEnvironment();
-    if (environment === 'testcore' && vcEnvironment !== 'testcore' ||
-        environment === 'core' && vcEnvironment !== 'core') {
-      throw new Error(`VCs environment "${environment} does not match ${vcEnvironment}`);
-    }
 
-    return {environment: vcEnvironment, internalId: internalId};
-  }
-
-  /**
-   * Associates the active identity with a new ID in the registry to store a VC at.
-   *
-   * @returns     {Promise<string>}  The reserved ID.
-   */
-  public async createId(): Promise<string> {
-    const id = await this.options.executor.executeContractTransaction(
-      await this.getRegistryContract(),
-      'createId', {
-        from: this.options.signerIdentity.activeIdentity,
-        event: { target: 'VcRegistry', eventName: 'VcIdRegistered', },
-        getEventResult: (event, args) => args.vcId,
-      },
-    );
-
-    return await this.convertInternalVcIdToUri(id);
+    return `vc:evan:${environment}:${internalVcId}`;
   }
 
   /**
@@ -503,15 +525,25 @@ export class Vc extends Logger {
   }
 
   /**
-   * Converts an interal VC ID (0x...) to a URI (vc:evan:...)
+   * Validates whether a given ID is a valid evan VC ID and returns
+   * its sections (environment and internal ID)
    *
-   * @param internalVcId Internal 32bytes ID
-   * @returns The VC's URI
+   * @param vcId VC ID
+   * @returns {VcIdSections} Sections of the ID
    */
-  private async convertInternalVcIdToUri(internalVcId: string): Promise<string> {
+  private async validateVcIdAndGetSections(vcId: string): Promise<VcIdSections> {
+    const groups = vcRegEx.exec(vcId);
+    if (!groups) {
+      throw new Error(`Given VC ID ("${vcId}") is no valid evan VC ID`);
+    }
+    const [ , vcEnvironment = 'core', internalId ] = groups;
     const environment = await this.getEnvironment();
+    if (environment === 'testcore' && vcEnvironment !== 'testcore' ||
+        environment === 'core' && vcEnvironment !== 'core') {
+      throw new Error(`VCs environment "${environment} does not match ${vcEnvironment}`);
+    }
 
-    return `vc:evan:${environment}:${internalVcId}`;
+    return {environment: vcEnvironment, internalId: internalId};
   }
 
   /**
@@ -531,36 +563,5 @@ export class Vc extends Logger {
     if (this.options.signerIdentity.activeIdentity !== ownerAddress) {
       throw Error(`Active identity is not the owner of the given VC ID ${await this.convertInternalVcIdToUri(vcId)}`);
     }
-  }
-  /**
-   * Revokes a given VC document
-   *
-   * @param      {string}  vcId    The registry ID the VC document is associated with.
-   * @return     {VcCredentialStatus}  An object containing URL and revokation status.
-   */
-  public async RevokeVc(vcId: string): Promise<VcCredentialStatus> {
-    await this.validateVcIdOwnership(vcId);
-    const revokeProcessed = await this.options.executor.executeContractTransaction(
-      await this.getRegistryContract(),
-      'revokeVC',
-      vcId);
-
-    return revokeProcessed;
-  }
-
-  /**
-   * get the Revoke status of a given VC document
-   *
-   * @param      {string}  vcId    The registry ID the VC document is associated with.
-   * @return     {revokationStatus}  A boolean value. False = not revoked, True = revoked
-   */
-  public async getRevokeVcStatus(vcId: string): Promise<void> {
-
-    const revokationStatus = await this.options.executor.executeContractCall(
-      await this.getRegistryContract(),
-      'vcRevoke',
-      vcId);
-
-    return revokationStatus;
   }
 }
