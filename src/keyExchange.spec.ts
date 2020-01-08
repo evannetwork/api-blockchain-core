@@ -21,8 +21,6 @@ import 'mocha';
 import { expect, use } from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
 
-use(chaiAsPromised);
-
 import { Ipfs } from './dfs/ipfs';
 import { Ipld } from './dfs/ipld';
 import { KeyExchange } from './keyExchange';
@@ -32,7 +30,9 @@ import { TestUtils } from './test/test-utils';
 import { accounts } from './test/accounts';
 import { Onboarding } from './onboarding';
 
-describe('KeyExchange class', function() {
+use(chaiAsPromised);
+
+describe('KeyExchange class', function test() {
   this.timeout(600000);
   let ipfs: Ipfs;
   let mailbox: Mailbox;
@@ -56,8 +56,8 @@ describe('KeyExchange class', function() {
     await Onboarding.createProfile(profile1Runtime, {
       accountDetails: {
         profileType: 'company',
-        accountName: 'test account'
-      }
+        accountName: 'test account',
+      },
     });
     // create profile 2
     const profile2Runtime = await TestUtils.getRuntime(accounts[1]);
@@ -66,7 +66,7 @@ describe('KeyExchange class', function() {
       accountDetails: {
         profileType: 'company',
         accountName: 'test account',
-      }
+      },
     });
 
     profile = profile1Runtime.profile;
@@ -82,7 +82,7 @@ describe('KeyExchange class', function() {
   it('should be able to send an invitation mail and store new commKey', async () => {
     const foreignPubkey = await profile2.getPublicKey();
     const commKey = await keyExchange1.generateCommKey();
-    await keyExchange1.sendInvite(accounts[1], foreignPubkey, commKey, { fromAlias: 'Bob', });
+    await keyExchange1.sendInvite(accounts[1], foreignPubkey, commKey, { fromAlias: 'Bob' });
     await profile.addContactKey(accounts[1], 'commKey', commKey);
     await profile.storeForAccount(profile.treeLabels.addressBook);
   });
@@ -103,13 +103,17 @@ describe('KeyExchange class', function() {
       const result = await mailbox2.getMails(1, 0);
       const keys = Object.keys(result.mails);
       expect(result.mails[keys[0]].content.attachments[0].type).to.equal('commKey');
-      const profileFromMail = await TestUtils.getProfile(web3, null, ipld, result.mails[keys[0]].content.from);
+      const profileFromMail = await TestUtils.getProfile(
+        web3, null, ipld, result.mails[keys[0]].content.from,
+      );
 
       const publicKeyProfile = await profileFromMail.getPublicKey();
       const commSecret = keyExchange2.computeSecretKey(publicKeyProfile);
       await expect(
         keyExchange2.decryptCommKey(
-          result.mails[keys[0]].content.attachments[0].key, commSecret.toString('hex')))
+          result.mails[keys[0]].content.attachments[0].key, commSecret.toString('hex'),
+        ),
+      )
         .not.to.be.rejected;
     });
 
@@ -119,10 +123,12 @@ describe('KeyExchange class', function() {
       const keys = Object.keys(result.mails);
       expect(result.mails[keys[0]].content.attachments[0].type).to.equal('commKey');
 
-      const profileFromMail = await TestUtils.getProfile(web3, null, ipld, result.mails[keys[0]].content.from);
+      const profileFromMail = await TestUtils.getProfile(
+        web3, null, ipld, result.mails[keys[0]].content.from,
+      );
       const keyExchangeOptions = {
         mailbox,
-        cryptoProvider:  TestUtils.getCryptoProvider(),
+        cryptoProvider: TestUtils.getCryptoProvider(),
         defaultCryptoAlgo: 'aes',
         account: accounts[2],
         keyProvider: TestUtils.getKeyProvider(),
@@ -133,7 +139,9 @@ describe('KeyExchange class', function() {
       const commSecret = blackHat.computeSecretKey(publicKeyProfile);
       await expect(
         blackHat.decryptCommKey(
-          result.mails[keys[0]].content.attachments[0].key, commSecret.toString('hex')))
+          result.mails[keys[0]].content.attachments[0].key, commSecret.toString('hex'),
+        ),
+      )
         .to.be.rejected;
     });
 

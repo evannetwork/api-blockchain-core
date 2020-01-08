@@ -17,7 +17,7 @@
   the following URL: https://evan.network/license/
 */
 
-import { Runtime } from '../index'
+import { Runtime } from '../index';
 
 
 export const nullAddress = '0x0000000000000000000000000000000000000000';
@@ -42,7 +42,9 @@ export async function getEnvironment(web3: any): Promise<string> {
  * @param      {string}   message    (optional): message to sign, uses current timestamp by default
  * @return     {Promise<string>}  auth header value as string
  */
-export async function getSmartAgentAuthHeaders(runtime: Runtime, message?: string
+export async function getSmartAgentAuthHeaders(
+  runtime: Runtime,
+  message?: string,
 ): Promise<string> {
   const messageToSign = message || `${new Date().getTime()}`;
   const hexMessage = runtime.web3.utils.toHex(messageToSign);
@@ -51,7 +53,7 @@ export async function getSmartAgentAuthHeaders(runtime: Runtime, message?: strin
   return [
     `EvanAuth ${runtime.activeAccount}`,
     `EvanMessage ${paddedMessage}`,
-    `EvanSignedMessage ${signature}`
+    `EvanSignedMessage ${signature}`,
   ].join(',');
 }
 
@@ -68,7 +70,7 @@ export function obfuscate(text: string): string {
 }
 
 /**
-* run given function from this, use function(error, result) {...} callback for promise resolve/reject
+* run given function from this, use function(error, result) {..} callback for promise resolve/reject
 * can be used like:
 * api.helpers
 *   .runFunctionAsPromise(fs, 'readFile', 'somefile.txt')
@@ -77,15 +79,15 @@ export function obfuscate(text: string): string {
 *
 * @param  {Object} funThis      the functions 'this' object
 * @param  {string} functionName name of the contract function to call
-* @return {Promise}             resolves to: {Object} (the result from the function(error, result) {...} callback)
+* @return {Promise}             resolves to: {Object}
 */
 export async function promisify(funThis, functionName, ...args): Promise<any> {
   const functionArguments = args.slice(0);
 
-  return new Promise(function(resolve, reject) {
+  return new Promise(((resolve, reject) => {
     try {
       // add callback function to arguments
-      functionArguments.push(function(error, result) {
+      functionArguments.push((error, result) => {
         if (error) {
           reject(error);
         } else {
@@ -97,5 +99,5 @@ export async function promisify(funThis, functionName, ...args): Promise<any> {
     } catch (ex) {
       reject(ex.message);
     }
-  });
+  }));
 }

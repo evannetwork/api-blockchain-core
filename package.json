@@ -40,17 +40,19 @@
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
     "common-shakeify": "^0.6.2",
-    "coveralls": "^3.0.2",
     "disc": "^1.3.3",
     "env-cmd": "^9.0.3",
     "eslint": "^6.1.0",
+    "eslint-config-airbnb": "^18.0.1",
+    "eslint-config-airbnb-typescript": "^6.3.1",
+    "eslint-plugin-chai-friendly": "^0.5.0",
+    "eslint-plugin-import": "^2.19.1",
     "gulp": "^3.9.1",
     "gulp-open": "^2.0.0",
     "gulp-replace": "^0.6.1",
     "gulp-sourcemaps": "^2.6.1",
     "husky": "^3.0.2",
     "mocha": "^6.2.0",
-    "mocha-lcov-reporter": "^1.3.0",
     "nyc": "^13.1.0",
     "ts-node": "^8.3.0",
     "typescript": "^3.5.3"
@@ -88,7 +90,7 @@
     "testunit": "env-cmd --fallback -f ./.env.local npm run build && env-cmd --fallback -f ./.env.local mocha --exit --inspect -r ts-node/register $*",
     "testunitbail": "env-cmd --fallback -f ./.env.local npm run build && env-cmd --fallback -f ./.env.local mocha --exit -b --inspect -r ts-node/register $*",
     "testunitbrk": "env-cmd --fallback -f ./.env.local npm run build && env-cmd --fallback -f ./.env.local mocha --exit --inspect-brk -r ts-node/register $*",
-    "testunitcoverage": "env-cmd --fallback -f ./.env.local npm run build && nyc -r lcov -e .ts -x \"**/*.spec.ts\" -x \"lib\" mocha --exit -r ts-node/register $TESTSPECS && nyc report --reporter=text-lcov | coveralls"
+    "testunitcoverage": "env-cmd --fallback -f ./.env.local npm run build && nyc -r lcov -e .ts -x \"**/*.spec.ts\" -x \"lib\" mocha --exit -r ts-node/register $TESTSPECS && nyc report --reporter=json > coverage/coverage.json"
   },
   "types": "./dist/index.d.ts",
   "version": "2.15.0"

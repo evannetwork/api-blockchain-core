@@ -18,6 +18,12 @@
 */
 
 // expose dbcp modules
+// partial and custom exports
+import { getSmartAgentAuthHeaders } from './common/utils';
+
+/** ****** export these libraries to be able to build the blockchain-core into a umd bundle ***** */
+import * as AccountType from './profile/types/types';
+
 export {
   AccountStore,
   AccountStoreOptions,
@@ -46,7 +52,7 @@ export {
   Unencrypted,
   Validator,
   ValidatorOptions,
-} from '@evan.network/dbcp'
+} from '@evan.network/dbcp';
 
 // expose modules from here
 export * from './contracts/base-contract/base-contract';
@@ -62,7 +68,7 @@ export * from './contracts/signer-identity';
 export * from './contracts/wallet';
 export * from './dfs/ipfs';
 export * from './dfs/ipld';
-export * from './did/did-resolver';
+export * from './did/did';
 export * from './encryption/aes';
 export * from './encryption/aes-blob';
 export * from './encryption/aes-ecb';
@@ -77,17 +83,11 @@ export * from './profile/business-center-profile';
 export * from './profile/profile';
 export * from './runtime';
 export * from './shared-description';
-export * from './verifications/vc-resolver'
+export * from './vc/vc';
 export * from './verifications/verifications';
 export * from './votings/votings';
-
-// partial and custom exports
-import { getSmartAgentAuthHeaders } from './common/utils';
 const utils = { getSmartAgentAuthHeaders };
 export { utils };
-
-/******** export these libraries to be able to build the blockchain-core into a umd bundle ********/
-import * as AccountType from './profile/types/types';
 import Web3 = require('web3');
 import crypto = require('crypto');
 import keystore = require('../libs/eth-lightwallet/keystore.js');
@@ -95,12 +95,13 @@ import lodash = require('lodash');
 import prottle = require('prottle');
 // assign to export Buffer;
 const buffer = Buffer;
-// load adjusted bitcore mnemonic lib and do not load the full API specification to reduce bundle size
+// load adjusted bitcore mnemonic lib and do not load the full API specification to reduce
+// bundle size
 // be careful when used adjusted components!
 import Mnemonic = require('../libs/bitcore-mnemonic/mnemonic.js');
 const instanceId = Date.now() + Math.random();
 // used for global & shared available logLog
-const logLog = [ ];
+const logLog = [];
 // push everything into the logLog
 const logLogLevel = 0;
 
@@ -116,4 +117,4 @@ export {
   logLog,
   logLogLevel,
   prottle,
-}
+};

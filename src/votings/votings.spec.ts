@@ -27,14 +27,14 @@ import { TestUtils } from '../test/test-utils';
 import { Votings } from './votings';
 
 function timeout(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-const [ votingOwner, member, nonMember ] = accounts;
+const [votingOwner, member, nonMember] = accounts;
 
 use(chaiAsPromised);
 
-describe('Voting handler', function() {
+describe('Voting handler', function test() {
   this.timeout(600000);
   let executor: Executor;
   let votingContract: any;
@@ -42,10 +42,13 @@ describe('Voting handler', function() {
   let web3: any;
 
   const createDescription = () => `${Math.random()} is the most awesome random number ever`;
-  const createProposal = async (description) =>
-    votings.createProposal(votingContract, votingOwner, { description, });
-  const nextBlock = async () => await executor.executeSend({ from: votingOwner, value: 0, to: votingOwner });
-  const psleep = (ms) => new Promise(s => setTimeout(() => s(), ms));
+  const createProposal = async (description) => votings.createProposal(
+    votingContract, votingOwner, { description },
+  );
+  const nextBlock = async () => executor.executeSend(
+    { from: votingOwner, value: 0, to: votingOwner },
+  );
+  const psleep = (ms) => new Promise((s) => setTimeout(() => s(), ms));
 
   before(async () => {
     web3 = TestUtils.getWeb3();
@@ -53,7 +56,7 @@ describe('Voting handler', function() {
     votings = await TestUtils.getVotings(web3);
   });
 
-  it('can create a new voting contract', async() => {
+  it('can create a new voting contract', async () => {
     votingContract = await votings.createContract(
       votingOwner,
       {
@@ -158,15 +161,15 @@ describe('Voting handler', function() {
       await expect(votings.execute(votingContract, votingOwner, proposal)).to.be.rejected;
     });
 
-    it('can perform transactions (and not only votes) via congress contract', async() => {
+    it('can perform transactions (and not only votes) via congress contract', async () => {
       const testContract = await executor.createContract(
-        'TestContract', ['abc'], { from: votingOwner, gas: 2000000 });
+        'TestContract', ['abc'], { from: votingOwner, gas: 2000000 },
+      );
       // input for: setData("def")
-      const setDataToDef = '0x47064d6a' +
-        '0000000000000000000000000000000000000000000000000000000000000020' +
-        '0000000000000000000000000000000000000000000000000000000000000003' +
-        '6465660000000000000000000000000000000000000000000000000000000000'
-      ;
+      const setDataToDef = '0x47064d6a'
+        + '0000000000000000000000000000000000000000000000000000000000000020'
+        + '0000000000000000000000000000000000000000000000000000000000000003'
+        + '6465660000000000000000000000000000000000000000000000000000000000';
       const proposal = await votings.createProposal(
         votingContract,
         votingOwner,
@@ -174,7 +177,7 @@ describe('Voting handler', function() {
           description: createDescription(),
           data: setDataToDef,
           to: testContract.options.address,
-        }
+        },
       );
       await timeout(5000);
       await votings.vote(votingContract, votingOwner, proposal, true);
@@ -187,7 +190,8 @@ describe('Voting handler', function() {
       // make new block to update time check in contract (for gas estimation)
       await nextBlock();
       await timeout(5000);
-      await expect(votings.execute(votingContract, votingOwner, proposal, setDataToDef)).not.to.be.rejected;
+      await expect(votings.execute(votingContract, votingOwner, proposal, setDataToDef))
+        .not.to.be.rejected;
       expect(await executor.executeContractCall(testContract, 'data')).to.eq('def');
     });
   });
@@ -204,7 +208,8 @@ describe('Voting handler', function() {
       );
       await votings.addMember(contract, votingOwner, member, { name: 'Member No. 2' });
       const proposal = await votings.createProposal(
-        contract, votingOwner, { description: createDescription() });
+        contract, votingOwner, { description: createDescription() },
+      );
       await votings.vote(contract, votingOwner, proposal, true);
       await votings.vote(contract, member, proposal, true);
 
@@ -226,7 +231,8 @@ describe('Voting handler', function() {
       );
       await votings.addMember(contract, votingOwner, member, { name: 'Member No. 2' });
       const proposal = await votings.createProposal(
-        contract, votingOwner, { description: createDescription() });
+        contract, votingOwner, { description: createDescription() },
+      );
       await votings.vote(contract, votingOwner, proposal, true);
       await votings.vote(contract, member, proposal, true);
 
@@ -238,7 +244,7 @@ describe('Voting handler', function() {
     });
   });
 
-  describe('when paging through proposals', async() => {
+  describe('when paging through proposals', async () => {
     const descriptions = [
       '0.17664580626145200 is the most awesome random number ever',
       '0.67163320670743580 is the most awesome random number ever',
