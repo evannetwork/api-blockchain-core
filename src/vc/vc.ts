@@ -98,8 +98,8 @@ export interface VcDocumentTemplate {
   validFrom: string;
   validUntil?: string;
   credentialSubject: VcCredentialSubject;
+  credentialStatus?: VcCredentialStatus;
 }
-
 /**
  * The parts an VC ID in evan is made of
  */
@@ -240,10 +240,12 @@ export class Vc extends Logger {
    * @return     {revokationStatus}  A boolean value. False = not revoked, True = revoked
    */
   public async getRevokeVcStatus(vcId: string): Promise<void> {
+    const environment = await this.getEnvironment();
+    const vcIdHash = vcId.replace(`vc:evan:${environment}:`, '');
     const revokationStatus = await this.options.executor.executeContractCall(
       await this.getRegistryContract(),
       'vcRevoke',
-      vcId,
+      vcIdHash,
     );
 
     return revokationStatus;
@@ -291,17 +293,18 @@ export class Vc extends Logger {
    * Revokes a given VC document
    *
    * @param      {string}  vcId    The registry ID the VC document is associated with.
-   * @return     {VcCredentialStatus}  An object containing URL and revokation status.
+   * @return     {Promise<void>}   resolved when done
    */
-  public async revokeVc(vcId: string): Promise<VcCredentialStatus> {
-    await this.validateVcIdOwnership(vcId);
-    const revokeProcessed = await this.options.executor.executeContractTransaction(
+  public async revokeVc(vcId: string): Promise<void> {
+    const environment = await this.getEnvironment();
+    const vcIdHash = vcId.replace(`vc:evan:${environment}:`, '');
+    await this.validateVcIdOwnership(vcIdHash);
+    await this.options.executor.executeContractTransaction(
       await this.getRegistryContract(),
-      'revokeVc',
-      vcId,
+      'revokeVC',
+      { from: this.options.signerIdentity.activeIdentity },
+      vcIdHash,
     );
-
-    return revokeProcessed;
   }
 
   /**
@@ -314,29 +317,28 @@ export class Vc extends Logger {
    * @returns     {Promise<VcDocument}  The final VC document as it is stored in the registry.
    */
   public async storeVc(vcData: VcDocumentTemplate): Promise<VcDocument> {
-    const localVcData: VcDocumentTemplate = cloneDeep(vcData);
+    const dataTemplate: VcDocumentTemplate = cloneDeep(vcData);
     let internalId;
 
-    if (!localVcData.id) {
-      localVcData.id = await this.createId();
-      internalId = (await this.validateVcIdAndGetSections(localVcData.id)).internalId;
+    if (!dataTemplate.id) {
+      dataTemplate.id = await this.createId();
+      internalId = (await this.validateVcIdAndGetSections(dataTemplate.id)).internalId;
     } else {
       // We prefix the ID specified in the document with
       // the evan identifier (vc:evan:[core|testcore]:)
       // However, we only need the actual ID to address the registry
-      const sections = await this.validateVcIdAndGetSections(localVcData.id);
+      const sections = await this.validateVcIdAndGetSections(dataTemplate.id);
       internalId = sections.internalId;
       // Is the given VC ID valid and the active identity the owner of the VC ID?
       await this.validateVcIdOwnership(internalId);
     }
 
-    const documentToStore = await this.createVc(localVcData);
-
-    documentToStore.credentialStatus = {
-      id: `${this.credentialStatusEndpoint}${documentToStore.id}`,
+    dataTemplate.credentialStatus = {
+      id: `${this.credentialStatusEndpoint}${dataTemplate.id}`,
       type: 'evan:evanCredential',
     };
 
+    const documentToStore = await this.createVc(dataTemplate);
 
     const vcDfsAddress = await this.options.dfs.add('vc',
       Buffer.from(JSON.stringify(documentToStore), 'utf-8'));
@@ -505,7 +507,27 @@ export class Vc extends Logger {
         return doc as any;
       },
     };
-    await didJWT.verifyJWT(document.proof.jws, { resolver });
+
+    // fails if invalid signature
+    const verifiedSignature = await didJWT.verifyJWT(document.proof.jws, { resolver });
+
+    // fails if signed payload and the VC differ
+    const payload = {
+      ...verifiedSignature.payload.vc,
+    };
+    delete payload.proof;
+    const prooflessDocument = {
+      ...document,
+    };
+    delete prooflessDocument.proof;
+
+    const proofPayloadHash = await this.options.nameResolver.soliditySha3(JSON.stringify(payload));
+    const documentHash = await this.options.nameResolver.soliditySha3(
+      JSON.stringify(prooflessDocument),
+    );
+    if (proofPayloadHash !== documentHash) {
+      throw Error('Invalid proof. Signed payload does not match given document.');
+    }
   }
 
   /**

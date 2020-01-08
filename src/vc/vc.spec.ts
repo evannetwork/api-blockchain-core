@@ -23,7 +23,7 @@ import { expect, use } from 'chai';
 
 import { Runtime } from '../index';
 import { TestUtils } from '../test/test-utils';
-import { VcDocumentTemplate } from './vc';
+import { VcDocumentTemplate, VcDocument } from './vc';
 import { Verifications } from '../verifications/verifications';
 import { accounts } from '../test/accounts';
 
@@ -48,6 +48,20 @@ describe('VC Resolver', function () {
     },
   };
 
+  async function compareDocuments(original: VcDocument, signedPayload: any): Promise<void> {
+    const sig = {
+      ...signedPayload,
+    };
+    const orig = {
+      ...original,
+    };
+    delete sig.proof;
+    delete orig.proof;
+    const proofPayloadHash = await runtime.nameResolver.soliditySha3(JSON.stringify(sig));
+    const documentHash = await runtime.nameResolver.soliditySha3(JSON.stringify(orig));
+    expect(proofPayloadHash).eq(documentHash);
+  }
+
   before(async () => {
     runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity: true });
     verifications = await TestUtils.getVerifications(runtime.web3, await TestUtils.getIpfs());
@@ -59,6 +73,12 @@ describe('VC Resolver', function () {
       },
       credentialSubject: {
         id: await runtime.did.convertIdentityToDid(subjectIdentityId),
+        data: [
+          {
+            name: 'isTrustedSupplier',
+            value: 'true',
+          },
+        ],
       },
       validFrom: new Date(Date.now()).toISOString(),
     };
@@ -77,13 +97,77 @@ describe('VC Resolver', function () {
       expect(createdVcDoc.credentialSubject.id).to.eq(myDoc.credentialSubject.id);
       await expect(didJWT.verifyJWT(createdVcDoc.proof.jws, { resolver: evanResolver }))
         .to.be.eventually.fulfilled;
+
+      await expect(didJWT.verifyJWT(createdVcDoc.proof.jws, { resolver: evanResolver }))
+        .to.not.be.rejected;
+      const verifiedSignature = await didJWT.verifyJWT(
+        createdVcDoc.proof.jws,
+        { resolver: evanResolver },
+      );
+
+      // fails if signed VC and proof-carrying VC not matching
+      await compareDocuments(createdVcDoc, verifiedSignature.payload.vc);
     });
 
+    it('does not allow me to issue a VC with missing issuer ID', async () => {
+      const promise = runtime.vc.createVc(minimalValidVcData);
+      await expect(promise).to.be.rejectedWith('VC misses id');
+    });
+
+    it('does not allow me to issue a VC under a different issuer ID', async () => {
+      const myDoc: VcDocumentTemplate = {
+        ...minimalValidVcData,
+        id: 'randomCustomId',
+        issuer: {
+          id: await runtime.did.convertIdentityToDid(subjectIdentityId),
+        },
+      };
+      const promise = runtime.vc.createVc(myDoc);
+
+      await expect(promise).to.be.rejectedWith('You are not authorized to issue this VC');
+    });
+
+    it('does not allow me to create a VC without an issuer', async () => {
+      const vc = {
+        ...minimalValidVcData,
+        id: 'randomCustomId',
+        issuer: {
+          id: '',
+        },
+      };
+      const promise = runtime.vc.createVc(vc);
+
+      await expect(promise).to.be.rejectedWith(`Invalid issuer DID: ${vc.issuer.id}`);
+    });
+
+    it('does not allow me to create a VC without a subject', async () => {
+      const vc = {
+        ...minimalValidVcData,
+        id: 'randomCustomId',
+        credentialSubject: {
+          id: '',
+        },
+      };
+      const promise = runtime.vc.createVc(vc);
+
+      await expect(promise).to.be.rejectedWith('No Subject ID provided');
+    });
+  });
+
+  describe('When storing a VC onchain', async () => {
     it('allows me to store a valid VC on-chain (and registering an ID implicitly)', async () => {
       const promise = runtime.vc.storeVc(minimalValidVcData);
       await expect(promise).to.not.be.rejected;
-      await expect(didJWT.verifyJWT((await promise).proof.jws, { resolver: evanResolver }))
+      const storedVc = await promise;
+      await expect(didJWT.verifyJWT(storedVc.proof.jws, { resolver: evanResolver }))
         .to.not.be.rejected;
+      const verifiedSignature = await didJWT.verifyJWT(
+        storedVc.proof.jws,
+        { resolver: evanResolver },
+      );
+
+      // fails if signed VC and proof-carrying VC not matching
+      await compareDocuments(storedVc, verifiedSignature.payload.vc);
     });
 
     it('adds a credentialStatus property to the VC document when storing on-chain', async () => {
@@ -117,25 +201,7 @@ describe('VC Resolver', function () {
         .to.be.rejectedWith(`Given VC ID ("${invalidId}") is no valid evan VC ID`);
     });
 
-    it('does not allow me to issue a VC with missing issuer ID', async () => {
-      const promise = runtime.vc.createVc(minimalValidVcData);
-      await expect(promise).to.be.rejectedWith('VC misses id');
-    });
-
-    it('does not allow me to issue a VC under a different issuer ID', async () => {
-      const myDoc: VcDocumentTemplate = {
-        ...minimalValidVcData,
-        id: 'randomCustomId',
-        issuer: {
-          id: await runtime.did.convertIdentityToDid(subjectIdentityId),
-        },
-      };
-      const promise = runtime.vc.createVc(myDoc);
-
-      await expect(promise).to.be.rejectedWith('You are not authorized to issue this VC');
-    });
-
-    it('does not allow me to store a VC under an ID I do not own', async () => {
+    it('(API level) does not allow me to store a VC under an ID I do not own', async () => {
       // Have another identity create a VC that we then want to store
       const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
       const someoneElsesId = await otherRuntime.vc.createId();
@@ -149,6 +215,24 @@ describe('VC Resolver', function () {
       await expect(promise).to.be.rejectedWith(
         `Active identity is not the owner of the given VC ID ${someoneElsesId}`,
       );
+    });
+
+    it('(contract level) does not allow me to store a VC under an ID I do not own', async () => {
+      // Have another identity create a VC that we then want to store
+      const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
+      const someoneElsesId = (await otherRuntime.vc.createId()).replace('vc:evan:testcore:', '');
+
+      // Try to write a fake dfs hash under someone else's registered ID
+      const promise = runtime.executor.executeContractTransaction(
+        await (runtime.vc as any).getRegistryContract(),
+        'setVc',
+        { from: runtime.activeIdentity },
+        someoneElsesId,
+        '0x2a838a6961be98f6a182f375bb9158848ee9760ca97a379939ccdf03fc442a23', // fake address
+      );
+
+      // Expect that the transaction is rejected since we do not own the address
+      await expect(promise).to.be.rejectedWith('could not estimate gas usage');
     });
 
     it('allows me to get an existing VC using the full VC ID URI', async () => {
@@ -181,31 +265,125 @@ describe('VC Resolver', function () {
       await expect(fetchedVcDoc)
         .to.be.rejectedWith('Given VC ID environment "core" does not match current "testcore"');
     });
+  });
 
-    it('does not allow me to create a VC without an issuer', async () => {
-      const vc = {
-        ...minimalValidVcData,
-        id: 'randomCustomId',
-        issuer: {
-          id: '',
-        },
-      };
-      const promise = runtime.vc.createVc(vc);
+  describe('When revoking a VC', async () => {
+    it('allows me to store online VC and revoke it using the bcc', async () => {
+      const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData);
+      const issuerId = storedVcDoc.issuer.id.replace('did:evan:testcore:', '');
+      expect(issuerId).to.be.eq(issuerIdentityId);
 
-      await expect(promise).to.be.rejectedWith(`Invalid issuer DID: ${vc.issuer.id}`);
+      const vcId = storedVcDoc.id.replace('vc:evan:testcore:', '');
+      const vcRevokeStatus = await runtime.executor.executeContractCall(
+        await (runtime.vc as any).getRegistryContract(),
+        'vcRevoke',
+        vcId,
+      );
+      expect(vcRevokeStatus).to.be.false;
+
+      const revokeProcessed = runtime.executor.executeContractTransaction(
+        await (runtime.vc as any).getRegistryContract(),
+        'revokeVC',
+        { from: runtime.activeIdentity },
+        vcId,
+      );
+      await expect(revokeProcessed).to.be.not.rejected;
+
+      const vcRevokeStatusNew = await runtime.executor.executeContractCall(
+        await (runtime.vc as any).getRegistryContract(),
+        'vcRevoke',
+        vcId,
+      );
+      expect(vcRevokeStatusNew).to.be.not.false;
     });
 
-    it('does not allow me to create a VC without a subject', async () => {
-      const vc = {
-        ...minimalValidVcData,
-        id: 'randomCustomId',
-        credentialSubject: {
-          id: '',
-        },
-      };
-      const promise = runtime.vc.createVc(vc);
+    it('allows me to store online VC and revoke it using the vc api', async () => {
+      const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData);
+      const issuerId = storedVcDoc.issuer.id.replace('did:evan:testcore:', '');
+      expect(issuerId).to.be.eq(issuerIdentityId);
 
-      await expect(promise).to.be.rejectedWith('No Subject ID provided');
+      const vcId = storedVcDoc.id;
+
+      const vcRevokeStatus = await runtime.vc.getRevokeVcStatus(vcId);
+      expect(vcRevokeStatus).to.be.false;
+
+      const revokeProcessed = runtime.vc.revokeVc(vcId);
+      await expect(revokeProcessed).to.be.not.rejected;
+
+      const vcRevokeStatusNew = await runtime.vc.getRevokeVcStatus(vcId);
+      expect(vcRevokeStatusNew).to.be.not.false;
+    });
+
+    it('does not allow me to revoke a non existing VC using the vc api', async () => {
+      const nonExistingVcId = '0x2a838a6961be98f6a182f375bb9158848ee9760ca97a379939ccdf03fc442a23';
+
+      const vcRevokeStatus = await runtime.vc.getRevokeVcStatus(nonExistingVcId);
+      expect(vcRevokeStatus).to.be.false;
+
+      const revokeProcessed = runtime.vc.revokeVc(nonExistingVcId);
+      await expect(revokeProcessed).to.be.rejected;
+
+      const vcRevokeStatusNew = await runtime.vc.getRevokeVcStatus(nonExistingVcId);
+      expect(vcRevokeStatusNew).to.be.false;
+    });
+
+    it('allows me to get revoke status of an existing VC using the vc api', async () => {
+      const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData);
+      const issuerId = storedVcDoc.issuer.id.replace('did:evan:testcore:', '');
+      expect(issuerId).to.be.eq(issuerIdentityId);
+      const vcId = storedVcDoc.id;
+
+      const vcRevokeStatus = await runtime.vc.getRevokeVcStatus(vcId);
+      expect(vcRevokeStatus).to.be.false;
+    });
+
+    it('does not allow me to revoke VC using non issuer account via bcc', async () => {
+      const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData);
+      const issuerId = storedVcDoc.issuer.id.replace('did:evan:testcore:', '');
+      expect(issuerId).to.be.eq(issuerIdentityId);
+      const vcId = storedVcDoc.id.replace('vc:evan:testcore:', '');
+
+      const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
+
+      const vcRevokeStatus = await runtime.executor.executeContractCall(
+        await (runtime.vc as any).getRegistryContract(),
+        'vcRevoke',
+        vcId,
+      );
+      expect(vcRevokeStatus).to.be.false;
+
+      const revokeProcessed = otherRuntime.executor.executeContractTransaction(
+        await (otherRuntime.vc as any).getRegistryContract(),
+        'revokeVC',
+        { from: otherRuntime.activeIdentity },
+        vcId,
+      );
+      await expect(revokeProcessed).to.be.rejected;
+
+      const vcRevokeStatusNew = await runtime.executor.executeContractCall(
+        await (runtime.vc as any).getRegistryContract(),
+        'vcRevoke',
+        vcId,
+      );
+      expect(vcRevokeStatusNew).to.be.false;
+    });
+
+    it('allows me to store online VC but not revoke it using non issuer account via vc api', async () => {
+      const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData);
+      const issuerId = storedVcDoc.issuer.id.replace('did:evan:testcore:', '');
+      expect(issuerId).to.be.eq(issuerIdentityId);
+
+      const vcId = storedVcDoc.id;
+      const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
+
+      const vcRevokeStatus = await runtime.vc.getRevokeVcStatus(vcId);
+      expect(vcRevokeStatus).to.be.false;
+
+      const revokeProcessed = otherRuntime.vc.revokeVc(vcId);
+      await expect(revokeProcessed).to.be.rejected;
+
+      const vcRevokeStatusNew = await runtime.vc.getRevokeVcStatus(vcId);
+      expect(vcRevokeStatusNew).to.be.false;
     });
   });
 });
