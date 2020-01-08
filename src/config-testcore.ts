@@ -32,6 +32,7 @@ const configTestcore = {
       index: 'index',
       mailbox: 'mailbox',
       profile: 'profile',
+      vcs: 'vcs',
       wallet: 'wallet',
     },
     domains: {
@@ -46,11 +47,15 @@ const configTestcore = {
       profile: process.env.ENS_PROFILES || ['profile', 'ensRoot'],
       profileFactory: ['profile', 'factory', 'ensRoot'],
       root: ['ensRoot'],
+      vcRegistry: ['vcs', 'ensRoot'],
     },
   },
   smartAgents: {
     onboarding: {
       accountId: '0x063fB42cCe4CA5448D69b4418cb89E663E71A139',
+    },
+    didAndVc: {
+      vcRevokationStatusEndpoint: 'https://testcore.evan.network/smart-agents/smart-agent-did-resolver/vc/status/',
     },
   },
   alwaysAutoGasLimit: 10,

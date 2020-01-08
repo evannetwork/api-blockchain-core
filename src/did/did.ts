@@ -36,7 +36,10 @@ import {
 
 const didRegEx = /^did:evan:(?:(testcore|core):)?(0x(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64}))$/;
 
-export interface DidResolverDocumentTemplate {
+/**
+ * template for a new DID document, can be used as a starting point for building own documents
+ */
+export interface DidDocumentTemplate {
   '@context': string;
   id: string;
   authentication: {
@@ -48,7 +51,7 @@ export interface DidResolverDocumentTemplate {
   }[];
   publicKey?: {
     id: string;
-    type: string[];
+    type: string;
     publicKeyHex: string;
   }[];
   service?: {
@@ -61,7 +64,7 @@ export interface DidResolverDocumentTemplate {
 /**
  * interface for services in DIDs
  */
-export interface DidResolverServiceEntry {
+export interface DidServiceEntry {
   type: any;
   serviceEndpoint: any;
   '@context'?: any;
@@ -70,9 +73,9 @@ export interface DidResolverServiceEntry {
 }
 
 /**
- * options for DidResolver constructor
+ * options for Did constructor
  */
-export interface DidResolverOptions extends LoggerOptions {
+export interface DidOptions extends LoggerOptions {
   contractLoader: ContractLoader;
   dfs: DfsInterface;
   executor: Executor;
@@ -84,19 +87,19 @@ export interface DidResolverOptions extends LoggerOptions {
 /**
  * module for working with did resolver registry
  *
- * @class      DidResolver (name)
+ * @class      Did (name)
  */
-export class DidResolver extends Logger {
+export class Did extends Logger {
   private cached: any;
 
-  private options: DidResolverOptions;
+  private options: DidOptions;
 
   /**
-   * Creates a new `DidResolver` instance.
+   * Creates a new `Did` instance.
    *
-   * @param      {DidResolverOptions}  options  runtime like options for `DidResolver`
+   * @param      {DidOptions}  options  runtime like options for `Did`
    */
-  public constructor(options: DidResolverOptions) {
+  public constructor(options: DidOptions) {
     super(options as LoggerOptions);
     this.options = options;
     this.cached = {};
@@ -111,10 +114,7 @@ export class DidResolver extends Logger {
    *                                "0x000000000000000000000000000000000000001234"
    */
   public async convertDidToIdentity(did: string): Promise<string> {
-    const groups = didRegEx.exec(did);
-    if (!groups) {
-      throw new Error(`given did ("${did}") is no valid evan DID`);
-    }
+    const groups = await this.validateDidAndGetSections(did);
     const [, didEnvironment = 'core', identity] = groups;
     const environment = await this.getEnvironment();
     if ((environment === 'testcore' && didEnvironment !== 'testcore')
@@ -138,6 +138,32 @@ export class DidResolver extends Logger {
   }
 
   /**
+   * Get DID document for given DID.
+   *
+   * @param      {string}  did     DID to fetch DID document for
+   * @return     {Promise<any>}    a DID document that MAY resemble `DidDocumentTemplate` format
+   */
+  public async getDidDocument(did: string): Promise<any> {
+    let result = null;
+    const identity = this.padIdentity(
+      did
+        ? await this.convertDidToIdentity(did)
+        : this.options.signerIdentity.activeIdentity,
+    );
+    const documentHash = await this.options.executor.executeContractCall(
+      await this.getRegistryContract(),
+      'didDocuments',
+      identity,
+    );
+    if (documentHash === nullBytes32) {
+      throw Error(`There is no DID document associated to ${did} yet`);
+    }
+    result = JSON.parse(await this.options.dfs.get(documentHash) as any);
+    result = await this.removePublicKeyTypeArray(result);
+    return result;
+  }
+
+  /**
    * Gets a DID document for currently configured account/identity pair. Notice, that this document
    * may a complete DID document for currently configured active identity, a part of it or not
    * matching it at all. You can use the result of this function to build a new DID document but
@@ -150,11 +176,11 @@ export class DidResolver extends Logger {
    * @param      {string}  did                   (optional) contract DID
    * @param      {string}  controllerDid         (optional) controller of contracts identity (DID)
    * @param      {string}  authenticationKey     (optional) authentication key used for contract
-   * @return     {Promise<DidResolverDocumentTemplate>}  a DID document template
+   * @return     {Promise<DidDocumentTemplate>}  a DID document template
    */
-  public async getDidResolverDocumentTemplate(
+  public async getDidDocumentTemplate(
     did?: string, controllerDid?: string, authenticationKey?: string,
-  ): Promise<DidResolverDocumentTemplate> {
+  ): Promise<DidDocumentTemplate> {
     if (did && controllerDid && authenticationKey) {
       // use given key to create a contract DID document
       return JSON.parse(`{
@@ -179,7 +205,7 @@ export class DidResolver extends Logger {
         "id": "did:evan:${didInfix}${identity}",
         "publicKey": [{
           "id": "did:evan:${didInfix}${identity}#key-1",
-          "type": ["Secp256k1SignatureVerificationKey2018", "ERC725ManagementKey"],
+          "type": "Secp256k1SignatureVerificationKey2018",
           "publicKeyHex": "${publicKey}"
         }],
         "authentication": [
@@ -191,37 +217,12 @@ export class DidResolver extends Logger {
   }
 
   /**
-   * Get DID document for given DID.
-   *
-   * @param      {string}  did     DID to fetch DID document for
-   * @return     {Promise<any>}    a DID document that MAY resemble `DidResolverDocumentTemplate`
-   *                               format
-   */
-  public async getDidDocument(did: string): Promise<any> {
-    let result = null;
-    const identity = this.padIdentity(did
-      ? await this.convertDidToIdentity(did)
-      : this.options.signerIdentity.activeIdentity);
-    const documentHash = await this.options.executor.executeContractCall(
-      await this.getRegistryContract(),
-      'didDocuments',
-      identity,
-    );
-    if (documentHash !== nullBytes32) {
-      result = JSON.parse(await this.options.dfs.get(documentHash) as any);
-    }
-    return result;
-  }
-
-  /**
    * Get service from DID document.
    *
    * @param      {string}  did     DID name to get service for
-   * @return     {Promise<DidResolverServiceEntry[] | DidResolverServiceEntry>}   service
+   * @return     {Promise<DidServiceEntry[] | DidServiceEntry>}  service
    */
-  public async getService(
-    did: string,
-  ): Promise<DidResolverServiceEntry[] | DidResolverServiceEntry> {
+  public async getService(did: string): Promise<DidServiceEntry[] | DidServiceEntry> {
     return (await this.getDidDocument(did)).service;
   }
 
@@ -251,15 +252,26 @@ export class DidResolver extends Logger {
   /**
    * Sets service in DID document.
    *
-   * @param      {string}                                               did      DID name to set
-   *                                                                             service for
-   * @param      {DidResolverServiceEntry[] | DidResolverServiceEntry}  service  service to set
+   * @param      {string}                               did      DID name to set service for
+   * @param      {DidServiceEntry[] | DidServiceEntry}  service  service to set
    * @return     {Promise<void>}  resolved when done
    */
   public async setService(
-    did: string, service: DidResolverServiceEntry[] | DidResolverServiceEntry,
+    did: string,
+    service: DidServiceEntry[] | DidServiceEntry,
   ): Promise<void> {
     await this.setDidDocument(did, { ...(await this.getDidDocument(did)), service });
+  }
+
+  /**
+   * Validates if a given DID is a valid evan DID.
+   *
+   * @param did DID to validate.
+   * @returns {Promise<void>} If the DID is valid.
+   * @throws If the DID is not valid.
+   */
+  public async validateDid(did: string): Promise<void> {
+    await this.validateDidAndGetSections(did);
   }
 
   /**
@@ -315,5 +327,42 @@ export class DidResolver extends Logger {
     return identity.length !== 66
       ? `0x${identity.replace(/^0x/, '').padStart(64, '0')}`
       : identity;
+  }
+
+  /**
+   * Method to ensure no public key array types are written into a retrieved did document. This is
+   * just a legacy method because we still have various faulty DID documents stored that have an
+   * array as the publicKey.type property.
+   *
+   * @param      {any}  result  The cleaned and valid DID document
+   */
+  private async removePublicKeyTypeArray(result: any): Promise<any> {
+    // TODO: Method can be deleted as soon as there is a real DID validation in place
+    const cleanedResult = result;
+    let keyTypes = [];
+
+    for (const pos in result.publicKey) {
+      // Discard ERC725ManagementKey type entry
+      if (result.publicKey[pos].type instanceof Array) {
+        keyTypes = result.publicKey[pos].type.filter((type) => !type.startsWith('ERC725'));
+        [cleanedResult.publicKey[pos].type] = keyTypes;
+      }
+    }
+    return cleanedResult;
+  }
+
+  /**
+   * Validates if a given DID is a valid evan DID and returns its parts.
+   *
+   * @param      {string}  did     DID to validate.
+   * @return     {Promise<RegExpExecArray>}  The parts of the DID if it is valid.
+   * @throws           If the DID is not valid.
+   */
+  private async validateDidAndGetSections(did: string): Promise<RegExpExecArray> {
+    const groups = didRegEx.exec(did);
+    if (!groups) {
+      throw new Error(`Given did ("${did}") is no valid evan DID`);
+    }
+    return groups;
   }
 }

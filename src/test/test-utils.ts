@@ -19,45 +19,45 @@
 
 import * as Web3 from 'web3';
 
+import { accountMap, accounts } from './accounts';
+import { configTestcore as config } from '../config-testcore';
 import {
   AccountStore,
+  Aes,
+  AesBlob,
+  AesEcb,
+  BaseContract,
   ContractLoader,
+  CryptoProvider,
+  DataContract,
+  Description,
   DfsInterface,
+  Did,
+  EncryptionWrapper,
   EventHub,
   Executor,
+  ExecutorWallet,
+  Ipfs,
+  Ipld,
   KeyProvider,
   Logger,
+  NameResolver,
+  Payments,
+  Profile,
+  RightsAndRoles,
+  ServiceContract,
+  Sharing,
+  SignerIdentity,
   SignerInternal,
   Unencrypted,
-} from '@evan.network/dbcp';
-
-import { setTimeout } from 'timers';
-import { accountMap, accounts } from './accounts';
-
-import { createDefaultRuntime, Runtime } from '../index';
-import { Aes } from '../encryption/aes';
-import { AesBlob } from '../encryption/aes-blob';
-import { AesEcb } from '../encryption/aes-ecb';
-import { BaseContract } from '../contracts/base-contract/base-contract';
-import { Verifications } from '../verifications/verifications';
-import { configTestcore as config } from '../config-testcore';
-import { CryptoProvider } from '../encryption/crypto-provider';
-import { DataContract } from '../contracts/data-contract/data-contract';
-import { DidResolver } from '../did/did-resolver';
-import { EncryptionWrapper } from '../encryption/encryption-wrapper';
-import { ExecutorWallet } from '../contracts/executor-wallet';
-import { Ipld } from '../dfs/ipld';
-import { Ipfs } from '../dfs/ipfs';
-import { NameResolver } from '../name-resolver';
-import { Payments } from '../payments';
-import { Profile } from '../profile/profile';
-import { RightsAndRoles } from '../contracts/rights-and-roles';
-import { ServiceContract } from '../contracts/service-contract/service-contract';
-import { SignerIdentity } from '../contracts/signer-identity';
-import { Description } from '../shared-description';
-import { Sharing } from '../contracts/sharing';
-import { Votings } from '../votings/votings';
-import { Wallet } from '../contracts/wallet';
+  Verifications,
+  Votings,
+  Wallet,
+} from '../index';
+import {
+  Runtime,
+  createDefaultRuntime,
+} from '../runtime';
 
 import crypto = require('crypto');
 import smartContract = require('@evan.network/smart-contracts-core');
@@ -191,18 +191,14 @@ export class TestUtils {
     });
   }
 
-  public static async getDidResolver(
-    web3: any,
-    accountId?: string,
-    dfs?: any,
-  ): Promise<DidResolver> {
+  public static async getDid(web3: any, accountId?: string, dfs?: any): Promise<Did> {
     const signerIdentity = await this.getSignerIdentity(web3, accountId);
     const executor = new Executor(
       { config: { alwaysAutoGasLimit: 1.1 }, signer: signerIdentity, web3 },
     );
     await executor.init({ eventHub: await TestUtils.getEventHub(web3) });
 
-    return new DidResolver({
+    return new Did({
       contractLoader: await this.getContractLoader(web3),
       dfs: dfs || (await this.getIpfs()),
       executor,

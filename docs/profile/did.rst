@@ -1,5 +1,5 @@
 ================================================================================
-DID Resolver
+DID
 ================================================================================
 
 .. list-table::
@@ -7,36 +7,36 @@ DID Resolver
    :stub-columns: 1
 
    * - Class Name
-     - DidResolver
+     - Did
    * - Extends
      - `Logger <../common/logger.html>`_
    * - Source
-     - `did-resolver.ts <https://github.com/evannetwork/api-blockchain-core/blob/master/src/did/did-resolver.ts>`_
+     - `did.ts <https://github.com/evannetwork/api-blockchain-core/blob/master/src/did/did.ts>`_
    * - Tests
-     - `did-resolver.spec.ts <https://github.com/evannetwork/api-blockchain-core/blob/master/src/did/did-resolver.spec.ts>`_
+     - `did.spec.ts <https://github.com/evannetwork/api-blockchain-core/blob/master/src/did/did.spec.ts>`_
 
-The `DidResolver` module allows to interact with DIDs on evan.network. As development of identity and DID handling on evan.network is an ongoing process, this document describes the current interoperability of DIDs on evan.network and can be seen as a work-in-progress state of the current implementation.
+The `Did` module allows to interact with DIDs on evan.network. As development of identity and DID handling on evan.network is an ongoing process, this document describes the current interoperability of DIDs on evan.network and can be seen as a work-in-progress state of the current implementation.
 
 
 
 --------------------------------------------------------------------------------
 
-.. _didResolvers_constructor:
+.. _did_constructor:
 
 constructor
 ================================================================================
 
 .. code-block:: typescript
 
-  new DidResolver(options);
+  new Did(options);
 
-Creates a new `DidResolver` instance.
+Creates a new `Did` instance.
 
 ----------
 Parameters
 ----------
 
-#. ``options`` - ``DidResolverOptions``: options for DidResolver constructor.
+#. ``options`` - ``DidOptions``: options for Did constructor.
     * ``contractLoader`` - |source contractLoader|_: |source contractLoader|_ instance
     * ``dfs`` - |source dfsInterface|_: |source dfsInterface|_ instance
     * ``executor`` - |source executor|_: |source executor|_ instance
@@ -52,7 +52,7 @@ Parameters
 Returns
 -------
 
-``DidResolver`` instance
+``Did`` instance
 
 -------
 Example
@@ -60,7 +60,7 @@ Example
 
 .. code-block:: typescript
 
-  const didResolver = new DidResolver({
+  const did = new Did({
     contractLoader,
     dfs,
     executor,
@@ -76,14 +76,14 @@ Example
 = Working with DID documents =
 ==============================
 
-.. _didResolver_setDidDocument:
+.. _did_setDidDocument:
 
 setDidDocument
 ================================================================================
 
 .. code-block:: typescript
 
-  didResolver.setDidDocument(did, document);
+  did.setDidDocument(did, document);
 
 Store given DID document for given DID.
 
@@ -107,22 +107,22 @@ Example
 .. code-block:: typescript
 
   const identity = await runtime.verifications.getIdentityForAccount(accountsId, true);
-  const did = await runtime.didResolver.convertIdentityToDid(identity);
-  const document = await runtime.didResolver.getDidDocumentTemplate();
-  await runtime.didResolver.setDidDocument(did, document);
+  const did = await runtime.did.convertIdentityToDid(identity);
+  const document = await runtime.did.getDidDocumentTemplate();
+  await runtime.did.setDidDocument(did, document);
 
 
 
 --------------------------------------------------------------------------------
 
-.. _didResolver_getDidDocument:
+.. _did_getDidDocument:
 
 getDidDocument
 ================================================================================
 
 .. code-block:: typescript
 
-  didResolver.getDidDocument([did]);
+  did.getDidDocument([did]);
 
 Get DID document for given DID.
 
@@ -136,7 +136,7 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``any``: a DID document that MAY resemble `DidResolverDocumentTemplate` format
+``Promise`` returns ``any``: a DID document that MAY resemble `DidDocumentTemplate` format
 
 -------
 Example
@@ -145,23 +145,23 @@ Example
 .. code-block:: typescript
 
   const identity = await runtime.verifications.getIdentityForAccount(accountsId, true);
-  const did = await runtime.didResolver.convertIdentityToDid(identity);
-  const document = await runtime.didResolver.getDidDocumentTemplate();
-  await runtime.didResolver.setDidDocument(did, document);
-  const retrieved = await runtime.didResolver.getDidDocument(did);
+  const did = await runtime.did.convertIdentityToDid(identity);
+  const document = await runtime.did.getDidDocumentTemplate();
+  await runtime.did.setDidDocument(did, document);
+  const retrieved = await runtime.did.getDidDocument(did);
 
 
 
 --------------------------------------------------------------------------------
 
-.. _didResolver_setService:
+.. _did_setService:
 
 setService
 ================================================================================
 
 .. code-block:: typescript
 
-  didResolver.setService(service[, did]);
+  did.setService(service[, did]);
 
 Sets service in DID document.
 
@@ -170,7 +170,7 @@ Parameters
 ----------
 
 #. ``did`` - ``string``: DID name to set service for
-#. ``service`` - ``DidResolverServiceEntry[] | DidResolverServiceEntry``: service to set
+#. ``service`` - ``DidServiceEntry[] | DidServiceEntry``: service to set
 
 -------
 Returns
@@ -184,29 +184,29 @@ Example
 
 .. code-block:: typescript
 
-  const document = await runtime.didResolver.getDidDocumentTemplate();
+  const document = await runtime.did.getDidDocumentTemplate();
   const identity = await runtime.verifications.getIdentityForAccount(account, true);
-  const did = await runtime.didResolver.convertIdentityToDid(identity);
-  await runtime.didResolver.setDidDocument(did, document);
+  const did = await runtime.did.convertIdentityToDid(identity);
+  await runtime.did.setDidDocument(did, document);
   const service = [{
     id: `${did}#randomService`,
     type: `randomService-${random}`,
     serviceEndpoint: `https://openid.example.com/${random}`,
   }];
-  await runtime.didResolver.setService(did, service);
+  await runtime.did.setService(did, service);
 
 
 
 --------------------------------------------------------------------------------
 
-.. _didResolver_getService:
+.. _did_getService:
 
 getService
 ================================================================================
 
 .. code-block:: typescript
 
-  didResolver.getService([did]);
+  did.getService([did]);
 
 Get service from DID document.
 
@@ -220,7 +220,7 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``DidResolverServiceEntry[] | DidResolverServiceEntry``: service
+``Promise`` returns ``DidServiceEntry[] | DidServiceEntry``: service
 
 -------
 Example
@@ -228,17 +228,17 @@ Example
 
 .. code-block:: typescript
 
-  const document = await runtime.didResolver.getDidDocumentTemplate();
+  const document = await runtime.did.getDidDocumentTemplate();
   const identity = await runtime.verifications.getIdentityForAccount(account, true);
-  const did = await runtime.didResolver.convertIdentityToDid(identity);
-  await runtime.didResolver.setDidDocument(did, document);
+  const did = await runtime.did.convertIdentityToDid(identity);
+  await runtime.did.setDidDocument(did, document);
   const service = [{
     id: `${did}#randomService`,
     type: `randomService-${random}`,
     serviceEndpoint: `https://openid.example.com/${random}`,
   }];
-  await runtime.didResolver.setService(did, service);
-  const retrieved = await runtime.didResolver.getService(did);
+  await runtime.did.setService(did, service);
+  const retrieved = await runtime.did.getService(did);
 
 
 
@@ -247,14 +247,14 @@ Example
 = utilities =
 ==============================
 
-.. _didResolver_convertDidToIdentity:
+.. _did_convertDidToIdentity:
 
 convertDidToIdentity
 ================================================================================
 
 .. code-block:: typescript
 
-  didResolver.convertDidToIdentity(did);
+  did.convertDidToIdentity(did);
 
 Converts given DID to a evan.network identity.
 
@@ -277,7 +277,7 @@ Example
 .. code-block:: typescript
 
   const did = 'did:evan:testcore:0x000000000000000000000000000000000000001234';
-  const identity = await didResolver.convertDidToIdentity(did);
+  const identity = await did.convertDidToIdentity(did);
   console.log(identity);
   // Output:
   // 0x000000000000000000000000000000000000001234
@@ -286,14 +286,14 @@ Example
 
 --------------------------------------------------------------------------------
 
-.. _didResolver_convertIdentityToDid:
+.. _did_convertIdentityToDid:
 
 convertIdentityToDid
 ================================================================================
 
 .. code-block:: typescript
 
-  didResolver.convertIdentityToDid(did);
+  did.convertIdentityToDid(identity);
 
 Converts given evan.network identity hash to DID.
 
@@ -316,7 +316,7 @@ Example
 .. code-block:: typescript
 
   const identity = '0x000000000000000000000000000000000000001234';
-  const did = await didResolver.convertIdentityToDid(identity);
+  const did = await did.convertIdentityToDid(identity);
   console.log(did);
   // Output:
   // did:evan:testcore:0x000000000000000000000000000000000000001234
@@ -325,14 +325,14 @@ Example
 
 --------------------------------------------------------------------------------
 
-.. _didResolver_getDidDocumentTemplate:
+.. _did_getDidDocumentTemplate:
 
 getDidDocumentTemplate
 ================================================================================
 
 .. code-block:: typescript
 
-  didResolver.getDidDocumentTemplate([]);
+  did.getDidDocumentTemplate([]);
 
 Gets a DID document for currently configured account/identity pair. Notice, that this document may a
 complete DID document for currently configured active identity, a part of it or not matching it at
@@ -355,7 +355,7 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``DidResolverDocumentTemplate``: template for DID document
+``Promise`` returns ``DidDocumentTemplate``: template for DID document
 
 -------
 Example
@@ -363,7 +363,7 @@ Example
 
 .. code-block:: typescript
 
-  const document = await runtime.didResolver.getDidDocumentTemplate();
+  const document = await runtime.did.getDidDocumentTemplate();
   console.log(JSON.stringify(document, null, 2));
   // Output:
   // {

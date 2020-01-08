@@ -32,6 +32,7 @@ const configCore = {
       index: 'index',
       mailbox: 'mailbox',
       profile: 'profile',
+      vcs: 'vcs',
       wallet: 'wallet',
     },
     domains: {
@@ -46,11 +47,15 @@ const configCore = {
       profile: process.env.ENS_PROFILES || ['profile', 'ensRoot'],
       profileFactory: ['profile', 'factory', 'ensRoot'],
       root: ['ensRoot'],
+      vcRegistry: ['vcs', 'test', 'ensRoot'],
     },
   },
   smartAgents: {
     onboarding: {
       accountId: '0x063fB42cCe4CA5448D69b4418cb89E663E71A139',
+    },
+    didAndVc: {
+      vcRevokationStatusEndpoint: '',
     },
   },
   alwaysAutoGasLimit: 10,

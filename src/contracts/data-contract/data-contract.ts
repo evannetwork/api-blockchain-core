@@ -17,26 +17,22 @@
   the following URL: https://evan.network/license/
 */
 
+import * as crypto from 'crypto';
+import * as prottle from 'prottle';
+
 import {
   DfsInterface,
   Envelope,
   Validator,
 } from '@evan.network/dbcp';
 
-import {
-  BaseContract,
-  BaseContractOptions,
-  CryptoProvider,
-  Description,
-  Sharing,
-} from '../../index';
-
-import crypto = require('crypto');
-import prottle = require('prottle');
+import { BaseContract, BaseContractOptions } from '../base-contract/base-contract';
+import { CryptoProvider } from '../../encryption/crypto-provider';
+import { Description } from '../../shared-description';
+import { Sharing } from '../sharing';
 
 
 const requestWindowSize = 10;
-
 
 /**
  * options for DataContract constructor
