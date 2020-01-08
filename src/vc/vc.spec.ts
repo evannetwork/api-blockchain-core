@@ -386,4 +386,51 @@ describe('VC Resolver', function () {
       expect(vcRevokeStatusNew).to.be.false;
     });
   });
+
+  describe('When creating a private/sharable VC', async () => {
+    // Test for after sharable VCs have been implemented.
+
+
+    /* it.only('allows the current runtime to use generate key using vc api', async () => {
+      const vcKey = await runtime.vc.generateKey();
+      expect(vcKey).to.be.string;
+    });
+
+    it.only('does not allows me to store a valid private VC non issuer account', async () => {
+      const vcKey = await runtime.vc.generateKey();
+      const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
+      const someoneElsesId = await otherRuntime.vc.createId();
+
+      const vcData = {
+        ...minimalValidVcData,
+        id: someoneElsesId
+      };
+
+      const promise = runtime.vc.storeVc(vcData, vcKey);
+      await expect(promise).to.be.rejectedWith(
+      `Active identity is not the owner of the given VC ID ${someoneElsesId}`);
+    });
+
+    it.only('allows me to store a valid private VC and retrieve it using same account',
+     async () => {
+      const vcKey = await runtime.vc.generateKey();
+      const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData, true, vcKey);
+
+      const vcRetrieved = runtime.vc.getVc(storedVcDoc.id, vcKey);
+
+      await expect(vcRetrieved).to.be.eq(storedVcDoc);
+      await expect(vcRetrieved.id).to.be.eq(storedVcDoc.id);
+    });
+
+    it('allows me to store a valid VC on-chain under my registered ID
+    and retrieve with different account', async () => {
+      const vcKey = await runtime.vc.generateKey();
+      const storedVcDoc = await runtime.vc.storeVc(
+      minimalValidVcData, true, vcKey);
+      const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
+
+      const vcRetrieved = otherRuntime.vc.getVc(storedVcDoc.id, vcKey);
+      await expect(vcRetrieved).to.be.eq(storedVcDoc);
+    }); */
+  });
 });
