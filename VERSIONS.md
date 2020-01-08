@@ -255,7 +255,7 @@
 
 ### Deprecations
 - remove build scripts for browserify bundle
-- remove `bcc/bundles/bcc.ts` file and switch to generalized `index.ts` for both, node and ui bundle (ui build job was moved to [ui-core/dapps/bcc](https://github.com/evannetwork/ui-core/tree/master/dapps/bcc))
+- remove `bcc/bundles/bcc.ts` file and switch to generalized `index.ts` for both, node and ui bundle (ui build job was moved to [ui-dapps/evan-libs/bcc](https://github.com/evannetwork/ui-dapps/tree/master/evan-libs/bcc))
 - add dependency to `RightsAndRoles` to `Profile`
 
 
