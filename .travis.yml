@@ -20,10 +20,10 @@ matrix:
     script:
       - npm run testunitcoverage
 
-  - name: "data contract & IPFS tests"
+  - name: "data contract & IPFS tests & did/vc tests"
     node_js: "11"
     env:
-      - TESTSPECS="src/contracts/data-contract/*.spec.ts src/encryption/*.spec.ts src/dfs/*.spec.ts"
+      - TESTSPECS="src/contracts/data-contract/*.spec.ts src/encryption/*.spec.ts src/dfs/*.spec.ts src/vc/*.spec.ts src/did/*.spec.ts"
       - CHAIN_ENDPOINT='ws://localhost:7545'
     script:
       - npm run testunitcoverage
