@@ -38,6 +38,7 @@ import {
   Verifications,
 } from '../index';
 
+import { CryptoProvider } from '../encryption/crypto-provider';
 
 /**
  * custom configuration for VC resolver
@@ -130,6 +131,7 @@ export interface VcOptions extends LoggerOptions {
   signerIdentity: SignerIdentity;
   verifications: Verifications;
   web3: any;
+  cryptoProvider: CryptoProvider;
 }
 
 /**
@@ -234,6 +236,17 @@ export class Vc extends Logger {
   }
 
   /**
+   * Returns a key.
+   *
+   * @returns     {Promise<any}  it returns a key for encrypting data which can
+   *                             be passed to `storeVc`.
+   */
+  public async generateKey(): Promise<any> {
+    const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aes');
+    return cryptor.generateKey();
+  }
+
+  /**
    * get the Revoke status of a given VC document
    *
    * @param      {string}  vcId    The registry ID the VC document is associated with.
@@ -258,7 +271,7 @@ export class Vc extends Logger {
    * @returns     {Promise<VcDocument}  A VC document stored in the registry.
    * @throws           If an invalid VC ID is given or no document is registered under this ID.
    */
-  public async getVc(vcId: string): Promise<VcDocument> {
+  public async getVc(vcId: string, key?: string): Promise<VcDocument> {
     // Check whether the full URI (vc:evan:[vcId]) or just the internal ID was given
     let identityAddress = vcId;
     if (!identityAddress.startsWith('0x')) {
@@ -316,8 +329,10 @@ export class Vc extends Logger {
    *                                           data.
    * @returns     {Promise<VcDocument}  The final VC document as it is stored in the registry.
    */
-  public async storeVc(vcData: VcDocumentTemplate): Promise<VcDocument> {
+  public async storeVc(vcData: VcDocumentTemplate, key?: string): Promise<VcDocument> {
     const dataTemplate: VcDocumentTemplate = cloneDeep(vcData);
+    // const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aes');
+    // const encryptedData = cryptor.encrypt(dataTemplate.credentialSubject.data, key);
     let internalId;
 
     if (!dataTemplate.id) {
