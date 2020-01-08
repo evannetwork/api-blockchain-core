@@ -16,52 +16,10 @@
   Fifth Floor, Boston, MA, 02110-1301 USA, or download the license from
   the following URL: https://evan.network/license/
 */
-
-const BigNumber = require('bignumber.js');
-const http = require('http');
-const https = require('https');
-const querystring = require('querystring');
-const url = require('url');
-
-/**
- * Use this function instead of request node_module to reduce browser bundle file size.
- *
- * @param      {any}       requestOptions  options including normal request node_module options
- * @param      {Function}  callback        callback function
- */
-const request = (requestOptions: any) => {
-  return new Promise((resolve, reject) => {
-    const requestModule = requestOptions.url.startsWith('https') ? https : http;
-    const parsed = url.parse(requestOptions.url);
-    let result = '';
-
-    // define request options
-    const options = {
-      method: requestOptions.method || 'POST',
-      headers: requestOptions.header || { 'Content-Type': 'application/json' },
-      hostname: parsed.hostname,
-      port: parsed.port,
-      path: parsed.path,
-    };
-
-    // start the request
-    const req = requestModule.request(options, (res) => {
-      res.on('data', (d) => result += d);
-      res.on('end', () => {
-        const resultObj = JSON.parse(result);
-        if (resultObj.error) {
-          reject(resultObj.error);
-        } else {
-          resolve(resultObj.result);
-        }
-      });
-    });
-
-    req.on('error', (e) => reject(e));
-    req.write(JSON.stringify(requestOptions.body));
-    req.end();
-  });
-};
+import * as BigNumber from 'bignumber.js';
+import * as http from 'http';
+import * as https from 'https';
+import * as url from 'url';
 
 import {
   ContractLoader,
@@ -70,6 +28,48 @@ import {
   ExecutorOptions,
   SignerInterface,
 } from '@evan.network/dbcp';
+
+
+/**
+ * Use this function instead of request node_module to reduce browser bundle file size.
+ *
+ * @param      {any}       requestOptions  options including normal request node_module options
+ * @param      {Function}  callback        callback function
+ */
+const request = (requestOptions: any) => new Promise((resolve, reject) => {
+  const requestModule = requestOptions.url.startsWith('https') ? https : http;
+  const parsed = url.parse(requestOptions.url);
+  let result = '';
+
+  // define request options
+  const options = {
+    method: requestOptions.method || 'POST',
+    headers: requestOptions.header || { 'Content-Type': 'application/json' },
+    hostname: parsed.hostname,
+    port: parsed.port,
+    path: parsed.path,
+  };
+
+  // start the request
+  const req = requestModule.request(options, (res) => {
+    res.on('data', (d) => {
+      result += d;
+      return result;
+    });
+    res.on('end', () => {
+      const resultObj = JSON.parse(result);
+      if (resultObj.error) {
+        reject(resultObj.error);
+      } else {
+        resolve(resultObj.result);
+      }
+    });
+  });
+
+  req.on('error', (e) => reject(e));
+  req.write(JSON.stringify(requestOptions.body));
+  req.end();
+});
 
 
 /**
@@ -88,20 +88,27 @@ export interface ExecutorAgentOptions extends ExecutorOptions {
  * @class      ExecutorAgent (name)
  */
 export class ExecutorAgent extends Executor {
-  agentUrl: string;
-  config: any;
-  contractLoader: ContractLoader;
-  defaultOptions: any;
-  eventHub: EventHub;
-  signer: SignerInterface;
-  web3: any;
-  token: string;
+  public agentUrl: string;
+
+  public config: any;
+
+  public contractLoader: ContractLoader;
+
+  public defaultOptions: any;
+
+  public eventHub: EventHub;
+
+  public signer: SignerInterface;
+
+  public web3: any;
+
+  public token: string;
 
   /**
-   * note, that the ExecutorAgent requires the "init" function to be called when intending to use the
-   * EventHub helper for transactions with event return values
+   * note, that the ExecutorAgent requires the "init" function to be called when intending to use
+   * the EventHub helper for transactions with event return values
    */
-  constructor(options: ExecutorAgentOptions) {
+  public constructor(options: ExecutorAgentOptions) {
     super(options);
     this.config = options.config;
     this.contractLoader = options.contractLoader;
@@ -125,11 +132,15 @@ export class ExecutorAgent extends Executor {
    *                                                .gas
    * @return     {Promise<any>}  new contract
    */
-  public async createContract(contractName: string, functionArguments: any[], inputOptions: any): Promise<any> {
+  public async createContract(
+    contractName: string,
+    functionArguments: any[],
+    inputOptions: any,
+  ): Promise<any> {
     this.log(`starting contract creation for "${contractName}" via agent`, 'debug');
     if (inputOptions.value && parseInt(inputOptions.value, 10)) {
-      throw new Error('sending funds is not supported by the agent based executor; ' +
-        `value has been set to ${inputOptions.value} for new contract "${contractName}"`);
+      throw new Error('sending funds is not supported by the agent based executor; '
+        + `value has been set to ${inputOptions.value} for new contract "${contractName}"`);
     }
 
     // submit to action
@@ -157,14 +168,16 @@ export class ExecutorAgent extends Executor {
    *                                           parameter
    * @return     {Promise<any>}  resolves to: {Object} contract calls result
    */
-  public async executeContractCall(contract: any, functionName: string, ...args): Promise<any>  {
+  public async executeContractCall(contract: any, functionName: string, ...args): Promise<any> {
     this.log(`starting contract call "${functionName}" via agent`, 'debug');
 
     // web3 compatibility for 1.2 and 2.0
     let functionSignature;
     if (contract.options.jsonInterface) {
       // web3 1.2
-      functionSignature = contract.options.jsonInterface.filter(fun => fun.name === functionName)[0];
+      [functionSignature] = contract.options.jsonInterface.filter(
+        (fun) => fun.name === functionName,
+      );
     } else {
       // web3 2.0
       functionSignature = contract.abiModel.abi.methods[functionName].abiItem;
@@ -190,10 +203,8 @@ export class ExecutorAgent extends Executor {
           result[index] = new BigNumber(result[index].value);
         }
       });
-    } else {
-      if (result && result.isBigNumber) {
-        result = new BigNumber(result.value);
-      }
+    } else if (result && result.isBigNumber) {
+      result = new BigNumber(result.value);
     }
 
     return result;
@@ -216,18 +227,21 @@ export class ExecutorAgent extends Executor {
    *                             value returned by getEventResult(eventObject)
    */
   public async executeContractTransaction(
-    contract: any, functionName: string, inputOptions: any, ...functionArguments: any[]): Promise<any> {
+    contract: any, functionName: string, inputOptions: any, ...functionArguments: any[]
+  ): Promise<any> {
     this.log(`starting contract transaction "${functionName}" via agent`, 'debug');
     if (inputOptions.value && parseInt(inputOptions.value, 10)) {
-      throw new Error('sending funds is not supported by the agent based executor; ' +
-        `value has been set to ${inputOptions.value} for tx "${functionName}"`);
+      throw new Error('sending funds is not supported by the agent based executor; '
+        + `value has been set to ${inputOptions.value} for tx "${functionName}"`);
     }
 
     // web3 compatibility for 1.2 and 2.0
     let functionSignature;
     if (contract.options.jsonInterface) {
       // web3 1.2
-      functionSignature = contract.options.jsonInterface.filter(fun => fun.name === functionName)[0];
+      [functionSignature] = contract.options.jsonInterface.filter(
+        (fun) => fun.name === functionName,
+      );
     } else {
       // web3 2.0
       functionSignature = contract.abiModel.abi.methods[functionName].abiItem;
@@ -255,8 +269,8 @@ export class ExecutorAgent extends Executor {
    *                                            value
    * @return     {Promise<void>}  resolved when done
    */
-  public async executeSend(inputOptions): Promise<void> {
-    throw new Error(`sending funds is not supported by the agent based executor`);
+  public async executeSend(): Promise<void> {
+    throw new Error('sending funds is not supported by the agent based executor');
   }
 
   /**
@@ -289,15 +303,17 @@ export class ExecutorAgent extends Executor {
         if (fun.functionName) {
           if (fun.contract.options.jsonInterface) {
             // web3 1.2
-            newFun.signature  = fun.contract.options.jsonInterface.filter(ff => ff.name === fun.functionName)[0];
+            [newFun.signature] = fun.contract.options.jsonInterface.filter(
+              (ff) => ff.name === fun.functionName,
+            );
           } else {
             // web3 2.0
-            newFun.signature  = fun.contract.abiModel.abi.methods[fun.functionName].abiItem;
+            newFun.signature = fun.contract.abiModel.abi.methods[fun.functionName].abiItem;
           }
         }
       }
       return newFun;
-    })
+    });
     return request({
       url: `${this.agentUrl}/api/smart-agents/executor/generateToken`,
       method: 'POST',

@@ -17,21 +17,17 @@
   the following URL: https://evan.network/license/
 */
 
-import crypto = require('crypto-browserify');
-
 import {
-  ContractLoader,
   KeyProvider,
   Logger,
   LoggerOptions,
-  NameResolver,
 } from '@evan.network/dbcp';
 
 import { Aes } from './encryption/aes';
 import { CryptoProvider } from './encryption/crypto-provider';
-import { Ipld } from './dfs/ipld';
-import { Ipfs } from './dfs/ipfs';
 import { Mail, Mailbox } from './mailbox';
+
+import crypto = require('crypto-browserify');
 
 
 /**
@@ -55,15 +51,22 @@ export interface KeyExchangeOptions extends LoggerOptions {
  * @class      KeyExchange (name)
  */
 export class KeyExchange extends Logger {
-
   private SHARED_SECRET = Buffer.from('a832d7a4c60473d4fcddabf5c31f5b64dcb2382bbebbeb7c49b6cfc2f08fe9c3', 'hex');
+
   private diffieHellman: any;
+
   private COMM_KEY_CONTEXT = 'mailboxKeyExchange';
+
   private mailbox: Mailbox;
+
   private cryptoProvider: CryptoProvider;
+
   private defaultCryptoAlgo: string;
+
   private account: string;
+
   private keyProvider: KeyProvider;
+
   private aes: Aes;
 
   public publicKey: string;
@@ -73,7 +76,7 @@ export class KeyExchange extends Logger {
    * @param {KeyExchangeOptions} options
    * @memberof KeyExchange
    */
-  constructor(options: KeyExchangeOptions) {
+  public constructor(options: KeyExchangeOptions) {
     super(options);
     this.aes = new Aes();
     this.mailbox = options.mailbox;
@@ -105,13 +108,15 @@ export class KeyExchange extends Logger {
   /**
    * decrypts a given communication key with an exchange key
    *
-   * @param      {string}           encryptedCommKey  encrypted communications key received from another account
-   * @param      {string}           exchangeKey       Diffie Hellman exchange key from computeSecretKey
+   * @param      {string}           encryptedCommKey  encrypted communications key received from
+   *                                                  another account
+   * @param      {string}           exchangeKey       Diffie Hellman exchange key from
+   *                                                  computeSecretKey
    * @return     {Promise<Buffer>}  commKey as a buffer
    */
   public async decryptCommKey(encryptedCommKey: string, exchangeKey: string): Promise<Buffer> {
     const cryptor = this.cryptoProvider.getCryptorByCryptoAlgo(this.defaultCryptoAlgo);
-    return await cryptor.decrypt(Buffer.from(encryptedCommKey, 'hex'), { key: exchangeKey, });
+    return cryptor.decrypt(Buffer.from(encryptedCommKey, 'hex'), { key: exchangeKey });
   }
 
   /**
@@ -123,7 +128,7 @@ export class KeyExchange extends Logger {
     return {
       publicKey: this.diffieHellman.getPublicKey(),
       privateKey: this.diffieHellman.getPrivateKey(),
-    }
+    };
   }
 
   /**
@@ -147,12 +152,12 @@ export class KeyExchange extends Logger {
     const ret: Mail = {
       content: {
         from,
-        fromAlias : mailContent.fromAlias,
-        fromMail : mailContent.fromMail,
+        fromAlias: mailContent.fromAlias,
+        fromMail: mailContent.fromMail,
         title: mailContent.title,
         body: mailContent.body,
-        attachments: mailContent.attachments || []
-      }
+        attachments: mailContent.attachments || [],
+      },
     };
 
     ret.content.title = ret.content.title || 'Contact request';
@@ -162,10 +167,10 @@ I'd like to add you as a contact. Do you accept my invitation?
 
 With kind regards,
 
-${mailContent && mailContent.fromAlias || from}`;
+${(mailContent && mailContent.fromAlias) || from}`;
     ret.content.attachments.push({
       type: 'commKey',
-      key: encryptedCommKey
+      key: encryptedCommKey,
     });
     return ret;
   };
@@ -181,16 +186,21 @@ ${mailContent && mailContent.fromAlias || from}`;
    * @param      {any}            mailContent      mail to send
    * @return     {Promise<void>}  resolved when done
    */
-  public async sendInvite(targetAccount: string, targetPublicKey: string, commKey: string, mailContent: any): Promise<void> {
+  public async sendInvite(
+    targetAccount: string,
+    targetPublicKey: string,
+    commKey: string,
+    mailContent: any,
+  ): Promise<void> {
     const secret = this.computeSecretKey(targetPublicKey).toString('hex');
     const cryptor = this.cryptoProvider.getCryptorByCryptoAlgo(this.defaultCryptoAlgo);
-    const encryptedCommKey = await cryptor.encrypt(commKey, { key: secret, });
+    const encryptedCommKey = await cryptor.encrypt(commKey, { key: secret });
     await this.mailbox.sendMail(
       this.getExchangeMail(this.account, mailContent, encryptedCommKey.toString('hex')),
       this.account,
       targetAccount,
       '0',
-      'mailboxKeyExchange'
+      'mailboxKeyExchange',
     );
   }
 

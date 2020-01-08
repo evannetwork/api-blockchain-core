@@ -8,6 +8,22 @@
 ### Deprecations
 
 
+## Version 2.16.0
+### Features
+- add `getPublicKey` implementation to `SignerIdentity`
+- add `DidResolver` module for managing DID documents
+- add possiblity to instantiate a new `SignerIdentity` in two steps
+  - can be used to create circular structures if required
+  - first call constructor, you can omit `config` argument
+  - when rest (e.g. verifications) has been set up you can call `updateConfig` to finalize `SignerIdenty` instantiation
+- add `getService`, `setService` to `DidResolver`
+
+### Fixes
+- fix `Container` documentation links and add warning to `ContainerUnshareConfig` documentation
+- add interfaces used in exported classes to export list
+- update pre-commit hook to use eslint for typescript
+
+
 ## Version 2.15.0
 ### Features
 - add `setContainerShareConfigs` to `Container` API
@@ -17,6 +33,7 @@
 - implement `unPinFileHash` function in dfs
 - remove old sharing ipfs hash within `saveSharingsToContract`
 - add `signer-identity` for making transactions via identity contract
+- add tests for encryption/decryption with identity based profiles
 
 ### Fixes
 - move `expirationDate` in `formatToV2` to details object
@@ -244,7 +261,7 @@
 
 ### Deprecations
 - remove build scripts for browserify bundle
-- remove `bcc/bundles/bcc.ts` file and switch to generalized `index.ts` for both, node and ui bundle (ui build job was moved to [ui-core/dapps/bcc](https://github.com/evannetwork/ui-core/tree/master/dapps/bcc))
+- remove `bcc/bundles/bcc.ts` file and switch to generalized `index.ts` for both, node and ui bundle (ui build job was moved to [ui-dapps/evan-libs/bcc](https://github.com/evannetwork/ui-dapps/tree/master/evan-libs/bcc))
 - add dependency to `RightsAndRoles` to `Profile`
 
 

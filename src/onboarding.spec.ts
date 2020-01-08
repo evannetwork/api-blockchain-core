@@ -19,7 +19,7 @@
 
 import 'mocha';
 import { expect, use } from 'chai';
-import chaiAsPromised = require('chai-as-promised');
+import * as chaiAsPromised from 'chai-as-promised';
 
 
 import { accounts } from './test/accounts';
@@ -31,7 +31,7 @@ import { TestUtils } from './test/test-utils';
 
 use(chaiAsPromised);
 
-describe('Onboarding helper', function() {
+describe('Onboarding helper', function test() {
   this.timeout(600000);
   let ipfs;
   let mailbox: Mailbox;
@@ -46,7 +46,7 @@ describe('Onboarding helper', function() {
     const profile = await TestUtils.getProfile(web3, ipfs, ipld);
     await profile.loadForAccount();
     keyProvider.init(profile);
-    keyProvider.currentAccount = accounts[0];
+    [keyProvider.currentAccount] = accounts;
 
     mailbox = new Mailbox({
       mailboxOwner: accounts[0],
@@ -66,7 +66,7 @@ describe('Onboarding helper', function() {
 
     const keyExchangeOptions = {
       mailbox,
-      cryptoProvider:  TestUtils.getCryptoProvider(),
+      cryptoProvider: TestUtils.getCryptoProvider(),
       defaultCryptoAlgo: 'aes',
       account: accounts[0],
       keyProvider: TestUtils.getKeyProvider(),
@@ -85,16 +85,16 @@ describe('Onboarding helper', function() {
       accountDetails: {
         profileType: 'dumb dumb',
         accountName: 'test account',
-      }});
+      },
+    });
     await expect(profilePromise)
       .to.be.rejectedWith('The parameters passed are incorrect, profile properties need to be reconfigured');
-
   });
 
   it('should create a new random mnemonic', () => {
     const mnemonic = Onboarding.createMnemonic();
     expect(mnemonic).to.be.an('string');
-  })
+  });
 
   it('should check if an account has enough amount of eves to create new profile', async () => {
     const originRuntime = await TestUtils.getRuntime(accounts[0]);
@@ -118,10 +118,11 @@ describe('Onboarding helper', function() {
       accountDetails: {
         profileType: 'company',
         accountName: 'test account',
-      }});
+      },
+    });
     expect(newProfile).to.be.exist;
     expect(newProfile.runtimeConfig).to.be.deep.eq(runtimeConfig);
-  })
+  });
 
   it('should create a new profile from a different account', async () => {
     const originRuntime = await TestUtils.getRuntime(accounts[0]);
@@ -133,7 +134,7 @@ describe('Onboarding helper', function() {
       accountDetails: {
         profileType: 'company',
         accountName: 'test account',
-      }
+      },
     });
 
     expect(newProfile.runtimeConfig).to.be.deep.eq(runtimeConfig);

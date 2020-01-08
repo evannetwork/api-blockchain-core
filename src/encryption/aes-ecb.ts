@@ -17,36 +17,37 @@
   the following URL: https://evan.network/license/
 */
 
-import crypto = require('crypto-browserify');
-
 import {
   Cryptor,
   CryptoInfo,
   Logger,
-  LoggerOptions,
+  LoggerOptions as AesEcbOptions,
 } from '@evan.network/dbcp';
+
+import crypto = require('crypto-browserify');
 
 /**
  * aes ecb instance options
  */
-export interface AesEcbOptions extends LoggerOptions {
-
-}
+export {
+  LoggerOptions as AesEcbOptions,
+} from '@evan.network/dbcp';
 
 export class AesEcb extends Logger implements Cryptor {
-  static defaultOptions = {
+  public static defaultOptions = {
     keyLength: 256,
     algorithm: 'aes-256-ecb',
   };
 
+  public options: any;
+
   private readonly encodingUnencrypted = 'utf-8';
+
   private readonly encodingEncrypted = 'hex';
 
-  options: any;
-
-  constructor(options?: AesEcbOptions) {
+  public constructor(options?: AesEcbOptions) {
     super(options);
-    this.options = Object.assign({}, AesEcb.defaultOptions, options || {});
+    this.options = { ...AesEcb.defaultOptions, ...options || {} };
   }
 
 
@@ -56,18 +57,18 @@ export class AesEcb extends Logger implements Cryptor {
    * @param      {string}  str     string to convert
    * @return     {Buffer}  converted input
    */
-  stringToArrayBuffer(str) {
-    let len = str.length;
-    let bytes = new Uint8Array( len );
-    for (let i = 0; i < len; i++) {
+  public stringToArrayBuffer(str) {
+    const len = str.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i += 1) {
       bytes[i] = str.charCodeAt(i);
     }
     return bytes.buffer;
   }
 
 
-  getCryptoInfo(originator: string): CryptoInfo {
-    return Object.assign({ originator, }, this.options);
+  public getCryptoInfo(originator: string): CryptoInfo {
+    return { originator, ...this.options };
   }
 
   /**
@@ -76,17 +77,17 @@ export class AesEcb extends Logger implements Cryptor {
    * @return     {any}  The iv from key.
 
    */
-  async generateKey(): Promise<any> {
+  public async generateKey(): Promise<any> {
     return new Promise((resolve, reject) => {
       crypto.randomBytes(this.options.keyLength / 8, (err, buf) => {
         if (err) {
           reject(err);
         } else {
-          const hexString = buf.toString('hex')
+          const hexString = buf.toString('hex');
           resolve(hexString);
         }
       });
-    })
+    });
   }
 
   /**
@@ -96,7 +97,7 @@ export class AesEcb extends Logger implements Cryptor {
    * @param      {any}     options  cryptor options
    * @return     {Buffer}  encrypted message
    */
-  async encrypt(message: Buffer, options: any): Promise<Buffer> {
+  public async encrypt(message: Buffer, options: any): Promise<Buffer> {
     try {
       if (!options.key) {
         throw new Error('no key given');
@@ -105,7 +106,7 @@ export class AesEcb extends Logger implements Cryptor {
       const cipher = crypto.createCipheriv(
         this.options.algorithm,
         Buffer.from(computedKey, 'hex'),
-        ''
+        '',
       );
       cipher.setAutoPadding(false);
       const encrypted = Buffer.concat([cipher.update(message), cipher.final()]);
@@ -123,7 +124,7 @@ export class AesEcb extends Logger implements Cryptor {
    * @param      {any}     options  decryption options
    * @return     {any}  decrypted message
    */
-  async decrypt(message: Buffer, options: any): Promise<Buffer> {
+  public async decrypt(message: Buffer, options: any): Promise<Buffer> {
     try {
       if (!options.key) {
         throw new Error('no key given');
@@ -132,7 +133,7 @@ export class AesEcb extends Logger implements Cryptor {
       const decipher = crypto.createDecipheriv(
         this.options.algorithm,
         Buffer.from(computedKey, 'hex'),
-        ''
+        '',
       );
       decipher.setAutoPadding(false);
       const decrypted = Buffer.concat([decipher.update(message), decipher.final()]);
@@ -153,16 +154,20 @@ export class AesEcb extends Logger implements Cryptor {
   private computeSecret(passphrase: Buffer): string {
     let nkey = 32;
     let niv = 0;
-    for (let key = '', iv = '', p = '';;) {
+    for (let key = '', p = ''; ;) {
       const h = crypto.createHash('md5');
       h.update(p, 'hex');
       h.update(passphrase);
       p = h.digest('hex');
-      let n, i = 0;
+      let n;
+      let i = 0;
       n = Math.min(p.length - i, 2 * nkey);
-      nkey -= n / 2, key += p.slice(i, i + n), i += n;
+      nkey -= n / 2;
+      key += p.slice(i, i + n);
+      i += n;
       n = Math.min(p.length - i, 2 * niv);
-      niv -= n / 2, iv += p.slice(i, i + n), i += n;
+      niv -= n / 2;
+      i += n;
       if (nkey + niv === 0) {
         return key;
       }

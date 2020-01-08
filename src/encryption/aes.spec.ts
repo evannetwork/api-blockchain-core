@@ -20,11 +20,10 @@
 import 'mocha';
 import { expect } from 'chai';
 
-import { Aes } from './aes'
-import { TestUtils } from '../test/test-utils'
+import { Aes } from './aes';
 
 
-describe('aes handler', function() {
+describe('aes handler', function test() {
   this.timeout(300000);
 
   it('should be able to be created', () => {
@@ -42,8 +41,8 @@ describe('aes handler', function() {
     const aes = new Aes();
     const key = await aes.generateKey();
     const message = Math.random().toString();
-    const encrypted = await aes.encrypt(message, { key: key, });
-    const decrypted = await aes.decrypt(encrypted, { key: key, });
+    const encrypted = await aes.encrypt(message, { key });
+    const decrypted = await aes.decrypt(encrypted, { key });
     expect(decrypted.toString('utf-8')).to.eq(message);
   });
 
@@ -51,8 +50,8 @@ describe('aes handler', function() {
     const aes = new Aes();
     const key = await aes.generateKey();
     const message = Math.random();
-    const encrypted = await aes.encrypt(message, { key: key, });
-    const decrypted = await aes.decrypt(encrypted, { key: key, });
+    const encrypted = await aes.encrypt(message, { key });
+    const decrypted = await aes.decrypt(encrypted, { key });
     expect(decrypted).to.eq(message);
   });
 });

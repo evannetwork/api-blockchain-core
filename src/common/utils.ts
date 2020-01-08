@@ -17,31 +17,11 @@
   the following URL: https://evan.network/license/
 */
 
-import { Runtime } from '../index'
+import { Runtime } from '../index';
 
 
 export const nullAddress = '0x0000000000000000000000000000000000000000';
 export const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
-
-/**
- * create auth header data to authenticate with current account against a smart agent server
- *
- * @param      {Runtime}  runtime    an initialized runtime
- * @param      {string}   message    (optional): message to sign, uses current timestamp by default
- * @return     {Promise<string>}  auth header value as string
- */
-export async function getSmartAgentAuthHeaders(runtime: Runtime, message?: string
-): Promise<string> {
-  const messageToSign = message || `${new Date().getTime()}`;
-  const hexMessage = runtime.web3.utils.toHex(messageToSign);
-  const paddedMessage = hexMessage.length % 2 === 1 ? hexMessage.replace('0x', '0x0') : hexMessage;
-  const signature = await runtime.signer.signMessage(runtime.activeAccount, paddedMessage);
-  return [
-    `EvanAuth ${runtime.activeAccount}`,
-    `EvanMessage ${paddedMessage}`,
-    `EvanSignedMessage ${signature}`
-  ].join(',');
-}
 
 /**
  * retrieves chain name from web3's connected networks id, testcore is 508674158, core is 49262, if
@@ -56,17 +36,41 @@ export async function getEnvironment(web3: any): Promise<string> {
 }
 
 /**
+ * create auth header data to authenticate with current account against a smart agent server
+ *
+ * @param      {Runtime}  runtime    an initialized runtime
+ * @param      {string}   message    (optional): message to sign, uses current timestamp by default
+ * @return     {Promise<string>}  auth header value as string
+ */
+export async function getSmartAgentAuthHeaders(
+  runtime: Runtime,
+  message?: string,
+): Promise<string> {
+  const messageToSign = message || `${new Date().getTime()}`;
+  const hexMessage = runtime.web3.utils.toHex(messageToSign);
+  const paddedMessage = hexMessage.length % 2 === 1 ? hexMessage.replace('0x', '0x0') : hexMessage;
+  const signature = await runtime.signer.signMessage(runtime.activeAccount, paddedMessage);
+  return [
+    `EvanAuth ${runtime.activeAccount}`,
+    `EvanMessage ${paddedMessage}`,
+    `EvanSignedMessage ${signature}`,
+  ].join(',');
+}
+
+/**
  * obfuscates strings by replacing each character but the last two with 'x'
  *
  * @param      {string}  text    text to obfuscate
  * @return     {string}  obfuscated text
  */
 export function obfuscate(text: string): string {
-  return text ? `${[...Array(text.length - 2)].map(() => 'x').join('')}${text.substr(text.length - 2)}` : text;
+  return text
+    ? `${[...Array(text.length - 2)].map(() => 'x').join('')}${text.substr(text.length - 2)}`
+    : text;
 }
 
 /**
-* run given function from this, use function(error, result) {...} callback for promise resolve/reject
+* run given function from this, use function(error, result) {..} callback for promise resolve/reject
 * can be used like:
 * api.helpers
 *   .runFunctionAsPromise(fs, 'readFile', 'somefile.txt')
@@ -75,15 +79,15 @@ export function obfuscate(text: string): string {
 *
 * @param  {Object} funThis      the functions 'this' object
 * @param  {string} functionName name of the contract function to call
-* @return {Promise}             resolves to: {Object} (the result from the function(error, result) {...} callback)
+* @return {Promise}             resolves to: {Object}
 */
 export async function promisify(funThis, functionName, ...args): Promise<any> {
-  let functionArguments = args.slice(0);
+  const functionArguments = args.slice(0);
 
-  return new Promise(function(resolve, reject) {
+  return new Promise(((resolve, reject) => {
     try {
       // add callback function to arguments
-      functionArguments.push(function(error, result) {
+      functionArguments.push((error, result) => {
         if (error) {
           reject(error);
         } else {
@@ -91,9 +95,9 @@ export async function promisify(funThis, functionName, ...args): Promise<any> {
         }
       });
       // run function
-      funThis[functionName].apply(funThis, functionArguments);
+      funThis[functionName](...functionArguments);
     } catch (ex) {
       reject(ex.message);
     }
-  });
+  }));
 }

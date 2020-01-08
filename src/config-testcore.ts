@@ -25,18 +25,21 @@ const configTestcore = {
       admin: 'admin',
       businessCenterRoot: process.env.BC_ROOT || 'testbc.evan',
       container: 'container',
+      dids: 'dids',
       ensRoot: process.env.ENS_ROOT || 'evan',
       eventhub: 'eventhub',
       factory: 'factory',
       index: 'index',
       mailbox: 'mailbox',
       profile: 'profile',
+      vcs: 'vcs',
       wallet: 'wallet',
     },
     domains: {
       adminFactory: ['admin', 'factory', 'ensRoot'],
       businessCenter: ['businessCenterRoot'],
       containerFactory: ['container', 'factory', 'ensRoot'],
+      didRegistry: ['dids', 'ensRoot'],
       eventhub: process.env.ENS_EVENTS || ['eventhub', 'ensRoot'],
       factory: ['factory', 'businessCenterRoot'],
       indexFactory: ['index', 'factory', 'ensRoot'],
@@ -44,17 +47,22 @@ const configTestcore = {
       profile: process.env.ENS_PROFILES || ['profile', 'ensRoot'],
       profileFactory: ['profile', 'factory', 'ensRoot'],
       root: ['ensRoot'],
+      vcRegistry: ['vcs', 'ensRoot'],
     },
   },
   smartAgents: {
     onboarding: {
       accountId: '0x063fB42cCe4CA5448D69b4418cb89E663E71A139',
     },
+    didAndVc: {
+      vcRevokationStatusEndpoint: 'https://testcore.evan.network/smart-agents/smart-agent-did-resolver/vc/status/',
+    },
   },
   alwaysAutoGasLimit: 10,
   // owner of the evan root verification domain
   ensRootOwner: '0x4a6723fC5a926FA150bAeAf04bfD673B056Ba83D',
-  ipfsConfig: {host: 'ipfs.test.evan.network', port: '443', protocol: 'https'},
-}
+  ipfsConfig: { host: 'ipfs.test.evan.network', port: '443', protocol: 'https' },
+};
 
-export { configTestcore }
+// eslint-disable-next-line import/prefer-default-export
+export { configTestcore };

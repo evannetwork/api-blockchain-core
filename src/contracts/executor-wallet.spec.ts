@@ -19,29 +19,24 @@
 
 import 'mocha';
 import { expect, use } from 'chai';
-import chaiAsPromised = require('chai-as-promised');
+import * as chaiAsPromised from 'chai-as-promised';
 
 import {
   ContractLoader,
   DfsInterface,
   Executor,
   NameResolver,
-  SignerInternal,
 } from '@evan.network/dbcp';
 
 import { accounts } from '../test/accounts';
-import { configTestcore as config } from '../config-testcore';
-import { CryptoProvider } from '../encryption/crypto-provider';
 import { ExecutorWallet } from './executor-wallet';
-import { Ipfs } from '../dfs/ipfs';
-import { sampleContext, TestUtils } from '../test/test-utils';
-import { Sharing } from './sharing';
+import { TestUtils } from '../test/test-utils';
 import { Wallet } from './wallet';
 
 use(chaiAsPromised);
 
 
-describe('Signer Wallet', function() {
+describe('Signer Wallet', function test() {
   this.timeout(60000);
   let dfs: DfsInterface;
   let contractLoader: ContractLoader;
@@ -65,9 +60,9 @@ describe('Signer Wallet', function() {
     nameResolver = await TestUtils.getNameResolver(web3);
     const eventHub = await TestUtils.getEventHub(web3);
     executor.eventHub = eventHub;
-    executorWallet0 = await TestUtils.getExecutorWallet(web3, wallet0, accounts[0], dfs);
+    executorWallet0 = await TestUtils.getExecutorWallet(web3, wallet0, accounts[0]);
     executorWallet0.eventHub = eventHub;
-    executorWallet1 = await TestUtils.getExecutorWallet(web3, wallet1, accounts[1], dfs);
+    executorWallet1 = await TestUtils.getExecutorWallet(web3, wallet1, accounts[1]);
     executorWallet1.eventHub = eventHub;
   });
 
@@ -75,12 +70,15 @@ describe('Signer Wallet', function() {
     it('can instantly submit transactions', async () => {
       // create test contract and hand over to wallet
       const testContract = await executor.createContract(
-        'Owned', [], { from: accounts[0], gas: 200000, });
+        'Owned', [], { from: accounts[0], gas: 200000 },
+      );
       expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[0]);
       await executor.executeContractTransaction(
-        testContract, 'transferOwnership', { from: accounts[0], }, wallet0.walletAddress);
+        testContract, 'transferOwnership', { from: accounts[0] }, wallet0.walletAddress,
+      );
       expect(await executor.executeContractCall(
-        testContract, 'owner')).to.eq(wallet0.walletAddress);
+        testContract, 'owner',
+      )).to.eq(wallet0.walletAddress);
       await TestUtils.nextBlock(executor, accounts[0]);
       await executorWallet0.executeContractTransaction(
         testContract,
@@ -94,7 +92,8 @@ describe('Signer Wallet', function() {
     it('cannot submit transactions, when not in owners group', async () => {
       // create test contract and hand over to wallet
       const testContract = await executor.createContract(
-        'Owned', [], { from: accounts[0], gas: 200000 });
+        'Owned', [], { from: accounts[0], gas: 200000 },
+      );
       expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[0]);
 
       await executor.executeContractTransaction(
@@ -104,22 +103,27 @@ describe('Signer Wallet', function() {
         wallet0.walletAddress,
       );
       expect(await executor.executeContractCall(
-        testContract, 'owner')).to.eq(wallet0.walletAddress);
+        testContract, 'owner',
+      )).to.eq(wallet0.walletAddress);
 
       const promise = executorWallet1.executeContractTransaction(
-        testContract, 'transferOwnership', { from: wallet1.walletAddress, }, accounts[1]);
+        testContract, 'transferOwnership', { from: wallet1.walletAddress }, accounts[1],
+      );
       await expect(promise).to.be.rejected;
     });
 
     it('can instantly submit transactions a second time', async () => {
       // create test contract and hand over to wallet
       const testContract = await executor.createContract(
-        'Owned', [], { from: accounts[0], gas: 200000 });
+        'Owned', [], { from: accounts[0], gas: 200000 },
+      );
       expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[0]);
       await executor.executeContractTransaction(
-        testContract, 'transferOwnership', { from: accounts[0], }, wallet0.walletAddress);
+        testContract, 'transferOwnership', { from: accounts[0] }, wallet0.walletAddress,
+      );
       expect(await executor.executeContractCall(
-        testContract, 'owner')).to.eq(wallet0.walletAddress);
+        testContract, 'owner',
+      )).to.eq(wallet0.walletAddress);
       await executorWallet0.executeContractTransaction(
         testContract,
         'transferOwnership',
@@ -132,16 +136,13 @@ describe('Signer Wallet', function() {
     it('can instantly submit transactions with event based result', async () => {
       const factoryAddress = await nameResolver.getAddress('testcontract.factory.testbc.evan');
       const factory = contractLoader.loadContract('TestContractFactory', factoryAddress);
-      const businessCenterDomain = nameResolver.getDomainName(
-        config.nameResolver.domains.businessCenter);
-      const businessCenterAddress = '0x0000000000000000000000000000000000000000';
 
       const data = `I like random numbers, for example: ${Math.random()}`;
       const contractId = await executorWallet0.executeContractTransaction(
         factory,
         'createContract', {
           from: wallet0.walletAddress,
-          event: { target: 'TestContractFactory', eventName: 'ContractCreated', },
+          event: { target: 'TestContractFactory', eventName: 'ContractCreated' },
           getEventResult: (event, args) => args.newAddress,
         },
         data,
@@ -154,16 +155,13 @@ describe('Signer Wallet', function() {
     it('can instantly submit transactions with event based result a second time', async () => {
       const factoryAddress = await nameResolver.getAddress('testcontract.factory.testbc.evan');
       const factory = contractLoader.loadContract('TestContractFactory', factoryAddress);
-      const businessCenterDomain = nameResolver.getDomainName(
-        config.nameResolver.domains.businessCenter);
-      const businessCenterAddress = '0x0000000000000000000000000000000000000000';
 
       const data = `I like random numbers, for example: ${Math.random()}`;
       const contractId = await executorWallet0.executeContractTransaction(
         factory,
         'createContract', {
           from: wallet0.walletAddress,
-          event: { target: 'TestContractFactory', eventName: 'ContractCreated', },
+          event: { target: 'TestContractFactory', eventName: 'ContractCreated' },
           getEventResult: (event, args) => args.newAddress,
         },
         data,
@@ -176,12 +174,15 @@ describe('Signer Wallet', function() {
     it('can instantly submit transactions a third time', async () => {
       // create test contract and hand over to wallet
       const testContract = await executor.createContract(
-        'Owned', [], { from: accounts[0], gas: 200000 });
+        'Owned', [], { from: accounts[0], gas: 200000 },
+      );
       expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[0]);
       await executor.executeContractTransaction(
-        testContract, 'transferOwnership', { from: accounts[0], }, wallet0.walletAddress);
+        testContract, 'transferOwnership', { from: accounts[0] }, wallet0.walletAddress,
+      );
       expect(await executor.executeContractCall(
-        testContract, 'owner')).to.eq(wallet0.walletAddress);
+        testContract, 'owner',
+      )).to.eq(wallet0.walletAddress);
 
       await executorWallet0.executeContractTransaction(
         testContract,
@@ -195,7 +196,8 @@ describe('Signer Wallet', function() {
     it('can create new contracts', async () => {
       // create new contract
       const testContract = await executorWallet0.createContract(
-        'Owned', [], { from: wallet0.walletAddress, autoGas: 1.1, });
+        'Owned', [], { from: wallet0.walletAddress, autoGas: 1.1 },
+      );
       expect(testContract.options.address).to.match(/0x[0-9a-f]{40}/ig);
 
       // current owner is wallet

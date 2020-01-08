@@ -49,8 +49,10 @@ export enum EncryptionWrapperKeyType {
   /** custom key handling means that the key is handled elsewhere and has to be given to profile */
   Custom = 'custom',
   /** key is stored in profile, usually in property "encryptionKeys" */
+  // eslint-disable-next-line no-shadow
   Profile = 'profile',
   /** key is stored in Shared or MultiShared contract */
+  // eslint-disable-next-line no-shadow
   Sharing = 'sharing',
 }
 
@@ -73,17 +75,18 @@ export interface EncryptionWrapperOptions extends LoggerOptions {
  * @class      EncryptionWrapper (name)
  */
 export class EncryptionWrapper extends Logger {
-  static defaultOptions = {
+  public static defaultOptions = {
     keyLength: 256,
     algorithm: 'aes-blob',
   };
 
+  public options: EncryptionWrapperOptions;
+
   private readonly encodingUnencrypted = 'utf-8';
+
   private readonly encodingEncrypted = 'hex';
 
-  options: EncryptionWrapperOptions;
-
-  constructor(options?: EncryptionWrapperOptions) {
+  public constructor(options?: EncryptionWrapperOptions) {
     super(options);
     this.options = { ...options };
   }
@@ -96,19 +99,17 @@ export class EncryptionWrapper extends Logger {
    */
   public async decrypt(
     toDecrypt: Envelope,
-    artifacts?:
-      // for type === Sharing
-      { accountId: string, propertyName: string } |
-      // for type === Custom
-      { key: string }
+    // for type === Sharing or type === Custom
+    artifacts?: { accountId: string; propertyName: string } | { key: string },
   ): Promise<any> {
-    const [ cryptor, key ] = await Promise.all([
+    const [cryptor, key] = await Promise.all([
       this.options.cryptoProvider.getCryptorByCryptoInfo(toDecrypt.cryptoInfo),
       this.getKey(toDecrypt.cryptoInfo, artifacts),
     ]);
 
     const decrypted = await cryptor.decrypt(
-      Buffer.from(toDecrypt.private, this.encodingEncrypted), { key });
+      Buffer.from(toDecrypt.private, this.encodingEncrypted), { key },
+    );
     return decrypted;
   }
 
@@ -124,13 +125,10 @@ export class EncryptionWrapper extends Logger {
   public async encrypt(
     toEncrypt: any,
     cryptoInfo: CryptoInfo,
-    artifacts?:
-      // for type === Sharing
-      { accountId: string, block?: number, propertyName: string } |
-      // for type === Custom
-      { key: string }
+    // for type === Sharing or type === Custom
+    artifacts?: { accountId: string; block?: number; propertyName: string } | { key: string },
   ): Promise<Envelope> {
-    const [ cryptor, key ] = await Promise.all([
+    const [cryptor, key] = await Promise.all([
       this.options.cryptoProvider.getCryptorByCryptoInfo(cryptoInfo),
       this.getKey(cryptoInfo, artifacts),
     ]);
@@ -177,9 +175,8 @@ export class EncryptionWrapper extends Logger {
     keyContext: string,
     keyType: EncryptionWrapperKeyType,
     cryptorType: EncryptionWrapperCryptorType = EncryptionWrapperCryptorType.Content,
-    artifacts?:
-      // for type === Sharing
-      { sharingContractId: string, sharingId?: string }
+    // for type === Sharing
+    artifacts?: { sharingContractId: string; sharingId?: string },
   ): Promise<CryptoInfo> {
     switch (keyType) {
       case EncryptionWrapperKeyType.Custom:
@@ -189,17 +186,18 @@ export class EncryptionWrapper extends Logger {
           block: await this.options.web3.eth.getBlockNumber(),
           originator: `${keyType}:${keyContext}`,
         };
-      case EncryptionWrapperKeyType.Sharing:
+      case EncryptionWrapperKeyType.Sharing: {
         this.checkProperties(artifacts, ['sharingContractId']);
         const { sharingContractId, sharingId } = artifacts;
-        const originator = typeof sharingId !== 'undefined' ?
-          `${keyType}:${sharingContractId}:${sharingId}` :
-          `${keyType}:${sharingContractId}`;
+        const originator = typeof sharingId !== 'undefined'
+          ? `${keyType}:${sharingContractId}:${sharingId}`
+          : `${keyType}:${sharingContractId}`;
         return {
           algorithm: cryptorType,
           block: await this.options.web3.eth.getBlockNumber(),
           originator,
         };
+      }
       default:
         throw new Error(`unknown key type "${keyType}"`);
     }
@@ -213,11 +211,8 @@ export class EncryptionWrapper extends Logger {
    */
   public async getKey(
     cryptoInfo: CryptoInfo,
-    artifacts?:
-      // for type === Sharing
-      { accountId: string, propertyName: string } |
-      // for type === Custom
-      { key: string }
+    // for type === Sharing or type === Custom
+    artifacts?: { accountId: string; propertyName: string } | { key: string },
   ) {
     let result;
     const split = cryptoInfo.originator.split(':');
@@ -228,9 +223,9 @@ export class EncryptionWrapper extends Logger {
       case 'profile':
         result = await this.options.profile.getEncryptionKey(split[1]);
         break;
-      case 'sharing':
+      case 'sharing': {
         this.checkProperties(artifacts, ['accountId']);
-        const [ contractid, sharingId = null ] = split.slice(1);
+        const [contractid, sharingId = null] = split.slice(1);
         const { accountId, propertyName = '*' } = artifacts as any;
         result = await this.options.sharing.getKey(
           contractid,
@@ -240,11 +235,13 @@ export class EncryptionWrapper extends Logger {
           sharingId,
         );
         break;
-      case 'custom':
+      }
+      case 'custom': {
         this.checkProperties(artifacts, ['key']);
         const { key } = artifacts as any;
         result = key;
         break;
+      }
       default:
         throw new Error(`unknown key type "${split[0]}"`);
     }
@@ -269,9 +266,8 @@ export class EncryptionWrapper extends Logger {
   public async storeKey(
     cryptoInfo: CryptoInfo,
     key: any,
-    artifacts?:
-      // for type === Sharing
-      { accountId: string, receiver?: string }
+    // for type === Sharing
+    artifacts?: { accountId: string; receiver?: string },
   ): Promise <void> {
     const split = cryptoInfo.originator.split(':');
     if (split.length < 2) {
@@ -287,7 +283,7 @@ export class EncryptionWrapper extends Logger {
       }
       case 'sharing': {
         this.checkProperties(artifacts, ['accountId']);
-        const [ contractid, sharingId = null ] = split.slice(1);
+        const [contractid, sharingId = null] = split.slice(1);
         await this.options.sharing.addSharing(
           contractid,
           artifacts.accountId,
@@ -314,13 +310,15 @@ export class EncryptionWrapper extends Logger {
    */
   private checkProperties(artifacts: any, properties: string[]) {
     if (artifacts) {
-      const missing = properties.filter(property => !artifacts.hasOwnProperty(property));
+      const missing = properties.filter(
+        (property) => !Object.prototype.hasOwnProperty.call(artifacts, property),
+      );
       if (missing.length) {
         throw new Error([
           'artifacts is missing ',
           missing.length === 1 ? 'property: ' : 'properties: ',
-          missing.join(', ')
-        ].join(''))
+          missing.join(', '),
+        ].join(''));
       }
     }
   }

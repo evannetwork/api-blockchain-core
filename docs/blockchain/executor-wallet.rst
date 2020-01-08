@@ -286,7 +286,7 @@ createContract
 
 .. required for building markup
 .. |source signerInterface| replace:: ``SignerInterface``
-.. _source signerInterface: ../blockchain/signer.html
+.. _source signerInterface: ../blockchain/signer-internal.html
 
 .. |source eventHub| replace:: ``EventHub``
 .. _source eventHub: ../blockchain/event-hub.html

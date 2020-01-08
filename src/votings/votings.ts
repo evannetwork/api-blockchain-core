@@ -28,7 +28,6 @@ import { NameResolver } from '../name-resolver';
 
 
 const nullAddress = '0x0000000000000000000000000000000000000000';
-const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const defaultProposalOptions = {
   data: '0x',
   to: nullAddress,
@@ -46,11 +45,11 @@ export interface MemberInfo {
   /**
    * description text of member
    */
-   name: string;
-   /**
-    * date of joining votings contract
-    */
-   memberSince: string;
+  name: string;
+  /**
+   * date of joining votings contract
+   */
+  memberSince: string;
 }
 
 /**
@@ -112,11 +111,11 @@ export interface ProposalInfos {
   /**
    * proposals of current page (length is 10)
    */
-  results: ProposalInfo[],
+  results: ProposalInfo[];
   /**
    * total number of results
    */
-  totalCount: number,
+  totalCount: number;
 }
 
 /**
@@ -177,12 +176,12 @@ export interface VotingsOptions extends LoggerOptions {
  * @class      Votings (name)
  */
 export class Votings extends Logger {
-  options: VotingsOptions;
+  public options: VotingsOptions;
 
   /**
    * create new Votings instance.
    */
-  constructor(options: VotingsOptions) {
+  public constructor(options: VotingsOptions) {
     super(options);
     this.options = options;
   }
@@ -197,11 +196,11 @@ export class Votings extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async addMember(
-      contract: string|any,
-      accountId: string,
-      targetAccount: string,
-      memberOptions: MemberOptions,
-      ): Promise<void> {
+    contract: string|any,
+    accountId: string,
+    targetAccount: string,
+    memberOptions: MemberOptions,
+  ): Promise<void> {
     await this.options.executor.executeContractTransaction(
       this.ensureContract(contract),
       'addMember',
@@ -220,14 +219,17 @@ export class Votings extends Logger {
    * @return     {Promise<any>}            votings contract web3 instance
    */
   public async createContract(
-      accountId: string, votingsContractOptions: VotingsContractOptions): Promise<any> {
+    accountId: string,
+    votingsContractOptions: VotingsContractOptions,
+  ): Promise<any> {
     const congressOptions = [
       votingsContractOptions.minimumQuorumForProposals,
       votingsContractOptions.minutesForDebate,
       votingsContractOptions.marginOfVotesForMajority,
     ];
-    return await this.options.executor.createContract(
-      'Congress', congressOptions, { from: accountId, gas: 2000000 });
+    return this.options.executor.createContract(
+      'Congress', congressOptions, { from: accountId, gas: 2000000 },
+    );
   }
 
   /**
@@ -240,11 +242,14 @@ export class Votings extends Logger {
    * @return     {Promise<string>}  id of new proposal
    */
   public async createProposal(
-      contract: string|any, accountId: string, proposalOptions: ProposalOptions): Promise<string> {
-    this.log(`creating proposal in congress "${contract.options.address}" ` +
-      `with account ${accountId}`, 'info');
-    const options = Object.assign({}, defaultProposalOptions, proposalOptions);
-    return await this.options.executor.executeContractTransaction(
+    contract: string|any,
+    accountId: string,
+    proposalOptions: ProposalOptions,
+  ): Promise<string> {
+    this.log(`creating proposal in congress "${contract.options.address}" `
+      + `with account ${accountId}`, 'info');
+    const options = { ...defaultProposalOptions, ...proposalOptions };
+    return this.options.executor.executeContractTransaction(
       this.ensureContract(contract),
       'newProposal',
       {
@@ -271,9 +276,12 @@ export class Votings extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async execute(
-      contract: string|any, accountId: string, proposal: string|number, data = '0x'): Promise<any> {
-    this.log(`executing proposal in congress "${contract.options.address}", ` +
-      `proposal "${proposal}" with account ${accountId}`, 'info');
+    contract: string|any,
+    accountId: string,
+    proposal: string|number, data = '0x',
+  ): Promise<any> {
+    this.log(`executing proposal in congress "${contract.options.address}", `
+      + `proposal "${proposal}" with account ${accountId}`, 'info');
     await this.options.executor.executeContractTransaction(
       this.ensureContract(contract),
       'executeProposal',
@@ -345,7 +353,7 @@ export class Votings extends Logger {
       description: fromContract.description,
       executed: fromContract.executed,
       minExecutionDate: parseInt(`${fromContract.minExecutionDate}000`, 10),
-      numberOfVotes: parseInt(fromContract.numberOfVotes,  10),
+      numberOfVotes: parseInt(fromContract.numberOfVotes, 10),
       proposalHash: fromContract.proposalHash,
       proposalPassed: fromContract.proposalPassed,
       to: fromContract.recipient,
@@ -364,17 +372,19 @@ export class Votings extends Logger {
    * @return     {Promise<ProposalInfos>}  proposals listing
    */
   public async getProposalInfos(
-      contract: string|any,
-      count = 10,
-      offset = 0,
-      reverse = true): Promise<ProposalInfos> {
+    contract: string|any,
+    count = 10,
+    offset = 0,
+    reverse = true,
+  ): Promise<ProposalInfos> {
     let totalCountString;
     const votingsContract = this.ensureContract(contract);
     const results = await this.options.nameResolver.getArrayFromUintMapping(
       votingsContract,
       async () => {
         totalCountString = await this.options.executor.executeContractCall(
-          votingsContract, 'numProposals');
+          votingsContract, 'numProposals',
+        );
         return totalCountString;
       },
       (i) => this.getProposalInfo(votingsContract, i),
@@ -383,7 +393,7 @@ export class Votings extends Logger {
       reverse,
     );
     return {
-      results: results.filter(result => !!result.minExecutionDate),
+      results: results.filter((result) => !!result.minExecutionDate),
       totalCount: parseInt(totalCountString, 10),
     };
   }
@@ -391,8 +401,8 @@ export class Votings extends Logger {
   /**
    * checks if a given account is member in voting contract
    *
-   * @param      {string|any}        contract       web3 voting contract instance or contract address
-   * @param      {string}            targetAccount  account to check
+   * @param      {string|any}  contract       web3 voting contract instance or contract address
+   * @param      {string}      targetAccount  account to check
    * @return     {Promise<boolean>}  true if member, false otherwise.
    */
   public async isMember(contract: string|any, targetAccount: string): Promise<any> {
@@ -409,10 +419,10 @@ export class Votings extends Logger {
    * @return     {Promise<void>}   resolved when done
    */
   public async removeMember(
-      contract: string|any,
-      accountId: string,
-      targetAccount: string,
-      ): Promise<void> {
+    contract: string|any,
+    accountId: string,
+    targetAccount: string,
+  ): Promise<void> {
     await this.options.executor.executeContractTransaction(
       this.ensureContract(contract),
       'removeMember',
@@ -432,9 +442,14 @@ export class Votings extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async vote(
-      contract: string|any, accountId: string, proposal: string, accept: boolean, comment = ''): Promise<void> {
-    this.log(`voting for proposal in congress "${contract.options.address}", ` +
-      `proposal "${proposal}" with account ${accountId}, responst is "${accept}"`, 'info');
+    contract: string|any,
+    accountId: string,
+    proposal: string,
+    accept: boolean,
+    comment = '',
+  ): Promise<void> {
+    this.log(`voting for proposal in congress "${contract.options.address}", `
+      + `proposal "${proposal}" with account ${accountId}, responst is "${accept}"`, 'info');
     await this.options.executor.executeContractTransaction(
       this.ensureContract(contract),
       'vote',
@@ -452,9 +467,8 @@ export class Votings extends Logger {
    * @return     {any}         contract instance
    */
   private ensureContract(contract: string|any): any {
-    return typeof contract === 'string' ?
-      this.options.contractLoader.loadContract('Congress', contract) :
-      contract
-    ;
+    return typeof contract === 'string'
+      ? this.options.contractLoader.loadContract('Congress', contract)
+      : contract;
   }
 }

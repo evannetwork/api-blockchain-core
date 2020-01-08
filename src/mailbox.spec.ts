@@ -19,19 +19,15 @@
 
 import 'mocha';
 import { expect } from 'chai';
-import BigNumber = require('bignumber.js');
-
-import {
-  NameResolver,
-} from '@evan.network/dbcp';
+import * as BigNumber from 'bignumber.js';
 
 import { accounts } from './test/accounts';
 import { Ipfs } from './dfs/ipfs';
 import { Ipld } from './dfs/ipld';
-import { Mail, Mailbox, MailboxOptions } from './mailbox';
+import { Mail, Mailbox } from './mailbox';
 import { TestUtils } from './test/test-utils';
 
-describe('Mailbox class', function() {
+describe('Mailbox class', function test() {
   this.timeout(600000);
   let ipfs: Ipfs;
   let mailbox: Mailbox;
@@ -46,9 +42,9 @@ describe('Mailbox class', function() {
       attachments: [
         {
           type: 'sharedExchangeKey',
-          key: ''
-        }
-      ]
+          key: '',
+        },
+      ],
     },
   });
   const getTestAnswer = (parentId): Mail => ({
@@ -68,8 +64,8 @@ describe('Mailbox class', function() {
       nameResolver: await TestUtils.getNameResolver(web3),
       ipfs,
       contractLoader: await TestUtils.getContractLoader(web3),
-      cryptoProvider:  TestUtils.getCryptoProvider(),
-      keyProvider:  TestUtils.getKeyProvider(),
+      cryptoProvider: TestUtils.getCryptoProvider(),
+      keyProvider: TestUtils.getKeyProvider(),
       defaultCryptoAlgo: 'aes',
     });
   });
@@ -97,10 +93,10 @@ describe('Mailbox class', function() {
   it('should be able to get a set amount of mails', async () => {
     await mailbox.sendMail(getTestMail(accounts[0]), accounts[0], accounts[0]);
     let mails;
-    mails = await mailbox.getMails(1)
+    mails = await mailbox.getMails(1);
     expect(mails).not.to.be.undefined;
     expect(Object.keys(mails.mails).length).to.eq(1);
-    mails = await mailbox.getMails(2)
+    mails = await mailbox.getMails(2);
     expect(mails).not.to.be.undefined;
     expect(Object.keys(mails.mails).length).to.eq(2);
   });
@@ -123,8 +119,8 @@ describe('Mailbox class', function() {
     expect(keys.length).to.eq(1);
     const initialMailId = keys[0];
     const answer = getTestAnswer(initialMailId);
-    answer.content.from = accounts[0];
-    await mailbox.sendAnswer(Object.assign({}, answer), accounts[0], accounts[0]);
+    [answer.content.from] = accounts;
+    await mailbox.sendAnswer({ ...answer }, accounts[0], accounts[0]);
 
     result = await mailbox.getAnswersForMail(initialMailId);
     expect(result).not.to.be.undefined;
@@ -139,13 +135,13 @@ describe('Mailbox class', function() {
   it('should be able to read mails sent from another user', async () => {
     const startTime = Date.now();
     // mailbox user 2
-    const  mailbox2 = new Mailbox({
+    const mailbox2 = new Mailbox({
       mailboxOwner: accounts[1],
       nameResolver: await TestUtils.getNameResolver(web3),
       ipfs,
       contractLoader: await TestUtils.getContractLoader(web3),
-      cryptoProvider:  TestUtils.getCryptoProvider(),
-      keyProvider:  TestUtils.getKeyProvider(),
+      cryptoProvider: TestUtils.getCryptoProvider(),
+      keyProvider: TestUtils.getKeyProvider(),
       defaultCryptoAlgo: 'aes',
     });
 
@@ -162,27 +158,31 @@ describe('Mailbox class', function() {
   });
 
   it('should be able to send UTC tokens with a mail', async () => {
-    const startTime = Date.now();
     await mailbox.init();
     const balanceToSend = new BigNumber(web3.utils.toWei('1', 'kWei'));
     const balanceBefore = new BigNumber(await web3.eth.getBalance(accounts[0]));
-    const mailboxBalanceBefore = new BigNumber(await web3.eth.getBalance(mailbox.mailboxContract.options.address));
+    const mailboxBalanceBefore = new BigNumber(
+      await web3.eth.getBalance(mailbox.mailboxContract.options.address),
+    );
     await mailbox.sendMail(getTestMail(accounts[1]), accounts[0], accounts[1], `0x${balanceToSend.toString(16)}`);
-    const mailboxBalanceAfter = new BigNumber(await web3.eth.getBalance(mailbox.mailboxContract.options.address));
+    const mailboxBalanceAfter = new BigNumber(
+      await web3.eth.getBalance(mailbox.mailboxContract.options.address),
+    );
     const balanceAfter = new BigNumber(await web3.eth.getBalance(accounts[0]));
-    expect(balanceAfter.plus(balanceToSend).lte(balanceBefore)).to.be.true;  // before - cost = after + value // (sender pays cost)
-    expect(mailboxBalanceBefore.plus(balanceToSend).eq(mailboxBalanceAfter)).to.be.true;  // before + value = after
+    // before - cost = after + value // (sender pays cost)
+    expect(balanceAfter.plus(balanceToSend).lte(balanceBefore)).to.be.true;
+    // before + value = after
+    expect(mailboxBalanceBefore.plus(balanceToSend).eq(mailboxBalanceAfter)).to.be.true;
   });
 
   it('should allow checking balance for a mail', async () => {
-    const startTime = Date.now();
-    const  mailbox2 = new Mailbox({
+    const mailbox2 = new Mailbox({
       mailboxOwner: accounts[1],
       nameResolver: await TestUtils.getNameResolver(web3),
       ipfs,
       contractLoader: await TestUtils.getContractLoader(web3),
-      cryptoProvider:  TestUtils.getCryptoProvider(),
-      keyProvider:  TestUtils.getKeyProvider(),
+      cryptoProvider: TestUtils.getCryptoProvider(),
+      keyProvider: TestUtils.getKeyProvider(),
       defaultCryptoAlgo: 'aes',
     });
     const balanceToSend = new BigNumber(web3.utils.toWei('0.1', 'Ether'));
@@ -194,14 +194,13 @@ describe('Mailbox class', function() {
   });
 
   it('should allow withdrawing UTC tokens for a mail', async () => {
-    const startTime = Date.now();
-    const  mailbox2 = new Mailbox({
+    const mailbox2 = new Mailbox({
       mailboxOwner: accounts[1],
       nameResolver: await TestUtils.getNameResolver(web3),
       ipfs,
       contractLoader: await TestUtils.getContractLoader(web3),
-      cryptoProvider:  TestUtils.getCryptoProvider(),
-      keyProvider:  TestUtils.getKeyProvider(),
+      cryptoProvider: TestUtils.getCryptoProvider(),
+      keyProvider: TestUtils.getKeyProvider(),
       defaultCryptoAlgo: 'aes',
     });
     const balanceToSend = new BigNumber(web3.utils.toWei('0.1', 'Ether'));
@@ -209,13 +208,17 @@ describe('Mailbox class', function() {
     const result = await mailbox2.getMails(1, 0);
     const keys = Object.keys(result.mails);
     const balanceBefore = new BigNumber(await web3.eth.getBalance(accounts[1]));
-    const mailboxBalanceBefore = new BigNumber(await web3.eth.getBalance(mailbox.mailboxContract.options.address));
+    const mailboxBalanceBefore = new BigNumber(
+      await web3.eth.getBalance(mailbox.mailboxContract.options.address),
+    );
     await mailbox2.withdrawFromMail(keys[0], accounts[1]);
-    const mailboxBalanceAfter = new BigNumber(await web3.eth.getBalance(mailbox.mailboxContract.options.address));
+    const mailboxBalanceAfter = new BigNumber(
+      await web3.eth.getBalance(mailbox.mailboxContract.options.address),
+    );
     const balanceAfter = new BigNumber(await web3.eth.getBalance(accounts[1]));
-    expect(balanceBefore.plus(balanceToSend).gte(balanceAfter)).to.be.true;  // before + value - cost = after // (withdrawer pays cost)
-    expect(mailboxBalanceAfter.plus(balanceToSend).eq(mailboxBalanceBefore)).to.be.true;  // before - value = after
+    // before + value - cost = after // (withdrawer pays cost)
+    expect(balanceBefore.plus(balanceToSend).gte(balanceAfter)).to.be.true;
+    // before - value = after
+    expect(mailboxBalanceAfter.plus(balanceToSend).eq(mailboxBalanceBefore)).to.be.true;
   });
-
-  it('should now allow withdrawing UTC tokens for a mail that has no tokens', async () => {});
 });

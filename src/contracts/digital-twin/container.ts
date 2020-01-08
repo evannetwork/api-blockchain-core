@@ -17,6 +17,9 @@
   the following URL: https://evan.network/license/
 */
 
+// disabled until global function handling is resolved
+/* eslint-disable @typescript-eslint/no-use-before-define */
+
 import * as Throttle from 'promise-parallel-throttle';
 import BigNumber from 'bignumber.js';
 import { Mutex } from 'async-mutex';
@@ -110,7 +113,7 @@ export interface ContainerUnshareConfig {
   /** list of properties, for which write permissions should be removed */
   write?: string[];
   /** Without force flag, removal of the owner will throw an error. By setting
-      to true, force will even remove the owner  **/
+      to true, force will even remove the owner  * */
   force?: boolean;
 }
 
@@ -118,9 +121,9 @@ export interface ContainerUnshareConfig {
  * base definition of a container instance, covers properties setup and permissions
  */
 export interface ContainerPlugin {
-  /** container dbcp description (name, description, ...) **/
+  /** container dbcp description (name, description, ...) * */
   description?: any;
-  /** template for container instances, covers properties setup and permissions **/
+  /** template for container instances, covers properties setup and permissions * */
   template: ContainerTemplate;
 }
 
@@ -182,6 +185,7 @@ export class Container extends Logger {
     version: '0.1.0',
     dbcpVersion: 2,
   };
+
   public static defaultSchemas = {
     booleanEntry: { type: 'boolean' },
     booleanList: { type: 'array', items: { type: 'boolean' } },
@@ -191,10 +195,10 @@ export class Container extends Logger {
       properties: {
         additionalProperties: false,
         files: {
-          type: 'array', items: { type: 'string', }
+          type: 'array', items: { type: 'string' },
         },
       },
-      required: [ 'files' ],
+      required: ['files'],
     },
     filesList: {
       type: 'array',
@@ -204,10 +208,10 @@ export class Container extends Logger {
         properties: {
           additionalProperties: false,
           files: {
-            type: 'array', items: { type: 'string', }
+            type: 'array', items: { type: 'string' },
           },
         },
-        required: [ 'files' ],
+        required: ['files'],
       },
     },
     numberEntry: { type: 'number' },
@@ -217,8 +221,11 @@ export class Container extends Logger {
     stringEntry: { type: 'string' },
     stringList: { type: 'array', items: { type: 'string' } },
   };
+
   public static defaultPlugin = 'metadata';
+
   public static profilePluginsKey = 'templates.datacontainer.digitaltwin.evan';
+
   public static plugins: { [id: string]: ContainerPlugin } = {
     metadata: {
       description: {
@@ -231,10 +238,15 @@ export class Container extends Logger {
       },
     },
   };
+
   private config: ContainerConfig;
+
   private contract: any;
+
   private mutexes: { [id: string]: Mutex };
+
   private options: ContainerOptions;
+
   private reservedRoles = 64;
 
   /**
@@ -273,34 +285,36 @@ export class Container extends Logger {
       'IdentityHolder',
       contractIdentities,
       'IdentityCreated',
-      ({ returnValues: { identity }}) => {
+      ({ returnValues: { identity } }) => {
         if (!pendingIdentities.includes(identity)) {
           pendingIdentities.push(identity);
           return true;
-        } else {
-          return false;
         }
+        return false;
       },
-      () => {}
+      () => { /* action already handled in filter block */ },
     );
 
     // convert template properties to jsonSchema
-    if (instanceConfig.plugin &&
-        instanceConfig.plugin.template &&
-        instanceConfig.plugin.template.properties) {
+    if (instanceConfig.plugin
+        && instanceConfig.plugin.template
+        && instanceConfig.plugin.template.properties) {
       instanceConfig.description.dataSchema = toJsonSchema(
-        instanceConfig.plugin.template.properties)
+        instanceConfig.plugin.template.properties,
+      );
     }
 
     // check description values and upload it
     const envelope: Envelope = {
-      public: JSON.parse(JSON.stringify(instanceConfig.description || Container.defaultDescription)),
+      public: JSON.parse(
+        JSON.stringify(instanceConfig.description || Container.defaultDescription),
+      ),
     };
 
     // ensure abi definition is saved to the data container
     if (!envelope.public.abis) {
       envelope.public.abis = {
-        own: JSON.parse(options.contractLoader.contracts.DataContract.interface)
+        own: JSON.parse(options.contractLoader.contracts.DataContract.interface),
       };
     }
 
@@ -311,8 +325,8 @@ export class Container extends Logger {
 
     // create contract
     const contract = await options.dataContract.create(
-      instanceConfig.factoryAddress ||
-        options.nameResolver.getDomainName(options.nameResolver.config.domains.containerFactory),
+      instanceConfig.factoryAddress
+        || options.nameResolver.getDomainName(options.nameResolver.config.domains.containerFactory),
       instanceConfig.accountId,
       null,
       '0x0000000000000000000000000000000000000000000000000000000000000000',
@@ -328,26 +342,22 @@ export class Container extends Logger {
     // now check all remaining identities if they match the new created contract
     const identityHolderContract = options.contractLoader.loadContract(
       'IdentityHolder',
-      contractIdentities
+      contractIdentities,
     );
 
-    const resolvedIdentities = await Promise.all(pendingIdentities.map(async (pendingIdentity) => {
-      return {
-        identity: pendingIdentity,
-        contract: await options.executor.executeContractCall(
-          identityHolderContract,
-          'getLink',
-          pendingIdentity
-        )
-      }
-    }));
-    const targetIdentity = resolvedIdentities.find((resolvedIdentity) => {
-      return new RegExp(`${contractId.substr(2)}$`, 'i').test(resolvedIdentity.contract);
-    });
+    const resolvedIdentities = await Promise.all(pendingIdentities.map(async (pendingIdentity) => ({
+      identity: pendingIdentity,
+      contract: await options.executor.executeContractCall(
+        identityHolderContract,
+        'getLink',
+        pendingIdentity,
+      ),
+    })));
+    const targetIdentity = resolvedIdentities.find((resolvedIdentity) => new RegExp(`${contractId.substr(2)}$`, 'i').test(resolvedIdentity.contract));
 
     // after found the correct identity, stop the subscription
     options.executor.eventHub.unsubscribe({
-      subscription: identitiesSubscription
+      subscription: identitiesSubscription,
     });
 
     pendingIdentities.splice(pendingIdentities.indexOf(targetIdentity.identity), 1);
@@ -367,7 +377,7 @@ export class Container extends Logger {
    */
   public static async deleteContainerPlugin(
     profile: Profile,
-    name: string
+    name: string,
   ): Promise<void> {
     // force reload to work on latest tree
     await profile.loadForAccount(profile.treeLabels.dtContainerPlugins);
@@ -389,7 +399,7 @@ export class Container extends Logger {
    */
   public static async getContainerPlugin(
     profile: Profile,
-    name: string
+    name: string,
   ): Promise<ContainerPlugin> {
     return (await this.getContainerPlugins(profile))[name];
   }
@@ -400,7 +410,7 @@ export class Container extends Logger {
    * @param      {Profile}            profile      profile instance
    */
   public static async getContainerPlugins(
-    profile: Profile
+    profile: Profile,
   ): Promise<{[id: string]: ContainerPlugin}> {
     return (await profile.getPlugins() || { });
   }
@@ -472,7 +482,8 @@ export class Container extends Logger {
       (async () => {
         const toSet = await this.encryptFilesIfRequired(listName, values);
         await this.options.dataContract.addListEntries(
-          this.contract, listName, toSet, this.config.accountId)
+          this.contract, listName, toSet, this.config.accountId,
+        );
       })(),
     );
   }
@@ -488,7 +499,7 @@ export class Container extends Logger {
     await this.ensureContract();
     const owner = await this.options.executor.executeContractCall(this.contract, 'owner');
     const isOwner = owner === this.config.accountId;
-    await Throttle.all(verifications.map(verification => async () => {
+    await Throttle.all(verifications.map((verification) => async () => {
       const verificationId = await this.options.verifications.setVerification(
         this.config.accountId,
         this.contract.options.address,
@@ -509,11 +520,11 @@ export class Container extends Logger {
     }));
     // update description if current user is owner
     if (owner === this.config.accountId) {
-      const tags = verifications.map(verification => `verification:${verification.topic}`);
+      const tags = verifications.map((verification) => `verification:${verification.topic}`);
       await this.getMutex('description').runExclusive(async () => {
         const description = await this.getDescription();
         const oldTags = description.tags || [];
-        const toAdd = tags.filter(tag => !oldTags.includes(tag));
+        const toAdd = tags.filter((tag) => !oldTags.includes(tag));
         if (toAdd.length) {
           description.tags = oldTags.concat(toAdd);
           await this.setDescription(description);
@@ -588,7 +599,8 @@ export class Container extends Logger {
   public async getDescription(): Promise<any> {
     await this.ensureContract();
     return (await this.options.description.getDescription(
-      this.contract.options.address, this.config.accountId)).public;
+      this.contract.options.address, this.config.accountId,
+    )).public;
   }
 
   /**
@@ -602,7 +614,8 @@ export class Container extends Logger {
       'get entry',
       (async () => {
         let value = await this.options.dataContract.getEntry(
-          this.contract, entryName, this.config.accountId);
+          this.contract, entryName, this.config.accountId,
+        );
 
         if (entryName !== 'type') {
           value = await this.decryptFilesIfRequired(entryName, value);
@@ -623,14 +636,19 @@ export class Container extends Logger {
    * @param      {number}   offset    skip this many entries
    * @param      {boolean}  reverse   if true, fetches last items first
    */
-  public async getListEntries(listName: string, count = 10, offset = 0, reverse = false
+  public async getListEntries(
+    listName: string,
+    count = 10,
+    offset = 0,
+    reverse = false,
   ): Promise<any[]> {
     await this.ensureContract();
     return this.wrapPromise(
       'get list entries',
       (async () => {
         const values = await this.options.dataContract.getListEntries(
-          this.contract, listName, this.config.accountId, true, true, count, offset, reverse);
+          this.contract, listName, this.config.accountId, true, true, count, offset, reverse,
+        );
         return this.decryptFilesIfRequired(listName, values);
       })(),
     );
@@ -648,7 +666,8 @@ export class Container extends Logger {
       'get list entry',
       (async () => {
         const value = await this.options.dataContract.getListEntry(
-          this.contract, listName, index, this.config.accountId);
+          this.contract, listName, index, this.config.accountId,
+        );
         return this.decryptFilesIfRequired(listName, value);
       })(),
     );
@@ -698,10 +717,11 @@ export class Container extends Logger {
           accountId,
           '0x0000000000000000000000000000000000000000',
           this.options.rightsAndRoles.getOperationCapabilityHash(
-            property, enumType, ModificationType.Set),
+            property, enumType, ModificationType.Set,
+          ),
         );
       };
-      const tasks = Object.keys(description.dataSchema).map(property => async () => {
+      const tasks = Object.keys(description.dataSchema).map((property) => async () => {
         if (property === 'type') {
           // do not list type property
           return;
@@ -730,8 +750,9 @@ export class Container extends Logger {
     await this.ensureContract();
     const roleMap = await this.options.rightsAndRoles.getMembers(this.contract);
     const unique = Array.from(new Set([].concat(...Object.values(roleMap))));
-    return Throttle.all(unique.map(accountId => async () =>
-      this.getContainerShareConfigForAccount(accountId)));
+    return Throttle.all(
+      unique.map((accountId) => async () => this.getContainerShareConfigForAccount(accountId)),
+    );
   }
 
   /**
@@ -740,10 +761,10 @@ export class Container extends Logger {
   public async getOwner(): Promise<string> {
     const authContract = this.options.contractLoader.loadContract(
       'DSAuth',
-      await this.getContractAddress()
+      await this.getContractAddress(),
     );
 
-    return await this.options.executor.executeContractCall(authContract, 'owner')
+    return this.options.executor.executeContractCall(authContract, 'owner');
   }
 
   /**
@@ -754,14 +775,13 @@ export class Container extends Logger {
     const description = await this.getDescription();
     const tags = description.tags || [];
     return Throttle.all(tags
-      .filter(tag => tag.startsWith('verification:'))
-      .map(tag => tag.substr(13))
-      .map(topic => async () => this.options.verifications.getVerifications(
+      .filter((tag) => tag.startsWith('verification:'))
+      .map((tag) => tag.substr(13))
+      .map((topic) => async () => this.options.verifications.getVerifications(
         description.identity,
         topic,
         true,
-      ))
-    );
+      )));
   }
 
   /**
@@ -779,25 +799,24 @@ export class Container extends Logger {
 
     // support short hand for removing a single property, ensure that entries variable is an
     // array
-    if (!Array.isArray(entries)) {
-      entries = [ entries ];
+    let entriesParameter = entries;
+    if (!Array.isArray(entriesParameter)) {
+      entriesParameter = [entriesParameter];
     }
 
-    // check for list entries, removeListEntries permissions only form them 
+    // check for list entries, removeListEntries permissions only form them
     const schemaProperties = (await this.toPlugin(false)).template.properties;
-    const listEntries = entries.filter(entry => schemaProperties[entry].type === 'list');
+    const listEntries = entriesParameter.filter((entry) => schemaProperties[entry].type === 'list');
 
     // unshare all accounts from the specific roles
-    await this.unshareProperties(unique.map(accountId => {
-      return {
-        accountId,
-        readWrite: entries as string[],
-        removeListEntries: listEntries as string[],
-        write: entries as string[],
-        // force removement of the owner
-        force: true,
-      };
-    }));
+    await this.unshareProperties(unique.map((accountId) => ({
+      accountId,
+      readWrite: entriesParameter as string[],
+      removeListEntries: listEntries as string[],
+      write: entriesParameter as string[],
+      // force removement of the owner
+      force: true,
+    })));
   }
 
   /**
@@ -813,53 +832,56 @@ export class Container extends Logger {
    */
   public async setContainerShareConfigs(
     newConfigs: ContainerShareConfig | ContainerShareConfig[],
-    originalConfigs?: ContainerShareConfig | ContainerShareConfig[]
+    originalConfigs?: ContainerShareConfig | ContainerShareConfig[],
   ) {
     // collect all users that properties should be shared / unshared
-    const shareConfigs: Array<ContainerShareConfig> = [ ];
-    const unshareConfigs: Array<ContainerShareConfig> = [ ];
-
+    const shareConfigs: ContainerShareConfig[] = [];
+    const unshareConfigs: ContainerShareConfig[] = [];
+    let configsParameter = newConfigs;
+    let originalConfigsParameter = originalConfigs;
     // ensure working with arrays
-    if (!Array.isArray(newConfigs)) {
-      newConfigs = [ newConfigs ];
+    if (!Array.isArray(configsParameter)) {
+      configsParameter = [configsParameter];
     }
-    if (!Array.isArray(originalConfigs)) {
-      originalConfigs = originalConfigs ? [ originalConfigs ] : [ ];
+    if (!Array.isArray(originalConfigsParameter)) {
+      originalConfigsParameter = originalConfigsParameter ? [originalConfigsParameter] : [];
     }
 
     // iterate through all configurations and check for sharing updates
-    await Promise.all(newConfigs.map(async (newConfig: ContainerShareConfig) => {
-      // objects to store sharing configuration delta (accountId, read, readWrite, removeListEntries)
-      const shareConfig: ContainerShareConfig = { accountId: newConfig.accountId };
-      const unshareConfig: ContainerShareConfig = { accountId: newConfig.accountId };
-      let originalConfig = (originalConfigs as ContainerShareConfig[])
-        .filter(orgConf => orgConf.accountId === newConfig.accountId)[0];
+    await Promise.all(configsParameter.map(async (newConfig: ContainerShareConfig) => {
+      const newConfigParam = newConfig;
+      // objects to store sharing configuration delta
+      // (accountId, read, readWrite, removeListEntries)
+      const shareConfig: ContainerShareConfig = { accountId: newConfigParam.accountId };
+      const unshareConfig: ContainerShareConfig = { accountId: newConfigParam.accountId };
+      let originalConfig = (originalConfigsParameter as ContainerShareConfig[])
+        .filter((orgConf) => orgConf.accountId === newConfigParam.accountId)[0];
 
       // load latest share configuration to buil delta against
       if (!originalConfig) {
-        originalConfig = await this.getContainerShareConfigForAccount(newConfig.accountId);
+        originalConfig = await this.getContainerShareConfigForAccount(newConfigParam.accountId);
       }
 
       // fill empty sharing types, so further checks will be easier
-      const shareConfigProperties = [ 'read', 'readWrite', 'removeListEntries' ];
-      shareConfigProperties.forEach(type => {
-        newConfig[type] = newConfig[type] || [ ];
-        originalConfig[type] = originalConfig[type] || [ ];
-        shareConfig[type] = shareConfig[type] || [ ];
-        unshareConfig[type] = unshareConfig[type] || [ ];
+      const shareConfigProperties = ['read', 'readWrite', 'removeListEntries'];
+      shareConfigProperties.forEach((type) => {
+        newConfigParam[type] = newConfigParam[type] || [];
+        originalConfig[type] = originalConfig[type] || [];
+        shareConfig[type] = shareConfig[type] || [];
+        unshareConfig[type] = unshareConfig[type] || [];
       });
 
       // iterate through all share config properties and detect changes
-      shareConfigProperties.forEach(type => {
+      shareConfigProperties.forEach((type) => {
         // track new properties that should be shared
-        newConfig[type].forEach(property => {
+        newConfigParam[type].forEach((property) => {
           if (originalConfig[type].indexOf(property) === -1) {
             shareConfig[type].push(property);
           }
         });
         // track properties that should be unshared
-        originalConfig[type].forEach(property => {
-          if (newConfig[type].indexOf(property) === -1) {
+        originalConfig[type].forEach((property) => {
+          if (newConfigParam[type].indexOf(property) === -1) {
             unshareConfig[type].push(property);
           }
         });
@@ -889,7 +911,8 @@ export class Container extends Logger {
     await this.wrapPromise(
       'set description',
       this.options.description.setDescription(
-        this.contract.options.address, { public: description }, this.config.accountId),
+        this.contract.options.address, { public: description }, this.config.accountId,
+      ),
     );
   }
 
@@ -918,47 +941,57 @@ export class Container extends Logger {
    */
   public async shareProperties(shareConfigs: ContainerShareConfig[]): Promise<void> {
     await this.ensureContract();
-    ///////////////////////////////////////////////////////////////////////////// check requirements
+    // check requirements
     // check ownership
     const authority = this.options.contractLoader.loadContract(
       'DSRolesPerContract',
       await this.options.executor.executeContractCall(this.contract, 'authority'),
     );
     if (!await this.options.executor.executeContractCall(
-        authority, 'hasUserRole', this.config.accountId, 0)) {
-      throw new Error(`current account "${this.config.accountId}" is unable to share properties, ` +
-        `as it isn't owner of the underlying contract "${this.contract.options.address}"`);
+      authority, 'hasUserRole', this.config.accountId, 0,
+    )
+    ) {
+      throw new Error(`current account "${this.config.accountId}" is unable to share properties, `
+        + `as it isn't owner of the underlying contract "${this.contract.options.address}"`);
     }
 
     // check fields
     const localShareConfig = cloneDeep(shareConfigs);
     const schemaProperties = (await this.toPlugin(false)).template.properties;
     const sharedProperties = Array.from(
-      new Set([].concat(...localShareConfig.map(shareConfig => [].concat(
-        shareConfig.read, shareConfig.readWrite)))))
-      .filter(property => property !== undefined);
+      new Set([].concat(...localShareConfig.map((shareConfig) => [].concat(
+        shareConfig.read, shareConfig.readWrite,
+      )))),
+    )
+      .filter((property) => property !== undefined);
     const missingProperties = sharedProperties
-      .filter(property => !schemaProperties.hasOwnProperty(property));
+      .filter((property) => !Object.prototype.hasOwnProperty.call(schemaProperties, property));
     if (missingProperties.length) {
       throw new Error(
-        `tried to share properties, but missing one or more in schema: ${missingProperties}`);
+        `tried to share properties, but missing one or more in schema: ${missingProperties}`,
+      );
     }
     // for all share configs
-    for (let { accountId, read = [], readWrite = [], removeListEntries = [] } of localShareConfig) {
-      //////////////////////////////////////////////////// ensure that account is member in contract
-      if (! await this.options.executor.executeContractCall(
-          this.contract, 'isConsumer', accountId)) {
+    for (const {
+      accountId, read = [], readWrite = [], removeListEntries = [],
+    } of localShareConfig) {
+      // //////////////////////////////////////////////// ensure that account is member in contract
+      if (!await this.options.executor.executeContractCall(
+        this.contract, 'isConsumer', accountId,
+      )
+      ) {
         await this.options.dataContract.inviteToContract(
-          null, this.contract.options.address, this.config.accountId, accountId);
+          null, this.contract.options.address, this.config.accountId, accountId,
+        );
       }
 
-      ///////////////////////////////////////////////////////// ensure property roles and membership
+      // ///////////////////////////////////////////////////// ensure property roles and membership
       // share type every time as it is mandatory
       if (!read.includes('type')) {
         read.push('type');
       }
       // ensure that roles for fields exist and that accounts have permissions
-      for (let property of readWrite) {
+      for (const property of readWrite) {
         // get permissions from contract
         const hash = this.options.rightsAndRoles.getOperationCapabilityHash(
           property,
@@ -994,15 +1027,17 @@ export class Container extends Logger {
 
         // ensure that account has role
         const hasRole = await this.options.executor.executeContractCall(
-          authority, 'hasUserRole', accountId, permittedRole);
+          authority, 'hasUserRole', accountId, permittedRole,
+        );
         if (!hasRole) {
           await this.options.rightsAndRoles.addAccountToRole(
-            this.contract, this.config.accountId, accountId, permittedRole);
+            this.contract, this.config.accountId, accountId, permittedRole,
+          );
         }
       }
 
 
-      for (let property of removeListEntries) {
+      for (const property of removeListEntries) {
         const propertyType = getPropertyType(schemaProperties[property].type);
 
         // throw error if remove should be given on no list
@@ -1045,19 +1080,21 @@ export class Container extends Logger {
 
         // ensure that account has role
         const hasRole = await this.options.executor.executeContractCall(
-          authority, 'hasUserRole', accountId, permittedRole);
+          authority, 'hasUserRole', accountId, permittedRole,
+        );
         if (!hasRole) {
           await this.options.rightsAndRoles.addAccountToRole(
-            this.contract, this.config.accountId, accountId, permittedRole);
+            this.contract, this.config.accountId, accountId, permittedRole,
+          );
         }
       }
 
       // ensure that content keys were created for all shared properties
       await Promise.all([...read, ...readWrite].map(
-        property => this.ensureKeyInSharing(property)
+        (property) => this.ensureKeyInSharing(property),
       ));
 
-      //////////////////////////////////////////////////////// ensure encryption keys for properties
+      // //////////////////////////////////////////////////// ensure encryption keys for properties
       // run with mutex to prevent breaking sharing info
       await this.getMutex('sharing').runExclusive(async () => {
         // checkout sharings
@@ -1066,9 +1103,9 @@ export class Container extends Logger {
         // check if account already has a hash key
         const sha3 = (...args) => this.options.nameResolver.soliditySha3(...args);
         const isShared = (section, block?) => {
-          if (!sharings[sha3(accountId)] ||
-              !sharings[sha3(accountId)][sha3(section)] ||
-              (typeof block !== 'undefined' && !sharings[sha3(accountId)][sha3(section)][block])) {
+          if (!sharings[sha3(accountId)]
+              || !sharings[sha3(accountId)][sha3(section)]
+              || (typeof block !== 'undefined' && !sharings[sha3(accountId)][sha3(section)][block])) {
             return false;
           }
           return true;
@@ -1076,30 +1113,35 @@ export class Container extends Logger {
         let modified = false;
         if (!isShared('*', 'hashKey')) {
           const hashKeyToShare = await this.options.sharing.getHashKey(
-            this.contract.options.address, this.config.accountId);
+            this.contract.options.address, this.config.accountId,
+          );
           await this.options.sharing.extendSharings(
-            sharings, this.config.accountId, accountId, '*', 'hashKey', hashKeyToShare, null);
+            sharings, this.config.accountId, accountId, '*', 'hashKey', hashKeyToShare, null,
+          );
           modified = true;
         }
 
         // ensure that target user has sharings for properties
         const blockNr = await this.options.web3.eth.getBlockNumber();
         // share keys for read and readWrite
-        for (let property of [...read, ...readWrite]) {
+        for (const property of [...read, ...readWrite]) {
           if (!isShared(property)) {
             // get key
             const contentKey = await this.options.sharing.getKey(
-              this.contract.options.address, this.config.accountId, property, blockNr);
+              this.contract.options.address, this.config.accountId, property, blockNr,
+            );
             // share this key
             await this.options.sharing.extendSharings(
-              sharings, this.config.accountId, accountId, property, 0, contentKey);
+              sharings, this.config.accountId, accountId, property, 0, contentKey,
+            );
             modified = true;
           }
         }
         if (modified) {
           // store sharings
           await this.options.sharing.saveSharingsToContract(
-            this.contract.options.address, sharings, this.config.accountId);
+            this.contract.options.address, sharings, this.config.accountId,
+          );
         }
       });
     }
@@ -1132,9 +1174,9 @@ export class Container extends Logger {
         type = this.deriveSchema(data[property]).type;
       }
       // add field or entry, based on property type
-      await (type === 'array' ?
-        this.addListEntries(property, data[property]) :
-        this.setEntry(property, data[property])
+      await (type === 'array'
+        ? this.addListEntries(property, data[property])
+        : this.setEntry(property, data[property])
       );
     });
 
@@ -1154,23 +1196,23 @@ export class Container extends Logger {
 
     // create empty plugin
     const template: Partial<ContainerTemplate> = {
-      properties: { }
+      properties: { },
     };
     const plugin: ContainerPlugin = {
       description,
-      template: template as ContainerTemplate
+      template: template as ContainerTemplate,
     };
 
     // if values should be loaded, load permissions first, so we won't load unreadable data
     let readableEntries;
     if (getValues) {
       const containerShareConfig = await this.getContainerShareConfigForAccount(
-        this.config.accountId
+        this.config.accountId,
       );
 
-      readableEntries = [ ].concat(
+      readableEntries = [].concat(
         containerShareConfig.read || [],
-        containerShareConfig.readWrite || [ ]
+        containerShareConfig.readWrite || [],
       );
     }
 
@@ -1179,8 +1221,9 @@ export class Container extends Logger {
         'DSRolesPerContract',
         await this.options.executor.executeContractCall(this.contract, 'authority'),
       );
-      for (let property of Object.keys(description.dataSchema)) {
+      for (const property of Object.keys(description.dataSchema)) {
         if (property === 'type') {
+          // eslint-disable-next-line no-continue
           continue;
         }
         const dataSchema = description.dataSchema[property];
@@ -1198,18 +1241,21 @@ export class Container extends Logger {
             try {
               value = await this.getEntry(property);
             } catch (ex) {
-              this.log(`Could not load value for entry ${ property } in toPlugin:
-                ${ ex.message }`, 'error');
+              this.log(`Could not load value for entry ${property} in toPlugin:
+                ${ex.message}`, 'error');
             }
 
-            if (value &&
-                value !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
+            if (value
+                && value !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
               template.properties[property].value = value;
             }
           }
         }
-        template.properties[property].permissions =
-          await this.getRolePermission(authority, property, type);
+        template.properties[property].permissions = await this.getRolePermission(
+          authority,
+          property,
+          type,
+        );
       }
     }
     // write type value to template property
@@ -1227,46 +1273,51 @@ export class Container extends Logger {
    */
   public async unshareProperties(unshareConfigs: ContainerUnshareConfig[]): Promise<void> {
     await this.ensureContract();
-    this.log(`unsharing properties`, 'debug');
-    ///////////////////////////////////////////////////////////////////////////// check requirements
+    this.log('unsharing properties', 'debug');
+    // ///////////////////////////////////////////////////////////////////////// check requirements
     // check ownership
     const authority = this.options.contractLoader.loadContract(
       'DSRolesPerContract',
       await this.options.executor.executeContractCall(this.contract, 'authority'),
     );
     if (!await this.options.executor.executeContractCall(
-      authority, 'hasUserRole', this.config.accountId, 0)) {
-      throw new Error(`current account "${this.config.accountId}" is unable to unshare ` +
-        'properties, as it isn\'t owner of the underlying contract ' +
-        this.contract.options.address);
+      authority, 'hasUserRole', this.config.accountId, 0,
+    )) {
+      throw new Error(`${`current account "${this.config.accountId}" is unable to unshare `
+        + 'properties, as it isn\'t owner of the underlying contract '}${
+        this.contract.options.address}`);
     }
 
     // only allow owner removal when force attribute is set
     const unpermittedOwnerRemoval = unshareConfigs.filter(
-      unshareConfig => unshareConfig.accountId === this.config.accountId && !unshareConfig.force);
-    if (unpermittedOwnerRemoval.length !==0) {
-      throw new Error(`current account "${this.config.accountId}" is owner of the contract ` +
-        'and cannot remove himself from sharing without force attribute' +
-        this.contract.options.address);
+      (unshareConfig) => unshareConfig.accountId === this.config.accountId && !unshareConfig.force,
+    );
+    if (unpermittedOwnerRemoval.length !== 0) {
+      throw new Error(`${`current account "${this.config.accountId}" is owner of the contract `
+        + 'and cannot remove himself from sharing without force attribute'}${
+        this.contract.options.address}`);
     }
 
     // check fields
     const localUnshareConfigs = cloneDeep(unshareConfigs);
     const schemaProperties = (await this.toPlugin(false)).template.properties;
     const sharedProperties = Array.from(
-      new Set([].concat(...localUnshareConfigs.map(unshareConfig => [].concat(
-        unshareConfig.write, unshareConfig.readWrite)))))
-      .filter(property => property !== undefined);
+      new Set([].concat(...localUnshareConfigs.map((unshareConfig) => [].concat(
+        unshareConfig.write, unshareConfig.readWrite,
+      )))),
+    )
+      .filter((property) => property !== undefined);
     const missingProperties = sharedProperties
-      .filter(property => !schemaProperties.hasOwnProperty(property));
+      .filter((property) => !Object.prototype.hasOwnProperty.call(schemaProperties, property));
     if (missingProperties.length) {
       throw new Error(
-        `tried to share properties, but missing one or more in schema: ${missingProperties}`);
+        `tried to share properties, but missing one or more in schema: ${missingProperties}`,
+      );
     }
 
     // ensure if removeListEntries can be removed correctly beforehand
-    for (let { removeListEntries = [], } of localUnshareConfigs) {
-      for (let property of removeListEntries) {
+    for (const { removeListEntries = [] } of localUnshareConfigs) {
+      for (const property of removeListEntries) {
         const propertyType = getPropertyType(schemaProperties[property].type);
 
         // throw error if remove should be given on no list
@@ -1275,8 +1326,9 @@ export class Container extends Logger {
         }
 
         // search for role with permissions
-        let permittedRole = await this.getPermittedRole(
-          authority, property, propertyType, ModificationType.Remove);
+        const permittedRole = await this.getPermittedRole(
+          authority, property, propertyType, ModificationType.Remove,
+        );
         if (permittedRole < this.reservedRoles) {
           // if not found or included in reserved roles, exit
           throw new Error(`can not find a role that has remove permissions for list "${property}"`);
@@ -1285,32 +1337,38 @@ export class Container extends Logger {
     }
 
     // for all share configs
-    for (let { accountId, readWrite = [], removeListEntries = [], write = [] } of localUnshareConfigs) {
-      this.log(`checking unshare configs`, 'debug');
+    for (const {
+      accountId, readWrite = [], removeListEntries = [], write = [],
+    } of localUnshareConfigs) {
+      this.log('checking unshare configs', 'debug');
       // remove write permissions for all in readWrite and write
-      for (let property of [...readWrite, ...write]) {
+      for (const property of [...readWrite, ...write]) {
         this.log(`removing write permissions for ${property}`, 'debug');
         const propertyType = getPropertyType(schemaProperties[property].type);
         // search for role with permissions
-        let permittedRole = await this.getPermittedRole(
-          authority, property, propertyType, ModificationType.Set);
+        const permittedRole = await this.getPermittedRole(
+          authority, property, propertyType, ModificationType.Set,
+        );
         if (permittedRole < this.reservedRoles) {
           // if not found or included in reserved roles, exit
-          this.log('can not find a role that has write permissions for property ' + property);
+          this.log(`can not find a role that has write permissions for property ${property}`);
         } else {
           // remove account from role
           const hasRole = await this.options.executor.executeContractCall(
-            authority, 'hasUserRole', accountId, permittedRole);
+            authority, 'hasUserRole', accountId, permittedRole,
+          );
           if (hasRole) {
             await this.options.rightsAndRoles.removeAccountFromRole(
-              this.contract, this.config.accountId, accountId, permittedRole);
+              this.contract, this.config.accountId, accountId, permittedRole,
+            );
           }
 
           // if no members are left, remove role
           const memberCount = await this.options.executor.executeContractCall(
-            authority, 'role2userCount', permittedRole);
+            authority, 'role2userCount', permittedRole,
+          );
           if (memberCount.eq(0)) {
-            this.log(`removing role for property "${property}"`, 'debug')
+            this.log(`removing role for property "${property}"`, 'debug');
             await this.options.rightsAndRoles.setOperationPermission(
               authority,
               this.config.accountId,
@@ -1324,7 +1382,7 @@ export class Container extends Logger {
         }
       }
 
-      /////////////////////// check if only remaining property is 'type', cleanup if that's the case
+      // /////////////////// check if only remaining property is 'type', cleanup if that's the case
       const shareConfig = await this.getContainerShareConfigForAccount(accountId);
       const remainingFields = Array.from(new Set([
         ...(shareConfig.read ? shareConfig.read : []),
@@ -1332,36 +1390,43 @@ export class Container extends Logger {
       ]));
       if (remainingFields.length === 1 && remainingFields[0] === 'type') {
         // remove property
-        let permittedRole = await this.getPermittedRole(
-          authority, 'type', PropertyType.Entry, ModificationType.Set);
+        const permittedRole = await this.getPermittedRole(
+          authority, 'type', PropertyType.Entry, ModificationType.Set,
+        );
         await this.options.rightsAndRoles.removeAccountFromRole(
-          this.contract, this.config.accountId, accountId, permittedRole);
+          this.contract, this.config.accountId, accountId, permittedRole,
+        );
 
         // remove read if applicable
         readWrite.push('type');
 
         // uninvite
         this.options.dataContract.removeFromContract(
-          null, await this.getContractAddress(), this.config.accountId, accountId);
+          null, await this.getContractAddress(), this.config.accountId, accountId,
+        );
       }
 
-      ///////////////////////////////////////////////////////////////// remove list entries handling
-      for (let property of removeListEntries) {
+      // ///////////////////////////////////////////////////////////// remove list entries handling
+      for (const property of removeListEntries) {
         const propertyType = getPropertyType(schemaProperties[property].type);
-        let permittedRole = await this.getPermittedRole(
-          authority, property, propertyType, ModificationType.Remove);
+        const permittedRole = await this.getPermittedRole(
+          authority, property, propertyType, ModificationType.Remove,
+        );
 
         // remove account from role
         const hasRole = await this.options.executor.executeContractCall(
-          authority, 'hasUserRole', accountId, permittedRole);
+          authority, 'hasUserRole', accountId, permittedRole,
+        );
         if (hasRole) {
           await this.options.rightsAndRoles.removeAccountFromRole(
-            this.contract, this.config.accountId, accountId, permittedRole);
+            this.contract, this.config.accountId, accountId, permittedRole,
+          );
         }
 
         // if no members are left, remove role
         const memberCount = await this.options.executor.executeContractCall(
-          authority, 'role2userCount', permittedRole);
+          authority, 'role2userCount', permittedRole,
+        );
         if (memberCount.eq(0)) {
           await this.options.rightsAndRoles.setOperationPermission(
             authority,
@@ -1375,19 +1440,19 @@ export class Container extends Logger {
         }
       }
 
-      //////////////////////////////////////////////////////// ensure encryption keys for properties
+      // //////////////////////////////////////////////////// ensure encryption keys for properties
       // run with mutex to prevent breaking sharing info
       await this.getMutex('sharing').runExclusive(async () => {
-        this.log(`checking read permisssions`, 'debug');
+        this.log('checking read permisssions', 'debug');
         // checkout sharings
         const sharings = await this.options.sharing.getSharingsFromContract(this.contract);
 
         // check if account already has a hash key
         const sha3 = (...args) => this.options.nameResolver.soliditySha3(...args);
         const isShared = (section, block?) => {
-          if (!sharings[sha3(accountId)] ||
-              !sharings[sha3(accountId)][sha3(section)] ||
-              (typeof block !== 'undefined' && !sharings[sha3(accountId)][sha3(section)][block])) {
+          if (!sharings[sha3(accountId)]
+              || !sharings[sha3(accountId)][sha3(section)]
+              || (typeof block !== 'undefined' && !sharings[sha3(accountId)][sha3(section)][block])) {
             return false;
           }
           return true;
@@ -1395,7 +1460,7 @@ export class Container extends Logger {
         let modified = false;
 
         // remove keys for readWrite
-        for (let property of readWrite) {
+        for (const property of readWrite) {
           this.log(`checking read permissions for ${property}`, 'debug');
           if (isShared(property)) {
             this.log(`removing key for ${property}`, 'debug');
@@ -1405,22 +1470,23 @@ export class Container extends Logger {
         }
         // cleanup sharings, this relies on a few conditions,
         // that are met, when sharings are managed by Container API
-        if (sharings[sha3(accountId)] &&  // account has any sharing
-          Object.keys(sharings[sha3(accountId)]).length === 2 &&  // only 2 sections remain
-          sharings[sha3(accountId)][sha3('*')] &&  // * section remains
-          Object.keys(sharings[sha3(accountId)][sha3('*')]).length === 1 && // only 1 entry in *
-          sharings[sha3(accountId)][sha3('*')].hashKey &&  // only the hash key in *
-          sharings[sha3(accountId)][sha3('type')]) {  // type remains
-          this.log(`account from sharings`, 'debug');
+        if (sharings[sha3(accountId)] // account has any sharing
+          && Object.keys(sharings[sha3(accountId)]).length === 2 // only 2 sections remain
+          && sharings[sha3(accountId)][sha3('*')] // * section remains
+          && Object.keys(sharings[sha3(accountId)][sha3('*')]).length === 1 // only 1 entry in *
+          && sharings[sha3(accountId)][sha3('*')].hashKey // only the hash key in *
+          && sharings[sha3(accountId)][sha3('type')]) { // type remains
+          this.log('account from sharings', 'debug');
           await this.options.sharing.trimSharings(sharings, accountId);
           modified = true;
         }
 
         if (modified) {
-          this.log(`sharings updated, saving sharings`, 'debug');
+          this.log('sharings updated, saving sharings', 'debug');
           // store sharings
           await this.options.sharing.saveSharingsToContract(
-            this.contract.options.address, sharings, this.config.accountId);
+            this.contract.options.address, sharings, this.config.accountId,
+          );
         }
 
         // inner mutex, as we also rely on sharings
@@ -1428,11 +1494,11 @@ export class Container extends Logger {
           // check if field still exists in updated sharing, if not remove field schema
           const description = await this.getDescription();
           const propertyHashes = [];
-          for (let accountHash of Object.keys(sharings)) {
+          for (const accountHash of Object.keys(sharings)) {
             propertyHashes.push(...Object.keys(sharings[accountHash]));
           }
           modified = false;
-          for (let property of readWrite) {
+          for (const property of readWrite) {
             if (!propertyHashes.includes(this.options.nameResolver.soliditySha3(property))) {
               delete description.dataSchema[property];
               modified = true;
@@ -1458,33 +1524,34 @@ export class Container extends Logger {
     if (this.isEncryptedFile(subSchema)) {
       // simple entry
       return toApply(toInspect);
-    } else if (subSchema.type === 'array' && this.isEncryptedFile(subSchema.items)) {
+    } if (subSchema.type === 'array' && this.isEncryptedFile(subSchema.items)) {
       // list/array with entries
-      return Promise.all(toInspect.map(entry => toApply(entry)));
-    } else {
-      // check if nested
-      if (subSchema.type === 'array') {
-        return Promise.all(toInspect.map(entry => this.applyIfEncrypted(
-          subSchema.items, entry, toApply)));
-      } else if (subSchema.type === 'object') {
-        // check objects subproperties
-        const transformed = {};
-        for (let key of Object.keys(toInspect)) {
-          // traverse further, if suproperties are defined
-          if (subSchema.properties && subSchema.properties[key]) {
-            // if included in schema, drill down
-            transformed[key] = await this.applyIfEncrypted(
-              subSchema.properties[key], toInspect[key], toApply);
-          } else {
-            // if not in schema, just copy
-            transformed[key] = toInspect[key];
-          }
-        }
-        return transformed;
-      }
-      // no encryption required
-      return toInspect;
+      return Promise.all(toInspect.map((entry) => toApply(entry)));
     }
+    // check if nested
+    if (subSchema.type === 'array') {
+      return Promise.all(toInspect.map((entry) => this.applyIfEncrypted(
+        subSchema.items, entry, toApply,
+      )));
+    } if (subSchema.type === 'object') {
+      // check objects subproperties
+      const transformed = {};
+      for (const key of Object.keys(toInspect)) {
+        // traverse further, if suproperties are defined
+        if (subSchema.properties && subSchema.properties[key]) {
+          // if included in schema, drill down
+          transformed[key] = await this.applyIfEncrypted(
+            subSchema.properties[key], toInspect[key], toApply,
+          );
+        } else {
+          // if not in schema, just copy
+          transformed[key] = toInspect[key];
+        }
+      }
+      return transformed;
+    }
+    // no encryption required
+    return toInspect;
   }
 
   /**
@@ -1497,13 +1564,12 @@ export class Container extends Logger {
     if (value === '0x0000000000000000000000000000000000000000000000000000000000000000') {
       return value;
     }
-    let result = value;
     const description = await this.getDescription();
     if (!description.dataSchema || !description.dataSchema[propertyName]) {
       throw new Error(`could not find description for entry "${propertyName}"`);
     }
     const decrypt = async (toEncrypt) => {
-      const encryptedFiles = await Throttle.all(toEncrypt.files.map(file => async () => {
+      const encryptedFiles = await Throttle.all(toEncrypt.files.map((file) => async () => {
         try {
           JSON.parse(file);
         } catch (ex) {
@@ -1522,9 +1588,7 @@ export class Container extends Logger {
 
       return { files: encryptedFiles.filter((f) => f !== null) };
     };
-    result = await this.applyIfEncrypted(description.dataSchema[propertyName], value, decrypt);
-
-    return result;
+    return this.applyIfEncrypted(description.dataSchema[propertyName], value, decrypt);
   }
 
   /**
@@ -1540,7 +1604,7 @@ export class Container extends Logger {
       throw new Error('could not derive type of value; cyclic references detected');
     }
     let schema;
-    let type = typeof value;
+    const type = typeof value;
     if (['boolean', 'number', 'string'].includes(type)) {
       schema = { type };
     } else if (type === 'object') {
@@ -1566,7 +1630,6 @@ export class Container extends Logger {
     propertyName: string,
     value: ContainerFile[]|any,
   ): Promise<any> {
-    let result = value;
     const description = await this.getDescription();
     if (!description.dataSchema || !description.dataSchema[propertyName]) {
       throw new Error(`could not find description for entry "${propertyName}"`);
@@ -1575,24 +1638,22 @@ export class Container extends Logger {
     // encrypt files and map them into the correct object format
     const blockNr = await this.options.web3.eth.getBlockNumber();
     const encrypt = async (toEncrypt) => {
-      const encryptedFiles = await Throttle.all(toEncrypt.files.map(file => async () =>
-        this.options.dataContract.encrypt(
+      const encryptedFiles = await Throttle.all(
+        toEncrypt.files.map((file) => async () => this.options.dataContract.encrypt(
           { private: file },
           this.contract,
           this.config.accountId,
           propertyName,
           blockNr,
           'aesBlob',
-        )
-      ));
+        )),
+      );
 
       return { files: encryptedFiles };
     };
 
     // check for encrypted files
-    result = await this.applyIfEncrypted(description.dataSchema[propertyName], value, encrypt);
-
-    return result;
+    return this.applyIfEncrypted(description.dataSchema[propertyName], value, encrypt);
   }
 
   /**
@@ -1603,9 +1664,9 @@ export class Container extends Logger {
       return;
     }
     checkConfigProperties(this.config, ['address']);
-    let address = this.config.address.startsWith('0x') ?
-      this.config.address : await this.options.nameResolver.getAddress(this.config.address);
-    this.contract = this.options.contractLoader.loadContract('DataContract', address)
+    const address = this.config.address.startsWith('0x')
+      ? this.config.address : await this.options.nameResolver.getAddress(this.config.address);
+    this.contract = this.options.contractLoader.loadContract('DataContract', address);
   }
 
   /**
@@ -1615,7 +1676,8 @@ export class Container extends Logger {
    */
   private async ensureKeyInSharing(entryName: string): Promise<void> {
     let key = await this.options.sharing.getKey(
-      this.contract.options.address, this.config.accountId, entryName);
+      this.contract.options.address, this.config.accountId, entryName,
+    );
     if (!key) {
       const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aes');
       key = await cryptor.generateKey();
@@ -1660,7 +1722,7 @@ export class Container extends Logger {
       await this.options.executor.executeContractCall(this.contract, 'authority'),
     );
     const enumType = getPropertyType(type);
-    let canSetField = await this.options.executor.executeContractCall(
+    const canSetField = await this.options.executor.executeContractCall(
       authority,
       'canCallOperation',
       accountId,
@@ -1668,8 +1730,8 @@ export class Container extends Logger {
       this.options.rightsAndRoles.getOperationCapabilityHash(name, enumType, ModificationType.Set),
     );
     if (!canSetField) {
-      this.log(`adding permissions on ${type} "${name}" for role ${role} to enable account ` +
-        `"${accountId}" on container "${this.contract.address}"`, 'debug');
+      this.log(`adding permissions on ${type} "${name}" for role ${role} to enable account `
+        + `"${accountId}" on container "${this.contract.address}"`, 'debug');
       await this.options.rightsAndRoles.setOperationPermission(
         this.contract,
         this.config.accountId,
@@ -1706,9 +1768,9 @@ export class Container extends Logger {
    */
   private getOperationHash(name: string, type: string, operation = 'set'): string {
     const keccak256 = this.options.web3.utils.soliditySha3;
-    const label = type === 'entry' ?
-      '0x84f3db82fb6cd291ed32c6f64f7f5eda656bda516d17c6bc146631a1f05a1833' : // entry
-      '0x7da2a80303fd8a8b312bb0f3403e22702ece25aa85a5e213371a770a74a50106';  // list entry
+    const label = type === 'entry'
+      ? '0x84f3db82fb6cd291ed32c6f64f7f5eda656bda516d17c6bc146631a1f05a1833' // entry
+      : '0x7da2a80303fd8a8b312bb0f3403e22702ece25aa85a5e213371a770a74a50106'; // list entry
     let operationHash;
     if (operation === 'set') {
       operationHash = '0xd2f67e6aeaad1ab7487a680eb9d3363a597afa7a3de33fa9bf3ae6edcb88435d';
@@ -1719,7 +1781,10 @@ export class Container extends Logger {
   }
 
   private async getPermittedRole(
-    authority: any, property: string, propertyType: PropertyType, modificationType: ModificationType
+    authority: any,
+    property: string,
+    propertyType: PropertyType,
+    modificationType: ModificationType,
   ): Promise<number> {
     // get permissions from contract
     const hash = this.options.rightsAndRoles.getOperationCapabilityHash(
@@ -1737,7 +1802,7 @@ export class Container extends Logger {
     // build string with all roles and 1/0 depending on permissions
     const binary = (new BigNumber(rolesMap)).toString(2);
     // check index in group list, ignore reserved roles for this
-    let index = [...binary.substr(0, binary.length - this.reservedRoles)]
+    const index = [...binary.substr(0, binary.length - this.reservedRoles)]
       .reverse().join('').indexOf('1');
     // if group was found, re-apply reserved roles count, result is group with permission
     const permittedRole = (index === -1) ? index : (index + this.reservedRoles);
@@ -1752,21 +1817,25 @@ export class Container extends Logger {
    * @param      {string}  property           property name
    * @param      {string}  type               'entry' or 'list'
    */
-  private async getRolePermission(authorityContract: any, property: string, type: string
+  private async getRolePermission(
+    authorityContract: any,
+    property: string,
+    type: string,
   ): Promise<any> {
     const permissions = {};
-    for (let operation of ['set', 'remove']) {
+    for (const operation of ['set', 'remove']) {
       const rolesMap = await this.options.executor.executeContractCall(
         authorityContract,
         'getOperationCapabilityRoles',
         this.config.address,
         this.options.rightsAndRoles.getOperationCapabilityHash(
-          property, getPropertyType(type), getModificationType(operation)),
+          property, getPropertyType(type), getModificationType(operation),
+        ),
       );
       // iterates over all roles and checks which roles are included
       const checkNumber = (bnum) => {
         const results = [];
-        for (let i = 0; i < 256; i++) {
+        for (let i = 0; i < 256; i += 1) {
           const divisor = (new BigNumber(2)).pow(i);
           if (divisor.gt(bnum)) {
             break;
@@ -1779,7 +1848,7 @@ export class Container extends Logger {
       const roleMap = checkNumber(new BigNumber(rolesMap));
       roleMap.forEach((value, i) => {
         if (value) {
-          if (!permissions[i])  {
+          if (!permissions[i]) {
             permissions[i] = [];
           }
           permissions[i].push(operation);
@@ -1851,7 +1920,7 @@ async function applyPlugin(
       dataSchema: { $id: 'type_schema', type: 'string' },
       type: 'entry',
       permissions: {
-        0: ['set']
+        0: ['set'],
       },
       value: plugin.template.type,
     };
@@ -1862,10 +1931,10 @@ async function applyPlugin(
     operations: [],
   };
   const propertyNames = Object.keys(properties);
-  for (let propertyName of propertyNames) {
+  for (const propertyName of propertyNames) {
     const property: ContainerTemplateProperty = properties[propertyName];
-    for (let role of Object.keys(property.permissions)) {
-      for (let modification of property.permissions[role]) {
+    for (const role of Object.keys(property.permissions)) {
+      for (const modification of property.permissions[role]) {
         permissionUpdates.roles.push(parseInt(role, 10));
         permissionUpdates.operations.push(options.rightsAndRoles.getOperationCapabilityHash(
           propertyName,
@@ -1901,13 +1970,14 @@ async function applyPlugin(
 
   // write sharings to contract
   await generateSharings(
-    options, await container.getContractAddress(), config.accountId, propertyNames);
+    options, await container.getContractAddress(), config.accountId, propertyNames,
+  );
 
   // set values after desription has been set
   const tasks = [];
-  for (let propertyName of propertyNames) {
+  for (const propertyName of propertyNames) {
     const property: ContainerTemplateProperty = properties[propertyName];
-    if (property.hasOwnProperty('value')) {
+    if (Object.prototype.hasOwnProperty.call(property, 'value')) {
       tasks.push(async () => container.setEntry(propertyName, property.value, false));
     }
   }
@@ -1924,7 +1994,9 @@ async function applyPlugin(
  * @param      {string}           properties  list of property names, that should be present
  */
 function checkConfigProperties(config: ContainerConfig, properties: string[]): void {
-  let missing = properties.filter(property => !config.hasOwnProperty(property));
+  const missing = properties.filter(
+    (property) => !Object.prototype.hasOwnProperty.call(config, property),
+  );
   if (missing.length === 1) {
     throw new Error(`missing property in config: "${missing[0]}"`);
   } else if (missing.length > 1) {
@@ -1942,7 +2014,7 @@ function checkConfigProperties(config: ContainerConfig, properties: string[]): v
  * @param      {string[]}  fields           fields to generate keys for
  */
 async function generateSharings(
-  runtime: any, contractAddress: string, accountId: string, fields: string[]
+  runtime: any, contractAddress: string, accountId: string, fields: string[],
 ) {
   // get current sharing
   const sharings = {};
@@ -1955,16 +2027,14 @@ async function generateSharings(
 
   // add hash key
   const tasks = [];
-  tasks.push(async () =>
-    runtime.sharing.extendSharings(
-      sharings, accountId, accountId, '*', 'hashKey', keys[keys.length - 1], null)
-  );
+  tasks.push(async () => runtime.sharing.extendSharings(
+    sharings, accountId, accountId, '*', 'hashKey', keys[keys.length - 1], null,
+  ));
 
-  for (let i = 0; i < fields.length; i++) {
-    tasks.push(async () =>
-      runtime.sharing.extendSharings(
-        sharings, accountId, accountId, fields[i], 0, keys[i])
-    );
+  for (let i = 0; i < fields.length; i += 1) {
+    tasks.push(async () => runtime.sharing.extendSharings(
+      sharings, accountId, accountId, fields[i], 0, keys[i],
+    ));
   }
 
   await Throttle.all(tasks);
@@ -2009,7 +2079,7 @@ function getPropertyType(typeName: string): PropertyType {
 function toJsonSchema(properties: any): any {
   const jsonSchema = {};
 
-  for (let field of Object.keys(properties)) {
+  for (const field of Object.keys(properties)) {
     const fieldId = field.replace(/[^a-zA-Z0-9]/g, '');
     jsonSchema[field] = { $id: `${fieldId}_schema`, ...properties[field].dataSchema };
   }

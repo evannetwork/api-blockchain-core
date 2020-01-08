@@ -17,14 +17,8 @@
   the following URL: https://evan.network/license/
 */
 
-import Graph = require('ipld-graph-builder');
-import bs58 = require('bs58');
-import * as https from 'https';
-import _ = require('lodash');
-
 import {
   CryptoInfo,
-  Cryptor,
   Envelope,
   KeyProviderInterface,
   Logger,
@@ -32,15 +26,20 @@ import {
   NameResolver,
 } from '@evan.network/dbcp';
 
-import { Ipfs } from '../dfs/ipfs';
+import { Ipfs } from './ipfs';
 
 import { CryptoProvider } from '../encryption/crypto-provider';
+
+import Graph = require('ipld-graph-builder');
+import _ = require('lodash');
+import bs58 = require('bs58');
 
 const IPLD_TIMEOUT = 120000;
 
 function rebuffer(toBuffer) {
   Object.keys(toBuffer).forEach((key) => {
     if (key === '/') {
+      // eslint-disable-next-line no-param-reassign
       toBuffer[key] = Buffer.from(toBuffer[key].data);
     } else if (typeof toBuffer[key] === 'object' && toBuffer[key] !== null) {
       rebuffer(toBuffer[key]);
@@ -65,17 +64,26 @@ export interface IpldOptions extends LoggerOptions {
  * @class      Ipld IPFS helper class
  */
 export class Ipld extends Logger {
-  graph: Graph;
-  ipfs: Ipfs;
-  keyProvider: KeyProviderInterface;
-  cryptoProvider: CryptoProvider;
-  originator: string;
-  defaultCryptoAlgo: string;
-  nameResolver: NameResolver;
-  hashLog: string[] = [];
+  public graph: Graph;
 
-  private readonly dagOptions = { format: 'dag-pb', };
+  public ipfs: Ipfs;
+
+  public keyProvider: KeyProviderInterface;
+
+  public cryptoProvider: CryptoProvider;
+
+  public originator: string;
+
+  public defaultCryptoAlgo: string;
+
+  public nameResolver: NameResolver;
+
+  public hashLog: string[] = [];
+
+  private readonly dagOptions = { format: 'dag-pb' };
+
   private readonly encodingUnencrypted = 'utf-8';
+
   private readonly encodingEncrypted = 'hex';
 
   /**
@@ -86,6 +94,7 @@ export class Ipld extends Logger {
   public static purgeCryptoInfo(toPurge: any): void {
     Object.keys(toPurge).forEach((key) => {
       if (key === 'cryptoInfo') {
+        // eslint-disable-next-line no-param-reassign
         delete toPurge.cryptoInfo;
       } else if (typeof toPurge[key] === 'object' && toPurge[key] !== null) {
         this.purgeCryptoInfo(toPurge[key]);
@@ -93,10 +102,10 @@ export class Ipld extends Logger {
     });
   }
 
-  constructor(options: IpldOptions) {
+  public constructor(options: IpldOptions) {
     super(options);
     this.ipfs = options.ipfs;
-    this.graph = new Graph({ get: null, put: null, });
+    this.graph = new Graph({ get: null, put: null });
     this.keyProvider = options.keyProvider;
     this.cryptoProvider = options.cryptoProvider;
     this.originator = options.originator;
@@ -104,9 +113,9 @@ export class Ipld extends Logger {
     this.nameResolver = options.nameResolver;
 
     // overwrite dag.put and dag.get if cryptor was provided
-    const originalDagPut = this.graph._dag.put;
+    // eslint-disable-next-line no-underscore-dangle
     this.graph._dag.put = async (...args) => {
-      const data = args[0];
+      let data = args[0];
       if (data.cryptoInfo || this.defaultCryptoAlgo) {
         let cryptor;
         let cryptoInfo;
@@ -119,35 +128,34 @@ export class Ipld extends Logger {
           cryptoInfo = cryptor.getCryptoInfo(this.originator);
         }
         const key = await this.keyProvider.getKey(cryptoInfo);
-        const encrypted = await cryptor.encrypt(args[0], { key, })
-        args[0] = encrypted.toString(this.encodingEncrypted);
+        const encrypted = await cryptor.encrypt(args[0], { key });
         const envelope: Envelope = {
           private: encrypted,
           cryptoInfo,
         };
-        args[0] = Buffer.from(JSON.stringify(envelope));
+        data = Buffer.from(JSON.stringify(envelope));
       }
       // add file to ipfs instead of dag put because js-ipfs-api don't supports dag at the moment
-      return this.ipfs.add('dag', args[0])
+      return this.ipfs.add('dag', data)
         .then((hash) => {
           this.hashLog.push(hash);
           const bufferHash = bs58.decode(Ipfs.bytes32ToIpfsHash(hash));
-          const dagHash = bs58.encode(bufferHash);
           return bufferHash;
         });
     };
 
-    const originalDagGet = this.graph._dag.get;
+    // eslint-disable-next-line no-underscore-dangle
     this.graph._dag.get = (...args) => {
       const timeout = new Promise((resolve, reject) => {
-        let wait = setTimeout(() => {
+        const wait = setTimeout(() => {
           clearTimeout(wait);
           reject(new Error('timeout reached'));
-        }, IPLD_TIMEOUT)
-      })
+        }, IPLD_TIMEOUT);
+      });
       this.log(`Getting IPLD Hash ${bs58.encode(args[0])}`, 'debug');
       // add file to ipfs instead of dag put because js-ipfs-api don't supports dag at the moment
       const getHash = this.ipfs.get(bs58.encode(args[0]))
+        // eslint-disable-next-line consistent-return
         .then(async (dag) => {
           if (this.defaultCryptoAlgo) {
             const envelope: Envelope = JSON.parse(dag.toString('utf-8'));
@@ -155,24 +163,22 @@ export class Ipld extends Logger {
             const key = await this.keyProvider.getKey(envelope.cryptoInfo);
             if (!key) {
               return {};
-            } else {
-
-              const decryptedObject = await cryptor.decrypt(
-                Buffer.from(envelope.private, this.encodingEncrypted), { key, });
-              rebuffer(decryptedObject);
-              if (typeof decryptedObject === 'object') {
-                // keep crypto info for later re-encryption
-                decryptedObject.cryptoInfo = envelope.cryptoInfo;
-              }
-              return  decryptedObject;
             }
+            const decryptedObject = await cryptor.decrypt(
+              Buffer.from(envelope.private, this.encodingEncrypted), { key },
+            );
+            rebuffer(decryptedObject);
+            if (typeof decryptedObject === 'object') {
+              // keep crypto info for later re-encryption
+              decryptedObject.cryptoInfo = envelope.cryptoInfo;
+            }
+            return decryptedObject;
           }
-        })
-      ;
+        });
       return Promise.race([
         getHash,
-        timeout
-      ])
+        timeout,
+      ]);
     };
   }
 
@@ -183,7 +189,7 @@ export class Ipld extends Logger {
    * @param      {string}                 path            path in the tree
    * @return     {Promise<any>}           linked graph.
    */
-  async getLinkedGraph(graphReference: string | Buffer | any, path = ''): Promise<any> {
+  public async getLinkedGraph(graphReference: string | Buffer | any, path = ''): Promise<any> {
     let graphObject;
     if (typeof graphReference === 'string') {
       // fetch ipfs file
@@ -195,30 +201,30 @@ export class Ipld extends Logger {
         const cryptor = this.cryptoProvider.getCryptorByCryptoInfo(envelope.cryptoInfo);
         const key = await this.keyProvider.getKey(envelope.cryptoInfo);
         const decryptedObject = await cryptor.decrypt(
-          Buffer.from(envelope.private, this.encodingEncrypted), { key, });
+          Buffer.from(envelope.private, this.encodingEncrypted), { key },
+        );
         rebuffer(decryptedObject);
         graphObject = decryptedObject;
       } else {
-        graphObject = { '/': Buffer.from(ipfsFile, this.encodingUnencrypted), };
+        graphObject = { '/': Buffer.from(ipfsFile, this.encodingUnencrypted) };
       }
     } else if (Buffer.isBuffer(graphReference)) {
-      graphObject = { '/': graphReference, };
+      graphObject = { '/': graphReference };
     } else {
       graphObject = graphReference;
     }
     if (!path) {
       const tree = await this.graph.tree(graphObject, 0);
       return tree['/'] || tree;
-    } else {
-      const element = await this.graph.get(graphObject, path)
-      if (element) {
-        this.log(`Got Linked Graph Path -> ${path} Element`, 'debug');
-      } else {
-        this.log(`Could not get Linked Graph Path -> ${path} Element`, 'debug');
-      }
-
-      return element;
     }
+    const element = await this.graph.get(graphObject, path);
+    if (element) {
+      this.log(`Got Linked Graph Path -> ${path} Element`, 'debug');
+    } else {
+      this.log(`Could not get Linked Graph Path -> ${path} Element`, 'debug');
+    }
+
+    return element;
   }
 
   /**
@@ -230,9 +236,9 @@ export class Ipld extends Logger {
    *                                                      (default: 10)
    * @return     {Promise<any>}           resolved graph
    */
-  async getResolvedGraph(graphReference: string | Buffer | any, path = '', depth = 10): Promise<any> {
+  public async getResolvedGraph(graphReference: string | Buffer | any, path = '', depth = 10): Promise<any> {
     const treeNode = await this.getLinkedGraph(graphReference, path);
-    return await this.graph.tree(treeNode, depth, true);
+    return this.graph.tree(treeNode, depth, true);
   }
 
   /**
@@ -241,19 +247,18 @@ export class Ipld extends Logger {
    * @param      {any}              toSet   tree to store
    * @return     {Promise<string>}  hash reference to a tree with with merklefied links
    */
-  async store(toSet: any): Promise<string> {
+  public async store(toSet: any): Promise<string> {
     const cryptoInfo = {
-      algorithm: 'unencrypted'
-    }
+      algorithm: 'unencrypted',
+    };
     const treeToStore = _.cloneDeep(toSet);
-    const [rootObject, key] = await Promise.all([
-      // get final tree
-      this.graph.flush(treeToStore, Object.assign({}, this.dagOptions, { cryptoInfo, })),
-      // encrypt dag and put in envelope
-      this.keyProvider.getKey(cryptoInfo),
-    ]);
+    // get final tree
+    const rootObject = await this.graph.flush(
+      treeToStore, { ...this.dagOptions, cryptoInfo },
+    );
     const envelope: Envelope = {
-      private: Buffer.from(JSON.stringify(rootObject), this.encodingUnencrypted).toString(this.encodingEncrypted),
+      private: Buffer.from(JSON.stringify(rootObject), this.encodingUnencrypted)
+        .toString(this.encodingEncrypted),
       cryptoInfo,
     };
 
@@ -273,11 +278,18 @@ export class Ipld extends Logger {
    * @param      {CryptoInfo}    cryptoInfo   crypto info for encrypting subtree
    * @return     {Promise<any>}  tree with merklefied links
    */
-  async set(tree: any, path: string, subtree: any, plainObject = false, cryptoInfo?: CryptoInfo): Promise<any> {
-    if (cryptoInfo && typeof subtree === 'object') {
-      subtree.cryptoInfo = cryptoInfo;
+  public async set(
+    tree: any,
+    path: string,
+    subtree: any,
+    plainObject = false,
+    cryptoInfo?: CryptoInfo,
+  ): Promise<any> {
+    const subtreeParam = subtree;
+    if (cryptoInfo && typeof subtreeParam === 'object') {
+      subtreeParam.cryptoInfo = cryptoInfo;
     }
-    const graphTree =  await this.graph.set(tree, path, subtree, plainObject);
+    const graphTree = await this.graph.set(tree, path, subtreeParam, plainObject);
     return graphTree;
   }
 
@@ -288,15 +300,16 @@ export class Ipld extends Logger {
    * @param      {string}        path    path of inserted element
    * @return     {Promise<any>}  tree with merklefied links
    */
-  async remove(tree: any, path: string): Promise<any> {
+  public async remove(tree: any, path: string): Promise<any> {
     const splitPath = path.split('/');
     const node = splitPath[splitPath.length - 1];
     const toTraverse = splitPath.slice(0, -1);
     let currentNode;
-    let currentTree
+    let currentTree;
     let linkedParent = tree;
 
     // find next linked node
+    // eslint-disable-next-line no-cond-assign
     while (currentNode = toTraverse.pop()) {
       currentTree = await this.getLinkedGraph(tree, toTraverse.join('/'));
       if (currentTree[currentNode]['/']) {
@@ -314,19 +327,17 @@ export class Ipld extends Logger {
     let splitPathInParent;
     if (toTraverse.length) {
       pathInParent = path.replace(`${toTraverse.join('/')}/`, '');
-      splitPathInParent = pathInParent.split('/').slice(1, -1);  // skip parent prop, skip last
+      splitPathInParent = pathInParent.split('/').slice(1, -1); // skip parent prop, skip last
+    } else if (linkedParent === tree) {
+      // entire graph is plain object, current linkedParent is entire tree
+      splitPathInParent = path.split('/').slice(0, -1); // skip last
     } else {
-      pathInParent = path;
-      if (linkedParent === tree) {
-        // entire graph is plain object, current linkedParent is entire tree
-        splitPathInParent = path.split('/').slice(0, -1);  // skip last
-      } else {
-        // linkedParent points to found node, node name is still in path
-        splitPathInParent = path.split('/').slice(1, -1);  // skip parent prop, skip last
-      }
+      // linkedParent points to found node, node name is still in path
+      splitPathInParent = path.split('/').slice(1, -1); // skip parent prop, skip last
     }
     let nodeInParentPath = linkedParent;
     let nodeNameInParentPath;
+    // eslint-disable-next-line no-cond-assign
     while (nodeNameInParentPath = splitPathInParent.pop()) {
       nodeInParentPath = nodeInParentPath[nodeNameInParentPath];
     }
@@ -334,13 +345,12 @@ export class Ipld extends Logger {
 
     if (toTraverse.length) {
       // set updated linked node in entire graph
-      return await this.graph.set(tree, `${toTraverse.join('/')}/${currentNode}`, linkedParent);
-    } else {
-      // flush graph, return linked graph object
-      const cryptor = this.cryptoProvider.getCryptorByCryptoAlgo(this.defaultCryptoAlgo);
-      const cryptoInfo = cryptor.getCryptoInfo(this.originator);
-      const flushed = await this.graph.flush(tree, this.dagOptions, this.dagOptions, { cryptoInfo, });
-      return this.getLinkedGraph(flushed);
+      return this.graph.set(tree, `${toTraverse.join('/')}/${currentNode}`, linkedParent);
     }
+    // flush graph, return linked graph object
+    const cryptor = this.cryptoProvider.getCryptorByCryptoAlgo(this.defaultCryptoAlgo);
+    const cryptoInfo = cryptor.getCryptoInfo(this.originator);
+    const flushed = await this.graph.flush(tree, this.dagOptions, this.dagOptions, { cryptoInfo });
+    return this.getLinkedGraph(flushed);
   }
 }

@@ -18,8 +18,6 @@
 */
 
 import { setTimeout, clearTimeout } from 'timers';
-import bs58 = require('bs58');
-import prottle = require('prottle');
 
 import {
   FileToAdd,
@@ -29,13 +27,15 @@ import {
   LoggerOptions,
 } from '@evan.network/dbcp';
 
-import { Runtime } from './../runtime';
+import { Runtime } from '../runtime';
 
-import { Payments } from './../payments';
+import { Payments } from '../payments';
 
 import { IpfsLib } from './ipfs-lib';
-import utils = require('./../common/utils');
 
+import bs58 = require('bs58');
+import prottle = require('prottle');
+import utils = require('./../common/utils');
 
 
 const IPFS_TIMEOUT = 120000;
@@ -61,9 +61,13 @@ export interface IpfsOptions extends LoggerOptions {
  */
 export class Ipfs extends Logger implements DfsInterface {
   public remoteNode: any;
+
   public dfsConfig: any;
+
   public disablePin: boolean;
+
   public cache: DfsCacheInterface;
+
   public runtime: Runtime;
 
   /**
@@ -147,25 +151,29 @@ export class Ipfs extends Logger implements DfsInterface {
         throw new Error('no hash was returned');
       }
       remoteFiles = remoteFiles.map((fileHash) => {
-        if (!fileHash.hash) {
-          fileHash.hash = fileHash.Hash;
+        const remoteFile = fileHash;
+        if (!remoteFile.hash) {
+          remoteFile.hash = remoteFile.Hash;
         }
-        return fileHash;
+        return remoteFile;
       });
     } catch (ex) {
-      let msg = `could not add file to ipfs: ${ex.message || ex}`;
+      const msg = `could not add file to ipfs: ${ex.message || ex}`;
       this.log(msg);
       throw new Error(msg);
     }
     if (this.cache) {
-      await Promise.all(remoteFiles.map((remoteFile, i) => {
-        this.cache.add(remoteFile.hash, files[i].content);
-      }));
+      await Promise.all(
+        remoteFiles.map((remoteFile, i) => this.cache.add(remoteFile.hash, files[i].content)),
+      );
     }
     if (!this.disablePin) {
-      await prottle(requestWindowSize, remoteFiles.map((fileHash) => () => this.pinFileHash(fileHash)));
+      await prottle(
+        requestWindowSize,
+        remoteFiles.map((fileHash) => () => this.pinFileHash(fileHash)),
+      );
     }
-    return remoteFiles.map(remoteFile => Ipfs.ipfsHashToBytes32(remoteFile.hash));
+    return remoteFiles.map((remoteFile) => Ipfs.ipfsHashToBytes32(remoteFile.hash));
   }
 
   /**
@@ -187,46 +195,43 @@ export class Ipfs extends Logger implements DfsInterface {
     this.log(`Getting IPFS Hash ${ipfsHash}`, 'debug');
 
     if (this.cache) {
-      let buffer = await this.cache.get(ipfsHash);
+      const buffer = await this.cache.get(ipfsHash);
       if (buffer) {
         if (returnBuffer) {
           return Buffer.from(buffer);
-        } else {
-          return Buffer.from(buffer).toString('binary');
         }
+        return Buffer.from(buffer).toString('binary');
       }
     }
 
     const timeout = new Promise((resolve, reject) => {
-      let wait = setTimeout(() => {
+      const wait = setTimeout(() => {
         clearTimeout(wait);
 
-        reject(new Error(`error while getting ipfs hash ${ipfsHash}: rejected after ${ IPFS_TIMEOUT }ms`));
-      }, IPFS_TIMEOUT)
+        reject(new Error(`error while getting ipfs hash ${ipfsHash}: rejected after ${IPFS_TIMEOUT}ms`));
+      }, IPFS_TIMEOUT);
     });
 
     const getRemoteHash = this.remoteNode.files.cat(ipfsHash)
       .then((buffer: any) => {
-        let fileBuffer = buffer;
+        const fileBuffer = buffer;
         const ret = fileBuffer.toString('binary');
         if (this.cache) {
           this.cache.add(ipfsHash, fileBuffer);
         }
         if (returnBuffer) {
           return fileBuffer;
-        } else {
-          return ret;
         }
+        return ret;
       })
-      .catch((ex: any) => {
+      .catch(() => {
         throw new Error(`error while getting ipfs hash ${ipfsHash}`);
-      })
-    ;
+      });
     return Promise.race([
       getRemoteHash,
-      timeout
+      timeout,
     ]);
-  };
+  }
 
   /**
    * @brief      pins file hashes on ipfs cluster
@@ -287,8 +292,8 @@ export class Ipfs extends Logger implements DfsInterface {
       const ipfsAuthHeader = await utils.getSmartAgentAuthHeaders(this.runtime);
       this.remoteNode.provider.headers.authorization = ipfsAuthHeader;
       setTimeout(() => {
-        delete this.remoteNode.provider.headers.authorization
-      }, 60 * 1000)
+        delete this.remoteNode.provider.headers.authorization;
+      }, 60 * 1000);
     }
   }
 }

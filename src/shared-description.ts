@@ -17,20 +17,19 @@
   the following URL: https://evan.network/license/
 */
 
-import { Envelope } from '@evan.network/dbcp';
-
 import * as Dbcp from '@evan.network/dbcp';
 
 import { Sharing } from './contracts/sharing';
 
+
 export interface DescriptionOptions extends Dbcp.DescriptionOptions {
-  sharing: Sharing,
+  sharing: Sharing;
 }
 
 export class Description extends Dbcp.Description {
-  sharing: Sharing;
+  public sharing: Sharing;
 
-  constructor(options: DescriptionOptions) {
+  public constructor(options: DescriptionOptions) {
     super(options);
     this.sharing = options.sharing;
   }
@@ -41,7 +40,10 @@ export class Description extends Dbcp.Description {
    * @param      {string}    ensAddress  The ens address where the description is stored
    * @return     {Envelope}  description as an Envelope
    */
-  async getDescriptionFromContract(contractAddress: string, accountId: string): Promise<Envelope> {
+  public async getDescriptionFromContract(
+    contractAddress: string,
+    accountId: string,
+  ): Promise<Dbcp.Envelope> {
     let result = null;
     const contract = this.contractLoader.loadContract('Described', contractAddress);
     const hash = await this.executor.executeContractCall(contract, 'contractDescription');
@@ -52,11 +54,14 @@ export class Description extends Dbcp.Description {
         if (this.sharing) {
           try {
             const cryptor = this.cryptoProvider.getCryptorByCryptoInfo(result.cryptoInfo);
-            const sharingKey = await this.sharing.getKey(contractAddress, accountId, '*', result.cryptoInfo.block);
+            const sharingKey = await this.sharing.getKey(
+              contractAddress, accountId, '*', result.cryptoInfo.block,
+            );
             const key = sharingKey;
             const privateData = await cryptor.decrypt(
-              Buffer.from(result.private, this.encodingEncrypted as BufferEncoding), { key, });
-              result.private = privateData;
+              Buffer.from(result.private, this.encodingEncrypted as BufferEncoding), { key },
+            );
+            result.private = privateData;
           } catch (e) {
             result.private = new Error('wrong_key');
           }
@@ -66,7 +71,7 @@ export class Description extends Dbcp.Description {
       }
     }
     return result;
-  };
+  }
 
 
   /**
@@ -74,17 +79,21 @@ export class Description extends Dbcp.Description {
    *
    * @param      {string}           contractAddress  The contract address where description will be
    *                                                 stored
-   * @param      {Envelope|string}  envelope         description as an envelope or a presaved description hash
+   * @param      {Envelope|string}  envelope         description as an envelope or a presaved
+   *                                                 description hash
    * @param      {string}           accountId        ETH account id
-   * @return     {Promise}          resolved when done
+   * @return     {Promise}  resolved when done
    */
-  async setDescriptionToContract(contractAddress: string, envelope: Envelope|string, accountId: string):
-      Promise<void> {
+  public async setDescriptionToContract(
+    contractAddress: string,
+    envelope: Dbcp.Envelope|string,
+    accountId: string,
+  ): Promise<void> {
     let hash;
     if (typeof envelope === 'string') {
       hash = envelope;
     } else {
-      const content: Envelope = Object.assign({}, envelope);
+      const content: Dbcp.Envelope = { ...envelope };
       // add dbcp version
       if (!content.public.dbcpVersion) {
         this.log('dbcpVersion not set, using fallback of version 1', 'warning');
@@ -99,14 +108,18 @@ export class Description extends Dbcp.Description {
         const blockNr = await this.web3.eth.getBlockNumber();
         const sharingKey = await this.sharing.getKey(contractAddress, accountId, '*', blockNr);
         const key = sharingKey;
-        const encrypted = await cryptor.encrypt(content.private, { key, });
+        const encrypted = await cryptor.encrypt(content.private, { key });
         content.private = encrypted.toString(this.encodingEncrypted);
         content.cryptoInfo.block = blockNr;
       }
       hash = await this.dfs.add(
-        'description', Buffer.from(JSON.stringify(content), this.encodingEnvelope as BufferEncoding));
+        'description',
+        Buffer.from(JSON.stringify(content), this.encodingEnvelope as BufferEncoding),
+      );
     }
     const contract = this.contractLoader.loadContract('Described', contractAddress);
-    await this.executor.executeContractTransaction(contract, 'setContractDescription', {from: accountId, gas: 200000}, hash);
-  };
+    await this.executor.executeContractTransaction(
+      contract, 'setContractDescription', { from: accountId, gas: 200000 }, hash,
+    );
+  }
 }

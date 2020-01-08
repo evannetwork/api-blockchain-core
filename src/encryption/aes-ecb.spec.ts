@@ -21,13 +21,10 @@ import 'mocha';
 import { expect } from 'chai';
 import { randomBytes } from 'crypto';
 
-import { AesEcb } from './aes-ecb'
-import { TestUtils } from '../test/test-utils'
+import { AesEcb } from './aes-ecb';
 
-const sampleUnencrypted = 'Id commodo nulla ut eiusmod.';
-const sampleKey = '346c22768f84f3050f5c94cec98349b3c5cbfa0b7315304e13647a49181fd1ef';
 
-describe('aes (ecb) handler', function() {
+describe('aes (ecb) handler', function test() {
   this.timeout(300000);
 
   it('should be able to be created', () => {
@@ -45,8 +42,8 @@ describe('aes (ecb) handler', function() {
     const aes = new AesEcb();
     const key = await aes.generateKey();
     const message = randomBytes(32);
-    const encrypted = await aes.encrypt(message, { key: key, });
-    const decrypted = await aes.decrypt(encrypted, { key: key, });
+    const encrypted = await aes.encrypt(message, { key });
+    const decrypted = await aes.decrypt(encrypted, { key });
     expect(decrypted.toString('utf-8')).to.eq(message.toString('utf-8'));
   });
 });

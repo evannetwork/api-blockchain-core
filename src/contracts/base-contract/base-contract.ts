@@ -22,7 +22,7 @@ import {
   Executor,
   Logger,
   LoggerOptions,
-  NameResolver
+  NameResolver,
 } from '@evan.network/dbcp';
 
 
@@ -38,27 +38,27 @@ export enum ContractState {
   Active,
   VerifyTerminated,
   Terminated,
-};
+}
 
 /**
  * describes the state of a consumer or owner in a contract
  */
 export enum ConsumerState {
-    Initial,
-    Error,
-    Draft,
-    Rejected,
-    Active,
-    Terminated
-};
+  Initial,
+  Error,
+  Draft,
+  Rejected,
+  Active,
+  Terminated
+}
 
 /**
  * options for BaseContract constructor
  */
 export interface BaseContractOptions extends LoggerOptions {
-  executor: Executor,
-  loader: ContractLoader,
-  nameResolver: NameResolver,
+  executor: Executor;
+  loader: ContractLoader;
+  nameResolver: NameResolver;
 }
 
 /**
@@ -69,7 +69,7 @@ export interface BaseContractOptions extends LoggerOptions {
 export class BaseContract extends Logger {
   protected options: BaseContractOptions;
 
-  constructor(optionsInput: BaseContractOptions) {
+  public constructor(optionsInput: BaseContractOptions) {
     super(optionsInput);
     this.options = optionsInput;
   }
@@ -86,11 +86,11 @@ export class BaseContract extends Logger {
    * @return     {Promise<string>}  Ethereum id of new contract
    */
   public async createUninitialized(
-      factoryName: string,
-      accountId: string,
-      businessCenterDomain?: string,
-      descriptionDfsHash = '0x0000000000000000000000000000000000000000000000000000000000000000')
-      : Promise<string> {
+    factoryName: string,
+    accountId: string,
+    businessCenterDomain?: string,
+    descriptionDfsHash = '0x0000000000000000000000000000000000000000000000000000000000000000',
+  ): Promise<string> {
     let factoryAddress;
     if (factoryName.startsWith('0x')) {
       factoryAddress = factoryName;
@@ -102,7 +102,8 @@ export class BaseContract extends Logger {
       } else {
         // partial name, bc relative domain
         factoryDomain = this.options.nameResolver.getDomainName(
-          this.options.nameResolver.config.domains.factory, factoryName);
+          this.options.nameResolver.config.domains.factory, factoryName,
+        );
       }
       factoryAddress = await this.options.nameResolver.getAddress(factoryDomain);
     }
@@ -116,13 +117,13 @@ export class BaseContract extends Logger {
       if (businessCenterAddress !== '0x0000000000000000000000000000000000000000') {
         const businessCenterContract = await this.options.loader.loadContract(
           'BusinessCenterInterface',
-          businessCenterAddress
+          businessCenterAddress,
         );
 
         try {
           await this.options.executor.executeContractCall(
             businessCenterContract,
-            'joinSchema'
+            'joinSchema',
           );
         } catch (e) {
           throw new Error('There is no Business Center domain exisiting');
@@ -136,7 +137,7 @@ export class BaseContract extends Logger {
       'createContract', {
         from: accountId,
         autoGas: 1.1,
-        event: { target: 'BaseContractFactoryInterface', eventName: 'ContractCreated', },
+        event: { target: 'BaseContractFactoryInterface', eventName: 'ContractCreated' },
         getEventResult: (event, args) => args.newAddress,
       },
       businessCenterAddress,
@@ -159,12 +160,13 @@ export class BaseContract extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async inviteToContract(
-      businessCenterDomain: string,
-      contract: string,
-      inviterId: string,
-      inviteeId: string): Promise<void> {
-    const baseContractInterface = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('BaseContractInterface', contract);
+    businessCenterDomain: string,
+    contract: string,
+    inviterId: string,
+    inviteeId: string,
+  ): Promise<void> {
+    const baseContractInterface = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('BaseContractInterface', contract);
     let businessCenterAddress;
     if (businessCenterDomain) {
       businessCenterAddress = await this.options.nameResolver.getAddress(businessCenterDomain);
@@ -174,7 +176,7 @@ export class BaseContract extends Logger {
     await this.options.executor.executeContractTransaction(
       baseContractInterface,
       'inviteConsumer',
-      { from: inviterId, autoGas: 1.1, },
+      { from: inviterId, autoGas: 1.1 },
       inviteeId,
       businessCenterAddress,
     );
@@ -188,13 +190,17 @@ export class BaseContract extends Logger {
    * @param      {ContractState}  state      new state
    * @return     {Promise<void>}  resolved when done
    */
-  public async changeContractState(contract: string|any, accountId: string, state: ContractState): Promise<void> {
-    const baseContractInterface = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('BaseContractInterface', contract);
+  public async changeContractState(
+    contract: string|any,
+    accountId: string,
+    state: ContractState,
+  ): Promise<void> {
+    const baseContractInterface = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('BaseContractInterface', contract);
     await this.options.executor.executeContractTransaction(
       baseContractInterface,
       'changeContractState',
-      { from: accountId, autoGas: 1.1, },
+      { from: accountId, autoGas: 1.1 },
       state,
     );
   }
@@ -209,16 +215,17 @@ export class BaseContract extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async changeConsumerState(
-      contract: string|any,
-      accountId: string,
-      consumerId: string,
-      state: ConsumerState): Promise<void> {
-    const baseContractInterface = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('BaseContractInterface', contract);
+    contract: string|any,
+    accountId: string,
+    consumerId: string,
+    state: ConsumerState,
+  ): Promise<void> {
+    const baseContractInterface = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('BaseContractInterface', contract);
     await this.options.executor.executeContractTransaction(
       baseContractInterface,
       'changeConsumerState',
-      { from: accountId, autoGas: 1.1, },
+      { from: accountId, autoGas: 1.1 },
       consumerId,
       state,
     );
@@ -236,12 +243,13 @@ export class BaseContract extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async removeFromContract(
-      businessCenterDomain: string,
-      contract: string,
-      accountId: string,
-      idToBeRemoved: string): Promise<void> {
-    const baseContractInterface = (typeof contract === 'object') ?
-      contract : this.options.loader.loadContract('BaseContractInterface', contract);
+    businessCenterDomain: string,
+    contract: string,
+    accountId: string,
+    idToBeRemoved: string,
+  ): Promise<void> {
+    const baseContractInterface = (typeof contract === 'object')
+      ? contract : this.options.loader.loadContract('BaseContractInterface', contract);
     let businessCenterAddress;
     if (businessCenterDomain) {
       businessCenterAddress = await this.options.nameResolver.getAddress(businessCenterDomain);
@@ -251,9 +259,9 @@ export class BaseContract extends Logger {
     await this.options.executor.executeContractTransaction(
       baseContractInterface,
       'removeConsumer',
-      { from: accountId, autoGas: 1.1, },
+      { from: accountId, autoGas: 1.1 },
       idToBeRemoved,
-      businessCenterAddress
+      businessCenterAddress,
     );
   }
 }

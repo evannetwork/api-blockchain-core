@@ -17,8 +17,6 @@
   the following URL: https://evan.network/license/
 */
 
-import prottle = require('prottle');
-
 import {
   ContractLoader,
   Executor,
@@ -27,6 +25,8 @@ import {
   LoggerOptions,
 } from '@evan.network/dbcp';
 
+import prottle = require('prottle');
+
 
 const simultaneousRolesProcessed = 2;
 
@@ -34,16 +34,20 @@ const simultaneousRolesProcessed = 2;
  * type of modification in contraction
  */
 export enum ModificationType {
-  Set = '0xd2f67e6aeaad1ab7487a680eb9d3363a597afa7a3de33fa9bf3ae6edcb88435d',  // web3.sha3('set')
-  Remove = '0x8dd27a19ebb249760a6490a8d33442a54b5c3c8504068964b74388bfe83458be',  // web3.sha3('remove')
+  /** web3.sha3('set') */
+  Set = '0xd2f67e6aeaad1ab7487a680eb9d3363a597afa7a3de33fa9bf3ae6edcb88435d',
+  /** web3.sha3('remove') */
+  Remove = '0x8dd27a19ebb249760a6490a8d33442a54b5c3c8504068964b74388bfe83458be',
 }
 
 /**
  * property to set in contract
  */
 export enum PropertyType {
-  Entry = '0x84f3db82fb6cd291ed32c6f64f7f5eda656bda516d17c6bc146631a1f05a1833',  // web3.sha3('entry')
-  ListEntry = '0x7da2a80303fd8a8b312bb0f3403e22702ece25aa85a5e213371a770a74a50106',  // web3.sha3('listentry')
+  /** web3.sha3('entry') */
+  Entry = '0x84f3db82fb6cd291ed32c6f64f7f5eda656bda516d17c6bc146631a1f05a1833',
+  /** web3.sha3('listentry') */
+  ListEntry = '0x7da2a80303fd8a8b312bb0f3403e22702ece25aa85a5e213371a770a74a50106',
 }
 
 export interface RightsAndRolesOptions extends LoggerOptions {
@@ -59,11 +63,11 @@ export interface RightsAndRolesOptions extends LoggerOptions {
  * @class      RightsAndRoles (name)
  */
 export class RightsAndRoles extends Logger {
-  options: RightsAndRolesOptions;
+  public options: RightsAndRolesOptions;
 
-  constructor(options: RightsAndRolesOptions) {
+  public constructor(options: RightsAndRolesOptions) {
     super(options);
-    this.options = Object.assign({}, options);
+    this.options = { ...options };
   }
 
   /**
@@ -74,12 +78,18 @@ export class RightsAndRoles extends Logger {
    * @param      {string}      accountId  account id to check call for
    * @param      {string}      hash       hash from `getOperationCapabilityHash`
    */
-  public async canCallOperation(contract: string|any, accountId: string, hash: string): Promise<boolean> {
+  public async canCallOperation(
+    contract: string|any,
+    accountId: string,
+    hash: string,
+  ): Promise<boolean> {
     const contractId = typeof contract === 'string' ? contract : contract.options.address;
     const auth = this.options.contractLoader.loadContract('DSAuth', contractId);
     const dsRolesAddress = await this.options.executor.executeContractCall(auth, 'authority');
-    const dsRolesContract = this.options.contractLoader.loadContract('DSRolesPerContract', dsRolesAddress);
-    return await this.options.executor.executeContractCall(
+    const dsRolesContract = this.options.contractLoader.loadContract(
+      'DSRolesPerContract', dsRolesAddress,
+    );
+    return this.options.executor.executeContractCall(
       dsRolesContract,
       'canCallOperation',
       accountId,
@@ -96,24 +106,26 @@ export class RightsAndRoles extends Logger {
    */
   public async getMembers(contract: any|string): Promise<any> {
     const result = {};
-    const contractInstance = (typeof contract === 'object') ?
-      contract : this.options.contractLoader.loadContract('BaseContractInterface', contract);
+    const contractInstance = (typeof contract === 'object')
+      ? contract : this.options.contractLoader.loadContract('BaseContractInterface', contract);
     const rolesAddress = await this.options.executor.executeContractCall(contractInstance, 'authority');
     const rolesContract = this.options.contractLoader.loadContract('DSRolesPerContract', rolesAddress);
     const roleCount = await this.options.executor.executeContractCall(rolesContract, 'roleCount');
     // array of functions that retrieve an element as a promise
     const retrievals = [...Array(parseInt(roleCount, 10))].map(
-      (_, role) => role).reverse().map(role => async () => {
-        const count = parseInt(
-          await this.options.executor.executeContractCall(rolesContract, 'role2userCount', role),
-          10);
-        result[role] = await this.options.nameResolver.getArrayFromUintMapping(
-          rolesContract,
-          () => this.options.executor.executeContractCall(rolesContract, 'role2userCount', role),
-          (i) => this.options.executor.executeContractCall(rolesContract, 'role2index2user', role, i + 1),
-          count,
-        );
-      });
+      (_, role) => role,
+    ).reverse().map((role) => async () => {
+      const count = parseInt(
+        await this.options.executor.executeContractCall(rolesContract, 'role2userCount', role),
+        10,
+      );
+      result[role] = await this.options.nameResolver.getArrayFromUintMapping(
+        rolesContract,
+        () => this.options.executor.executeContractCall(rolesContract, 'role2userCount', role),
+        (i) => this.options.executor.executeContractCall(rolesContract, 'role2index2user', role, i + 1),
+        count,
+      );
+    });
     // run these function windowed, chain .then()s, return result array
     await prottle(simultaneousRolesProcessed, retrievals);
     return result;
@@ -148,17 +160,23 @@ export class RightsAndRoles extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async setFunctionPermission(
-      contract: string|any, accountId: string, role: number, functionSignature: string, allow: boolean) {
+    contract: string|any,
+    accountId: string,
+    role: number,
+    functionSignature: string,
+    allow: boolean,
+  ) {
     const contractId = typeof contract === 'string' ? contract : contract.options.address;
     const auth = this.options.contractLoader.loadContract('DSAuth', contractId);
     const dsRolesAddress = await this.options.executor.executeContractCall(auth, 'authority');
     const dsRolesContract = this.options.contractLoader.loadContract('DSRolesPerContract', dsRolesAddress);
     const keccak256 = this.options.web3.utils.soliditySha3;
-    const bytes4 = input => input.substr(0, 10);
+    const bytes4 = (input) => input.substr(0, 10);
     const permissionHash = bytes4(keccak256(functionSignature));
     await this.options.executor.executeContractTransaction(
-      dsRolesContract, 'setRoleCapability', { from: accountId, autoGas: 1.1, },
-      role, '0x0000000000000000000000000000000000000000', permissionHash, allow);
+      dsRolesContract, 'setRoleCapability', { from: accountId, autoGas: 1.1 },
+      role, '0x0000000000000000000000000000000000000000', permissionHash, allow,
+    );
   }
 
   /**
@@ -174,22 +192,27 @@ export class RightsAndRoles extends Logger {
    * @return     {Promise<void>}     resolved when done
    */
   public async setOperationPermission(
-      contract: string|any,
-      accountId: string,
-      role: number,
-      propertyName: string,
-      propertyType: PropertyType,
-      modificationType: ModificationType,
-      allow: boolean) {
+    contract: string|any,
+    accountId: string,
+    role: number,
+    propertyName: string,
+    propertyType: PropertyType,
+    modificationType: ModificationType,
+    allow: boolean,
+  ) {
     const contractId = typeof contract === 'string' ? contract : contract.options.address;
     const auth = this.options.contractLoader.loadContract('DSAuth', contractId);
     const dsRolesAddress = await this.options.executor.executeContractCall(auth, 'authority');
     const dsRolesContract = this.options.contractLoader.loadContract('DSRolesPerContract', dsRolesAddress);
     const keccak256 = this.options.web3.utils.soliditySha3;
-    const permissionHash = keccak256(keccak256(propertyType, keccak256(propertyName)), modificationType)
+    const permissionHash = keccak256(
+      keccak256(propertyType, keccak256(propertyName)),
+      modificationType,
+    );
     await this.options.executor.executeContractTransaction(
-      dsRolesContract, 'setRoleOperationCapability', { from: accountId, autoGas: 1.1, },
-      role, '0x0000000000000000000000000000000000000000', permissionHash, allow);
+      dsRolesContract, 'setRoleOperationCapability', { from: accountId, autoGas: 1.1 },
+      role, '0x0000000000000000000000000000000000000000', permissionHash, allow,
+    );
   }
 
   /**
@@ -202,17 +225,19 @@ export class RightsAndRoles extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async addAccountToRole(
-      contract: string|any,
-      accountId: string,
-      targetAccountId: string,
-      role: number) {
+    contract: string|any,
+    accountId: string,
+    targetAccountId: string,
+    role: number,
+  ) {
     const contractId = typeof contract === 'string' ? contract : contract.options.address;
     const auth = this.options.contractLoader.loadContract('DSAuth', contractId);
     const dsRolesAddress = await this.options.executor.executeContractCall(auth, 'authority');
     const dsRolesContract = this.options.contractLoader.loadContract('DSRolesPerContract', dsRolesAddress);
     await this.options.executor.executeContractTransaction(
-      dsRolesContract, 'setUserRole', { from: accountId, autoGas: 1.1, },
-      targetAccountId, role, true);
+      dsRolesContract, 'setUserRole', { from: accountId, autoGas: 1.1 },
+      targetAccountId, role, true,
+    );
   }
 
   /**
@@ -226,15 +251,16 @@ export class RightsAndRoles extends Logger {
    * @return     {Promise<boolean>}  true is given user as specified role
    */
   public async hasUserRole(
-      contract: string|any,
-      accountId: string,
-      targetAccountId: string,
-      role: number) {
+    contract: string|any,
+    accountId: string,
+    targetAccountId: string,
+    role: number,
+  ) {
     const contractId = typeof contract === 'string' ? contract : contract.options.address;
     const auth = this.options.contractLoader.loadContract('DSAuth', contractId);
     const dsRolesAddress = await this.options.executor.executeContractCall(auth, 'authority');
     const dsRolesContract = this.options.contractLoader.loadContract('DSRolesPerContract', dsRolesAddress);
-    return this.options.executor.executeContractCall(dsRolesContract, 'hasUserRole', targetAccountId, role)
+    return this.options.executor.executeContractCall(dsRolesContract, 'hasUserRole', targetAccountId, role);
   }
 
   /**
@@ -247,17 +273,19 @@ export class RightsAndRoles extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async removeAccountFromRole(
-      contract: string|any,
-      accountId: string,
-      targetAccountId: string,
-      role: number) {
+    contract: string|any,
+    accountId: string,
+    targetAccountId: string,
+    role: number,
+  ) {
     const contractId = typeof contract === 'string' ? contract : contract.options.address;
     const auth = this.options.contractLoader.loadContract('DSAuth', contractId);
     const dsRolesAddress = await this.options.executor.executeContractCall(auth, 'authority');
     const dsRolesContract = this.options.contractLoader.loadContract('DSRolesPerContract', dsRolesAddress);
     await this.options.executor.executeContractTransaction(
-      dsRolesContract, 'setUserRole', { from: accountId, autoGas: 1.1, },
-      targetAccountId, role, false);
+      dsRolesContract, 'setUserRole', { from: accountId, autoGas: 1.1 },
+      targetAccountId, role, false,
+    );
   }
 
   /**
@@ -268,15 +296,20 @@ export class RightsAndRoles extends Logger {
    * @param      {string}         targetAccountId  target accountId
    * @return     {Promise<void>}  resolved when done
    */
-  public async transferOwnership(contract: string|any, accountId: string, targetAccountId: string
-    ): Promise<void> {
+  public async transferOwnership(
+    contract: string|any,
+    accountId: string,
+    targetAccountId: string,
+  ): Promise<void> {
     const contractId = typeof contract === 'string' ? contract : contract.options.address;
     const auth = this.options.contractLoader.loadContract('DSAuth', contractId);
     const dsRolesAddress = await this.options.executor.executeContractCall(auth, 'authority');
     const dsRolesContract = this.options.contractLoader.loadContract('DSRolesPerContract', dsRolesAddress);
     await this.options.executor.executeContractTransaction(
-      auth, 'setOwner', { from: accountId, autoGas: 1.1, }, targetAccountId);
+      auth, 'setOwner', { from: accountId, autoGas: 1.1 }, targetAccountId,
+    );
     await this.options.executor.executeContractTransaction(
-      dsRolesContract, 'setOwner', { from: accountId, autoGas: 1.1, }, targetAccountId);
+      dsRolesContract, 'setOwner', { from: accountId, autoGas: 1.1 }, targetAccountId,
+    );
   }
 }

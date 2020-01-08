@@ -18,16 +18,13 @@
 */
 
 import 'mocha';
+import { Executor } from '@evan.network/dbcp';
 import { expect } from 'chai';
 import { promisify } from 'util';
 import { readFile } from 'fs';
-import {
-  Envelope,
-  Executor,
-} from '@evan.network/dbcp';
 
 import { accounts } from '../test/accounts';
-import { CryptoProvider } from '../encryption/crypto-provider';
+import { CryptoProvider } from './crypto-provider';
 import { Sharing } from '../contracts/sharing';
 import { TestUtils } from '../test/test-utils';
 import {
@@ -37,26 +34,27 @@ import {
 } from './encryption-wrapper';
 
 
-describe('Encryption Wrapper', function() {
+describe('Encryption Wrapper', function test() {
   this.timeout(300000);
   let cryptoProvider: CryptoProvider;
   let encryptionWrapper: EncryptionWrapper;
   let executor: Executor;
   let sharing0: Sharing;
-  let sharing1: Sharing;
 
   before(async () => {
+    const web3 = TestUtils.getWeb3();
     // data sharing sha3 self key and edges to self and other accounts
     const sha3 = (...args) => web3.utils.soliditySha3(...args);
     const sha9 = (accountId1, accountId2) => sha3(...[sha3(accountId1), sha3(accountId2)].sort());
-    const getKeys = (ownAccount, partnerAccount) =>
-      [sha3(ownAccount), ...[ownAccount, partnerAccount].map(partner => sha9(ownAccount, partner))];
-    const web3 = TestUtils.getWeb3();
+    const getKeys = (
+      ownAccount, partnerAccount,
+    ) => [sha3(ownAccount), ...[ownAccount, partnerAccount].map(
+      (partner) => sha9(ownAccount, partner),
+    )];
     const dfs = await TestUtils.getIpfs();
     cryptoProvider = TestUtils.getCryptoProvider(dfs);
     executor = await TestUtils.getExecutor(web3);
     sharing0 = await TestUtils.getSharing(web3, dfs, getKeys(accounts[0], accounts[1]));
-    sharing1 = await TestUtils.getSharing(web3, dfs, getKeys(accounts[1], accounts[0]));
     encryptionWrapper = new EncryptionWrapper({
       cryptoProvider,
       nameResolver: await TestUtils.getNameResolver(web3),
@@ -64,9 +62,6 @@ describe('Encryption Wrapper', function() {
       sharing: sharing0,
       web3,
     });
-  });
-
-  after(async () => {
   });
 
   it('should be able to be created', async () => {
@@ -77,7 +72,8 @@ describe('Encryption Wrapper', function() {
   describe('when using keys stored in profile', () => {
     it('should be able to encrypt and decrypt files with a new key from profile', async () => {
       const file = await promisify(readFile)(
-        `${__dirname}/testfile.spec.jpg`);
+        `${__dirname}/testfile.spec.jpg`,
+      );
       const sampleFile = [{
         name: 'testfile.spec.jpg',
         fileType: 'image/jpeg',
@@ -138,18 +134,19 @@ describe('Encryption Wrapper', function() {
 
   describe('when using keys stored in Multisharings', () => {
     let multiSharingAddress: string;
-    let sharingId = TestUtils.getRandomBytes32();
+    const sharingId = TestUtils.getRandomBytes32();
 
     before(async () => {
-      const randomSecret = `super secret; ${Math.random()}`;
       const contract = await executor.createContract(
-        'MultiShared', [], { from: accounts[0], gas: 500000, });
+        'MultiShared', [], { from: accounts[0], gas: 500000 },
+      );
       multiSharingAddress = contract.options.address;
     });
 
     it('should be able to encrypt and decrypt files with a new key from profile', async () => {
       const file = await promisify(readFile)(
-        `${__dirname}/testfile.spec.jpg`);
+        `${__dirname}/testfile.spec.jpg`,
+      );
       const sampleFile = [{
         name: 'testfile.spec.jpg',
         fileType: 'image/jpeg',
@@ -167,7 +164,7 @@ describe('Encryption Wrapper', function() {
         keyContext,
         EncryptionWrapperKeyType.Sharing,
         EncryptionWrapperCryptorType.File,
-        { sharingContractId: multiSharingAddress, sharingId }
+        { sharingContractId: multiSharingAddress, sharingId },
       );
 
       // generate and store new key for crypto info
@@ -180,7 +177,8 @@ describe('Encryption Wrapper', function() {
 
       // encrypt files (key is pulled from profile)
       const encrypted = await encryptionWrapper.encrypt(
-        sampleFile, cryptoInfo, encryptionArtifacts);
+        sampleFile, cryptoInfo, encryptionArtifacts,
+      );
 
       expect(encrypted).to.haveOwnProperty('cryptoInfo');
       expect(encrypted).to.haveOwnProperty('private');
@@ -200,7 +198,7 @@ describe('Encryption Wrapper', function() {
         keyContext,
         EncryptionWrapperKeyType.Sharing,
         EncryptionWrapperCryptorType.Content,
-        { sharingContractId: multiSharingAddress, sharingId }
+        { sharingContractId: multiSharingAddress, sharingId },
       );
 
       // generate and store new key for crypto info
@@ -213,7 +211,8 @@ describe('Encryption Wrapper', function() {
 
       // encrypt files (key is pulled from profile)
       const encrypted = await encryptionWrapper.encrypt(
-        sampleData, cryptoInfo, encryptionArtifacts);
+        sampleData, cryptoInfo, encryptionArtifacts,
+      );
 
       expect(encrypted).to.haveOwnProperty('cryptoInfo');
       expect(encrypted).to.haveOwnProperty('private');
@@ -226,15 +225,16 @@ describe('Encryption Wrapper', function() {
     let sharingAddress: string;
 
     before(async () => {
-      const randomSecret = `super secret; ${Math.random()}`;
       const contract = await executor.createContract(
-        'Shared', [], { from: accounts[0], gas: 500000, });
+        'Shared', [], { from: accounts[0], gas: 500000 },
+      );
       sharingAddress = contract.options.address;
     });
 
     it('should be able to encrypt and decrypt files with a new key from profile', async () => {
       const file = await promisify(readFile)(
-        `${__dirname}/testfile.spec.jpg`);
+        `${__dirname}/testfile.spec.jpg`,
+      );
       const sampleFile = [{
         name: 'testfile.spec.jpg',
         fileType: 'image/jpeg',
@@ -252,7 +252,7 @@ describe('Encryption Wrapper', function() {
         keyContext,
         EncryptionWrapperKeyType.Sharing,
         EncryptionWrapperCryptorType.File,
-        { sharingContractId: sharingAddress }
+        { sharingContractId: sharingAddress },
       );
 
       // generate and store new key for crypto info
@@ -265,7 +265,8 @@ describe('Encryption Wrapper', function() {
 
       // encrypt files (key is pulled from profile)
       const encrypted = await encryptionWrapper.encrypt(
-        sampleFile, cryptoInfo, encryptionArtifacts);
+        sampleFile, cryptoInfo, encryptionArtifacts,
+      );
 
       expect(encrypted).to.haveOwnProperty('cryptoInfo');
       expect(encrypted).to.haveOwnProperty('private');
@@ -285,7 +286,7 @@ describe('Encryption Wrapper', function() {
         keyContext,
         EncryptionWrapperKeyType.Sharing,
         EncryptionWrapperCryptorType.Content,
-        { sharingContractId: sharingAddress }
+        { sharingContractId: sharingAddress },
       );
 
       // generate and store new key for crypto info
@@ -298,7 +299,8 @@ describe('Encryption Wrapper', function() {
 
       // encrypt files (key is pulled from profile)
       const encrypted = await encryptionWrapper.encrypt(
-        sampleData, cryptoInfo, encryptionArtifacts);
+        sampleData, cryptoInfo, encryptionArtifacts,
+      );
 
       expect(encrypted).to.haveOwnProperty('cryptoInfo');
       expect(encrypted).to.haveOwnProperty('private');
@@ -310,7 +312,8 @@ describe('Encryption Wrapper', function() {
   describe('when using keys stored separately', () => {
     it('should be able to encrypt and decrypt files with a new key from profile', async () => {
       const file = await promisify(readFile)(
-        `${__dirname}/testfile.spec.jpg`);
+        `${__dirname}/testfile.spec.jpg`,
+      );
       const sampleFile = [{
         name: 'testfile.spec.jpg',
         fileType: 'image/jpeg',

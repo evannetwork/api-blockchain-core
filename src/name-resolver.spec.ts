@@ -19,14 +19,14 @@
 import 'mocha';
 import { ContractLoader, Executor } from '@evan.network/dbcp';
 import { expect, use } from 'chai';
-import chaiAsPromised = require('chai-as-promised');
+import * as chaiAsPromised from 'chai-as-promised';
 
 import { accounts } from './test/accounts';
 import { configTestcore as config } from './config-testcore';
 import { NameResolver } from './name-resolver';
 import { TestUtils } from './test/test-utils';
 
-const [ domainOwner, domainNonOwner, ensOwner, registrarOwner ] = accounts;
+const [domainOwner, domainNonOwner, ensOwner] = accounts;
 
 
 use(chaiAsPromised);
@@ -34,11 +34,10 @@ use(chaiAsPromised);
 const fifsRegistrarDomain = 'fifs.registrar.test.evan';
 const payableRegistrarDomain = 'payable';
 
-describe('NameResolver class', function() {
+describe('NameResolver class', function test() {
   this.timeout(600000);
   let contractLoader: ContractLoader;
   let executor: Executor;
-  let fifsRegistrar: any;
   let nameResolver: NameResolver;
   let web3;
 
@@ -46,7 +45,8 @@ describe('NameResolver class', function() {
   const getWrongPrice = () => web3.utils.toWei('4', 'wei');
   function prepareData(registrarDomain) {
     const randomAccount = web3.utils.toChecksumAddress(
-      `0x${[...Array(40)].map(() => Math.floor(Math.random() * 16).toString(16)).join('')}`);
+      `0x${[...Array(40)].map(() => Math.floor(Math.random() * 16).toString(16)).join('')}`,
+    );
     const randomNode = Math.random().toString(32).substr(2);
     const domain = `${randomNode}.${registrarDomain}`;
     const domainHash = nameResolver.namehash(domain);
@@ -65,19 +65,6 @@ describe('NameResolver class', function() {
     contractLoader = await TestUtils.getContractLoader(web3);
     executor = await TestUtils.getExecutor(web3);
     nameResolver = await TestUtils.getNameResolver(web3);
-    // create fifs registrar for testing and give it ownership over 'registrar.test.evan'
-    const ens = contractLoader.loadContract('AbstractENS', config.nameResolver.ensAddress);
-    // fifsRegistrar = await executor.createContract(
-    //   'FIFSRegistrar',
-    //   [config.nameResolver.ensAddress, nameResolver.namehash('fifs.registrar.test.evan')],
-    //   { from: registrarOwner, gas: 1000000, },
-    // );
-    // await nameResolver.setAddress(
-    //   fifsRegistrarDomain,
-    //   fifsRegistrar.options.address,
-    //   registrarOwner,
-    //   fifsRegistrar.options.address,
-    // );
   });
 
   describe('when working with the fifs registrar', () => {
@@ -90,7 +77,8 @@ describe('NameResolver class', function() {
       await nameResolver.claimAddress(data.domain, domainOwner, data.randomAccount);
       // check again
       expect(await executor.executeContractCall(
-        data.ens, 'owner', data.domainHash)).to.eq(data.randomAccount);
+        data.ens, 'owner', data.domainHash,
+      )).to.eq(data.randomAccount);
     });
 
     it('should not allow to take a fifs claimed domain from another account', async () => {
@@ -102,30 +90,31 @@ describe('NameResolver class', function() {
       await nameResolver.claimAddress(data.domain, domainNonOwner, data.randomAccount);
       // check again
       expect(await executor.executeContractCall(
-        data.ens, 'owner', data.domainHash)).to.eq(data.randomAccount);
+        data.ens, 'owner', data.domainHash,
+      )).to.eq(data.randomAccount);
       // try to claim address, that is already onwed by data.randomAccount
       const addressTakeover = nameResolver.claimAddress(data.domain, domainNonOwner);
       await expect(addressTakeover).to.be.rejected;
     });
   });
 
-  describe('when buying domains', async() => {
+  describe('when buying domains', async () => {
     let payableRegistrar: any;
     let nameResolverTimed: NameResolver;
     let timedEns: any;
     // use modified validity durations
-    let timeValidMs = 45000;
-    let timeValidPreExpireWindowMs = -22500;
-    let timeValidPostExpireWindowMs = 22500;
+    const timeValidMs = 45000;
+    const timeValidPreExpireWindowMs = -22500;
+    const timeValidPostExpireWindowMs = 22500;
 
     const createStructure = async () => {
       // create new ens and register test tld
       timedEns = await executor.createContract('TimedENS', [], { from: ensOwner, gas: 1000000 });
-      const [ resolver ] = await Promise.all([
+      const [resolver] = await Promise.all([
         // create new resolver, tied to custom ens
         executor.createContract(
           'PublicResolver',
-          [ timedEns.options.address ],
+          [timedEns.options.address],
           { from: ensOwner, gas: 2000000 },
         ),
         // set duration, that an owner still has excluse claim permission after validity expired
@@ -164,7 +153,7 @@ describe('NameResolver class', function() {
           nameResolverTimed.namehash('payable'),
           getPrice(),
         ],
-        { from: ensOwner, gas: 1000000, },
+        { from: ensOwner, gas: 1000000 },
       );
       // set duration and pre expiration window
       await Promise.all([
@@ -197,60 +186,73 @@ describe('NameResolver class', function() {
     });
 
     describe('when working with the payable registrar', () => {
-      it('should be able to claim a new domain from a payable registrar', async() => {
+      it('should be able to claim a new domain from a payable registrar', async () => {
         const data = prepareData(payableRegistrarDomain);
         // check owner at ens
         const oldOwner = await executor.executeContractCall(nameResolverTimed.ensContract, 'owner', data.domainHash);
         expect(oldOwner).not.to.eq(data.randomAccount);
         // claim domain
-        await nameResolverTimed.claimAddress(data.domain, domainOwner, data.randomAccount, getPrice());
+        await nameResolverTimed.claimAddress(
+          data.domain, domainOwner, data.randomAccount, getPrice(),
+        );
         // check again
         expect(await executor.executeContractCall(
-          nameResolverTimed.ensContract, 'owner', data.domainHash)).to.eq(data.randomAccount);
+          nameResolverTimed.ensContract, 'owner', data.domainHash,
+        )).to.eq(data.randomAccount);
       });
 
-      it('should not allow to take a payable claimed domain when giving wrong funds', async() => {
+      it('should not allow to take a payable claimed domain when giving wrong funds', async () => {
         const data = prepareData(payableRegistrarDomain);
         // check owner at ens
         const oldOwner = await executor.executeContractCall(nameResolverTimed.ensContract, 'owner', data.domainHash);
         expect(oldOwner).not.to.eq(data.randomAccount);
         // try to claim domain
         await expect(
-          nameResolverTimed.claimAddress(data.domain, domainOwner, data.randomAccount, getWrongPrice()),
+          nameResolverTimed.claimAddress(
+            data.domain, domainOwner, data.randomAccount, getWrongPrice(),
+          ),
         ).to.be.rejected;
       });
 
-      it('should not allow to take a payable claimed domain from another account', async() => {
+      it('should not allow to take a payable claimed domain from another account', async () => {
         const data = prepareData(payableRegistrarDomain);
         // check owner at ens
         const oldOwner = await executor.executeContractCall(nameResolverTimed.ensContract, 'owner', data.domainHash);
         expect(oldOwner).not.to.eq(data.randomAccount);
         // claim domain
-        await nameResolverTimed.claimAddress(data.domain, domainNonOwner, data.randomAccount, getPrice());
+        await nameResolverTimed.claimAddress(
+          data.domain, domainNonOwner, data.randomAccount, getPrice(),
+        );
         // check again
         expect(await executor.executeContractCall(
-          nameResolverTimed.ensContract, 'owner', data.domainHash)).to.eq(data.randomAccount);
+          nameResolverTimed.ensContract, 'owner', data.domainHash,
+        )).to.eq(data.randomAccount);
         // try to claim address, that is already onwed by data.randomAccount
-        const addressTakeover = nameResolverTimed.claimAddress(data.domain, domainNonOwner, domainNonOwner, getPrice());
+        const addressTakeover = nameResolverTimed.claimAddress(
+          data.domain, domainNonOwner, domainNonOwner, getPrice(),
+        );
         await expect(addressTakeover).to.be.rejected;
       });
 
       describe('when using ens owner account', () => {
-        it('should allow to take a payable claimed domain from another account as registrar owner', async() => {
+        it('should allow to take a payable claimed domain from another account as registrar owner', async () => {
           const data = prepareData(payableRegistrarDomain);
           // check owner at ens
           const oldOwner = await executor.executeContractCall(nameResolverTimed.ensContract, 'owner', data.domainHash);
           expect(oldOwner).not.to.eq(data.randomAccount);
           // claim domain
-          await nameResolverTimed.claimAddress(data.domain, domainNonOwner, data.randomAccount, getPrice());
+          await nameResolverTimed.claimAddress(
+            data.domain, domainNonOwner, data.randomAccount, getPrice(),
+          );
           // check again
           expect(await executor.executeContractCall(
-            nameResolverTimed.ensContract, 'owner', data.domainHash)).to.eq(data.randomAccount);
+            nameResolverTimed.ensContract, 'owner', data.domainHash,
+          )).to.eq(data.randomAccount);
           // try to claim address, that is already onwed by data.randomAccount
           await nameResolverTimed.claimAddress(data.domain, ensOwner, ensOwner, getPrice());
         });
 
-        it('should allow to change the price', async() => {
+        it('should allow to change the price', async () => {
           const data = prepareData(payableRegistrarDomain);
           expect(await nameResolverTimed.getPrice(data.domain)).to.eq(getPrice());
           const newPrice = Math.floor(Math.random() * 10000).toString();
@@ -260,32 +262,36 @@ describe('NameResolver class', function() {
           await nameResolverTimed.setPrice(payableRegistrarDomain, ensOwner, getPrice());
         });
 
-        it('should allow to claim existing funds from registrar contract', async() => {
+        it('should allow to claim existing funds from registrar contract', async () => {
           const data = prepareData(payableRegistrarDomain);
           // claim domain to ensure funds on contract
-          await nameResolverTimed.claimAddress(data.domain, domainOwner, data.randomAccount, getPrice());
+          await nameResolverTimed.claimAddress(
+            data.domain, domainOwner, data.randomAccount, getPrice(),
+          );
           const registrarAddress = await executor.executeContractCall(
-            nameResolverTimed.ensContract, 'owner', nameResolverTimed.namehash(payableRegistrarDomain));
+            nameResolverTimed.ensContract, 'owner', nameResolverTimed.namehash(payableRegistrarDomain),
+          );
           expect(await web3.eth.getBalance(registrarAddress)).not.to.eq('0');
-          const registrar = contractLoader.loadContract('PayableRegistrar', registrarAddress);
           await nameResolverTimed.claimFunds(payableRegistrarDomain, ensOwner);
           expect(await web3.eth.getBalance(registrarAddress)).to.eq('0');
         });
 
-        it('should not allow to claim existing funds from non registrar owner contract', async() => {
+        it('should not allow to claim existing funds from non registrar owner contract', async () => {
           const data = prepareData(payableRegistrarDomain);
           // claim domain to ensure funds on contract
-          await nameResolverTimed.claimAddress(data.domain, domainOwner, data.randomAccount, getPrice());
+          await nameResolverTimed.claimAddress(
+            data.domain, domainOwner, data.randomAccount, getPrice(),
+          );
           const registrarAddress = await executor.executeContractCall(
-            nameResolverTimed.ensContract, 'owner', nameResolverTimed.namehash(payableRegistrarDomain));
+            nameResolverTimed.ensContract, 'owner', nameResolverTimed.namehash(payableRegistrarDomain),
+          );
           expect(await web3.eth.getBalance(registrarAddress)).not.to.eq('0');
-          const registrar = contractLoader.loadContract('PayableRegistrar', registrarAddress);
           await expect(nameResolverTimed.claimFunds(domainOwner, ensOwner)).to.be.rejected;
         });
       });
     });
 
-    describe('when using an ENS with a time limited validity for nodes', async() => {
+    describe('when using an ENS with a time limited validity for nodes', async () => {
       it('allows setting and getting addresses', async () => {
         const domain = `sample_${Math.random().toString(36).substr(2)}.ownedbyensowner`;
         const randomAddress = TestUtils.getRandomAddress();
@@ -302,7 +308,9 @@ describe('NameResolver class', function() {
         expect(await nameResolverTimed.getAddress(domain)).to.eq(randomAddress);
 
         // set valid time
-        const setValidUntilP = nameResolverTimed.setValidUntil(domain, ensOwner, Date.now() + timeValidMs);
+        const setValidUntilP = nameResolverTimed.setValidUntil(
+          domain, ensOwner, Date.now() + timeValidMs,
+        );
         await expect(setValidUntilP).not.to.be.rejected;
       });
 
@@ -315,7 +323,9 @@ describe('NameResolver class', function() {
         expect(await nameResolverTimed.getAddress(domain)).to.eq(randomAddress);
 
         // set valid time
-        const setValidUntilP = nameResolverTimed.setValidUntil(domain, domainNonOwner, Date.now() + timeValidMs);
+        const setValidUntilP = nameResolverTimed.setValidUntil(
+          domain, domainNonOwner, Date.now() + timeValidMs,
+        );
         await expect(setValidUntilP).to.be.rejected;
       });
 
@@ -342,8 +352,8 @@ describe('NameResolver class', function() {
         expect(await nameResolverTimed.getAddress(domain)).to.eq(null);
       });
 
-      it('does not re-enable subdomain resolval, ' +
-          'when refreshing domains between domain to resolve and an expired upper domain', async () => {
+      it('does not re-enable subdomain resolval, '
+          + 'when refreshing domains between domain to resolve and an expired upper domain', async () => {
         const domain = `sample_${Math.random().toString(36).substr(2)}.ownedbyensowner`;
         const subdomain = `sub.${domain}`;
 
@@ -397,12 +407,12 @@ describe('NameResolver class', function() {
           await nameResolverTimed.claimAddress(domain, domainOwner, randomAccount, getPrice());
           // check again
           expect(await executor.executeContractCall(
-            timedEns, 'owner', domainHash)).to.eq(randomAccount);
+            timedEns, 'owner', domainHash,
+          )).to.eq(randomAccount);
         });
 
         it('has expiring durations as set up', async () => {
           const domain = `sample_${Math.random().toString(36).substr(2)}.payable`;
-          const domainHash = nameResolverTimed.namehash(domain);
           const randomAddress = TestUtils.getRandomAddress();
 
           // claim domain
@@ -424,7 +434,6 @@ describe('NameResolver class', function() {
 
         it('cannot extend valid duration via registrar before expiration (and before extension timeframe)', async () => {
           const domain = `sample_${Math.random().toString(36).substr(2)}.payable`;
-          const domainHash = nameResolverTimed.namehash(domain);
           const randomAddress = TestUtils.getRandomAddress();
 
           // claim domain
@@ -435,9 +444,6 @@ describe('NameResolver class', function() {
           // check address
           expect(await nameResolverTimed.getAddress(domain)).to.eq(randomAddress);
 
-          // fetch old valid duration
-          const oldValidUntil = await executor.executeContractCall(timedEns, 'validUntil', domainHash);
-
           // wait for 1s (must be before timeValidMs + timeValidPreExpireWindowMs)
           await TestUtils.sleep(1000);
           await TestUtils.nextBlock(executor, domainOwner);
@@ -445,7 +451,9 @@ describe('NameResolver class', function() {
           // address is still up
           expect(await nameResolverTimed.getAddress(domain)).to.eq(randomAddress);
           // extend uptime
-          const extendP = nameResolverTimed.claimAddress(domain, domainOwner, domainOwner, getPrice());
+          const extendP = nameResolverTimed.claimAddress(
+            domain, domainOwner, domainOwner, getPrice(),
+          );
           await expect(extendP).to.be.rejected;
         });
 
@@ -546,7 +554,6 @@ describe('NameResolver class', function() {
 
         it('can have its addresses lookup expire after valid duration', async () => {
           const domain = `sample_${Math.random().toString(36).substr(2)}.payable`;
-          const domainHash = nameResolverTimed.namehash(domain);
           const randomAddress = TestUtils.getRandomAddress();
 
           // claim domain
@@ -556,9 +563,6 @@ describe('NameResolver class', function() {
 
           // check address
           expect(await nameResolverTimed.getAddress(domain)).to.eq(randomAddress);
-
-          // fetch old valid duration
-          const oldValidUntil = await executor.executeContractCall(timedEns, 'validUntil', domainHash);
 
           // wait for resolval to be available (plus 1s to be sure, that we surpassed validity)
           await TestUtils.sleep(timeValidMs);
@@ -582,9 +586,6 @@ describe('NameResolver class', function() {
           // check address
           expect(await nameResolverTimed.getAddress(domain)).to.eq(randomAddress);
 
-          // fetch old valid duration
-          const oldValidUntil = await executor.executeContractCall(timedEns, 'validUntil', domainHash);
-
           // wait for resolval to be available (plus 1s to be sure, that we surpassed validity)
           await TestUtils.sleep(timeValidMs);
           await TestUtils.nextBlock(executor, domainOwner);
@@ -607,9 +608,6 @@ describe('NameResolver class', function() {
           // check address
           expect(await nameResolverTimed.getAddress(domain)).to.eq(randomAddress);
 
-          // fetch old valid duration
-          const oldValidUntil = await executor.executeContractCall(timedEns, 'validUntil', domainHash);
-
           // wait for resolval to be available (plus 1s to be sure, that we surpassed validity)
           await TestUtils.sleep(timeValidMs + timeValidPostExpireWindowMs);
           await TestUtils.sleep(2000);
@@ -629,7 +627,8 @@ describe('NameResolver class', function() {
           expect(oldOwner).not.to.eq(randomAccount);
           // claim domain
           const claimPermantP = nameResolverTimed.claimPermanentAddress(
-            domain, domainOwner, randomAccount);
+            domain, domainOwner, randomAccount,
+          );
 
           await expect(claimPermantP).to.be.rejected;
         });
@@ -652,7 +651,6 @@ describe('NameResolver class', function() {
 
         it('cannot set validUntil for a domain bought directly from registrar', async () => {
           const domain = `sample_${Math.random().toString(36).substr(2)}.payable`;
-          const randomAddress = TestUtils.getRandomAddress();
 
           // get domain and subdomain
           await nameResolverTimed.claimAddress(domain, domainOwner, domainOwner, getPrice());
@@ -667,22 +665,22 @@ describe('NameResolver class', function() {
         it('cannot buy an address from the registrar from another account', async () => {
           const domain = `sample_${Math.random().toString(36).substr(2)}.payable`;
           const domainHash = nameResolverTimed.namehash(domain);
-          // check owner at ens
-          const oldOwner = await executor.executeContractCall(timedEns, 'owner', domainHash);
           // claim domain
           await nameResolverTimed.claimAddress(domain, domainOwner, domainOwner, getPrice());
           // check again
           expect(await executor.executeContractCall(
-            timedEns, 'owner', domainHash)).to.eq(domainOwner);
+            timedEns, 'owner', domainHash,
+          )).to.eq(domainOwner);
 
           // try to claim with other account
-          const claimAddressP = nameResolverTimed.claimAddress(domain, domainNonOwner, domainNonOwner, getPrice());
+          const claimAddressP = nameResolverTimed.claimAddress(
+            domain, domainNonOwner, domainNonOwner, getPrice(),
+          );
           await expect(claimAddressP).to.be.rejected;
         });
 
         it('cannot extend valid duration via registrar before expiration (and in extension timeframe) from another account', async () => {
           const domain = `sample_${Math.random().toString(36).substr(2)}.payable`;
-          const domainHash = nameResolverTimed.namehash(domain);
           const randomAddress = TestUtils.getRandomAddress();
 
           // claim domain
@@ -692,9 +690,6 @@ describe('NameResolver class', function() {
 
           // check address
           expect(await nameResolverTimed.getAddress(domain)).to.eq(randomAddress);
-
-          // fetch old valid duration
-          const oldValidUntil = await executor.executeContractCall(timedEns, 'validUntil', domainHash);
 
           // wait for resolval to be available
           await TestUtils.sleep(timeValidMs + timeValidPreExpireWindowMs);
@@ -704,15 +699,16 @@ describe('NameResolver class', function() {
           expect(await nameResolverTimed.getAddress(domain)).to.eq(randomAddress);
 
           // extend uptime
-          const claimAddressP = nameResolverTimed.claimAddress(domain, domainNonOwner, domainNonOwner, getPrice());
+          const claimAddressP = nameResolverTimed.claimAddress(
+            domain, domainNonOwner, domainNonOwner, getPrice(),
+          );
           await expect(claimAddressP).to.be.rejected;
         });
 
-        it('cannot extend valid duration via registrar after expiration ' +
-          '(and before everyone can buy it) from another account',
+        it('cannot extend valid duration via registrar after expiration '
+          + '(and before everyone can buy it) from another account',
         async () => {
           const domain = `sample_${Math.random().toString(36).substr(2)}.payable`;
-          const domainHash = nameResolverTimed.namehash(domain);
           const randomAddress = TestUtils.getRandomAddress();
 
           // claim domain
@@ -722,9 +718,6 @@ describe('NameResolver class', function() {
 
           // check address
           expect(await nameResolverTimed.getAddress(domain)).to.eq(randomAddress);
-
-          // fetch old valid duration
-          const oldValidUntil = await executor.executeContractCall(timedEns, 'validUntil', domainHash);
 
           // wait for resolval to be available and extra owner lock has passed
           await TestUtils.sleep(timeValidMs);
@@ -735,7 +728,9 @@ describe('NameResolver class', function() {
           expect(await nameResolverTimed.getAddress(domain)).to.eq(null);
 
           // extend uptime
-          const claimAddressP = nameResolverTimed.claimAddress(domain, domainNonOwner, domainNonOwner, getPrice());
+          const claimAddressP = nameResolverTimed.claimAddress(
+            domain, domainNonOwner, domainNonOwner, getPrice(),
+          );
           await expect(claimAddressP).to.be.rejected;
         });
 
@@ -780,7 +775,8 @@ describe('NameResolver class', function() {
           expect(oldOwner).not.to.eq(randomAccount);
           // claim domain
           const claimPermantP = nameResolverTimed.claimPermanentAddress(
-            domain, domainNonOwner, randomAccount);
+            domain, domainNonOwner, randomAccount,
+          );
 
           await expect(claimPermantP).to.be.rejected;
         });
@@ -803,7 +799,6 @@ describe('NameResolver class', function() {
 
         it('cannot set validUntil for a domain bought directly from registrar', async () => {
           const domain = `sample_${Math.random().toString(36).substr(2)}.payable`;
-          const randomAddress = TestUtils.getRandomAddress();
 
           // get domain and subdomain
           await nameResolverTimed.claimAddress(domain, domainOwner, domainOwner, getPrice());
@@ -826,7 +821,8 @@ describe('NameResolver class', function() {
           await nameResolverTimed.claimPermanentAddress(domain, ensOwner, randomAccount);
           // check again
           expect(await executor.executeContractCall(
-            timedEns, 'owner', domainHash)).to.eq(randomAccount);
+            timedEns, 'owner', domainHash,
+          )).to.eq(randomAccount);
         });
 
         it('can set validUntil for a subdomain of an owned domain', async () => {
@@ -845,7 +841,6 @@ describe('NameResolver class', function() {
 
         it('cannot set validUntil for a domain bought directly from registrar', async () => {
           const domain = `sample_${Math.random().toString(36).substr(2)}.payable`;
-          const randomAddress = TestUtils.getRandomAddress();
 
           // get domain and subdomain
           await nameResolverTimed.claimAddress(domain, domainOwner, domainOwner, getPrice());

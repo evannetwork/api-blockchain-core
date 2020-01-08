@@ -26,16 +26,20 @@ import {
 } from '@evan.network/dbcp';
 
 import * as BigNumber from 'bignumber.js';
-import { typedSignatureHash, signTypedDataLegacy, recoverTypedSignatureLegacy, concatSig } from 'eth-sig-util';
+import {
+  recoverTypedSignatureLegacy,
+  signTypedDataLegacy,
+  typedSignatureHash,
+} from 'eth-sig-util';
 
 /**
  * parameters for Payments constructor
  */
 export interface PaymentOptions extends LoggerOptions {
-  executor: any,
-  accountStore: AccountStore,
-  contractLoader: ContractLoader,
-  web3: any,
+  executor: any;
+  accountStore: AccountStore;
+  contractLoader: ContractLoader;
+  web3: any;
 }
 
 /**
@@ -122,27 +126,28 @@ interface MsgParam {
  * @class      Payments (name)
  */
 export class Payments extends Logger {
-  options: PaymentOptions;
+  public options: PaymentOptions;
+
   /**
    * Currently set channel info. May be loaded through [[loadStoredChannel]],
    * [[loadChannelFromBlockchain]], or stored and set manually with [[setChannel]]
    */
-  channel: MicroChannel;
-  channelManager: any;
-  startBlock: any;
-  challenge: any;
+  public channel: MicroChannel;
 
-  constructor(options) {
+  public channelManager: any;
+
+  public startBlock: any;
+
+  public challenge: any;
+
+  public constructor(options) {
     super(options);
     this.options = options;
     this.startBlock = 0;
-    if (concatSig) {
-      const sig = concatSig;
-    }
     if (options.channelManager) {
       this.channelManager = this.options.contractLoader.loadContract(
         'RaidenMicroTransferChannels',
-        options.channelManager
+        options.channelManager,
       );
     }
   }
@@ -159,7 +164,7 @@ export class Payments extends Logger {
    * @param closingSig  Cooperative-close signature from receiver
    * @returns  Promise to closing tx hash
    */
-  async closeChannel(closingSig?: string): Promise<void> {
+  public async closeChannel(closingSig?: string): Promise<void> {
     if (!this.isChannelValid()) {
       throw new Error('No valid channelInfo');
     }
@@ -169,13 +174,14 @@ export class Payments extends Logger {
     }
 
     if (this.channel.closing_sig) {
+      // eslint-disable-next-line no-param-reassign
       closingSig = this.channel.closing_sig;
     } else if (closingSig) {
-      this.setChannel(Object.assign(
-        {},
-        this.channel,
-        { closing_sig: closingSig },
-      ));
+      this.setChannel({
+
+        ...this.channel,
+        closing_sig: closingSig, // eslint-disable-line @typescript-eslint/camelcase
+      });
     }
     this.log(`Closing channel. Cooperative = ${closingSig}`, 'debug');
 
@@ -187,7 +193,7 @@ export class Payments extends Logger {
       proof = this.channel.proof;
     }
 
-    closingSig ?
+    if (closingSig) {
       await this.options.executor.executeContractTransaction(
         this.channelManager,
         'cooperativeClose',
@@ -197,7 +203,8 @@ export class Payments extends Logger {
         this.options.web3.utils.toHex(proof.balance),
         proof.sig,
         closingSig,
-      ) :
+      );
+    } else {
       await this.options.executor.executeContractTransaction(
         this.channelManager,
         'uncooperativeClose',
@@ -206,6 +213,7 @@ export class Payments extends Logger {
         this.channel.block,
         this.options.web3.utils.toHex(proof.balance),
       );
+    }
   }
 
   /**
@@ -215,17 +223,17 @@ export class Payments extends Logger {
    * or right after signNewProof is resolved,
    * if implementation don't care for request status
    */
-  confirmPayment(proof: MicroProof): void {
+  public confirmPayment(proof: MicroProof): void {
     if (!this.channel.next_proof
       || !this.channel.next_proof.sig
       || this.channel.next_proof.sig !== proof.sig) {
       throw new Error('Invalid provided or stored next signature');
     }
-    const channel = Object.assign(
-      {},
-      this.channel,
-      { proof: this.channel.next_proof },
-    );
+    const channel = {
+
+      ...this.channel,
+      proof: this.channel.next_proof,
+    };
     delete channel.next_proof;
     this.setChannel(channel);
   }
@@ -237,8 +245,9 @@ export class Payments extends Logger {
    * @param channel  Channel to get info from. Default to channel
    * @returns Promise to MicroChannelInfo data
    */
-  async getChannelInfo(channel?: MicroChannel): Promise<MicroChannelInfo> {
+  public async getChannelInfo(channel?: MicroChannel): Promise<MicroChannelInfo> {
     if (!channel) {
+      // eslint-disable-next-line no-param-reassign
       channel = this.channel;
     }
     if (!this.isChannelValid(channel)) {
@@ -247,12 +256,12 @@ export class Payments extends Logger {
 
     const closeEvents = await this.channelManager.getPastEvents('ChannelCloseRequested', {
       filter: {
-        _sender_address: channel.account,
-        _receiver_address: channel.receiver,
-        _open_block_number: channel.block,
+        _sender_address: channel.account, // eslint-disable-line @typescript-eslint/camelcase
+        _receiver_address: channel.receiver, // eslint-disable-line @typescript-eslint/camelcase
+        _open_block_number: channel.block, // eslint-disable-line @typescript-eslint/camelcase
       },
       fromBlock: channel.block,
-      toBlock: 'latest'
+      toBlock: 'latest',
     });
 
     let closed: number;
@@ -264,12 +273,12 @@ export class Payments extends Logger {
 
     const settleEvents = await this.channelManager.getPastEvents('ChannelSettled', {
       filter: {
-        _sender_address: channel.account,
-        _receiver_address: channel.receiver,
-        _open_block_number: channel.block,
+        _sender_address: channel.account, // eslint-disable-line @typescript-eslint/camelcase
+        _receiver_address: channel.receiver, // eslint-disable-line @typescript-eslint/camelcase
+        _open_block_number: channel.block, // eslint-disable-line @typescript-eslint/camelcase
       },
       fromBlock: closed || channel.block,
-      toBlock: 'latest'
+      toBlock: 'latest',
     });
 
     let settled: number;
@@ -281,10 +290,10 @@ export class Payments extends Logger {
     // for settled channel, getChannelInfo call will fail, so we return before
     if (settled) {
       return {
-        'state': 'settled',
-        'block': settled,
-        'deposit': new BigNumber(0),
-        'withdrawn': new BigNumber(0),
+        state: 'settled',
+        block: settled,
+        deposit: new BigNumber(0),
+        withdrawn: new BigNumber(0),
       };
     }
 
@@ -293,17 +302,17 @@ export class Payments extends Logger {
       'getChannelInfo',
       channel.account,
       channel.receiver,
-      channel.block
+      channel.block,
     );
 
     if (!(new BigNumber(info[1]).gt(0))) {
-      throw new Error('Invalid channel deposit: ' + JSON.stringify(info));
+      throw new Error(`Invalid channel deposit: ${JSON.stringify(info)}`);
     }
     return {
-      'state': closed ? 'closed' : 'opened',
-      'block': closed || channel.block,
-      'deposit': new BigNumber(info[1]),
-      'withdrawn': new BigNumber(info[4]),
+      state: closed ? 'closed' : 'opened',
+      block: closed || channel.block,
+      deposit: new BigNumber(info[1]),
+      withdrawn: new BigNumber(info[4]),
     };
   }
 
@@ -315,10 +324,10 @@ export class Payments extends Logger {
    *
    * @returns  Promise to challenge period number, in blocks
    */
-  async getChallengePeriod(): Promise<number> {
+  public async getChallengePeriod(): Promise<number> {
     this.challenge = await this.options.executor.executeContractCall(
       this.channelManager,
-      'challenge_period'
+      'challenge_period',
     );
     if (!(this.challenge > 0)) {
       throw new Error('Invalid challenge');
@@ -341,7 +350,7 @@ export class Payments extends Logger {
    * @param proof  Balance proof to be signed
    * @returns  Promise to signature
    */
-  async getClosingSig(account: string): Promise<string> {
+  public async getClosingSig(account: string): Promise<string> {
     if (!this.isChannelValid()) {
       throw new Error('No valid channelInfo');
     }
@@ -352,7 +361,7 @@ export class Payments extends Logger {
     try {
       const result = await signTypedDataLegacy(
         Buffer.from(privKey, 'hex'),
-        { data: params }
+        { data: params },
       );
 
       if (result.error) {
@@ -364,7 +373,9 @@ export class Payments extends Logger {
         throw err;
       }
     }
-    const recovered = this.options.web3.utils.toChecksumAddress(recoverTypedSignatureLegacy({ data: params, sig }));
+    const recovered = this.options.web3.utils.toChecksumAddress(
+      recoverTypedSignatureLegacy({ data: params, sig }),
+    );
     this.log(`signTypedData = ${sig} , ${recovered}`, 'debug');
     if (recovered !== account) {
       throw new Error(`Invalid recovered signature: ${recovered} != ${account}. Do your provider support eth_signTypedData?`);
@@ -379,8 +390,9 @@ export class Payments extends Logger {
    * @param channel  Channel to test. Default to channel
    * @returns  True if channel is valid, false otherwise
    */
-  isChannelValid(channel?: MicroChannel): boolean {
+  public isChannelValid(channel?: MicroChannel): boolean {
     if (!channel) {
+      // eslint-disable-next-line no-param-reassign
       channel = this.channel;
     }
     if (!channel || !channel.receiver || !channel.block
@@ -399,8 +411,9 @@ export class Payments extends Logger {
    * @param amount  Amount to increment in current balance
    * @returns  Promise to signature
    */
-  async incrementBalanceAndSign(amount: BigNumber|string): Promise<MicroProof> {
+  public async incrementBalanceAndSign(amount: BigNumber|string): Promise<MicroProof> {
     if (!(amount instanceof BigNumber)) {
+      // eslint-disable-next-line no-param-reassign
       amount = new BigNumber(amount);
     }
     if (!this.isChannelValid()) {
@@ -413,12 +426,12 @@ export class Payments extends Logger {
       throw new Error('Tried signing on closed channel');
     } else if (proof.balance.gt(info.deposit)) {
       const err = new Error(`Insuficient funds: current = ${info.deposit} , required = ${proof.balance}`);
-      err['current'] = info.deposit;
-      err['required'] = proof.balance;
+      (err as any).current = info.deposit;
+      (err as any).required = proof.balance;
       throw err;
     }
     // get hash for new balance proof
-    return await this.signNewProof(proof);
+    return this.signNewProof(proof);
   }
 
 
@@ -434,58 +447,61 @@ export class Payments extends Logger {
    * @param receiver  Receiver/server's account address
    * @returns  Promise to channel info, if a channel was found
    */
-  async loadChannelFromBlockchain(account: string, receiver: string): Promise<MicroChannel> {
+  public async loadChannelFromBlockchain(account: string, receiver: string): Promise<MicroChannel> {
     const openEvents = await this.channelManager.getPastEvents('ChannelCreated', {
       filter: {
-        _sender_address: account,
-        _receiver_address: receiver,
+        _sender_address: account, // eslint-disable-line @typescript-eslint/camelcase
+        _receiver_address: receiver, // eslint-disable-line @typescript-eslint/camelcase
       },
       fromBlock: this.startBlock,
-      toBlock: 'latest'
+      toBlock: 'latest',
     });
     if (!openEvents || openEvents.length === 0) {
       throw new Error('No channel found for this account');
     }
 
     const minBlock = Math.min.apply(null, openEvents.map((ev) => ev.blockNumber));
-    const [ closeEvents, settleEvents, currentBlock, challenge ] = await Promise.all([
+    const [closeEvents, settleEvents, currentBlock, challenge] = await Promise.all([
       this.channelManager.getPastEvents('ChannelCloseRequested', {
         filter: {
-          _sender_address: account,
-          _receiver_address: receiver,
+          _sender_address: account, // eslint-disable-line @typescript-eslint/camelcase
+          _receiver_address: receiver, // eslint-disable-line @typescript-eslint/camelcase
         },
         fromBlock: minBlock,
-        toBlock: 'latest'
+        toBlock: 'latest',
       }),
       this.channelManager.getPastEvents('ChannelSettled', {
         filter: {
-          _sender_address: account,
-          _receiver_address: receiver,
+          _sender_address: account, // eslint-disable-line @typescript-eslint/camelcase
+          _receiver_address: receiver, // eslint-disable-line @typescript-eslint/camelcase
         },
         fromBlock: minBlock,
-        toBlock: 'latest'
+        toBlock: 'latest',
       }),
       this.options.web3.eth.getBlockNumber(),
       this.getChallengePeriod(),
     ]);
 
     const stillOpen = openEvents.filter((ev) => {
-      for (let sev of settleEvents) {
+      for (const sev of settleEvents) {
+        // eslint-disable-next-line
         if (sev.args._open_block_number.eq(ev.blockNumber)) {
           return false;
         }
       }
-      for (let cev of closeEvents) {
-        if (cev.args._open_block_number.eq(ev.blockNumber) &&
-            cev.blockNumber + challenge > currentBlock) {}
+      for (const cev of closeEvents) {
+        // eslint-disable-next-line
+        if (cev.args._open_block_number.eq(ev.blockNumber)
+            && cev.blockNumber + challenge > currentBlock) {
           return false;
+        }
       }
       return true;
     });
 
     let openChannel: MicroChannel;
-    for (let ev of stillOpen) {
-      let channel: MicroChannel = {
+    for (const ev of stillOpen) {
+      const channel: MicroChannel = {
         account,
         receiver,
         block: ev.blockNumber,
@@ -497,11 +513,12 @@ export class Payments extends Logger {
         break;
       } catch (err) {
         this.log(`Invalid channel ${channel}, ${err}`, 'error');
+        // eslint-disable-next-line
         continue;
       }
     }
     if (!openChannel) {
-      throw new Error('No open and valid channels found from ' + stillOpen.length);
+      throw new Error(`No open and valid channels found from ${stillOpen.length}`);
     }
     this.setChannel(openChannel);
     return this.channel;
@@ -517,8 +534,13 @@ export class Payments extends Logger {
    * @param deposit  Tokens to be initially deposited in the channel (in Wei)
    * @returns  Promise to MicroChannel info object
    */
-  async openChannel(account: string, receiver: string, deposit: BigNumber|string): Promise<MicroChannel> {
+  public async openChannel(
+    account: string,
+    receiver: string,
+    deposit: BigNumber|string,
+  ): Promise<MicroChannel> {
     if (!(deposit instanceof BigNumber)) {
+      // eslint-disable-next-line no-param-reassign
       deposit = new BigNumber(deposit);
     }
     if (this.isChannelValid()) {
@@ -534,18 +556,18 @@ export class Payments extends Logger {
     }
 
     // call transfer to make the deposit, automatic support for ERC20/223 token
-    let transferTxHash: string;
     const createdBlockNumber = await this.options.executor.executeContractTransaction(
       this.channelManager,
       'createChannel',
       {
         from: account,
         value: deposit,
-        // event ChannelCreated(address _sender_address, address  _receiver_address, uint256 _deposit)
+        // event ChannelCreated(address _sender_address,
+        // address  _receiver_address, uint256 _deposit)
         event: { target: 'RaidenMicroTransferChannels', eventName: 'ChannelCreated' },
-        getEventResult: (event, args) => event.blockNumber,
+        getEventResult: (event) => event.blockNumber,
       },
-      receiver
+      receiver,
     );
     // call getChannelInfo to be sure channel was created
     const info = await this.options.executor.executeContractCall(
@@ -553,7 +575,7 @@ export class Payments extends Logger {
       'getChannelInfo',
       account,
       receiver,
-      createdBlockNumber
+      createdBlockNumber,
     );
     if (!(info[1] > 0)) {
       throw new Error('No deposit found!');
@@ -574,10 +596,10 @@ export class Payments extends Logger {
    *
    * @param      {string}  channelManager  the new channelmanager address
    */
-  setChannelManager(channelManager: string) {
+  public setChannelManager(channelManager: string) {
     this.channelManager = this.options.contractLoader.loadContract(
       'RaidenMicroTransferChannels',
-      channelManager
+      channelManager,
     );
   }
 
@@ -588,11 +610,11 @@ export class Payments extends Logger {
    *
    * @param channel  Channel info to be set
    */
-  setChannel(channel: MicroChannel): void {
+  public setChannel(channel: MicroChannel): void {
     this.channel = channel;
-    if (typeof (<any>global).localStorage !== 'undefined') {
+    if (typeof (global as any).localStorage !== 'undefined') {
       const key = [this.channel.account, this.channel.receiver].join('|');
-      (<any>global).localStorage.setItem(key, JSON.stringify(this.channel));
+      (global as any).localStorage.setItem(key, JSON.stringify(this.channel));
     }
   }
 
@@ -604,13 +626,13 @@ export class Payments extends Logger {
    *
    * @returns  Promise resolved when done
    */
-  async settleChannel(): Promise<void> {
+  public async settleChannel(): Promise<void> {
     if (!this.isChannelValid()) {
       throw new Error('No valid channelInfo');
     }
-    const [ info, currentBlock ] = await Promise.all([
+    const [info, currentBlock] = await Promise.all([
       this.getChannelInfo(),
-      await this.options.web3.eth.getBlockNumber()
+      await this.options.web3.eth.getBlockNumber(),
     ]);
     if (info.state !== 'closed') {
       throw new Error(`Tried settling opened or settled channel: ${info.state}`);
@@ -641,12 +663,13 @@ export class Payments extends Logger {
    * @param proof  Balance proof to be signed
    * @returns  Promise to signature
    */
-  async signNewProof(proof?: MicroProof): Promise<MicroProof> {
+  public async signNewProof(proof?: MicroProof): Promise<MicroProof> {
     if (!this.isChannelValid()) {
       throw new Error('No valid channelInfo');
     }
     this.log(`signNewProof, balance: ${proof.balance.toString()}, sig: ${proof.sig}`, 'debug');
     if (!proof) {
+      // eslint-disable-next-line no-param-reassign
       proof = this.channel.proof;
     }
     if (proof.sig) {
@@ -655,11 +678,11 @@ export class Payments extends Logger {
 
     const params = this.getBalanceProofSignatureParams(proof);
     let sig: string;
-    const privKey = await this.options.accountStore.getPrivateKey(this.channel.account)
+    const privKey = await this.options.accountStore.getPrivateKey(this.channel.account);
     try {
       const result = await signTypedDataLegacy(
         Buffer.from(privKey, 'hex'),
-        { data: params }
+        { data: params },
       );
 
       if (result.error) {
@@ -675,28 +698,31 @@ export class Payments extends Logger {
       // ask for signing of the hash
       sig = await this.signMessage(hash);
     }
-    const recovered = this.options.web3.utils.toChecksumAddress(recoverTypedSignatureLegacy({ data: params, sig }));
+    const recovered = this.options.web3.utils.toChecksumAddress(recoverTypedSignatureLegacy(
+      { data: params, sig },
+    ));
     this.log(`signTypedData = ${sig}, ${recovered}`, 'debug');
     if (recovered !== this.channel.account) {
-      throw new Error(`Invalid recovered signature: ${recovered} != ${this.channel.account}. ` +
-        'Does your provider support eth_signTypedData?');
+      throw new Error(`Invalid recovered signature: ${recovered} != ${this.channel.account}. `
+        + 'Does your provider support eth_signTypedData?');
     }
-
+    // eslint-disable-next-line no-param-reassign
     proof.sig = sig;
 
     // return signed message
     if (proof.balance.equals(this.channel.proof.balance)) {
-      this.setChannel(Object.assign(
-        {},
-        this.channel,
-        { proof, next_proof: proof }
-      ));
+      this.setChannel({
+
+        ...this.channel,
+        proof,
+        next_proof: proof, // eslint-disable-line @typescript-eslint/camelcase
+      });
     } else {
-      this.setChannel(Object.assign(
-        {},
-        this.channel,
-        { next_proof: proof }
-      ));
+      this.setChannel({
+
+        ...this.channel,
+        next_proof: proof, // eslint-disable-line @typescript-eslint/camelcase
+      });
     }
     return proof;
   }
@@ -707,29 +733,19 @@ export class Payments extends Logger {
    * @param msg  Data to be signed
    * @returns Promise to signature
    */
-  async signMessage(msg: string): Promise<string> {
+  public async signMessage(msg: string): Promise<string> {
     if (!this.isChannelValid()) {
       throw new Error('No valid channelInfo');
     }
     const hex = msg.startsWith('0x') ? msg : this.options.web3.utils.toHex(msg);
     this.log(`Signing "${msg}" => ${hex}, account: ${this.channel.account}`, 'debug');
-    const privKey = await this.options.accountStore.getPrivateKey(this.channel.account)
-    let sig = await this.options.web3.eth.accounts.sign(
+    const privKey = await this.options.accountStore.getPrivateKey(this.channel.account);
+    const sig = await this.options.web3.eth.accounts.sign(
       hex,
-      Buffer.from('0x' + privKey, 'hex')
+      Buffer.from(`0x${privKey}`, 'hex'),
     );
     return sig;
   }
-
-
-   /**
-   * Top up current channel, by depositing some [more] tokens to it
-   *
-   * Should work with both ERC20/ERC223 tokens
-   *
-   * @param deposit  Tokens to be deposited in the channel
-   * @returns  Promise to tx hash
-   */
 
   /**
    * Top up current channel, by depositing some [more] EVE to it
@@ -737,8 +753,9 @@ export class Payments extends Logger {
    * @param      {BigNumber|string}  deposit  amount  to topup channel
    * @return     {Promise<void>}  resolved when done
    */
-  async topUpChannel(deposit: BigNumber|string): Promise<void> {
+  public async topUpChannel(deposit: BigNumber|string): Promise<void> {
     if (!(deposit instanceof BigNumber)) {
+      // eslint-disable-next-line no-param-reassign
       deposit = new BigNumber(deposit);
     }
 
@@ -746,7 +763,7 @@ export class Payments extends Logger {
       throw new Error('No valid channelInfo');
     }
 
-    const account = this.channel.account;
+    const { account } = this.channel;
 
     // first, check if there's enough balance
     const balance = new BigNumber(await this.options.web3.eth.getBalance(account));
@@ -794,7 +811,7 @@ export class Payments extends Logger {
       {
         type: 'uint32',
         name: 'block_created',
-        value: '' + this.channel.block,
+        value: `${this.channel.block}`,
       },
       {
         type: 'uint256',
@@ -824,7 +841,7 @@ export class Payments extends Logger {
       {
         type: 'uint32',
         name: 'block_created',
-        value: '' + this.channel.block,
+        value: `${this.channel.block}`,
       },
       {
         type: 'uint256',
@@ -838,5 +855,4 @@ export class Payments extends Logger {
       },
     ];
   }
-
 }

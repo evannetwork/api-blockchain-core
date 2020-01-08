@@ -17,79 +17,85 @@
   the following URL: https://evan.network/license/
 */
 
+import { IpfsLib } from './dfs/ipfs-lib';
+import { configCore } from './config-core';
+import { configTestcore } from './config-testcore';
+import { getEnvironment } from './common/utils';
 import {
   AccountStore,
+  Aes,
+  AesBlob,
+  AesEcb,
+  BaseContract,
   ContractLoader,
+  CryptoProvider,
+  DataContract,
+  Description,
   DfsInterface,
+  Did,
+  EncryptionWrapper,
   EventHub,
   Executor,
+  Ipfs,
+  Ipld,
+  KeyExchange,
   KeyProvider,
   Logger,
+  Mailbox,
+  NameResolver,
+  Onboarding,
+  Payments,
+  Profile,
+  RightsAndRoles,
+  ServiceContract,
+  Sharing,
+  SignerIdentity,
   SignerInterface,
   SignerInternal,
   Unencrypted,
-} from '@evan.network/dbcp';
-
-import { Aes } from './encryption/aes';
-import { AesBlob } from './encryption/aes-blob';
-import { AesEcb } from './encryption/aes-ecb';
-import { BaseContract } from './contracts/base-contract/base-contract';
-import { configCore } from './config-core';
-import { configTestcore } from './config-testcore';
-import { CryptoProvider } from './encryption/crypto-provider';
-import { DataContract } from './contracts/data-contract/data-contract';
-import { Description } from './shared-description';
-import { EncryptionWrapper } from './encryption/encryption-wrapper';
-import { getEnvironment } from './common/utils';
-import { Ipfs } from './dfs/ipfs';
-import { IpfsLib } from './dfs/ipfs-lib';
-import { Ipld } from './dfs/ipld';
-import { KeyExchange } from './keyExchange';
-import { Mailbox } from './mailbox';
-import { NameResolver } from './name-resolver';
-import { Onboarding } from './onboarding';
-import { Payments } from './payments';
-import { Profile } from './profile/profile';
-import { RightsAndRoles } from './contracts/rights-and-roles';
-import { ServiceContract } from './contracts/service-contract/service-contract';
-import { Sharing } from './contracts/sharing';
-import { Verifications } from './verifications/verifications';
-import { Votings } from './votings/votings';
+  Vc,
+  Verifications,
+  Votings,
+} from './index';
 
 /**
  * runtime for interacting with dbcp, including helpers for transactions & co
  */
 export interface Runtime {
-  accountStore?: AccountStore,
-  activeAccount?: string,
-  baseContract?: BaseContract,
-  contractLoader?: ContractLoader,
-  contracts?: any,
-  cryptoProvider?: CryptoProvider,
-  dataContract?: DataContract,
-  description?: Description,
-  dfs?: DfsInterface,
-  encryptionWrapper?: EncryptionWrapper,
-  environment?: string,
-  eventHub?: EventHub,
-  executor?: Executor,
-  ipld?: Ipld,
-  keyExchange?: KeyExchange,
-  keyProvider?: KeyProvider,
-  logger?: Logger,
-  mailbox?: Mailbox,
-  nameResolver?: NameResolver,
-  onboarding?: Onboarding,
-  payments?: Payments,
-  profile?: Profile,
-  rightsAndRoles?: RightsAndRoles,
-  serviceContract?: ServiceContract,
-  sharing?: Sharing,
-  signer?: SignerInterface,
-  verifications?: Verifications,
-  votings?: Votings,
-  web3?: any,
-};
+  accountStore?: AccountStore;
+  activeAccount?: string;
+  activeIdentity?: string;
+  baseContract?: BaseContract;
+  contractLoader?: ContractLoader;
+  contracts?: any;
+  cryptoProvider?: CryptoProvider;
+  dataContract?: DataContract;
+  description?: Description;
+  dfs?: DfsInterface;
+  did?: Did;
+  encryptionWrapper?: EncryptionWrapper;
+  environment?: string;
+  eventHub?: EventHub;
+  executor?: Executor;
+  ipld?: Ipld;
+  keyExchange?: KeyExchange;
+  keyProvider?: KeyProvider;
+  logger?: Logger;
+  mailbox?: Mailbox;
+  nameResolver?: NameResolver;
+  onboarding?: Onboarding;
+  payments?: Payments;
+  profile?: Profile;
+  rightsAndRoles?: RightsAndRoles;
+  serviceContract?: ServiceContract;
+  sharing?: Sharing;
+  signer?: SignerInterface;
+  underlyingAccount?: string;
+  vc?: Vc;
+  verifications?: Verifications;
+  votings?: Votings;
+  web3?: any;
+}
 
 /**
  * create new runtime instance
@@ -99,7 +105,9 @@ export interface Runtime {
  * @param      {any}               runtimeConfig  configuration values
  * @return     {Promise<Runtime>}  runtime instance
  */
-export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtimeConfig: any, options: Runtime = { }): Promise<Runtime> {
+export async function createDefaultRuntime(
+  web3: any, dfs: DfsInterface, runtimeConfig: any, options: Runtime = { },
+): Promise<Runtime> {
   // determine chain this runtime is created for
   const environment = await getEnvironment(web3);
   const config = environment === 'core' ? configCore : configTestcore;
@@ -111,26 +119,29 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   // if this function is used within node and no browser context exists, load the
   // @evan.network/smart-contracts-core normally and use the Solc functionalities to parse and
   // retrieve contracts
-  let contracts = options.contracts;
+  let { contracts } = options;
   if (!contracts) {
-    if (typeof global === 'undefined' || !(<any>global).localStorage) {
+    if (typeof global === 'undefined' || !(global as any).localStorage) {
       // get/compile smart contracts
       // It is possible to load contracts from non-default locations
-      const solcCfg = { compileContracts: false, }
+      const solcCfg = { compileContracts: false };
       if (runtimeConfig.contractsLoadPath) {
-        solcCfg['destinationPath'] = runtimeConfig.contractsLoadPath;
+        (solcCfg as any).destinationPath = runtimeConfig.contractsLoadPath;
       }
 
+      // eslint-disable-next-line
       const smartContract = require('@evan.network/smart-contracts-core');
-      const solc = new smartContract.Solc({ config: solcCfg, log, });
+      const solc = new smartContract.Solc({ config: solcCfg, log });
       await solc.ensureCompiled(
-        runtimeConfig.additionalContractsPaths || [], solcCfg['destinationPath']);
+        runtimeConfig.additionalContractsPaths || [], (solcCfg as any).destinationPath,
+      );
 
       contracts = solc.getContracts();
     } else {
       // if this lib is used within the browser using browserify, smart-contracts-core needs to be
       // defined externaly (normally defined by @evan.network/ui-dapp-browser) to return the abis
       // directly as json
+      // eslint-disable-next-line
       const originalContracts = require('@evan.network/smart-contracts-core');
       contracts = { };
 
@@ -143,43 +154,69 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   }
 
   // web3 contract interfaces
-  const contractLoader = options.contractLoader ||
-    new ContractLoader({ contracts, log, web3, });
+  const contractLoader = options.contractLoader
+    || new ContractLoader({ contracts, log, web3 });
 
   // check if mnemonic and password are given
   if (runtimeConfig.mnemonic && runtimeConfig.password) {
     const tempConfig: any = await Onboarding.generateRuntimeConfig(
       runtimeConfig.mnemonic,
       runtimeConfig.password,
-      web3
+      web3,
     );
     if (!runtimeConfig.accountMap) {
-      runtimeConfig.accountMap = {};
+      // eslint-disable-next-line no-param-reassign
+      (runtimeConfig as any).accountMap = {};
     }
     if (!runtimeConfig.keyConfig) {
-      runtimeConfig.keyConfig = {};
+      // eslint-disable-next-line no-param-reassign
+      (runtimeConfig as any).keyConfig = {};
     }
     Object.assign(runtimeConfig.accountMap, tempConfig.accountMap);
     Object.assign(runtimeConfig.keyConfig, tempConfig.keyConfig);
+  } else if (!runtimeConfig.accountMap
+       || !(Object.keys(runtimeConfig.accountMap).length)) {
+    throw new Error('accountMap invalid');
   }
 
   const activeAccount = Object.keys(runtimeConfig.accountMap)[0];
 
   // executor
-  const accountStore = options.accountStore ||
-    new AccountStore({ accounts: runtimeConfig.accountMap, log, });
-  const signerConfig = <any>{};
-  if (runtimeConfig.hasOwnProperty('gasPrice')) {
+  const accountStore = options.accountStore
+    || new AccountStore({ accounts: runtimeConfig.accountMap, log });
+  const signerConfig = {} as any;
+  if (Object.prototype.hasOwnProperty.call(runtimeConfig, 'gasPrice')) {
     signerConfig.gasPrice = runtimeConfig.gasPrice;
   } else {
     signerConfig.gasPrice = `${200e9}`;
   }
 
-  const signer = options.signer ||
-    new SignerInternal({ accountStore, contractLoader, config: signerConfig, log, web3, });
+  const signerInternal = options.signer
+    || new SignerInternal({
+      accountStore, contractLoader, config: signerConfig, log, web3,
+    });
+  let signer;
+  if (runtimeConfig.useIdentity) {
+    signer = new SignerIdentity(
+      {
+        contractLoader,
+        verifications: null, // filled later on
+        web3,
+      },
+    );
+  } else {
+    signer = signerInternal;
+  }
+
   const executor = options.executor || new Executor(
-    Object.assign({ config, log, signer, web3, },
-      runtimeConfig.options ? runtimeConfig.options.Executor : {}));
+    {
+      config,
+      log,
+      signer,
+      web3,
+      ...(runtimeConfig.options ? runtimeConfig.options.Executor : {}),
+    },
+  );
   await executor.init({});
   const nameResolver = options.nameResolver || new NameResolver({
     config: runtimeConfig.nameResolver || config.nameResolver,
@@ -197,47 +234,56 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   executor.eventHub = eventHub;
 
   // check if the dfs remoteNode matches our ipfslib
-  if (!(dfs as Ipfs).remoteNode as any instanceof IpfsLib) {
+  if (!((dfs as Ipfs).remoteNode as any instanceof IpfsLib)) {
+    // eslint-disable-next-line no-param-reassign
     (dfs as Ipfs).remoteNode = new IpfsLib(config.ipfsConfig);
   }
-  (dfs as Ipfs).setRuntime({signer, activeAccount, web3});
+  (dfs as Ipfs).setRuntime({ signer, activeAccount, web3 });
 
   // encryption
   const cryptoConfig = {};
-  cryptoConfig['aes'] = new Aes({ log });
-  cryptoConfig['unencrypted'] = new Unencrypted({ log });
-  cryptoConfig['aesBlob'] = new AesBlob({ dfs, log });
-  cryptoConfig['aesEcb'] = new AesEcb({ log });
+  // eslint-disable-next-line no-param-reassign
+  (cryptoConfig as any).aes = new Aes({ log });
+  // (cryptoConfig as any)-disable-next-line no-param-reassign
+  (cryptoConfig as any).unencrypted = new Unencrypted({ log });
+  // eslint-disable-next-line no-param-reassign
+  (cryptoConfig as any).aesBlob = new AesBlob({ dfs, log });
+  // eslint-disable-next-line no-param-reassign
+  (cryptoConfig as any).aesEcb = new AesEcb({ log });
   const cryptoProvider = new CryptoProvider(cryptoConfig);
 
   // check and modify if any accountid with password is provided
   if (runtimeConfig.keyConfig) {
-    for (let accountId in runtimeConfig.keyConfig) {
+    for (const accountId in runtimeConfig.keyConfig) {
       // check if the key is a valid accountId
       if (accountId.length === 42) {
         const sha9Account = web3.utils.soliditySha3.apply(
           web3.utils.soliditySha3,
           [
             web3.utils.soliditySha3(accountId),
-            web3.utils.soliditySha3(accountId)
-          ].sort()
+            web3.utils.soliditySha3(accountId),
+          ].sort(),
         );
-        const sha3Account = web3.utils.soliditySha3(accountId)
+        const sha3Account = web3.utils.soliditySha3(accountId);
         const dataKey = web3.utils
           .keccak256(accountId + runtimeConfig.keyConfig[accountId])
           .replace(/0x/g, '');
         // now add the different hashed accountids and datakeys to the runtimeconfig
+        // eslint-disable-next-line no-param-reassign
         runtimeConfig.keyConfig[sha3Account] = dataKey;
+        // eslint-disable-next-line no-param-reassign
         runtimeConfig.keyConfig[sha9Account] = dataKey;
 
         // at least delete the old key
+        // eslint-disable-next-line no-param-reassign
         delete runtimeConfig.keyConfig[accountId];
       }
     }
   }
 
 
-  const keyProvider = options.keyProvider || new KeyProvider({ keys: runtimeConfig.keyConfig, log, });
+  const keyProvider = options.keyProvider
+    || new KeyProvider({ keys: runtimeConfig.keyConfig, log });
 
   // description
   const description = options.description || new Description({
@@ -303,7 +349,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
 
   // 'own' key provider, that won't be linked to profile and used in 'own' ipld
   // this prevents key lookup infinite loops
-  const keyProviderOwn = new KeyProvider({ keys: runtimeConfig.keyConfig, log, });
+  const keyProviderOwn = new KeyProvider({ keys: runtimeConfig.keyConfig, log });
   const ipldOwn = new Ipld({
     ipfs: dfs as Ipfs,
     keyProvider: keyProviderOwn,
@@ -387,15 +433,59 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
   });
 
   const verifications = options.verifications || new Verifications({
-    accountStore: accountStore,
-    contractLoader: contractLoader,
+    accountStore,
+    contractLoader,
     config,
     description,
-    dfs: dfs,
-    executor: executor,
+    dfs,
+    executor,
     log,
-    nameResolver: nameResolver,
-  })
+    nameResolver,
+  });
+
+  let activeIdentity: string;
+  let underlyingAccount: string;
+  if (runtimeConfig.useIdentity) {
+    activeIdentity = await verifications.getIdentityForAccount(activeAccount, true);
+    underlyingAccount = activeAccount;
+    signer.updateConfig(
+      { verifications },
+      {
+        activeIdentity,
+        underlyingAccount,
+        underlyingSigner: signerInternal,
+      },
+    );
+  }
+
+  let did: Did;
+  let vc: Vc;
+  if (runtimeConfig.useIdentity) {
+    did = new Did({
+      contractLoader,
+      dfs,
+      executor,
+      nameResolver,
+      signerIdentity: signer,
+      web3,
+    });
+    vc = new Vc(
+      {
+        activeAccount,
+        accountStore,
+        contractLoader,
+        dfs,
+        did,
+        executor,
+        nameResolver,
+        signerIdentity: signer,
+        verifications,
+        web3,
+      },
+      { credentialStatusEndpoint: config.smartAgents.didAndVc.vcRevokationStatusEndpoint },
+    );
+  }
+
 
   if (await profile.exists()) {
     logger.log(`profile for ${activeAccount} exists, fetching keys`, 'debug');
@@ -405,12 +495,15 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
         await profile.getContactKey(activeAccount, 'dataKey'),
       );
     } catch (ex) {
-      logger.log(`fetching keys for ${activeAccount} failed with "${ex.msg || ex}", removing profile from runtime`, 'warning');
+      logger.log(
+        `fetching keys for ${activeAccount} failed with "${ex.msg || ex}", `
+        + 'removing profile from runtime', 'warning',
+      );
       profile = null;
       keyProvider.profile = null;
     }
   } else {
-    logger.log(`profile for ${activeAccount} doesn't exist`, 'debug')
+    logger.log(`profile for ${activeAccount} doesn't exist`, 'debug');
   }
 
   const onboarding = options.onboarding || new Onboarding({
@@ -432,7 +525,7 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     contractLoader,
     executor,
     log,
-    web3
+    web3,
   });
 
   const encryptionWrapper = options.encryptionWrapper || new EncryptionWrapper({
@@ -474,5 +567,10 @@ export async function createDefaultRuntime(web3: any, dfs: DfsInterface, runtime
     verifications,
     votings,
     web3,
+    // optional properties
+    ...(activeIdentity && { activeIdentity }),
+    ...(did && { did }),
+    ...(vc && { vc }),
+    ...(underlyingAccount && { underlyingAccount }),
   };
-};
+}

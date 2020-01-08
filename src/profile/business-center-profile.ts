@@ -18,64 +18,24 @@
 */
 
 import {
+  CryptoProvider,
+  Ipld,
   Logger,
   LoggerOptions,
   NameResolver,
-} from '@evan.network/dbcp';
-
-import { CryptoProvider } from '../encryption/crypto-provider';
-import { Ipld } from '../dfs/ipld';
-
-function saveGet(root, labels) {
-  const split = labels.split('/');
-  let pointer = root;
-  for (let i = 0; i < split.length; i++) {
-    let sublabel = split[i];
-    if (pointer.hasOwnProperty(sublabel)) {
-      pointer = pointer[sublabel];
-    } else {
-      pointer = undefined;
-      break;
-    }
-  }
-  return pointer;
-}
-
-
-function saveSet(root, labels, child) {
-  const split = labels.split('/');
-  let pointer = root;
-  for (let i = 0; i < split.length; i++) {
-    let sublabel = split[i];
-    if (i === split.length - 1) {
-      pointer[sublabel] = child;
-    } else if (!pointer[sublabel]) {
-      pointer[sublabel] = {};
-    }
-    pointer = pointer[sublabel];
-  }
-}
+} from '../index';
 
 
 /**
  * parameters for Profile constructor
  */
-export interface ProfileOptions extends LoggerOptions {
+export interface BusinessCenterProfileOptions extends LoggerOptions {
+  bcAddress: string;
+  cryptoProvider: CryptoProvider;
+  defaultCryptoAlgo: string;
   ipld: Ipld;
   nameResolver: NameResolver;
-  defaultCryptoAlgo: string;
-  cryptoProvider: CryptoProvider
-  bcAddress: string;
   ipldData?: any;
-}
-
-
-export interface DappBookmark {
-  title: string;
-  description: string;
-  img: string;
-  primaryColor: string;
-  secondaryColor?: string;
 }
 
 
@@ -85,14 +45,19 @@ export interface DappBookmark {
  * @class      Profile (name)
  */
 export class BusinessCenterProfile extends Logger {
-  ipldData: any;
-  ipld: Ipld;
-  nameResolver: NameResolver;
-  defaultCryptoAlgo: string;
-  cryptoProvider: CryptoProvider;
-  bcAddress: string;
+  public bcAddress: string;
 
-  constructor(options: ProfileOptions) {
+  public cryptoProvider: CryptoProvider;
+
+  public defaultCryptoAlgo: string;
+
+  public ipld: Ipld;
+
+  public ipldData: any;
+
+  public nameResolver: NameResolver;
+
+  public constructor(options: BusinessCenterProfileOptions) {
     super(options);
     this.ipld = options.ipld;
     this.ipldData = options.ipldData || {};
@@ -107,7 +72,7 @@ export class BusinessCenterProfile extends Logger {
    *
    * @return     {string}  hash of the ipfs file
    */
-  async storeToIpld(): Promise<string> {
+  public async storeToIpld(): Promise<string> {
     const stored = await this.ipld.store(this.ipldData);
     return stored;
   }
@@ -118,14 +83,14 @@ export class BusinessCenterProfile extends Logger {
    * @param      {string}   ipldIpfsHash  ipfs file hash that points to a file with ipld a hash
    * @return     {Profile}  this profile
    */
-  async loadFromIpld(ipldIpfsHash: string): Promise<BusinessCenterProfile> {
+  public async loadFromIpld(ipldIpfsHash: string): Promise<BusinessCenterProfile> {
     let loaded;
     try {
-     loaded = await this.ipld.getLinkedGraph(ipldIpfsHash);
+      loaded = await this.ipld.getLinkedGraph(ipldIpfsHash);
     } catch (e) {
       this.log(`Error getting BC Profile ${e}`, 'debug');
       loaded = {
-        alias: {}
+        alias: {},
       };
     }
     this.ipldData = loaded;
@@ -137,7 +102,7 @@ export class BusinessCenterProfile extends Logger {
    *
    * @return     {any}     contact card
    */
-  async getContactCard(): Promise<string> {
+  public async getContactCard(): Promise<string> {
     return this.ipld.getLinkedGraph(this.ipldData, 'contactCard');
   }
 
@@ -147,7 +112,7 @@ export class BusinessCenterProfile extends Logger {
    * @param      {any}  contactCard  contact card to store
    * @return     {any}  updated tree
    */
-  async setContactCard(contactCard: any): Promise<any> {
+  public async setContactCard(contactCard: any): Promise<any> {
     const cryptor = this.cryptoProvider.getCryptorByCryptoAlgo(this.defaultCryptoAlgo);
     const cryptoInfo = cryptor.getCryptoInfo(this.nameResolver.soliditySha3(this.bcAddress));
     return this.ipld.set(this.ipldData, 'contactCard', contactCard, false, cryptoInfo);
@@ -160,16 +125,21 @@ export class BusinessCenterProfile extends Logger {
    * @param      {string}   account               Ethereum account id
    * @return     {Promise}  resolved when done
    */
-  async storeForBusinessCenter(businessCenterDomain: string, account: string): Promise<void> {
+  public async storeForBusinessCenter(
+    businessCenterDomain: string,
+    account: string,
+  ): Promise<void> {
     const [stored, address] = await Promise.all([
       this.storeToIpld(),
       this.nameResolver.getAddress(businessCenterDomain),
     ]);
-    const contract = this.nameResolver.contractLoader.loadContract('BusinessCenterInterface', address);
+    const contract = this.nameResolver.contractLoader.loadContract(
+      'BusinessCenterInterface', address,
+    );
     await this.nameResolver.executor.executeContractTransaction(
       contract,
       'setMyProfile',
-      { from: account, autoGas: 1.1, },
+      { from: account, autoGas: 1.1 },
       stored,
     );
   }
@@ -181,18 +151,22 @@ export class BusinessCenterProfile extends Logger {
    * @param      {string}   account               Ethereum account id
    * @return     {Promise}  resolved when done
    */
-  async loadForBusinessCenter(businessCenterDomain: string, account: string): Promise<any> {
+  // eslint-disable-next-line consistent-return
+  public async loadForBusinessCenter(businessCenterDomain: string, account: string): Promise<any> {
     const address = await this.nameResolver.getAddress(businessCenterDomain);
-    const contract = this.nameResolver.contractLoader.loadContract('BusinessCenterInterface', address);
-    const hash = await this.nameResolver.executor.executeContractCall(contract, 'getProfile', account);
+    const contract = this.nameResolver.contractLoader.loadContract(
+      'BusinessCenterInterface', address,
+    );
+    const hash = await this.nameResolver.executor.executeContractCall(
+      contract, 'getProfile', account,
+    );
     if (hash === '0x0000000000000000000000000000000000000000000000000000000000000000') {
       this.ipldData = {
         alias: '',
       };
       return Promise.resolve();
-    } else {
-      await this.loadFromIpld(hash);
     }
+    await this.loadFromIpld(hash);
   }
 
   /**
@@ -203,12 +177,24 @@ export class BusinessCenterProfile extends Logger {
    * @param      {string}  account               current accountId
    * @return     {Array}   Array with all registered bc contracts
    */
-  async getMyBusinessCenterContracts(businessCenterDomain: string, contractType: string, account: string): Promise<any> {
+  public async getMyBusinessCenterContracts(
+    businessCenterDomain: string,
+    contractType: string,
+    account: string,
+  ): Promise<any> {
     const address = await this.nameResolver.getAddress(businessCenterDomain);
-    const contract = this.nameResolver.contractLoader.loadContract('BusinessCenterInterface', address);
-    const bcIndex = await this.nameResolver.executor.executeContractCall(contract, 'getMyIndex', {from: account});
-    const indexContract = this.nameResolver.contractLoader.loadContract('DataStoreIndexInterface', bcIndex);
-    const contracts = await this.nameResolver.getArrayFromIndexContract(indexContract, this.nameResolver.soliditySha3(contractType));
+    const contract = this.nameResolver.contractLoader.loadContract(
+      'BusinessCenterInterface', address,
+    );
+    const bcIndex = await this.nameResolver.executor.executeContractCall(
+      contract, 'getMyIndex', { from: account },
+    );
+    const indexContract = this.nameResolver.contractLoader.loadContract(
+      'DataStoreIndexInterface', bcIndex,
+    );
+    const contracts = await this.nameResolver.getArrayFromIndexContract(
+      indexContract, this.nameResolver.soliditySha3(contractType),
+    );
     return contracts;
   }
 }

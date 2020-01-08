@@ -20,37 +20,24 @@
 import 'mocha';
 import { expect } from 'chai';
 
-import { KeyProvider } from '@evan.network/dbcp';
-
+import * as BigNumber from 'bignumber.js';
 import { accounts } from './test/accounts';
-import { configTestcore as config } from './config-testcore';
-import { KeyExchange } from './keyExchange';
-import { Ipfs }  from './dfs/ipfs';
-import { Ipld } from './dfs/ipld';
-import { InvitationMail, Onboarding } from './onboarding';
-import { Mailbox } from './mailbox';
-import { Profile } from './profile/profile';
 import { TestUtils } from './test/test-utils';
 
 
-import * as BigNumber from 'bignumber.js';
-
-describe('Payment Channels', function() {
+describe('Payment Channels', function test() {
   this.timeout(600000);
-  let nameResolver;
   let payments1;
   let payments2;
   let executor;
   let web3;
   let initialChannel;
   let proof;
-  let accountStore;
   before(async () => {
     web3 = TestUtils.getWeb3();
     executor = await TestUtils.getExecutor(web3);
-    payments1 = await TestUtils.getPayments(web3, accounts[0]);
-    payments2 = await TestUtils.getPayments(web3, accounts[1]);
-    accountStore = await TestUtils.getAccountStore({});
+    payments1 = await TestUtils.getPayments(web3);
+    payments2 = await TestUtils.getPayments(web3);
   });
 
 
@@ -58,7 +45,7 @@ describe('Payment Channels', function() {
     const channelManager = await executor.createContract(
       'RaidenMicroTransferChannels',
       [500, []],
-      { from: accounts[0], gas: 3000000, }
+      { from: accounts[0], gas: 3000000 },
     );
     payments1.setChannelManager(channelManager.options.address);
     payments2.setChannelManager(channelManager.options.address);
@@ -94,7 +81,7 @@ describe('Payment Channels', function() {
     const balanceReceiverBefore = new BigNumber(await web3.eth.getBalance(accounts[1]));
     await payments2.closeChannel(closingSig);
 
-    let result = await payments2.getChannelInfo();
+    const result = await payments2.getChannelInfo();
     expect(result).to.have.all.keys('state', 'block', 'deposit', 'withdrawn');
     expect(result.state).to.be.equal('settled');
     expect(result.deposit.eq(new BigNumber(0))).to.be.true;
@@ -116,7 +103,7 @@ describe('Payment Channels', function() {
 
     await payments1.closeChannel(closingSig);
 
-    let result = await payments1.getChannelInfo();
+    const result = await payments1.getChannelInfo();
     expect(result).to.have.all.keys('state', 'block', 'deposit', 'withdrawn');
     expect(result.state).to.be.equal('settled');
     expect(result.deposit.eq(new BigNumber(0))).to.be.true;
@@ -125,7 +112,7 @@ describe('Payment Channels', function() {
     expect(balanceReceiverAfter.eq(balanceReceiverBefore.add(1)));
   });
 
-   it.skip('should close a channel un-cooperative from the receiver side', async () => {
+  it.skip('should close a channel un-cooperative from the receiver side', async () => {
     const closingSig = await payments2.getClosingSig(accounts[1]);
     await payments2.closeChannel(closingSig);
   });
