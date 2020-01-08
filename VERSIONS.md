@@ -2,6 +2,14 @@
 
 ## Next Version
 ### Features
+
+### Fixes
+
+### Deprecations
+
+
+## Version 2.16.0
+### Features
 - add `getPublicKey` implementation to `SignerIdentity`
 - add `DidResolver` module for managing DID documents
 - add possiblity to instantiate a new `SignerIdentity` in two steps
@@ -14,8 +22,6 @@
 - fix `Container` documentation links and add warning to `ContainerUnshareConfig` documentation
 - add interfaces used in exported classes to export list
 - update pre-commit hook to use eslint for typescript
-
-### Deprecations
 
 
 ## Version 2.15.0
