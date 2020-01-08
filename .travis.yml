@@ -36,6 +36,9 @@ matrix:
     script:
       - npm run testunitcoverage
 
+cache:
+  npm: false
+
 services:
   - docker
 
