@@ -54,14 +54,13 @@ before_install:
   - export CC="gcc-5" && export CXX="g++-5" && export LINK="gcc-5" && export LINKXX="g++-5"
   - npm install -g npm@latest
   - cd ..
-  - git clone https://github.com/trufflesuite/ganache-cli.git && cd ganache-cli && npm install && cd node_modules && rm -rf ganache-core && git clone https://github.com/trufflesuite/ganache-core.git && cd ganache-core && npm i && cd /home/travis/build/evannetwork/api-blockchain-core
+  - npm i -g ganache-cli
 install:
   - cd /home/travis/build/evannetwork/api-blockchain-core
   - npm install
   - rm -rf node_modules/@evan.network/dbcp && git clone https://github.com/evannetwork/dbcp.git ../dbcp && cd ../dbcp && git checkout develop && npm i && npm run build && cd ../api-blockchain-core && mv ../dbcp ./node_modules/@evan.network
   - cd node_modules/@evan.network && rm -rf smart-contracts-core && git clone https://github.com/evannetwork/smart-contracts-core.git && cd smart-contracts-core && git checkout develop && npm i && node ./scripts/build-contracts.js
-  - cd ../../../
-  - cd ganache-cli && node cli.js --allowUnlimitedContractSize --gasLimit 0xE4E1C0 -p 7545 -f http://localhost:8545 > /dev/null &
+  - ganache-cli --allowUnlimitedContractSize --gasLimit 0xE4E1C0 -p 7545 -f http://localhost:8545 > /dev/null &
   - cd /home/travis/build/evannetwork/api-blockchain-core
 after_success:
   - bash <(curl -s https://codecov.io/bash) -cF javascript
