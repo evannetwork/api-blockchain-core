@@ -391,12 +391,22 @@ describe('VC Resolver', function () {
     // Test for after sharable VCs have been implemented.
 
 
-    /* it.only('allows the current runtime to use generate key using vc api', async () => {
+    it.only('allows the current runtime to use generate key using vc api', async () => {
       const vcKey = await runtime.vc.generateKey();
+      console.log(vcKey);
       expect(vcKey).to.be.string;
     });
 
-    it.only('does not allows me to store a valid private VC non issuer account', async () => {
+    it.only('does not allow the current runtime to generate key same keys using vc api', async () => {
+      const vcKey = await runtime.vc.generateKey();
+      console.log(vcKey);
+      expect(vcKey).to.be.string;
+
+      const vcKey2 = await runtime.vc.generateKey();
+      console.log(vcKey2);
+      expect(vcKey).to.be.not.eq(vcKey2);
+    });
+    /* it.only('does not allows me to store a valid private VC non issuer account', async () => {
       const vcKey = await runtime.vc.generateKey();
       const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
       const someoneElsesId = await otherRuntime.vc.createId();
