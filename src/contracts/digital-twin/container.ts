@@ -54,7 +54,7 @@ export interface ContainerConfig {
   description?: any;
   /** factory address can be passed to ``.create`` for custom container factory */
   factoryAddress?: string;
-  /** plugin to be used in ``.create``, can be string with name or a ``ContainerTemplate`` */
+  /** plugin to be used in ``.create``, can be string with name or a ``ContainerPlugin`` */
   plugin?: string | ContainerPlugin;
 }
 

@@ -30,6 +30,7 @@ import { configTestcore as config } from '../../config-testcore';
 import { Container } from './container';
 import { TestUtils } from '../../test/test-utils';
 import { VerificationsStatus } from '../../verifications/verifications';
+import twinTemplate from './testfiles/twin-template';
 import {
   DigitalTwin,
   DigitalTwinConfig,
@@ -146,6 +147,19 @@ describe('DigitalTwin', function test() {
       await twin.removeFromFavorites();
       favorites = await DigitalTwin.getFavorites(runtime);
       expect(favorites).to.not.include(await twin.getContractAddress());
+    });
+
+    it.only('can can create new contracts using twin templates', async () => {
+      const configWithTemplate = {
+        ...defaultConfig,
+        ...twinTemplate,
+      };
+      const twin = await DigitalTwin.create(runtime, configWithTemplate);
+      expect(await twin.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
+
+      const entries = await twin.getEntries();
+      expect(entries).to.have.property('property1');
+      expect(entries).to.have.property('property2');
     });
   });
 
