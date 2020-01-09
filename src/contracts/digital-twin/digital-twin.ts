@@ -27,10 +27,8 @@ import {
 
 import { Container, ContainerConfig, ContainerOptions } from './container';
 import { Profile } from '../../profile/profile';
-
-
-// empty address
-const nullAddress = '0x0000000000000000000000000000000000000000';
+import { nullAddress } from '../../common/utils';
+import { Did } from '../../did/did';
 
 /**
  * possible entry types for entries in index
@@ -95,6 +93,7 @@ export interface DigitalTwinVerificationEntry {
  */
 export interface DigitalTwinOptions extends ContainerOptions {
   profile: Profile;
+  did?: Did;
 }
 
 /**
@@ -208,6 +207,14 @@ export class DigitalTwin extends Logger {
 
     const twin = new DigitalTwin(options, instanceConfig);
     await twin.ensureContract();
+
+    if (options.did) {
+      const twinIdentityId = (await twin.getDescription()).identity;
+      const ownerIdentity = await options.verifications
+        .getIdentityForAccount(config.accountId, true);
+      await twin.createAndStoreDidDocument(twinIdentityId, ownerIdentity);
+    }
+
     return twin;
   }
 
@@ -573,6 +580,22 @@ export class DigitalTwin extends Logger {
       toSet,
       entryType,
     );
+  }
+
+  private async createAndStoreDidDocument(twinIdentityId: string, controllerId: string):
+  Promise<void> {
+    const twinDid = await this.options.did.convertIdentityToDid(twinIdentityId);
+    const controllerDid = await this.options.did.convertIdentityToDid(controllerId);
+    if (!controllerDid) {
+      // TODO: Throw error?
+      return;
+    }
+
+    // Get all key IDs of the controller's public keys
+    const authKeyIds = (await this.options.did.getDidDocument(controllerDid))
+      .publicKey.map((key) => key.id).join(',');
+    const doc = await this.options.did.getDidDocumentTemplate(twinDid, controllerDid, authKeyIds);
+    await this.options.did.setDidDocument(twinDid, doc);
   }
 
   /**
