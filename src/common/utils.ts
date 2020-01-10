@@ -49,7 +49,7 @@ export async function getSmartAgentAuthHeaders(
   const messageToSign = message || `${new Date().getTime()}`;
   const hexMessage = runtime.web3.utils.toHex(messageToSign);
   const paddedMessage = hexMessage.length % 2 === 1 ? hexMessage.replace('0x', '0x0') : hexMessage;
-  const signature = await runtime.signer.signMessage(runtime.activeAccount, paddedMessage);
+  const signature = await runtime.signer.signMessage(runtime.underlyingAccount, paddedMessage);
   return [
     `EvanAuth ${runtime.activeAccount}`,
     `EvanMessage ${paddedMessage}`,

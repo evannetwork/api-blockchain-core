@@ -17,46 +17,47 @@
   the following URL: https://evan.network/license/
 */
 
-import { IpfsLib } from './dfs/ipfs-lib';
-import { configCore } from './config-core';
-import { configTestcore } from './config-testcore';
-import { getEnvironment } from './common/utils';
 import {
   AccountStore,
-  Aes,
-  AesBlob,
-  AesEcb,
-  BaseContract,
   ContractLoader,
-  CryptoProvider,
-  DataContract,
-  Description,
   DfsInterface,
-  Did,
-  EncryptionWrapper,
   EventHub,
   Executor,
-  Ipfs,
-  Ipld,
-  KeyExchange,
   KeyProvider,
   Logger,
-  Mailbox,
-  NameResolver,
-  Onboarding,
-  Payments,
-  Profile,
-  RightsAndRoles,
-  ServiceContract,
-  Sharing,
-  SignerIdentity,
   SignerInterface,
   SignerInternal,
   Unencrypted,
-  Vc,
-  Verifications,
-  Votings,
-} from './index';
+} from '@evan.network/dbcp';
+
+import { Aes } from './encryption/aes';
+import { AesBlob } from './encryption/aes-blob';
+import { AesEcb } from './encryption/aes-ecb';
+import { BaseContract } from './contracts/base-contract/base-contract';
+import { configCore } from './config-core';
+import { configTestcore } from './config-testcore';
+import { CryptoProvider } from './encryption/crypto-provider';
+import { DataContract } from './contracts/data-contract/data-contract';
+import { Description } from './shared-description';
+import { Did } from './did/did';
+import { EncryptionWrapper } from './encryption/encryption-wrapper';
+import { getEnvironment } from './common/utils';
+import { Ipfs } from './dfs/ipfs';
+import { IpfsLib } from './dfs/ipfs-lib';
+import { Ipld } from './dfs/ipld';
+import { KeyExchange } from './keyExchange';
+import { Mailbox } from './mailbox';
+import { NameResolver } from './name-resolver';
+import { Onboarding } from './onboarding';
+import { Payments } from './payments';
+import { Profile } from './profile/profile';
+import { RightsAndRoles } from './contracts/rights-and-roles';
+import { ServiceContract } from './contracts/service-contract/service-contract';
+import { Sharing } from './contracts/sharing';
+import { SignerIdentity } from './contracts/signer-identity';
+import { Verifications } from './verifications/verifications';
+import { Vc } from './vc/vc';
+import { Votings } from './votings/votings';
 
 /**
  * runtime for interacting with dbcp, including helpers for transactions & co
@@ -179,8 +180,6 @@ export async function createDefaultRuntime(
     throw new Error('accountMap invalid');
   }
 
-  const activeAccount = Object.keys(runtimeConfig.accountMap)[0];
-
   // executor
   const accountStore = options.accountStore
     || new AccountStore({ accounts: runtimeConfig.accountMap, log });
@@ -232,13 +231,6 @@ export async function createDefaultRuntime(
     nameResolver,
   });
   executor.eventHub = eventHub;
-
-  // check if the dfs remoteNode matches our ipfslib
-  if (!((dfs as Ipfs).remoteNode as any instanceof IpfsLib)) {
-    // eslint-disable-next-line no-param-reassign
-    (dfs as Ipfs).remoteNode = new IpfsLib(config.ipfsConfig);
-  }
-  (dfs as Ipfs).setRuntime({ signer, activeAccount, web3 });
 
   // encryption
   const cryptoConfig = {};
@@ -297,6 +289,49 @@ export async function createDefaultRuntime(
     sharing: null,
     web3,
   });
+
+  const verifications = options.verifications || new Verifications({
+    accountStore,
+    contractLoader,
+    config,
+    description,
+    dfs,
+    executor,
+    log,
+    nameResolver,
+  });
+
+  const activeAccount = Object.keys(runtimeConfig.accountMap)[0];
+  let activeIdentity: string;
+  let underlyingAccount: string;
+  if (runtimeConfig.useIdentity) {
+    activeIdentity = await verifications.getIdentityForAccount(activeAccount, true);
+    underlyingAccount = activeAccount;
+    signer.updateConfig(
+      { verifications },
+      {
+        activeIdentity,
+        underlyingAccount,
+        underlyingSigner: signerInternal,
+      },
+    );
+  } else {
+    activeIdentity = activeAccount;
+    underlyingAccount = activeIdentity;
+  }
+
+  // check if the dfs remoteNode matches our ipfslib
+  if (!((dfs as Ipfs).remoteNode as any instanceof IpfsLib)) {
+    // eslint-disable-next-line no-param-reassign
+    (dfs as Ipfs).remoteNode = new IpfsLib(config.ipfsConfig);
+  }
+  (dfs as Ipfs).setRuntime({
+    activeIdentity,
+    signer,
+    underlyingAccount,
+    web3,
+  });
+
   const sharing = options.sharing || new Sharing({
     contractLoader,
     cryptoProvider,
@@ -335,7 +370,7 @@ export async function createDefaultRuntime(
     cryptoProvider,
     defaultCryptoAlgo: 'aes',
     log,
-    originator: nameResolver.soliditySha3(activeAccount),
+    originator: nameResolver.soliditySha3(activeIdentity),
     nameResolver,
   });
 
@@ -356,7 +391,7 @@ export async function createDefaultRuntime(
     cryptoProvider,
     defaultCryptoAlgo: 'aes',
     log,
-    originator: nameResolver.soliditySha3(activeAccount),
+    originator: nameResolver.soliditySha3(activeIdentity),
     nameResolver,
   });
   const sharingOwn = new Sharing({
@@ -382,7 +417,7 @@ export async function createDefaultRuntime(
     description,
   });
   let profile = options.profile || new Profile({
-    accountId: activeAccount,
+    accountId: activeIdentity,
     contractLoader,
     cryptoProvider,
     dataContract: dataContractOwn,
@@ -393,6 +428,7 @@ export async function createDefaultRuntime(
     ipld: ipldOwn,
     log,
     nameResolver,
+    profileOwner: activeIdentity,
     rightsAndRoles,
     sharing,
   });
@@ -413,7 +449,7 @@ export async function createDefaultRuntime(
   });
 
   const mailbox = options.mailbox || new Mailbox({
-    mailboxOwner: activeAccount,
+    mailboxOwner: activeIdentity,
     nameResolver,
     ipfs: dfs as Ipfs,
     contractLoader,
@@ -427,36 +463,10 @@ export async function createDefaultRuntime(
     mailbox,
     cryptoProvider,
     defaultCryptoAlgo: 'aes',
-    account: activeAccount,
+    account: activeIdentity,
     keyProvider,
     log,
   });
-
-  const verifications = options.verifications || new Verifications({
-    accountStore,
-    contractLoader,
-    config,
-    description,
-    dfs,
-    executor,
-    log,
-    nameResolver,
-  });
-
-  let activeIdentity: string;
-  let underlyingAccount: string;
-  if (runtimeConfig.useIdentity) {
-    activeIdentity = await verifications.getIdentityForAccount(activeAccount, true);
-    underlyingAccount = activeAccount;
-    signer.updateConfig(
-      { verifications },
-      {
-        activeIdentity,
-        underlyingAccount,
-        underlyingSigner: signerInternal,
-      },
-    );
-  }
 
   let did: Did;
   let vc: Vc;
@@ -471,7 +481,7 @@ export async function createDefaultRuntime(
     });
     vc = new Vc(
       {
-        activeAccount,
+        activeAccount: activeIdentity,
         accountStore,
         contractLoader,
         dfs,
@@ -488,22 +498,22 @@ export async function createDefaultRuntime(
 
 
   if (await profile.exists()) {
-    logger.log(`profile for ${activeAccount} exists, fetching keys`, 'debug');
+    logger.log(`profile for ${activeIdentity} exists, fetching keys`, 'error');
     try {
       keyExchange.setPublicKey(
         await profile.getPublicKey(),
-        await profile.getContactKey(activeAccount, 'dataKey'),
+        await profile.getContactKey(activeIdentity, 'dataKey'),
       );
     } catch (ex) {
       logger.log(
-        `fetching keys for ${activeAccount} failed with "${ex.msg || ex}", `
-        + 'removing profile from runtime', 'warning',
+        `fetching keys for ${activeIdentity} failed with "${ex.msg || ex}", `
+        + 'removing profile from runtime', 'error',
       );
       profile = null;
       keyProvider.profile = null;
     }
   } else {
-    logger.log(`profile for ${activeAccount} doesn't exist`, 'debug');
+    logger.log(`profile for ${activeIdentity} doesn't exist`, 'error');
   }
 
   const onboarding = options.onboarding || new Onboarding({

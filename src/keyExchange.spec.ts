@@ -25,10 +25,11 @@ import { Ipfs } from './dfs/ipfs';
 import { Ipld } from './dfs/ipld';
 import { KeyExchange } from './keyExchange';
 import { Mailbox } from './mailbox';
+import { Onboarding } from './onboarding';
 import { Profile } from './profile/profile';
+import { Runtime } from './index';
 import { TestUtils } from './test/test-utils';
 import { accounts } from './test/accounts';
-import { Onboarding } from './onboarding';
 
 use(chaiAsPromised);
 
@@ -43,47 +44,34 @@ describe('KeyExchange class', function test() {
   let ipld: Ipld;
   let profile: Profile;
   let profile2: Profile;
+  let runtimes: Runtime[];
 
   before(async () => {
-    web3 = TestUtils.getWeb3();
+    runtimes = await Promise.all(
+      accounts.slice(0, 2).map(
+        (account) => TestUtils.getRuntime(account, null, { useIdentity: true }),
+      ),
+    );
+    ([{
+      ipld,
+      web3,
+    }] = runtimes);
 
-    ipfs = await TestUtils.getIpfs();
-    ipld = await TestUtils.getIpld(ipfs);
-
-    // create profile 1
-    const profile1Runtime = await TestUtils.getRuntime(accounts[0]);
-    profile1Runtime.profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
-    await Onboarding.createProfile(profile1Runtime, {
-      accountDetails: {
-        profileType: 'company',
-        accountName: 'test account',
-      },
-    });
-    // create profile 2
-    const profile2Runtime = await TestUtils.getRuntime(accounts[1]);
-    profile2Runtime.profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[1]);
-    await Onboarding.createProfile(profile2Runtime, {
-      accountDetails: {
-        profileType: 'company',
-        accountName: 'test account',
-      },
-    });
-
-    profile = profile1Runtime.profile;
-    profile2 = profile2Runtime.profile;
+    profile = runtimes[0].profile;
+    profile2 = runtimes[1].profile;
     await profile.loadForAccount();
     await profile2.loadForAccount();
-    mailbox = profile1Runtime.mailbox;
-    mailbox2 = profile2Runtime.mailbox;
-    keyExchange1 = profile1Runtime.keyExchange;
-    keyExchange2 = profile2Runtime.keyExchange;
+    mailbox = runtimes[0].mailbox;
+    mailbox2 = runtimes[1].mailbox;
+    keyExchange1 = runtimes[0].keyExchange;
+    keyExchange2 = runtimes[1].keyExchange;
   });
 
   it('should be able to send an invitation mail and store new commKey', async () => {
     const foreignPubkey = await profile2.getPublicKey();
     const commKey = await keyExchange1.generateCommKey();
-    await keyExchange1.sendInvite(accounts[1], foreignPubkey, commKey, { fromAlias: 'Bob' });
-    await profile.addContactKey(accounts[1], 'commKey', commKey);
+    await keyExchange1.sendInvite(runtimes[1].activeIdentity, foreignPubkey, commKey, { fromAlias: 'Bob' });
+    await profile.addContactKey(runtimes[1].activeIdentity, 'commKey', commKey);
     await profile.storeForAccount(profile.treeLabels.addressBook);
   });
 
@@ -146,11 +134,11 @@ describe('KeyExchange class', function test() {
     });
 
   it('should be able to send an invitation to a remote account', async () => {
-    const profileLocal = await TestUtils.getProfile(web3, null, ipld, accounts[1]);
+    const profileLocal = await TestUtils.getProfile(web3, null, ipld, runtimes[1].activeIdentity);
     const foreignPubkey = await profileLocal.getPublicKey();
     const commKey = await keyExchange1.generateCommKey();
-    await keyExchange1.sendInvite(accounts[1], foreignPubkey, commKey, 'hi');
-    await profile.addContactKey(accounts[1], 'commKey', commKey);
+    await keyExchange1.sendInvite(runtimes[1].activeIdentity, foreignPubkey, commKey, 'hi');
+    await profile.addContactKey(runtimes[1].activeIdentity, 'commKey', commKey);
     await profile.storeForAccount(profile.treeLabels.addressBook);
   });
 });
