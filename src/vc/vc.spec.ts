@@ -405,7 +405,7 @@ describe('VC Resolver', function () {
       expect(vcKey).to.be.not.eq(vcKey2);
     });
 
-    it.only('allows to store and retrieve a sharable vc from the same account', async () => {
+    it('allows to store and retrieve a sharable vc from the same account', async () => {
       const vcKey = await runtime.vc.generateKey();
       encryptionInfo = { key: vcKey };
       expect(vcKey).to.be.string;
