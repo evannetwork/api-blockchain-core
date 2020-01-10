@@ -101,6 +101,14 @@ export interface VcDocumentTemplate {
   credentialSubject: VcCredentialSubject;
   credentialStatus?: VcCredentialStatus;
 }
+
+/**
+ * The details of encryption/decryption of VC documents
+ */
+export interface VcEncryptionInfo {
+  key?: string;
+}
+
 /**
  * The parts an VC ID in evan is made of
  */
@@ -208,7 +216,7 @@ export class Vc extends Logger {
    *
    * @param      {VcDocumentTemplate}  vcData  Template for the VC document containing the relevant
    *                                           data.
-   * @returns     {Promise<VcDocument}  The final VC document as it is stored in the registry.
+   * @returns     {Promise<VcDocument} The final VC document as it is stored in the registry.
    */
   public async createVc(vcData: VcDocumentTemplate): Promise<VcDocument> {
     if (!vcData.id) {
@@ -243,13 +251,14 @@ export class Vc extends Logger {
    */
   public async generateKey(): Promise<any> {
     const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aes');
+
     return cryptor.generateKey();
   }
 
   /**
    * get the Revoke status of a given VC document
    *
-   * @param      {string}  vcId    The registry ID the VC document is associated with.
+   * @param      {string}  vcId      The registry ID the VC document is associated with.
    * @return     {revokationStatus}  A boolean value. False = not revoked, True = revoked
    */
   public async getRevokeVcStatus(vcId: string): Promise<void> {
@@ -267,11 +276,14 @@ export class Vc extends Logger {
   /**
    * Returns a VC document for a given ID.
    *
-   * @param      {string}  vcId    The registry ID the VC document is associated with.
-   * @returns     {Promise<VcDocument}  A VC document stored in the registry.
-   * @throws           If an invalid VC ID is given or no document is registered under this ID.
+   * @param      {string}            vcId              The registry ID the VC document
+   *                                                   is associated with.
+   * @param      {VcEncryptionInfo}  encryptionInfo    The encryption information for decryption.
+   * @returns    {Promise<VcDocument}                  A VC document stored in the registry.
+   * @throws           If an invalid VC ID is given or no document is registered under this ID or
+   *                   wrong decryption key is provided.
    */
-  public async getVc(vcId: string, key?: string): Promise<VcDocument> {
+  public async getVc(vcId: string, encryptionInfo?: VcEncryptionInfo): Promise<VcDocument> {
     // Check whether the full URI (vc:evan:[vcId]) or just the internal ID was given
     let identityAddress = vcId;
     if (!identityAddress.startsWith('0x')) {
@@ -297,9 +309,23 @@ export class Vc extends Logger {
     if (vcDfsHash === nullBytes32) {
       throw Error(`VC for address ${vcId} does not exist`);
     }
-    const document = JSON.parse(await this.options.dfs.get(vcDfsHash) as any) as VcDocument;
-    await this.validateProof(document);
-    return document;
+
+    if (!encryptionInfo) {
+      const document = JSON.parse(await this.options.dfs.get(vcDfsHash) as any) as VcDocument;
+      await this.validateProof(document);
+      return document;
+    }
+
+    const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aes');
+    let document = JSON.parse(await this.options.dfs.get(vcDfsHash) as any);
+    document = Buffer.from(document.data);
+    try {
+      const decryptedDocument = await cryptor.decrypt(document, { key: encryptionInfo.key });
+      await this.validateProof(decryptedDocument);
+      return decryptedDocument;
+    } catch {
+      throw new Error('Incorrect key: decryption failed');
+    }
   }
 
   /**
@@ -325,14 +351,15 @@ export class Vc extends Logger {
    * The ID has to be a valid and registered VC ID.
    * Creates a proof if none is given or validates it if one is given.
    *
-   * @param      {VcDocumentTemplate}  vcData  Template for the VC document containing the relevant
-   *                                           data.
-   * @returns     {Promise<VcDocument}  The final VC document as it is stored in the registry.
+   * @param      {VcDocumentTemplate}  vcData            Template for the VC document containing
+   *                                                     the relevant data.
+   * @param      {VcEncryptionInfo}    encryptionInfo    The encryption information for encryption.
+   * @returns    {Promise<VcDocument}                    The final VC document as it
+   *                                                     is stored in the registry.
    */
-  public async storeVc(vcData: VcDocumentTemplate, key?: string): Promise<VcDocument> {
+  public async storeVc(vcData: VcDocumentTemplate, encryptionInfo?: VcEncryptionInfo):
+  Promise<VcDocument> {
     const dataTemplate: VcDocumentTemplate = cloneDeep(vcData);
-    // const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aes');
-    // const encryptedData = cryptor.encrypt(dataTemplate.credentialSubject.data, key);
     let internalId;
 
     if (!dataTemplate.id) {
@@ -354,17 +381,30 @@ export class Vc extends Logger {
     };
 
     const documentToStore = await this.createVc(dataTemplate);
-
-    const vcDfsAddress = await this.options.dfs.add('vc',
-      Buffer.from(JSON.stringify(documentToStore), 'utf-8'));
-    await this.options.executor.executeContractTransaction(
-      await this.getRegistryContract(),
-      'setVc',
-      { from: this.options.signerIdentity.activeIdentity },
-      internalId,
-      vcDfsAddress,
-    );
-
+    if (!encryptionInfo) {
+      const vcDfsAddress = await this.options.dfs.add('vc',
+        Buffer.from(JSON.stringify(documentToStore), 'utf-8'));
+      await this.options.executor.executeContractTransaction(
+        await this.getRegistryContract(),
+        'setVc',
+        { from: this.options.signerIdentity.activeIdentity },
+        internalId,
+        vcDfsAddress,
+      );
+    } else {
+      const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aes');
+      const encryptedDocumentToStore = await cryptor.encrypt(documentToStore,
+        { key: encryptionInfo.key });
+      const vcDfsAddress = await this.options.dfs.add('vc',
+        Buffer.from(JSON.stringify(encryptedDocumentToStore), 'utf-8'));
+      await this.options.executor.executeContractTransaction(
+        await this.getRegistryContract(),
+        'setVc',
+        { from: this.options.signerIdentity.activeIdentity },
+        internalId,
+        vcDfsAddress,
+      );
+    }
     return documentToStore;
   }
 
@@ -412,7 +452,7 @@ export class Vc extends Logger {
    * @param      {VcDocument}   vc         The VC document to create the proof for.
    * @param      {VcProofType}  proofType  Specify if you want a proof type different from the
    *                                       default one.
-   * @returns     {VcProof}  A proof object containing a JWT.
+   * @returns    {VcProof}                 A proof object containing a JWT.
    * @throws           If the VC issuer identity and the signer identity differ from each other
    */
   private async createProofForVc(vc: VcDocument,
@@ -510,8 +550,8 @@ export class Vc extends Logger {
   /**
    * Validates the JWS of a VC Document proof
    *
-   * @param      {VcDocument}  document  The VC Document
-   * @returns     {Promise<void>}  Resolves when done
+   * @param      {VcDocument}    document  The VC Document
+   * @returns    {Promise<void>}           Resolves when done
    */
   private async validateProof(document: VcDocument): Promise<void> {
     // Mock the did-resolver package that did-jwt usually requires
@@ -548,8 +588,8 @@ export class Vc extends Logger {
   /**
    * Checks various criteria a VC document has to meet
    *
-   * @param      {VcDocument}  document  The VC document to check.
-   * @returns     {Promise<void>}  If the checks are succesfull.
+   * @param      {VcDocument}    document  The VC document to check.
+   * @returns    {Promise<void>}           If the checks are succesfull.
    * @throws           If any of the criteria is not met.
    */
   private async validateVcDocument(document: VcDocument): Promise<void> {
@@ -578,8 +618,8 @@ export class Vc extends Logger {
    * Validates whether a given ID is a valid evan VC ID and returns
    * its sections (environment and internal ID)
    *
-   * @param vcId VC ID
-   * @returns {VcIdSections} Sections of the ID
+   * @param   {string}        vcId   VC ID
+   * @returns {VcIdSections}         Sections of the ID
    */
   private async validateVcIdAndGetSections(vcId: string): Promise<VcIdSections> {
     const groups = vcRegEx.exec(vcId);
@@ -599,9 +639,9 @@ export class Vc extends Logger {
   /**
    * Checks if the given VC ID is associated to the active identity at the VC registry
    *
-   * @param vcId VC ID registered at the VC registry
-   * @returns {Promise<void>} Resolves when successful
-   * @throws {Error} If the ID is not valid or the identity is not the ID owner
+   * @param    {string} vcId   VC ID registered at the VC registry
+   * @returns  {Promise<void>} Resolves when successful
+   * @throws   {Error}         If the ID is not valid or the identity is not the ID owner
    */
   private async validateVcIdOwnership(vcId: string): Promise<void> {
     const ownerAddress = await this.options.executor.executeContractCall(
