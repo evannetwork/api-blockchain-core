@@ -168,12 +168,14 @@ export class DigitalTwin extends Logger {
     // check for valid plugin descriptions
     if (config.plugins) {
       Object.keys(config.plugins).forEach((pluginName: string) => {
-        const pluginValidation = options.description.validateDescription({
+        const pluginDescription = {
           public: config.plugins[pluginName].description || config.containerConfig.description,
-        });
+        };
+
+        const pluginValidation = options.description.validateDescription(pluginDescription);
         if (pluginValidation !== true) {
-          throw new Error(`validation of plugin description failed with:
-            ${JSON.stringify(validation)}`);
+          throw new Error(`validation of plugin "${pluginName}" description failed with:
+            ${JSON.stringify(pluginValidation)}`);
         }
       });
     }
@@ -246,10 +248,13 @@ export class DigitalTwin extends Logger {
       // transform plugins to container configs
       const containerPartials: { [id: string]: Partial<ContainerConfig> } = { };
       Object.keys(config.plugins).forEach((pluginName: string) => {
-        containerPartials[pluginName] = { plugin: config.plugins[pluginName] };
+        containerPartials[pluginName] = {
+          description: config.plugins[pluginName].description,
+          plugin: config.plugins[pluginName],
+        };
       });
       // create the containers for the given plugins
-      await twin.createContainers(config.plugins);
+      await twin.createContainers(containerPartials);
     }
 
     return twin;
@@ -445,31 +450,21 @@ export class DigitalTwin extends Logger {
    *                                   always excluded)
    */
   public async exportAsTemplate(getValues = false): Promise<DigitalTwinTemplate> {
-    const twinTemplate: DigitalTwinTemplate = {
-      description: {
-        version: '1.0.0',
-        versions: { },
-      },
-      plugins: { },
-    };
-
     // load twin specific data
     const [description, entries] = (await Promise.all([
       this.getDescription(),
       this.getEntries(),
     ])) as [ any, {[id: string]: DigitalTwinIndexEntry} ];
 
-    // only allow following properties to be exported
-    const allowedDescProperties = [
-      'abis', 'author', 'dapp', 'dataSchema', 'dbcpVersion', 'description',
-      'i18n', 'imgSquare', 'imgWide', 'license', 'name', 'tags',
-    ];
-    allowedDescProperties.forEach((prop: string) => {
-      // eslint-disable-next-line no-prototype-builtins
-      if (!description.hasOwnProperty([prop])) {
-        twinTemplate.description[prop] = description[prop];
-      }
-    });
+    // create clean twin template
+    const twinTemplate: DigitalTwinTemplate = {
+      description: await Container.purgeDescriptionForTemplate({
+        version: '1.0.0',
+        versions: { },
+        ...description,
+      }),
+      plugins: { },
+    };
 
     // load plugin definitions for all containers that are attached to this twin
     await Throttle.all(Object.keys(entries).map((pluginName: string) => async () => {

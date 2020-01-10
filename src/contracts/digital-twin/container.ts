@@ -295,21 +295,26 @@ export class Container extends Logger {
       () => { /* action already handled in filter block */ },
     );
 
+    // setup description: instanceConfig => pluginConfig => defaultContainerConfig
+    // check description values and upload it
+    const envelope: Envelope = { public: instanceConfig.description, };
+    if (!envelope.public) {
+      if (instanceConfig.plugin && instanceConfig.plugin.description) {
+        envelope.public = instanceConfig.plugin.description;
+      } else {
+        envelope.public = Container.defaultDescription;
+      }
+    }
+    // copy description, so configuration params will not be changed 
+    envelope.public = JSON.parse(JSON.stringify(envelope.public));
+
     // convert template properties to jsonSchema
-    if (instanceConfig.plugin
-        && instanceConfig.plugin.template
-        && instanceConfig.plugin.template.properties) {
-      instanceConfig.description.dataSchema = toJsonSchema(
+    if (instanceConfig.plugin && instanceConfig.plugin.template &&
+        instanceConfig.plugin.template.properties) {
+      envelope.public.dataSchema = toJsonSchema(
         instanceConfig.plugin.template.properties,
       );
     }
-
-    // check description values and upload it
-    const envelope: Envelope = {
-      public: JSON.parse(
-        JSON.stringify(instanceConfig.description || Container.defaultDescription),
-      ),
-    };
 
     // ensure abi definition is saved to the data container
     if (!envelope.public.abis) {
@@ -413,6 +418,29 @@ export class Container extends Logger {
     profile: Profile,
   ): Promise<{[id: string]: ContainerPlugin}> {
     return (await profile.getPlugins() || { });
+  }
+
+  /**
+   * Removes properties from a description that aren't necessary for a plugin / template export.
+   *
+   * @param      {any}          description        dbcp container description
+   * @param      {Arraystring}  allowedProperties  array of properties that should be kept
+   * @return     {any}          purged dbcp description
+   */
+  public static purgeDescriptionForTemplate(
+    description: any,
+    allowedProperties: Array<string> = ['author', 'dapp', 'dbcpVersion', 'description', 'i18n',
+      'imgSquare', 'imgWide', 'license', 'name', 'tags']
+  ): any {
+    const purged: any = { };
+    allowedProperties.forEach((prop: string) => {
+      // eslint-disable-next-line no-prototype-builtins
+      if (description.hasOwnProperty(prop)) {
+        purged[prop] = description[prop];
+      }
+    });
+
+    return purged;
   }
 
   /**
@@ -1190,8 +1218,7 @@ export class Container extends Logger {
    */
   public async toPlugin(getValues = false): Promise<ContainerPlugin> {
     await this.ensureContract();
-
-    // fetch description, add fields from data schema
+    // fetch description and create a lean structure
     const description = await this.getDescription();
 
     // create empty plugin
@@ -1199,7 +1226,7 @@ export class Container extends Logger {
       properties: { },
     };
     const plugin: ContainerPlugin = {
-      description,
+      description: Container.purgeDescriptionForTemplate(description),
       template: template as ContainerTemplate,
     };
 

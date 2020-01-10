@@ -19,7 +19,9 @@
 
 export default JSON.parse(`{
   "description": {
-    "description": "Sample twin template",
+    "author": "sample author",
+    "dbcpVersion": 2,
+    "description": "Sample Twin Template",
     "i18n": {
       "de": {
         "description": "Beispiel für eine Vorlage eines Digitalen Zwillings.",
@@ -31,12 +33,14 @@ export default JSON.parse(`{
       }
     },
     "name": "sampletwin",
-    "author": "sample author",
     "version": "1.0.0"
   },
   "plugins": {
     "plugin1": {
       "description": {
+        "author": "sample author",
+        "dbcpVersion": 2,
+        "description": "Sample Twin Plugin 1",
         "i18n": {
           "de": {
             "dataset1": {
@@ -75,23 +79,21 @@ export default JSON.parse(`{
             "name": "Container 1"
           }
         },
-        "name": "maintenance"
+        "name": "plugin1",
+        "version": "1.0.0"
       },
       "template": {
         "properties": {
           "dataset1": {
             "dataSchema": {
               "$id": "dataset1_schema",
-              "items": {
-                "properties": {
-                  "prop1": {
-                    "type": "string"
-                  },
-                  "prop2": {
-                    "type": "string"
-                  }
+              "properties": {
+                "prop1": {
+                  "type": "string"
                 },
-                "type": "object"
+                "prop2": {
+                  "type": "string"
+                }
               },
               "type": "object"
             },
@@ -105,16 +107,13 @@ export default JSON.parse(`{
           "dataset2": {
             "dataSchema": {
               "$id": "dataset2_schema",
-              "items": {
-                "properties": {
-                  "prop1": {
-                    "type": "string"
-                  },
-                  "prop2": {
-                    "type": "string"
-                  }
+              "properties": {
+                "prop1": {
+                  "type": "string"
                 },
-                "type": "object"
+                "prop2": {
+                  "type": "string"
+                }
               },
               "type": "object"
             },
@@ -141,19 +140,10 @@ export default JSON.parse(`{
               "$id": "characteristics_schema",
               "items": {
                 "properties": {
-                  "bicycleType": {
+                  "prop1": {
                     "type": "string"
                   },
-                  "category": {
-                    "type": "string"
-                  },
-                  "color": {
-                    "type": "string"
-                  },
-                  "frameHeight": {
-                    "type": "string"
-                  },
-                  "manufacturer": {
+                  "prop2": {
                     "type": "string"
                   }
                 },
