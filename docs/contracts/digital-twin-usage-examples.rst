@@ -313,8 +313,72 @@ That's it for the simple case. If you want to get fancy, you can have a look at 
   test path: |source container_testListComplex|_
 
 
+--------------------------------------------------------------------------------
+
+.. _template_plugins:
+
+Handling Templates and Plugins
+==============================
+
+Container definitions can be saved as plugins, so they can easy be shared and the structure can be imported by anyone else. These plugins can be combined, including a dbcp description, that represents a whole twin structure, a so called **Twin Template**.
+
+You can find a basic twin template here: `Sample Twin Template <https://github.com/evannetwork/api-blockchain-core/blob/master/src/contracts/digital-twin/testfiles/twin-template.ts>`__.
+
+1. Define a short description of your twin template:
+
+.. code-block:: typescript
+
+  {
+    "description": {
+      "name": "Heavy Machine",
+      "description": "Basic Heavy Machine twin structure."
+    },
+    "plugins": { ... }
+  }
+
+2. Add default plugins to your template:
+
+  {
+    "description": { ... },
+    "plugins": {
+      "plugin1": {
+        "description": {
+          ...
+        },
+        "template": {
+          "properties": {
+            "dataset1": {
+              "dataSchema": {
+                "$id": "dataset1_schema",
+                "properties": {
+                  "prop1": {
+                    "type": "string"
+                  },
+                  "prop2": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "permissions": {
+                "0": [
+                  "set"
+                ]
+              },
+              "type": "entry"
+            }
+          },
+          "type": "plugin1"
+        }
+      },
+      "plugin2": { ... },
+      "pluginX": { ... },
+    }
+  }
 
 --------------------------------------------------------------------------------
+
+
 
 .. required for building markup
 

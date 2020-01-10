@@ -149,7 +149,7 @@ describe('DigitalTwin', function test() {
       expect(favorites).to.not.include(await twin.getContractAddress());
     });
   });
-  
+
   describe('when working with tempaltes', () => {
     it('can create new contracts using twin templates', async () => {
       const configWithTemplate = {
@@ -215,7 +215,7 @@ describe('DigitalTwin', function test() {
       expect(template.description).to.not.have.property('dataSchema');
 
       // checkup plugin1
-      const plugin1 = template.plugins.plugin1;
+      const { plugin1, plugin2 } = template.plugins;
       expect(template.plugins).to.have.property('plugin1');
       expect(plugin1.description.name).to.be.eq('plugin1');
       expect(plugin1.description.i18n.en.name).to.be.eq('Container 1');
@@ -226,7 +226,6 @@ describe('DigitalTwin', function test() {
       expect(plugin1.template.properties).to.have.property('dataset2');
 
       // checkup plugin2
-      const plugin2 = template.plugins.plugin2;
       expect(template.plugins).to.have.property('plugin2');
       expect(plugin2.description).to.not.have.property('i18n');
       expect(plugin2.template.type).to.be.eq('plugin2');

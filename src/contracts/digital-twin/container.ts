@@ -297,7 +297,7 @@ export class Container extends Logger {
 
     // setup description: instanceConfig => pluginConfig => defaultContainerConfig
     // check description values and upload it
-    const envelope: Envelope = { public: instanceConfig.description, };
+    const envelope: Envelope = { public: instanceConfig.description };
     if (!envelope.public) {
       if (instanceConfig.plugin && instanceConfig.plugin.description) {
         envelope.public = instanceConfig.plugin.description;
@@ -305,12 +305,12 @@ export class Container extends Logger {
         envelope.public = Container.defaultDescription;
       }
     }
-    // copy description, so configuration params will not be changed 
+    // copy description, so configuration params will not be changed
     envelope.public = JSON.parse(JSON.stringify(envelope.public));
 
     // convert template properties to jsonSchema
-    if (instanceConfig.plugin && instanceConfig.plugin.template &&
-        instanceConfig.plugin.template.properties) {
+    if (instanceConfig.plugin && instanceConfig.plugin.template
+      && instanceConfig.plugin.template.properties) {
       envelope.public.dataSchema = toJsonSchema(
         instanceConfig.plugin.template.properties,
       );
@@ -430,7 +430,7 @@ export class Container extends Logger {
   public static purgeDescriptionForTemplate(
     description: any,
     allowedProperties: Array<string> = ['author', 'dapp', 'dbcpVersion', 'description', 'i18n',
-      'imgSquare', 'imgWide', 'license', 'name', 'tags']
+      'imgSquare', 'imgWide', 'license', 'name', 'tags'],
   ): any {
     const purged: any = { };
     allowedProperties.forEach((prop: string) => {
