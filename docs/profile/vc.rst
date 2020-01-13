@@ -139,7 +139,7 @@ Create a signed **off-chain** VC document
 Parameters
 ----------
 
-#. ``vcData`` - ``VcDocumentTemplate``: Collection of mandatory and optional VC properties to store in the VC document
+#. ``vcData`` - :ref:`VcDocumentTemplate`: Collection of mandatory and optional VC properties to store in the VC document
 
 -------
 Returns
@@ -227,6 +227,7 @@ Parameters
 
 #. ``vcData`` - :ref:`VcDocumentTemplate`: Collection of mandatory and optional VC properties to store in the VC document
 #. ``encryptionInfo`` - :ref:`VcEncryptionInfo`: (optional): Information required for encryption
+
 -------
 Returns
 -------
@@ -252,6 +253,7 @@ Example
   const permanentVcAddress = createdVcDoc.id;
 
 .. code-block:: typescript
+
   const myRegisteredId = await runtime.vc.createId();
   const minimalVcData = {
       issuer: {
@@ -366,7 +368,7 @@ configuration settings required for the encryption and decryption
 
 
 
-.. _VcEncryptionInfo:
+.. _VcDocumentTemplate:
 
 ----------------
 DocumentTemplate
@@ -376,14 +378,69 @@ Template for the VC document containing the relevant data
 
 #. ``id``-``string``: the id of the VC
 #. ``type``-``string``: set of unordered URIs
-#. ``issuer``-``VcIssuer``: issuer of VC details
-    *``id``-``string``: id of the issuer
-    *``name``-``string`` (optional): name of the issuer
+#. ``issuer``- :ref:`VcIssuer`: VC issuer details
 #. ``validFrom``-``string``: date from which the VC is valid
 #. ``validUntil``-``string`` (optional): date until which the VC is valid
-#. ``credentialSubject``-``VcCredentialSubject``: subject details of VC
-#. ``credentialStatus``-``VcCredentialStatus`` (optional): details regarding the status of VC
-#. ``proof``-``VcProof`` (optional): proof of the respective VC
+#. ``credentialSubject``- :ref:`VcCredentialSubject`: subject details of VC
+#. ``credentialStatus``- :ref:`VcCredentialStatus` (optional): details regarding the status of VC
+#. ``proof``- :ref:`VcProof` (optional): proof of the respective VC
+
+
+
+.. _VcIssuer:
+
+--------
+VcIssuer
+--------
+
+Template for the VC Issuer containing the relevant data
+
+#. ``id``-``string``: the id of the issuer
+#. ``name``-``string`` (optional): name of the issuer
+
+
+
+.. _VcCredentialSubject:
+
+-------------------
+VcCredentialSubject
+-------------------
+
+Template for the VC credential subject containing the relevant data
+
+#. ``id``-``string``: the id of the subject
+#. ``data``-``VcCredentialSubjectPayload`` (optional): data payload for subject
+#. ``description``-``string`` (optional): description about subject
+#. ``uri``-``string`` (optional): uri of subject 
+
+
+
+.. _VcCredentialStatus:
+
+------------------
+VcCredentialStatus
+------------------
+
+Template for the VC credential status containing the status data
+
+#. ``id``-``string``: the id of the VC
+#. ``type``-``string``: VC status type 
+
+
+
+.. _VcProof:
+
+-------
+VcProof
+-------
+
+proof for VC, contains JWS and metadata
+
+#. ``type``-``string``: VC status type
+#. ``created``-``string``: date when the proof was created
+#. ``proofPurpose``-``string``: purpose of the proof
+#. ``verificationmethod``-``string``: method used for verification
+#. ``jws``-``string``: JSON Web Signature
 
 
 
