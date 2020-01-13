@@ -298,6 +298,7 @@ export class Container extends Logger {
     // setup description: instanceConfig => pluginConfig => defaultContainerConfig
     // check description values and upload it
     const envelope: Envelope = { public: instanceConfig.description };
+
     if (!envelope.public) {
       if (instanceConfig.plugin && instanceConfig.plugin.description) {
         envelope.public = instanceConfig.plugin.description;
