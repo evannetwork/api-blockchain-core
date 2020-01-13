@@ -345,19 +345,22 @@ You can find a basic twin template here: `Sample Twin Template <https://github.c
   {
     "description": { ... },
     "plugins": {
-      "plugin1": {
+      "data": {
         "description": {
           ...
         },
         "template": {
           "properties": {
-            "dataset1": {
+            "productionProfile": {
               "dataSchema": {
                 "properties": {
-                  "prop1": {
+                  "id": {
                     "type": "string"
                   },
-                  "prop2": {
+                  "dateOfManufacturing": {
+                    "type": "string"
+                  },
+                  "category": {
                     "type": "string"
                   }
                 },
@@ -371,7 +374,7 @@ You can find a basic twin template here: `Sample Twin Template <https://github.c
               "type": "entry"
             }
           },
-          "type": "plugin1"
+          "type": "heavyMachineData"
         }
       },
       "plugin2": { ... },
@@ -399,38 +402,38 @@ You can find a basic twin template here: `Sample Twin Template <https://github.c
       }
     },
     "plugins": {
-      "plugin1": {
+      "data": {
         "description": {
           "i18n": {
             "de": {
-              "dataset1": {
+              "productionProfile": {
                 "description": "Beschreibung Datenset",
                 "name": "Datenset 1",
                 "properties": {
-                  "prop1": {
-                    "label": "Prop 1",
-                    "placeholder": "Wert für Property 1 eingeben."
+                  "id": {
+                    "label": "TWIN ID",
+                    "placeholder": "Bitte geben Sie eine Produktions-ID ein."
                   },
                   ...
                 }
               },
-              "description": "Beschreibung Container 1",
-              "name": "Container 1"
+              "description": "Generelle Daten einer Baumaschine.",
+              "name": "Produktdaten"
             },
             "en": {
-              "dataset1": {
+              "productionProfile": {
                 "description": "description data set",
                 "name": "dataset 1",
                 "properties": {
-                  "prop1": {
-                    "label": "Prop 1.",
-                    "placeholder": "Enter value for property 1."
+                  "id": {
+                    "label": "TWIN ID.",
+                    "placeholder": "Please insert production id."
                   },
                   ...
                 }
               },
-              "description": "description container 1",
-              "name": "Container 1"
+              "description": "General information about a heavy machine.",
+              "name": "Product data"
             }
           }
         },
@@ -462,7 +465,7 @@ You can find a basic twin template here: `Sample Twin Template <https://github.c
   // {
   //   "description": { ... },
   //   "plugins": {
-  //     "plugin1": {
+  //     "data": {
   //       "description": {
   //         ...
   //       },
