@@ -167,7 +167,7 @@ Example
 
 --------------------------------------------------------------------------------
 
-.. _vc_getVc:
+.. _vc_getVc_VcEncryptionInfo:
 
 getVc
 ================================================================================
@@ -176,13 +176,14 @@ Get VC document for given VC ID.
 
 .. code-block:: typescript
 
-  vc.getVc(vcId);
+  vc.getVc(vcId, encryptionInfo);
 
 ----------
 Parameters
 ----------
 
 #. ``vcId`` - ``string``: ID to fetch VC document for. Can be either a full VC URI (starting with ``vc:evan:``) or just the VC ID (starting with ``0x``)
+#. ``encryptionInfo`` - :ref:`VcEncryptionInfo`: (optional): Information required for decryption
 
 -------
 Returns
@@ -199,17 +200,23 @@ Example
   const storedVcDoc = await vc.getVc('0x2a838a6961be98f6a182f375bb9158848ee9760ca97a379939ccdf03fc442a23');
   const otherStoredVcDoc = await vc.getVc('vc:evan:testcore:0x2a838a6961be98f6a182f375bb9158848ee9760ca97a379939ccdf03fc442a23');
 
+  // using encryption
+  const fetchedEncryptedVcDoc = await vc.getVc('0x2a838a6961be98f6a182f375bb9158848ee9760ca97a379939ccdf03fc442a23', encryptionInfo);
+  const otherFetchedEncryptedVcDoc = await vc.getVc('vc:evan:testcore:0x2a838a6961be98f6a182f375bb9158848ee9760ca97a379939ccdf03fc442a23', encryptionInfo);
+
 --------------------------------------------------------------------------------
 
 
-.. _vc_storeVc:
+.. _vc_storeVc_VcEncryptionInfo:
+.. _vc_storeVc_VcDocumentTemplate:
+.. _vc_storeVc_Vc:
 
 storeVc
 ================================================================================
 
 .. code-block:: typescript
 
-  vc.storeVc(vcData, shouldRegisterNewId);
+  vc.storeVc(vcData, encryptionInfo);
 
 Create a new VC that holds the given data and **store it on the chain**.
 Whether a new ID should be registered with the VC registry or the given ID in the document should be used depends of if ``vcData.id`` is set. If set, the method calls ``createId()`` to generate a new ID.
@@ -218,8 +225,8 @@ Whether a new ID should be registered with the VC registry or the given ID in th
 Parameters
 ----------
 
-#. ``vcData`` - ``VcDocumentTemplate``: Collection of mandatory and optional VC properties to store in the VC document
-
+#. ``vcData`` - :ref:`VcDocumentTemplate`: Collection of mandatory and optional VC properties to store in the VC document
+#. ``encryptionInfo`` - :ref:`VcEncryptionInfo`: (optional): Information required for encryption
 -------
 Returns
 -------
@@ -338,6 +345,49 @@ Example
 
 
 
+--------------------------------------------------------------------------------
+
+Additional Components
+======================
+
+
+Interfaces
+==========
+
+.. _VcEncryptionInfo:
+
+--------------
+EncryptionInfo
+--------------
+
+configuration settings required for the encryption and decryption
+
+#. ``key``-``string``: the encryption key required for encrypting and decrypting the VC
+
+
+
+.. _VcEncryptionInfo:
+
+----------------
+DocumentTemplate
+----------------
+
+Template for the VC document containing the relevant data
+
+#. ``id``-``string``: the id of the VC
+#. ``type``-``string``: set of unordered URIs
+#. ``issuer``-``VcIssuer``: issuer of VC details
+    *``id``-``string``: id of the issuer
+    *``name``-``string`` (optional): name of the issuer
+#. ``validFrom``-``string``: date from which the VC is valid
+#. ``validUntil``-``string`` (optional): date until which the VC is valid
+#. ``credentialSubject``-``VcCredentialSubject``: subject details of VC
+#. ``credentialStatus``-``VcCredentialStatus`` (optional): details regarding the status of VC
+#. ``proof``-``VcProof`` (optional): proof of the respective VC
+
+
+
+--------------------------------------------------------------------------------
 
 .. required for building markup
 
