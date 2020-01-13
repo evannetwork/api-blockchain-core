@@ -165,7 +165,7 @@ describe('DigitalTwin', function test() {
       expect((await promise).id).to.eq(did);
       expect((await promise).controller).to.eq(ownerDid);
       expect((await promise).authentication
-        .filter((id) => id === ownerDidDocument.authentication[0]));
+        .filter((id) => id === ownerDidDocument.authentication[0]).length).to.be.above(0);
     });
   });
 
