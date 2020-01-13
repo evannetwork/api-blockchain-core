@@ -149,7 +149,7 @@ describe('DigitalTwin', function test() {
       expect(favorites).to.not.include(await twin.getContractAddress());
     });
 
-    it.only('automatically creates a valid did document upon twin creation', async () => {
+    it('automatically creates a valid did document upon twin creation', async () => {
       const twin = await DigitalTwin.create(runtime, defaultConfig);
       const twinIdentity = (await twin.getDescription()).identity;
       const did = await runtime.did.convertIdentityToDid(twinIdentity);
