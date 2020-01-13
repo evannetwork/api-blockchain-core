@@ -56,7 +56,17 @@ export enum DigitalTwinEntryType {
  */
 export interface DigitalTwinTemplate {
   /** default description has to be passed to ``.create`` to apply it to to contract */
-  description: any;
+  description: {
+    author: string;
+    description?: string;
+    i18n?: {
+      [language: string]: {
+        description?: string;
+        name: string;
+      };
+    };
+    name: string;
+  };
   /** set of plugins that should be applied to the twin as new containers */
   plugins: { [pluginName: string]: ContainerPlugin };
 }
