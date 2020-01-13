@@ -833,7 +833,7 @@ exportAsTemplate
 
   digitalTwin.exportAsTemplate();
 
-Exports the twin template definition for this twin. Includes the twins dbcp descriptions and all plugins, created out of the twin containers definitions. Can also export containers values within the plugin definitions.
+Exports the twin template definition for this twin. Includes the twins dbcp descriptions and all plugins, created out of the twin containers definitions. Can also export container values within the plugin definitions.
 
 You can find a sample twin template here: |source twinTemplate|_
 

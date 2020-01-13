@@ -298,6 +298,7 @@ export class Container extends Logger {
     // setup description: instanceConfig => pluginConfig => defaultContainerConfig
     // check description values and upload it
     const envelope: Envelope = { public: instanceConfig.description };
+
     if (!envelope.public) {
       if (instanceConfig.plugin && instanceConfig.plugin.description) {
         envelope.public = instanceConfig.plugin.description;
@@ -309,7 +310,7 @@ export class Container extends Logger {
     envelope.public = JSON.parse(JSON.stringify(envelope.public));
 
     // convert template properties to jsonSchema
-    if (instanceConfig.plugin && instanceConfig.plugin.template
+    if (instanceConfig?.plugin?.template?.properties) {
       && instanceConfig.plugin.template.properties) {
       envelope.public.dataSchema = toJsonSchema(
         instanceConfig.plugin.template.properties,
