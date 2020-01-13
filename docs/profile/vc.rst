@@ -39,7 +39,7 @@ Creates a new `Vc` instance.
 Parameters
 ----------
 
-#. ``options`` - ``DidOptions``: options for Did constructor.
+#. ``options`` - ``DidOptions``: options for Vc constructor.
     * ``accountStore`` - |source accountStore|_: |source accountStore|_ instance
     * ``activeAccount`` - ``string``: ID of the active account
     * ``contractLoader`` - |source contractLoader|_: |source contractLoader|_ instance
@@ -54,7 +54,8 @@ Parameters
     * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
     * ``logLogLevel`` - |source logLevel|_ (optional): messages with this level will be pushed to ``logLog``
-#. ``credentialStatusEndpoint`` - ``string``: URL of the credential status endpoint
+#. ``config`` - ``VcConfig``: custom configuration for Vc constructor.
+    * ``credentialStatusEndpoint`` - ``string``: URL of the credential status endpoint
 
 -------
 Returns
