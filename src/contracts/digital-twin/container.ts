@@ -311,7 +311,6 @@ export class Container extends Logger {
 
     // convert template properties to jsonSchema
     if (instanceConfig?.plugin?.template?.properties) {
-      && instanceConfig.plugin.template.properties) {
       envelope.public.dataSchema = toJsonSchema(
         instanceConfig.plugin.template.properties,
       );
