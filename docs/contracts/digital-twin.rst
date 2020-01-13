@@ -859,6 +859,22 @@ Example
   const template = await twin.exportAsTemplate();
 
   console.log(template);
+  // {
+  //   "description": { ... },
+  //   "plugins": {
+  //     "plugin1": {
+  //       "description": {
+  //         ...
+  //       },
+  //       "template": {
+  //         ...
+  //       }
+  //     },
+  //     "pluginX": {
+  //       ...
+  //     }
+  //   }
+  // }
 
 
 --------------------------------------------------------------------------------
