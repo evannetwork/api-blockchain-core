@@ -434,8 +434,7 @@ export class Container extends Logger {
   ): any {
     const purged: any = { };
     allowedProperties.forEach((prop: string) => {
-      // eslint-disable-next-line no-prototype-builtins
-      if (description.hasOwnProperty(prop)) {
+      if (Object.prototype.hasOwnProperty.call(description, prop)) {
         purged[prop] = description[prop];
       }
     });
