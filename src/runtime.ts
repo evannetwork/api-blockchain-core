@@ -249,14 +249,8 @@ export async function createDefaultRuntime(
     for (const accountId in runtimeConfig.keyConfig) {
       // check if the key is a valid accountId
       if (accountId.length === 42) {
-        const sha9Account = web3.utils.soliditySha3.apply(
-          web3.utils.soliditySha3,
-          [
-            web3.utils.soliditySha3(accountId),
-            web3.utils.soliditySha3(accountId),
-          ].sort(),
-        );
         const sha3Account = web3.utils.soliditySha3(accountId);
+        const sha9Account = web3.utils.soliditySha3(sha3Account, sha3Account);
         const dataKey = web3.utils
           .keccak256(accountId + runtimeConfig.keyConfig[accountId])
           .replace(/0x/g, '');
@@ -273,9 +267,9 @@ export async function createDefaultRuntime(
     }
   }
 
-
   const keyProvider = options.keyProvider
     || new KeyProvider({ keys: runtimeConfig.keyConfig, log });
+  keyProvider.currentAccountHash = nameResolver.soliditySha3(keyProvider);
 
   // description
   const description = options.description || new Description({
@@ -318,6 +312,17 @@ export async function createDefaultRuntime(
   } else {
     activeIdentity = activeAccount;
     underlyingAccount = activeIdentity;
+  }
+
+  const sha3Identity = web3.utils.soliditySha3(activeIdentity);
+  if ((activeIdentity !== underlyingAccount) && !runtimeConfig.keyConfig[sha3Identity]) {
+    const sha9Identity = web3.utils.soliditySha3(sha3Identity, sha3Identity);
+    const sha3Account = web3.utils.soliditySha3(underlyingAccount);
+    const sha9Account = web3.utils.soliditySha3(sha3Account, sha3Account);
+    // eslint-disable-next-line no-param-reassign
+    runtimeConfig.keyConfig[sha3Identity] = runtimeConfig.keyConfig[sha3Account];
+    // eslint-disable-next-line no-param-reassign
+    runtimeConfig.keyConfig[sha9Identity] = runtimeConfig.keyConfig[sha9Account];
   }
 
   // check if the dfs remoteNode matches our ipfslib
@@ -385,6 +390,7 @@ export async function createDefaultRuntime(
   // 'own' key provider, that won't be linked to profile and used in 'own' ipld
   // this prevents key lookup infinite loops
   const keyProviderOwn = new KeyProvider({ keys: runtimeConfig.keyConfig, log });
+  keyProviderOwn.currentAccountHash = nameResolver.soliditySha3(activeIdentity);
   const ipldOwn = new Ipld({
     ipfs: dfs as Ipfs,
     keyProvider: keyProviderOwn,
@@ -428,7 +434,6 @@ export async function createDefaultRuntime(
     ipld: ipldOwn,
     log,
     nameResolver,
-    profileOwner: activeIdentity,
     rightsAndRoles,
     sharing,
   });

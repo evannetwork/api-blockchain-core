@@ -21,21 +21,24 @@ import 'mocha';
 import { expect, use } from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
 
-import { Ipfs } from './dfs/ipfs';
 import { Ipld } from './dfs/ipld';
 import { KeyExchange } from './keyExchange';
 import { Mailbox } from './mailbox';
-import { Onboarding } from './onboarding';
 import { Profile } from './profile/profile';
 import { Runtime } from './index';
 import { TestUtils } from './test/test-utils';
 import { accounts } from './test/accounts';
 
 use(chaiAsPromised);
+let useIdentity = false;
+try {
+  useIdentity = JSON.parse(process.env.USE_IDENTITY);
+} catch (_) {
+  // silently continue
+}
 
 describe('KeyExchange class', function test() {
   this.timeout(600000);
-  let ipfs: Ipfs;
   let mailbox: Mailbox;
   let mailbox2: Mailbox;
   let keyExchange1: KeyExchange;
@@ -49,7 +52,7 @@ describe('KeyExchange class', function test() {
   before(async () => {
     runtimes = await Promise.all(
       accounts.slice(0, 2).map(
-        (account) => TestUtils.getRuntime(account, null, { useIdentity: true }),
+        (account) => TestUtils.getRuntime(account, null, { useIdentity }),
       ),
     );
     ([{

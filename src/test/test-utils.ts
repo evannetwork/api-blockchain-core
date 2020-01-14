@@ -19,7 +19,6 @@
 
 import * as Web3 from 'web3';
 
-import { accountMap, accounts } from './accounts';
 import { configTestcore as config } from '../config-testcore';
 import {
   AccountStore,
@@ -58,6 +57,12 @@ import {
   Runtime,
   createDefaultRuntime,
 } from '../runtime';
+import {
+  accountMap,
+  accounts,
+  dataKeys,
+  identities,
+} from './accounts';
 
 import crypto = require('crypto');
 import smartContract = require('@evan.network/smart-contracts-core');
@@ -69,37 +74,7 @@ export const sampleContext = 'context sample';
 const web3Provider = (process.env.CHAIN_ENDPOINT as any) || 'wss://testcore.evan.network/ws';
 // due to issues with typings in web3 remove type from Web3
 const localWeb3 = new (Web3 as any)(web3Provider, null, { transactionConfirmationBlocks: 1 });
-const sampleKeys = {};
 
-const identities = [
-  '0xD032Cbee0495521Bf16B24dfC641D8A9b695E58a',
-  '0x5AECF22953A9c08E4CbAE93BF871175323034b82',
-];
-
-// dataKeys
-sampleKeys[localWeb3.utils.soliditySha3(identities[0])] = 'c2b54df69be5df0a34f1da1381a61ea03432299f6a6f8aeb434f9714f32ff22a'; // plain acc0 key
-sampleKeys[localWeb3.utils.soliditySha3(identities[1])] = 'b1210bbc38d78fbc411dbb376be4af48bb49d4407f097a06af18471a71741ed2'; // plain acc1 key
-sampleKeys[localWeb3.utils.soliditySha3(sampleContext)] = '00000000000000000000000000000000000000000000000000000000005a3973';
-sampleKeys[localWeb3.utils.soliditySha3(publicMailBoxExchange)] = '346c22768f84f3050f5c94cec98349b3c5cbfa0b7315304e13647a4918ffff22'; // accX <--> mailbox edge key
-sampleKeys[localWeb3.utils.soliditySha3('wulfwulf.test')] = '00000000000000000000000000000000000000000000000000000000005a3973';
-sampleKeys[localWeb3.utils.soliditySha3(accounts[2])] = '00d1267b27c3a80080f9e1b6ba01de313b53ab58000000000000000000000022';
-sampleKeys[localWeb3.utils.soliditySha3(accounts[3])] = '483257531bc9456ea783e44d325f8a384a4b89da81dac00e589409431692f218';
-
-// commKeys
-sampleKeys[localWeb3.utils.soliditySha3.apply(localWeb3.utils.soliditySha3,
-  [localWeb3.utils.soliditySha3(identities[0]), localWeb3.utils.soliditySha3(identities[0])].sort())] = 'c2b54df69be5df0a34f1da1381a61ea03432299f6a6f8aeb434f9714f32ff22a'; // acc0 <--> acc0 edge key
-sampleKeys[localWeb3.utils.soliditySha3.apply(localWeb3.utils.soliditySha3,
-  [localWeb3.utils.soliditySha3(accounts[0]), localWeb3.utils.soliditySha3(accounts[1])].sort())] = '001de828935e8c7e4cb50030c5e7394585400b1f000000000000000000000001'; // acc0 <--> acc1 edge key
-sampleKeys[localWeb3.utils.soliditySha3.apply(localWeb3.utils.soliditySha3,
-  [localWeb3.utils.soliditySha3(accounts[0]), localWeb3.utils.soliditySha3(accounts[2])].sort())] = '001de828935e8c7e4cb500d1267b27c3a80080f9000000000000000000000002'; // acc0 <--> acc1 edge key
-sampleKeys[localWeb3.utils.soliditySha3.apply(localWeb3.utils.soliditySha3,
-  [localWeb3.utils.soliditySha3(identities[1]), localWeb3.utils.soliditySha3(identities[1])].sort())] = 'b1210bbc38d78fbc411dbb376be4af48bb49d4407f097a06af18471a71741ed2';
-sampleKeys[localWeb3.utils.soliditySha3.apply(localWeb3.utils.soliditySha3,
-  [localWeb3.utils.soliditySha3(accounts[1]), localWeb3.utils.soliditySha3(accounts[2])].sort())] = '0030c5e7394585400b1f00d1267b27c3a80080f9000000000000000000000012'; // acc1 <--> acc2 edge key
-sampleKeys[localWeb3.utils.soliditySha3.apply(localWeb3.utils.soliditySha3,
-  [localWeb3.utils.soliditySha3(accounts[2]), localWeb3.utils.soliditySha3(accounts[2])].sort())] = '00d1267b27c3a80080f9e1b6ba01de313b53ab58000000000000000000000022';
-sampleKeys[localWeb3.utils.soliditySha3.apply(localWeb3.utils.soliditySha3,
-  [localWeb3.utils.soliditySha3(accounts[3]), localWeb3.utils.soliditySha3(accounts[3])].sort())] = '483257531bc9456ea783e44d325f8a384a4b89da81dac00e589409431692f218';
 
 export class TestUtils {
   public static getAccountStore(): AccountStore {
@@ -296,7 +271,12 @@ export class TestUtils {
       dfsConfig: { host: 'ipfs.test.evan.network', port: '443', protocol: 'https' },
       disablePin: true,
     });
-    ipfs.setRuntime({ signer, activeAccount: accounts[0], web3: this.getWeb3() });
+    ipfs.setRuntime({
+      activeAccount: accounts[0],
+      signer,
+      underlyingAccount: identities[0],
+      web3: this.getWeb3(),
+    });
     return ipfs;
   }
 
@@ -307,14 +287,14 @@ export class TestUtils {
       // crypto provider
       const cryptoProvider = this.getCryptoProvider();
       // key provider
-      const keyProvider = _keyProvider || (new KeyProvider({ keys: sampleKeys }));
+      const keyProvider = _keyProvider || (new KeyProvider({ keys: dataKeys }));
 
       resolve(new Ipld({
         ipfs,
         keyProvider,
         cryptoProvider,
         defaultCryptoAlgo: 'aes',
-        originator: nameResolver.soliditySha3(accounts[0]),
+        originator: nameResolver.soliditySha3(identities[0]),
         nameResolver,
       }));
     });
@@ -323,18 +303,18 @@ export class TestUtils {
   public static getKeyProvider(requestedKeys?: string[]) {
     let keys;
     if (!requestedKeys) {
-      keys = sampleKeys;
+      keys = dataKeys;
     } else {
       keys = {};
       requestedKeys.forEach((key) => {
-        keys[key] = sampleKeys[key];
+        keys[key] = dataKeys[key];
       });
     }
     return new KeyProvider({ keys });
   }
 
   public static getKeys(): any {
-    return sampleKeys;
+    return dataKeys;
   }
 
   public static getLogger(): Function {
@@ -382,7 +362,7 @@ export class TestUtils {
     executor.eventHub = await TestUtils.getEventHub(web3);
 
     const profile = new Profile({
-      accountId: accountId || accounts[0],
+      accountId: accountId || identities[0],
       contractLoader: await TestUtils.getContractLoader(web3),
       cryptoProvider: await TestUtils.getCryptoProvider(),
       dataContract: await TestUtils.getDataContract(web3, dfs),
@@ -419,11 +399,11 @@ export class TestUtils {
   public static async getRuntime(accountId, requestedKeys?, customConfig = {}): Promise<Runtime> {
     let keys;
     if (!requestedKeys) {
-      keys = sampleKeys;
+      keys = dataKeys;
     } else {
       keys = {};
       requestedKeys.forEach((key) => {
-        keys[key] = sampleKeys[key];
+        keys[key] = dataKeys[key];
       });
     }
     return createDefaultRuntime(
