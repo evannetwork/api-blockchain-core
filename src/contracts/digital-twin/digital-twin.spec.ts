@@ -30,6 +30,7 @@ import { configTestcore as config } from '../../config-testcore';
 import { Container } from './container';
 import { TestUtils } from '../../test/test-utils';
 import { VerificationsStatus } from '../../verifications/verifications';
+import twinTemplate from './testfiles/twin-template';
 import {
   DigitalTwin,
   DigitalTwinConfig,
@@ -146,6 +147,105 @@ describe('DigitalTwin', function test() {
       await twin.removeFromFavorites();
       favorites = await DigitalTwin.getFavorites(runtime);
       expect(favorites).to.not.include(await twin.getContractAddress());
+    });
+  });
+
+  describe('when working with tempaltes', () => {
+    it('can create new contracts using twin templates', async () => {
+      const configWithTemplate = {
+        ...defaultConfig,
+        ...twinTemplate,
+      };
+      const twin = await DigitalTwin.create(runtime, configWithTemplate);
+      expect(await twin.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
+
+      // check if containers were created
+      const entries = await twin.getEntries();
+      expect(entries).to.have.property('plugin1');
+      expect(entries).to.have.property('plugin2');
+
+      // ensure plugin descriptions
+      const plugin1: Container = entries.plugin1.value;
+      const plugin2: Container = entries.plugin2.value;
+
+      // check plugin 1
+      const plugin1Desc = await plugin1.getDescription();
+      // check correct i18n
+      expect(plugin1Desc.i18n.en).to.have.property('dataset1');
+      expect(plugin1Desc.i18n.en.dataset1.name).to.be.eq('dataset 1');
+      // check correct properties
+      expect(plugin1Desc.dataSchema).to.have.property('dataset1');
+      expect(plugin1Desc.dataSchema).to.have.property('dataset2');
+      expect(plugin1Desc.dataSchema.dataset1.type).to.be.eq('object');
+      expect(plugin1Desc.dataSchema.dataset1.properties).to.have.property('prop1');
+      expect(plugin1Desc.dataSchema.dataset1.properties.prop1.type).to.be.eq('string');
+
+      // check plugin 2
+      const plugin2Desc = await plugin2.getDescription();
+      // check correct i18n
+      expect(plugin2Desc).to.not.have.property('i18n');
+      // check correct properties
+      expect(plugin2Desc.dataSchema).to.have.property('testlist');
+      expect(plugin2Desc.dataSchema.testlist.type).to.be.eq('array');
+      expect(plugin2Desc.dataSchema.testlist.items.type).to.be.eq('object');
+      expect(plugin2Desc.dataSchema.testlist.items.properties).to.have.property('prop1');
+      expect(plugin2Desc.dataSchema.testlist.items.properties.prop1.type).to.be.eq('string');
+
+      // check initial values
+      const dataset1Value = await plugin1.getEntry('dataset1');
+      expect(dataset1Value.prop1).to.be.eq(undefined);
+      const dataset2Value = await plugin1.getEntry('dataset2');
+      expect(dataset2Value.prop1).to.be.eq('test value 1');
+      expect(dataset2Value.prop2).to.be.eq('test value 2');
+    });
+
+    it('can export a twin template from a twin', async () => {
+      const configWithTemplate = {
+        ...defaultConfig,
+        ...twinTemplate,
+      };
+      const twin = await DigitalTwin.create(runtime, configWithTemplate);
+      const template = await twin.exportAsTemplate();
+
+      // check exported description
+      expect(template.description.name).to.be.eq('sampletwin');
+      expect(template.description.author).to.be.eq('sample author');
+      expect(template.description.description).to.be.eq('Sample Twin Template');
+      expect(template.description.i18n.en.name).to.be.eq('Sample Twin Template');
+      expect(template.description).to.not.have.property('dataSchema');
+
+      // checkup plugin1
+      const { plugin1, plugin2 } = template.plugins;
+      expect(template.plugins).to.have.property('plugin1');
+      expect(plugin1.description.name).to.be.eq('plugin1');
+      expect(plugin1.description.i18n.en.name).to.be.eq('Container 1');
+      expect(plugin1.description.i18n.en.dataset1.properties).to.have.property('prop1');
+      expect(plugin1.template.type).to.be.eq('plugin1');
+      expect(plugin1.template.properties).to.have.property('dataset1');
+      expect(plugin1.template.properties.dataset1.dataSchema.properties).to.have.property('prop1');
+      expect(plugin1.template.properties).to.have.property('dataset2');
+
+      // checkup plugin2
+      expect(template.plugins).to.have.property('plugin2');
+      expect(plugin2.description).to.not.have.property('i18n');
+      expect(plugin2.template.type).to.be.eq('plugin2');
+      expect(plugin2.template.properties).to.have.property('testlist');
+      expect(plugin2.template.properties.testlist.dataSchema.items.properties).to.have
+        .property('prop1');
+    });
+
+    it('can export a twin template from a twin with value', async () => {
+      const configWithTemplate = {
+        ...defaultConfig,
+        ...twinTemplate,
+      };
+      const twin = await DigitalTwin.create(runtime, configWithTemplate);
+      const { plugins: { plugin1, plugin2 } } = await twin.exportAsTemplate(true);
+
+      expect(plugin2.template.properties.testlist.value).to.be.eq(undefined);
+      expect(plugin1.template.properties.dataset1.value).to.be.eq(undefined);
+      expect(plugin1.template.properties.dataset2.value.prop1).to.be.eq('test value 1');
+      expect(plugin1.template.properties.dataset2.value.prop2).to.be.eq('test value 2');
     });
   });
 

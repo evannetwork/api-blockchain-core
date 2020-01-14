@@ -2,6 +2,8 @@
 
 ## Next Version
 ### Features
+- allow `plugins` property within `DigitalTwin.create` to create initial containers
+- add `DigitalTwin.exportAsTemplate` to copy a existing twin configuration
 
 ### Fixes
 
