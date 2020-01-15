@@ -939,16 +939,18 @@ export class Container extends Logger {
    * @param      {any}  description  description (public part)
    */
   public async setDescription(description: any): Promise<void> {
+    const toSave = JSON.parse(JSON.stringify(description));
+
     // ensure dbcp version 2 or higher
-    if (!description.dbcpVersion || description.dbcpVersion < 2) {
-      description.dbcpVersion = 2;
+    if (!toSave.dbcpVersion || toSave.dbcpVersion < 2) {
+      toSave.dbcpVersion = 2;
     }
-    
+
     await this.ensureContract();
     await this.wrapPromise(
       'set description',
       this.options.description.setDescription(
-        this.contract.options.address, { public: description }, this.config.accountId,
+        this.contract.options.address, { public: toSave }, this.config.accountId,
       ),
     );
   }

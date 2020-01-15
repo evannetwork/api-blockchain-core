@@ -154,7 +154,7 @@ describe('DigitalTwin', function test() {
       const customConfig = JSON.parse(JSON.stringify(defaultConfig));
       delete customConfig.containerConfig;
 
-      const twin = new DigitalTwin(runtime, customConfig)
+      const twin = new DigitalTwin(runtime, customConfig);
       expect((twin as any).config.containerConfig.accountId).to.be.eq(defaultConfig.accountId);
     });
 

@@ -340,7 +340,7 @@ export class DigitalTwin extends Logger {
     // fallback to twin accountId, if containerConfig is specified
     this.config.containerConfig = {
       accountId: this.config.accountId,
-      ...this.config.containerConfig
+      ...this.config.containerConfig,
     };
     this.options = options;
     this.mutexes = {};
