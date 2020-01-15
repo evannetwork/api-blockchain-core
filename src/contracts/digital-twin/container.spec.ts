@@ -150,6 +150,16 @@ describe('Container', function test() {
       expect(await container.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
     });
 
+    it('ensure that dbcpVersion 2 is used', async () => {
+      // create custom config without dbcpVersion
+      const customConfig = JSON.parse(JSON.stringify(defaultConfig));
+      delete customConfig.description.dbcpVersion;
+
+      const container = await Container.create(runtimes[owner], defaultConfig);
+      const newDesc = await container.getDescription();
+      expect(newDesc.dbcpVersion).to.be.eq(2);
+    });
+
     it('can create multiple new contracts in parallel without colliding identities', async () => {
       const [container1, container2, container3, container4, container5] = await Promise.all([
         Container.create(runtimes[owner], defaultConfig),

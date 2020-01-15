@@ -148,6 +148,25 @@ describe('DigitalTwin', function test() {
       favorites = await DigitalTwin.getFavorites(runtime);
       expect(favorites).to.not.include(await twin.getContractAddress());
     });
+
+    it('can pass empty containerConfig to twin constructor', () => {
+      // create custom config without container config
+      const customConfig = JSON.parse(JSON.stringify(defaultConfig));
+      delete customConfig.containerConfig;
+
+      const twin = new DigitalTwin(runtime, customConfig)
+      expect((twin as any).config.containerConfig.accountId).to.be.eq(defaultConfig.accountId);
+    });
+
+    it('ensure that dbcpVersion 2 is used', async () => {
+      // create custom config without dbcpVersion
+      const customConfig = JSON.parse(JSON.stringify(defaultConfig));
+      delete customConfig.description.dbcpVersion;
+
+      const twin = await DigitalTwin.create(runtime, defaultConfig);
+      const newDesc = await twin.getDescription();
+      expect(newDesc.dbcpVersion).to.be.eq(2);
+    });
   });
 
   describe('when working with tempaltes', () => {

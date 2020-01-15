@@ -323,6 +323,11 @@ export class Container extends Logger {
       };
     }
 
+    // ensure dbcp version 2 or higher
+    if (!envelope.public.dbcpVersion || envelope.public.dbcpVersion < 2) {
+      envelope.public.dbcpVersion = 2;
+    }
+
     const validation = options.description.validateDescription(envelope);
     if (validation !== true) {
       throw new Error(`validation of description failed with: ${JSON.stringify(validation)}`);
@@ -934,6 +939,11 @@ export class Container extends Logger {
    * @param      {any}  description  description (public part)
    */
   public async setDescription(description: any): Promise<void> {
+    // ensure dbcp version 2 or higher
+    if (!description.dbcpVersion || description.dbcpVersion < 2) {
+      description.dbcpVersion = 2;
+    }
+    
     await this.ensureContract();
     await this.wrapPromise(
       'set description',
