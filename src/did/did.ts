@@ -33,6 +33,7 @@ import {
   NameResolver,
   SignerIdentity,
 } from '../index';
+import { VerificationsDelegationInfo, Verifications } from '../verifications/verifications';
 
 const didRegEx = /^did:evan:(?:(testcore|core):)?(0x(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64}))$/;
 
@@ -81,6 +82,7 @@ export interface DidOptions extends LoggerOptions {
   executor: Executor;
   nameResolver: NameResolver;
   signerIdentity: SignerIdentity;
+  verifications: Verifications;
   web3: any;
 }
 
@@ -231,6 +233,8 @@ export class Did extends Logger {
    *
    * @param      {string}  did       DID to store DID document for
    * @param      {any}     document  DID document to store
+   * @param      {VerificationDelegationInfo} txInfo Optional. If given, the transaction
+   *    is executed on behalf of the tx signer.
    * @return     {Promise<void>}  resolved when done
    */
   public async setDidDocument(did: string, document: any): Promise<void> {
@@ -247,6 +251,34 @@ export class Did extends Logger {
       identity,
       documentHash,
     );
+  }
+
+  /**
+   * Creates a transaction for setting a DID document and returns the signed transaction,
+   * as well as the document's associated ipfs hash
+   *
+   * @param did DID to set document for
+   * @param document Document to store
+   * @returns Tuple of the signed transaction and the document's ipfs hash
+   */
+  public async setDidDocumentOffline(did: string, document: any):
+  Promise<[VerificationsDelegationInfo, string]> {
+    const identity = this.padIdentity(did
+      ? await this.convertDidToIdentity(did)
+      : this.options.signerIdentity.activeIdentity);
+    const documentHash = await this.options.dfs.add(
+      'did-document', Buffer.from(JSON.stringify(document), 'utf8'),
+    );
+
+    const txInfo = await this.options.verifications.signTransaction(
+      await this.getRegistryContract(),
+      'setDidDocument',
+      { from: this.options.signerIdentity.underlyingAccount },
+      identity,
+      documentHash,
+    );
+
+    return [txInfo, documentHash];
   }
 
   /**

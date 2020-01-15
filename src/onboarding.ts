@@ -22,12 +22,16 @@ import { cloneDeep, merge } from 'lodash';
 import {
   Logger,
   LoggerOptions,
+  SignerInternal,
 } from '@evan.network/dbcp';
 
 import { createDefaultRuntime, Runtime } from './runtime';
 import { Mail, Mailbox } from './mailbox';
 import { Profile } from './profile/profile';
 import * as AccountType from './profile/types/types';
+import { SignerIdentity } from './contracts/signer-identity';
+import { Did } from './did/did';
+import { VerificationsDelegationInfo } from './verifications/verifications';
 
 import KeyStore = require('../libs/eth-lightwallet/keystore');
 import https = require('https');
@@ -386,7 +390,6 @@ export class Onboarding extends Logger {
         signature,
         captchaToken: recaptchaToken,
       });
-
       const reqOptions = {
         hostname: `agents${network === 'testcore' ? '.test' : ''}.evan.network`,
         port: 443,
@@ -513,13 +516,25 @@ export class Onboarding extends Logger {
     // re-enable pinning
     profile.ipld.ipfs.disablePin = false;
 
-    const data = JSON.stringify({
+    const data = {
       accountId,
       signature,
       profileInfo: fileHashes,
       accessToken: (requestedProfile as any).accessToken,
       contractId: (requestedProfile as any).contractId,
-    });
+    } as any;
+
+    // TODO if statement can be removed after account/identity switch is done
+    if ((requestedProfile as any).identity) {
+      const didTransactionTuple = await this.createOfflineDidTransaction(runtime,
+        accountId, (requestedProfile as any).identity);
+      const didTransaction = didTransactionTuple[0];
+      const documentHash = didTransactionTuple[1];
+      data.didTransaction = didTransaction;
+      fileHashes.ipfsHashes.push(documentHash);
+    }
+
+    const jsonPayload = JSON.stringify(data);
     const options = {
       hostname: `agents${network === 'testcore' ? '.test' : ''}.evan.network`,
       port: 443,
@@ -527,7 +542,7 @@ export class Onboarding extends Logger {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Content-Length': data.length,
+        'Content-Length': jsonPayload.length,
       },
     };
 
@@ -542,9 +557,51 @@ export class Onboarding extends Logger {
         reject(error);
       });
 
-      req.write(data);
+      req.write(jsonPayload);
       req.end();
     });
+  }
+
+  /**
+   * Create an offline did document for an account identity transaction
+   *
+   * @param runtime Runtime object
+   * @param accountId Account ID of the identity's owner
+   */
+  private static async createOfflineDidTransaction(runtime: any, account: string, identity: string):
+  Promise<[VerificationsDelegationInfo, string]> {
+    const underlyingSigner = new SignerInternal({
+      accountStore: runtime.accountStore,
+      contractLoader: runtime.contractLoader,
+      config: {},
+      web3: runtime.web3,
+    });
+    const signer = new SignerIdentity({
+      contractLoader: runtime.contractLoader,
+      verifications: runtime.verifications,
+      web3: runtime.web3,
+    },
+    {
+      activeIdentity: identity,
+      underlyingAccount: account,
+      underlyingSigner,
+    });
+
+    const did = new Did({
+      contractLoader: runtime.contractLoader,
+      dfs: runtime.dfs,
+      executor: runtime.executor,
+      nameResolver: runtime.nameResolver,
+      signerIdentity: signer,
+      verifications: runtime.verifications,
+      web3: runtime.web3,
+    });
+
+    const doc = await did.getDidDocumentTemplate();
+    const identityDid = await did.convertIdentityToDid(identity);
+    const [txInfo, documentHash] = await did.setDidDocumentOffline(identityDid, doc);
+
+    return [txInfo, documentHash];
   }
 
   public constructor(optionsInput: OnboardingOptions) {
