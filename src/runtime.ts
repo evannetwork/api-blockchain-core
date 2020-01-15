@@ -299,16 +299,23 @@ export async function createDefaultRuntime(
   let activeIdentity: string;
   let underlyingAccount: string;
   if (runtimeConfig.useIdentity) {
-    activeIdentity = await verifications.getIdentityForAccount(activeAccount, true);
-    underlyingAccount = activeAccount;
-    signer.updateConfig(
-      { verifications },
-      {
-        activeIdentity,
-        underlyingAccount,
-        underlyingSigner: signerInternal,
-      },
-    );
+    try {
+      activeIdentity = await verifications.getIdentityForAccount(activeAccount, true);
+      underlyingAccount = activeAccount;
+      signer.updateConfig(
+        { verifications },
+        {
+          activeIdentity,
+          underlyingAccount,
+          underlyingSigner: signerInternal,
+        },
+      );
+    } catch (e) {
+      logger.log(`identity for ${activeAccount} doesn't exist, using exisiting account signing`, 'debug');
+      activeIdentity = activeAccount;
+      underlyingAccount = activeIdentity;
+      signer = signerInternal;
+    }
   } else {
     activeIdentity = activeAccount;
     underlyingAccount = activeIdentity;
