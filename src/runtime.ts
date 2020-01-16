@@ -509,7 +509,7 @@ export async function createDefaultRuntime(
 
 
   if (await profile.exists()) {
-    logger.log(`profile for ${activeIdentity} exists, fetching keys`, 'error');
+    logger.log(`profile for ${activeIdentity} exists, fetching keys`, 'debug');
     try {
       keyExchange.setPublicKey(
         await profile.getPublicKey(),
@@ -518,13 +518,13 @@ export async function createDefaultRuntime(
     } catch (ex) {
       logger.log(
         `fetching keys for ${activeIdentity} failed with "${ex.msg || ex}", `
-        + 'removing profile from runtime', 'error',
+        + 'removing profile from runtime', 'warning',
       );
       profile = null;
       keyProvider.profile = null;
     }
   } else {
-    logger.log(`profile for ${activeIdentity} doesn't exist`, 'error');
+    logger.log(`profile for ${activeIdentity} doesn't exist`, 'debug');
   }
 
   const onboarding = options.onboarding || new Onboarding({
