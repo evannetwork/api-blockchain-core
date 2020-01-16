@@ -29,7 +29,11 @@ import { Onboarding } from './onboarding';
 import { Mailbox } from './mailbox';
 import { TestUtils } from './test/test-utils';
 
+import express = require('express');
+import bodyParser = require('body-parser');
+
 use(chaiAsPromised);
+
 
 describe('Onboarding helper', function test() {
   this.timeout(600000);
@@ -37,13 +41,14 @@ describe('Onboarding helper', function test() {
   let mailbox: Mailbox;
   let onboarding: Onboarding;
   let web3;
+  let profile;
 
   before(async () => {
     web3 = TestUtils.getWeb3();
     ipfs = await TestUtils.getIpfs();
     const keyProvider = await TestUtils.getKeyProvider();
     const ipld = await TestUtils.getIpld(ipfs, keyProvider);
-    const profile = await TestUtils.getProfile(web3, ipfs, ipld);
+    profile = await TestUtils.getProfile(web3, ipfs, ipld);
     await profile.loadForAccount();
     keyProvider.init(profile);
     [keyProvider.currentAccount] = accounts;
@@ -148,5 +153,73 @@ describe('Onboarding helper', function test() {
       subject: 'evan.network Onboarding Invitation',
       body: 'I\'d like to welcome you on board.',
     }, web3.utils.toWei('1'));
+  });
+
+  it('should be able to create an offline profile', async () => {
+    const accountToUse = accounts[0];
+    const originRuntime = await TestUtils.getRuntime(accountToUse, null, { useIdentity: true });
+    const identity = await originRuntime.verifications.getIdentityForAccount(accountToUse, true);
+    const port = 42069;
+    const pKey = await TestUtils.getAccountStore().getPrivateKey(accounts[0]);
+    const accessToken = 'randomToken';
+    const contractId = '0x1234random';
+
+    await new Promise((resolve, reject) => {
+      const app = express();
+      app.use(bodyParser.json());
+
+      // Serverside -- Step 1 of offline profile creation
+      app.post('/api/smart-agents/profile/create', (req, res) => {
+        try {
+          expect(req.body).to.have.property('accountId').that.equals(accountToUse);
+          expect(req.body).to.have.property('signature');
+          expect(originRuntime.web3.eth.accounts.recover(
+            'Gimme Gimme Gimme!', req.body.signature,
+          )).to.equal(accountToUse);
+          res.send({
+            accessToken,
+            contractId,
+            identity,
+          });
+        } catch (e) {
+          reject(e);
+        }
+      });
+
+      // Serverside -- Step 2 of offline profile creation
+      app.post('/api/smart-agents/profile/fill', (req, res) => {
+        try {
+          expect(req.body).to.have.property('accountId').that.equals(accountToUse);
+          expect(req.body).to.have.property('identityId').that.equals(identity);
+          expect(req.body).to.have.property('accessToken').that.equals(accessToken);
+          expect(req.body).to.have.property('profileInfo');
+          expect(req.body).to.have.property('contractId').that.equals(contractId);
+          expect(req.body).to.have.nested.property('didTransaction.sourceIdentity').that.equals(identity);
+          expect(req.body).to.have.property('signature');
+          expect(originRuntime.web3.eth.accounts.recover(
+            'Gimme Gimme Gimme!', req.body.signature,
+          )).to.equal(accountToUse);
+          res.send({});
+        } catch (e) {
+          reject(e);
+        }
+      });
+
+      app.listen(port);
+      process.env.TEST_ONBOARDING = `{"port": ${port}}`;
+
+      // Client side -- Initiate onboarding
+      Onboarding.createOfflineProfile(
+        originRuntime,
+        {
+          accountDetails: {
+            accountName: 'Test',
+          },
+        },
+        accounts[0],
+        pKey,
+        '',
+      ).then(() => resolve());
+    });
   });
 });
