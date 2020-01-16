@@ -149,7 +149,7 @@ describe('DigitalTwin', function test() {
       expect(favorites).to.not.include(await twin.getContractAddress());
     });
 
-    it('automatically creates a valid did document upon twin creation', async () => {
+    it.only('automatically creates a valid did document upon twin creation', async () => {
       const twin = await DigitalTwin.create(runtime, defaultConfig);
       const twinIdentity = (await twin.getDescription()).identity;
       const did = await runtime.did.convertIdentityToDid(twinIdentity);
@@ -162,10 +162,9 @@ describe('DigitalTwin', function test() {
 
       expect(ownerDidDocument).not.to.be.null;
       expect(promise).not.to.be.rejected;
-      expect((await promise).id).to.eq(did);
-      expect((await promise).controller).to.eq(ownerDid);
-      expect((await promise).authentication
-        .filter((id) => id === ownerDidDocument.authentication[0]).length).to.be.above(0);
+      expect(promise).to.eventually.have.property('id').that.equals(did);
+      expect(promise).to.eventually.have.property('controller').that.equals(ownerDid);
+      expect(promise).to.eventually.have.property('authentication').that.include(ownerDidDocument.authentication[0]);
     });
   });
 

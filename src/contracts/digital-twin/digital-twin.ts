@@ -203,13 +203,11 @@ export class DigitalTwin extends Logger {
     instanceConfig.address = contractId;
 
     // create identity for index and write it to description
-    await options.verifications.createIdentity(config.accountId, contractId);
-
+    const twinIdentityId = await options.verifications.createIdentity(config.accountId, contractId);
     const twin = new DigitalTwin(options, instanceConfig);
     await twin.ensureContract();
 
     if (options.did) {
-      const twinIdentityId = (await twin.getDescription()).identity;
       const ownerIdentity = await options.verifications
         .getIdentityForAccount(config.accountId, true);
       await twin.createAndStoreDidDocument(twinIdentityId, ownerIdentity);
@@ -586,10 +584,6 @@ export class DigitalTwin extends Logger {
   Promise<void> {
     const twinDid = await this.options.did.convertIdentityToDid(twinIdentityId);
     const controllerDid = await this.options.did.convertIdentityToDid(controllerId);
-    if (!controllerDid) {
-      // TODO: Throw error?
-      return;
-    }
 
     // Get all key IDs of the controller's public keys
     const authKeyIds = (await this.options.did.getDidDocument(controllerDid))
