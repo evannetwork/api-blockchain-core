@@ -146,8 +146,9 @@ export class Ipld extends Logger {
 
     // eslint-disable-next-line no-underscore-dangle
     this.graph._dag.get = (...args) => {
+      let wait;
       const timeout = new Promise((resolve, reject) => {
-        const wait = setTimeout(() => {
+        wait = setTimeout(() => {
           clearTimeout(wait);
           reject(new Error('timeout reached'));
         }, IPLD_TIMEOUT);
@@ -157,6 +158,7 @@ export class Ipld extends Logger {
       const getHash = this.ipfs.get(bs58.encode(args[0]))
         // eslint-disable-next-line consistent-return
         .then(async (dag) => {
+          clearTimeout(wait);
           if (this.defaultCryptoAlgo) {
             const envelope: Envelope = JSON.parse(dag.toString('utf-8'));
             const cryptor = this.cryptoProvider.getCryptorByCryptoInfo(envelope.cryptoInfo);
