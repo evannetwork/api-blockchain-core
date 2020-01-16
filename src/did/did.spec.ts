@@ -112,7 +112,9 @@ describe('DID Resolver', function test() {
     };
 
     it('allows to store a DID document for the identity of an own contract', async () => {
-      const accountRuntime = await TestUtils.getRuntime(runtimes[0].underlyingAccount);
+      const accountRuntime = await TestUtils.getRuntime(
+        runtimes[0].underlyingAccount, null, { useIdentity: true },
+      );
       const twin = await DigitalTwin.create(
         accountRuntime as DigitalTwinOptions,
         {
@@ -138,7 +140,9 @@ describe('DID Resolver', function test() {
     });
 
     it('can get retrieve an contract identities DID document', async () => {
-      const accountRuntime = await TestUtils.getRuntime(runtimes[0].underlyingAccount);
+      const accountRuntime = await TestUtils.getRuntime(
+        runtimes[0].underlyingAccount, null, { useIdentity: true },
+      );
       const twin = await DigitalTwin.create(
         accountRuntime as DigitalTwinOptions,
         {
@@ -165,7 +169,9 @@ describe('DID Resolver', function test() {
     });
 
     it('allows to get a DID document of another identity', async () => {
-      const accountRuntime = await TestUtils.getRuntime(runtimes[0].underlyingAccount);
+      const accountRuntime = await TestUtils.getRuntime(
+        runtimes[0].underlyingAccount, null, { useIdentity: true },
+      );
       const twin = await DigitalTwin.create(
         accountRuntime as DigitalTwinOptions,
         {
@@ -193,7 +199,9 @@ describe('DID Resolver', function test() {
     });
 
     it('does not allow to store a DID document for the identity of an own contract', async () => {
-      const accountRuntime = await TestUtils.getRuntime(runtimes[0].underlyingAccount);
+      const accountRuntime = await TestUtils.getRuntime(
+        runtimes[0].underlyingAccount, null, { useIdentity: true },
+      );
       const twin = await DigitalTwin.create(
         accountRuntime as DigitalTwinOptions,
         {
