@@ -219,4 +219,60 @@ describe('DID Resolver', function test() {
       await expect(promise).to.be.rejectedWith(/^could not estimate gas usage for setDidDocument/);
     });
   });
+
+  describe('when storing did documents for alias identities', () => {
+    it('can create did documents for alias identities', async () => {
+      const aliasHash = TestUtils.getRandomBytes32();
+      const aliasIdentity = await runtimes[0].verifications.createIdentity(
+        runtimes[0].underlyingAccount, aliasHash, false,
+      );
+      const did = await runtimes[0].did.convertIdentityToDid(aliasIdentity);
+      const controllerDid = await runtimes[0].did.convertIdentityToDid(
+        runtimes[0].activeIdentity,
+      );
+      const controllerDidDocument = await runtimes[0].did.getDidDocument(accounts0Did);
+      const document = await runtimes[0].did.getDidDocumentTemplate(
+        aliasIdentity, controllerDid, controllerDidDocument.authentication[0],
+      );
+      const promise = runtimes[0].did.setDidDocument(did, document);
+
+      await expect(promise).not.to.be.rejected;
+    });
+
+    it('can create did documents for alias identities without backlinking to given hash', async () => {
+      const aliasHash = TestUtils.getRandomBytes32();
+      const aliasIdentity = await runtimes[0].verifications.createIdentity(
+        runtimes[0].underlyingAccount, aliasHash, false, false,
+      );
+      const did = await runtimes[0].did.convertIdentityToDid(aliasIdentity);
+      const controllerDid = await runtimes[0].did.convertIdentityToDid(
+        runtimes[0].activeIdentity,
+      );
+      const controllerDidDocument = await runtimes[0].did.getDidDocument(accounts0Did);
+      const document = await runtimes[0].did.getDidDocumentTemplate(
+        aliasIdentity, controllerDid, controllerDidDocument.authentication[0],
+      );
+      const promise = runtimes[0].did.setDidDocument(did, document);
+
+      await expect(promise).not.to.be.rejected;
+    });
+
+    it('can fetch did documents for alias identities', async () => {
+      const aliasHash = TestUtils.getRandomBytes32();
+      const aliasIdentity = await runtimes[0].verifications.createIdentity(
+        runtimes[0].underlyingAccount, aliasHash, false,
+      );
+      const did = await runtimes[0].did.convertIdentityToDid(aliasIdentity);
+      const controllerDid = await runtimes[0].did.convertIdentityToDid(
+        runtimes[0].activeIdentity,
+      );
+      const controllerDidDocument = await runtimes[0].did.getDidDocument(accounts0Did);
+      const document = await runtimes[0].did.getDidDocumentTemplate(
+        aliasIdentity, controllerDid, controllerDidDocument.authentication[0],
+      );
+      await runtimes[0].did.setDidDocument(did, document);
+
+      expect(runtimes[0].did.getDidDocument(did)).to.eventually.deep.eq(document);
+    });
+  });
 });
