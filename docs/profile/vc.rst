@@ -41,7 +41,6 @@ Parameters
 
 #. ``options`` - ``DidOptions``: options for Did constructor.
     * ``accountStore`` - |source accountStore|_: |source accountStore|_ instance
-    * ``activeAccount`` - ``string``: ID of the active account
     * ``contractLoader`` - |source contractLoader|_: |source contractLoader|_ instance
     * ``dfs`` - |source dfsInterface|_: |source dfsInterface|_ instance
     * ``did`` - |source Did|_: |source Did|_ instance for resolving and validating
@@ -71,7 +70,6 @@ Example
   const vc = new Vc(
     {
       accountStore,
-      activeIdentity
       contractLoader,
       dfs,
       did,

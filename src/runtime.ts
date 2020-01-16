@@ -493,7 +493,6 @@ export async function createDefaultRuntime(
     });
     vc = new Vc(
       {
-        activeAccount: activeIdentity,
         accountStore,
         contractLoader,
         dfs,

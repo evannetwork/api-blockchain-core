@@ -27,13 +27,8 @@ import { VcDocumentTemplate, VcDocument } from './vc';
 import { Verifications } from '../verifications/verifications';
 import { accounts } from '../test/accounts';
 
+
 use(chaiAsPromised);
-let useIdentity = false;
-try {
-  useIdentity = JSON.parse(process.env.USE_IDENTITY);
-} catch (_) {
-  // silently continue
-}
 
 // eslint-disable-next-line func-names
 describe('VC Resolver', function () {
@@ -69,7 +64,7 @@ describe('VC Resolver', function () {
   }
 
   before(async () => {
-    runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
+    runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity: true });
     verifications = await TestUtils.getVerifications(runtime.web3, await TestUtils.getIpfs());
     issuerIdentityId = await verifications.getIdentityForAccount(issuerAccountId, true);
     subjectIdentityId = await verifications.getIdentityForAccount(subjectAccountId, true);
@@ -209,7 +204,7 @@ describe('VC Resolver', function () {
 
     it('(API level) does not allow me to store a VC under an ID I do not own', async () => {
       // Have another identity create a VC that we then want to store
-      const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity });
+      const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
       const someoneElsesId = await otherRuntime.vc.createId();
 
       const vcData = {
@@ -225,7 +220,7 @@ describe('VC Resolver', function () {
 
     it('(contract level) does not allow me to store a VC under an ID I do not own', async () => {
       // Have another identity create a VC that we then want to store
-      const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity });
+      const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
       const someoneElsesId = (await otherRuntime.vc.createId()).replace('vc:evan:testcore:', '');
 
       // Try to write a fake dfs hash under someone else's registered ID
@@ -251,7 +246,7 @@ describe('VC Resolver', function () {
 
     it('allows me to get an existing VC using only the VC ID (discarding vc:evan prefix)', async () => {
       const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData);
-      const promise = runtime.vc.getVc(storedVcDoc.id.replace('vc:evan:testcore:', ''));
+      const promise = runtime.vc.getVc(storedVcDoc.id);
 
       await expect(promise).to.not.be.rejected;
       expect((await promise).id).to.eq(storedVcDoc.id);
@@ -349,7 +344,7 @@ describe('VC Resolver', function () {
       expect(issuerId).to.be.eq(issuerIdentityId);
       const vcId = storedVcDoc.id.replace('vc:evan:testcore:', '');
 
-      const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity });
+      const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
 
       const vcRevokeStatus = await runtime.executor.executeContractCall(
         await (runtime.vc as any).getRegistryContract(),
@@ -380,7 +375,7 @@ describe('VC Resolver', function () {
       expect(issuerId).to.be.eq(issuerIdentityId);
 
       const vcId = storedVcDoc.id;
-      const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity });
+      const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
 
       const vcRevokeStatus = await runtime.vc.getRevokeVcStatus(vcId);
       expect(vcRevokeStatus).to.be.false;

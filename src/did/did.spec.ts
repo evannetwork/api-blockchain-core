@@ -29,13 +29,8 @@ import {
   Runtime,
 } from '../index';
 
+
 use(chaiAsPromised);
-let useIdentity = false;
-try {
-  useIdentity = JSON.parse(process.env.USE_IDENTITY);
-} catch (_) {
-  // silently continue
-}
 
 describe('DID Resolver', function test() {
   this.timeout(600000);
@@ -45,8 +40,8 @@ describe('DID Resolver', function test() {
 
   before(async () => {
     runtimes = await Promise.all([
-      TestUtils.getRuntime(accounts[0], null, { useIdentity }),
-      TestUtils.getRuntime(accounts[1], null, { useIdentity }),
+      TestUtils.getRuntime(accounts[0], null, { useIdentity: true }),
+      TestUtils.getRuntime(accounts[1], null, { useIdentity: true }),
     ]);
     accounts0Identity = await runtimes[0].verifications.getIdentityForAccount(accounts[0], true);
     accounts0Did = await runtimes[0].did.convertIdentityToDid(accounts0Identity);
