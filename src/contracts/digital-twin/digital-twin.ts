@@ -256,7 +256,7 @@ export class DigitalTwin extends Logger {
         .getIdentityForAccount(config.accountId, true);
       await twin.createAndStoreDidDocument(twinIdentityId, ownerIdentity);
     }
-    
+
     // if plugins were applied to the twin, run the createContainers function
     if (config.plugins) {
       // transform plugins to container configs
