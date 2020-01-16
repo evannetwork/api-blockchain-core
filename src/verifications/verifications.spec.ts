@@ -87,7 +87,7 @@ describe('Verifications handler', function test() {
           const before = contractLoader.contracts[contract].bytecode;
           replace(contract, librayName, libraryAddress);
           if (before !== contractLoader.contracts[contract].bytecode) {
-            // eslint-disable-next-line
+            // eslint-disable-next-line no-console
             console.log(`updated: ${contract}`);
           }
         });
@@ -103,7 +103,7 @@ describe('Verifications handler', function test() {
     await deploy('verifications/VerificationsRegistryLibrary.sol:VerificationsRegistryLibrary');
 
     for (const key of Object.keys(libs)) {
-      // eslint-disable-next-line
+      // eslint-disable-next-line no-console
       console.log(`${/[^:]:(.*)/g.exec(key)[1]}: ${libs[key].slice(2)}`);
     }
   });

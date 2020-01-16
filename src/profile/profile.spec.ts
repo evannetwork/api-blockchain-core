@@ -26,23 +26,31 @@ import {
   NameResolver,
 } from '@evan.network/dbcp';
 
-import { accountMap, accounts } from '../test/accounts';
+import { accountMap, accounts, identities } from '../test/accounts';
 
 import { configTestcore as config } from '../config-testcore';
-import { createDefaultRuntime } from '../runtime';
+import { Runtime, createDefaultRuntime } from '../runtime';
 import { Onboarding } from '../onboarding';
+import { Profile } from './profile';
 import { TestUtils } from '../test/test-utils';
 
 use(chaiAsPromised);
+let useIdentity = false;
+try {
+  useIdentity = JSON.parse(process.env.USE_IDENTITY);
+} catch (_) {
+  // silently continue
+}
 
 describe('Profile helper', function test() {
   this.timeout(600000);
+  let ensName;
   let ipfs;
   let ipld;
   let nameResolver: NameResolver;
-  let ensName;
+  let profile: Profile;
+  let runtime: Runtime;
   let web3;
-  let executor;
   const sampleDesc = {
     title: 'sampleTest',
     description: 'desc',
@@ -59,28 +67,23 @@ describe('Profile helper', function test() {
   before(async () => {
     web3 = TestUtils.getWeb3();
     ipfs = await TestUtils.getIpfs();
-    ipld = await TestUtils.getIpld(ipfs);
-    nameResolver = await TestUtils.getNameResolver(web3);
+    runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
+    ({ ipld, nameResolver, profile } = runtime);
     ensName = nameResolver.getDomainName(config.nameResolver.domains.profile);
-    const eventHub = await TestUtils.getEventHub(web3);
-    executor = await TestUtils.getExecutor(web3);
-    executor.eventHub = eventHub;
   });
 
   it('should be able to be add contact keys', async () => {
-    const profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
-    await profile.addContactKey(accounts[0], 'context a', 'key 0x01_a');
-    await profile.addContactKey(accounts[1], 'context a', 'key 0x02_a');
-    await profile.addContactKey(accounts[1], 'context b', 'key 0x02_b');
+    await profile.addContactKey(identities[0], 'context a', 'key 0x01_a');
+    await profile.addContactKey(identities[1], 'context a', 'key 0x02_a');
+    await profile.addContactKey(identities[1], 'context b', 'key 0x02_b');
 
-    expect(await profile.getContactKey(accounts[0], 'context a')).to.eq('key 0x01_a');
-    expect(await profile.getContactKey(accounts[1], 'context a')).to.eq('key 0x02_a');
-    expect(await profile.getContactKey(accounts[1], 'context b')).to.eq('key 0x02_b');
-    expect(await profile.getContactKey(accounts[2], 'context a')).to.be.undefined;
+    expect(await profile.getContactKey(identities[0], 'context a')).to.eq('key 0x01_a');
+    expect(await profile.getContactKey(identities[1], 'context a')).to.eq('key 0x02_a');
+    expect(await profile.getContactKey(identities[1], 'context b')).to.eq('key 0x02_b');
+    expect(await profile.getContactKey(identities[2], 'context a')).to.be.undefined;
   });
 
   it('should be able to be add dapp bookmarks', async () => {
-    const profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await profile.addDappBookmark('sample1.test', sampleDesc);
 
     expect(await profile.getDappBookmark('sample1.test')).to.be.ok;
@@ -94,7 +97,6 @@ describe('Profile helper', function test() {
   });
 
   it('should be able to store data container plugins', async () => {
-    let profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     const templates = {
       templates: 'can',
       have: {
@@ -107,16 +109,14 @@ describe('Profile helper', function test() {
     expect(await profile.getPlugins()).to.eq(templates);
 
     await profile.storeForAccount(profile.treeLabels.dtContainerPlugins);
-    profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await profile.loadForAccount(profile.treeLabels.dtContainerPlugins);
     expect(await profile.getPlugins()).to.deep.eq(templates);
   });
 
   it('should be able to save an encrypted profile to IPLD', async () => {
-    const profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
-    await profile.addContactKey(accounts[0], 'context a', 'key 0x01_a');
-    await profile.addContactKey(accounts[1], 'context a', 'key 0x02_a');
-    await profile.addContactKey(accounts[1], 'context b', 'key 0x02_b');
+    await profile.addContactKey(identities[0], 'context a', 'key 0x01_a');
+    await profile.addContactKey(identities[1], 'context a', 'key 0x02_a');
+    await profile.addContactKey(identities[1], 'context b', 'key 0x02_b');
     await profile.addDappBookmark('sample1.test', sampleDesc);
 
     // store as ipldIpfsHash
@@ -124,14 +124,14 @@ describe('Profile helper', function test() {
     expect(ipldIpfsHash).not.to.be.undefined;
 
     // load it to new profile instance
-    const loadedProfile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
+    const loadedProfile = await TestUtils.getProfile(web3, ipfs, ipld, identities[0]);
     await loadedProfile.loadFromIpld(profile.treeLabels.addressBook, ipldIpfsHash);
 
     // test contacts
-    expect(await loadedProfile.getContactKey(accounts[0], 'context a')).to.eq('key 0x01_a');
-    expect(await loadedProfile.getContactKey(accounts[1], 'context a')).to.eq('key 0x02_a');
-    expect(await loadedProfile.getContactKey(accounts[1], 'context b')).to.eq('key 0x02_b');
-    expect(await loadedProfile.getContactKey(accounts[2], 'context a')).to.be.undefined;
+    expect(await loadedProfile.getContactKey(identities[0], 'context a')).to.eq('key 0x01_a');
+    expect(await loadedProfile.getContactKey(identities[1], 'context a')).to.eq('key 0x02_a');
+    expect(await loadedProfile.getContactKey(identities[1], 'context b')).to.eq('key 0x02_b');
+    expect(await loadedProfile.getContactKey(identities[2], 'context a')).to.be.undefined;
 
     // test bookmarks
     expect(await profile.getDappBookmark('sample1.test')).to.be.ok;
@@ -164,49 +164,46 @@ describe('Profile helper', function test() {
     );
   });
 
-  it('should be able to set and load a profile for a given user from the blockchain shorthand', async () => {
+  (useIdentity ? it.skip : it)('should be able to set and load a profile for a given user from the blockchain shorthand', async () => {
     // create profile
-    const initRuntime = await TestUtils.getRuntime(accounts[0]);
-    initRuntime.profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
-    await Onboarding.createProfile(initRuntime, {
+    await Onboarding.createProfile(runtime, {
       accountDetails: {
         profileType: 'company',
         accountName: 'test account',
       },
     });
-    const profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await profile.loadForAccount();
-    await profile.addContactKey(accounts[0], 'context a', 'key 0x01_a');
-    await profile.addContactKey(accounts[1], 'context a', 'key 0x02_a');
-    await profile.addContactKey(accounts[1], 'context b', 'key 0x02_b');
+    await profile.addContactKey(identities[0], 'context a', 'key 0x01_a');
+    await profile.addContactKey(identities[1], 'context a', 'key 0x02_a');
+    await profile.addContactKey(identities[1], 'context b', 'key 0x02_b');
     await profile.addDappBookmark('sample1.test', sampleDesc);
 
     // store
     await profile.storeForAccount(profile.treeLabels.addressBook);
 
     // load
-    const newProfile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
+    const {
+      profile: newProfile,
+    } = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
 
     // test contacts
-    expect(await newProfile.getContactKey(accounts[0], 'context a')).to.eq('key 0x01_a');
-    expect(await newProfile.getContactKey(accounts[1], 'context a')).to.eq('key 0x02_a');
-    expect(await newProfile.getContactKey(accounts[1], 'context b')).to.eq('key 0x02_b');
-    expect(await newProfile.getContactKey(accounts[2], 'context a')).to.be.undefined;
+    expect(await newProfile.getContactKey(identities[0], 'context a')).to.eq('key 0x01_a');
+    expect(await newProfile.getContactKey(identities[1], 'context a')).to.eq('key 0x02_a');
+    expect(await newProfile.getContactKey(identities[1], 'context b')).to.eq('key 0x02_b');
+    expect(await newProfile.getContactKey(identities[2], 'context a')).to.be.undefined;
     // test bookmarks
     expect(await profile.getDappBookmark('sample1.test')).to.be.ok;
     expect((await profile.getDappBookmark('sample1.test')).title).to.eq('sampleTest');
   });
 
   it('allow to check if a profile exists', async () => {
-    let profile = await TestUtils.getProfile(web3, ipfs, ipld, '0x000000000000000000000000000000000000beef');
-    expect(await profile.exists()).to.be.false;
-
-    profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     expect(await profile.exists()).to.be.true;
+
+    const profile2 = await TestUtils.getProfile(web3, ipfs, ipld, '0x000000000000000000000000000000000000beef');
+    expect(await profile2.exists()).to.be.false;
   });
 
   it('should remove a bookmark from a given profile', async () => {
-    const profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
     await profile.addDappBookmark('sample1.test', sampleDesc);
     await profile.addDappBookmark('sample2.test', sampleDesc);
 
@@ -218,9 +215,9 @@ describe('Profile helper', function test() {
     expect(await profile.getDappBookmark('sample2.test')).to.be.ok;
   });
 
-  it('should read a public part of a profile (e.g. public key)', async () => {
-    const initRuntime = await TestUtils.getRuntime(accounts[0]);
-    initRuntime.profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
+  (useIdentity ? it.skip : it)('should read a public part of a profile (e.g. public key)', async () => {
+    const initRuntime = await TestUtils.getRuntime(identities[0]);
+    initRuntime.profile = await TestUtils.getProfile(web3, ipfs, ipld, identities[0]);
     await Onboarding.createProfile(initRuntime, {
       accountDetails: {
         profileType: 'company',
@@ -233,7 +230,7 @@ describe('Profile helper', function test() {
     const modifiedKeyStore = TestUtils.getKeyProvider(['mailboxKeyExchange']);
     ipld.keyProvider = modifiedKeyStore;
     // load
-    const newProfile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
+    const newProfile = await TestUtils.getProfile(web3, ipfs, ipld, identities[0]);
 
     const pubKey = await newProfile.getPublicKey();
     expect(pubKey).to.be.ok;
@@ -246,8 +243,7 @@ describe('Profile helper', function test() {
   });
 
   it.skip('should be able to set a contact as known', async () => {
-    const initRuntime = await TestUtils.getRuntime(accounts[0]);
-    const profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
+    const initRuntime = await TestUtils.getRuntime(identities[0]);
     await Onboarding.createProfile(initRuntime, {
       accountDetails: {
         profileType: 'company',
@@ -256,14 +252,13 @@ describe('Profile helper', function test() {
     });
 
     await profile.loadForAccount();
-    expect(await profile.getContactKnownState(accounts[1])).to.be.false;
-    await profile.setContactKnownState(accounts[1], true);
-    expect(await profile.getContactKnownState(accounts[1])).to.be.true;
+    expect(await profile.getContactKnownState(identities[1])).to.be.false;
+    await profile.setContactKnownState(identities[1], true);
+    expect(await profile.getContactKnownState(identities[1])).to.be.true;
   });
 
-  it.skip('should be able to set a contact as unknown', async () => {
-    const initRuntime = await TestUtils.getRuntime(accounts[0]);
-    const profile = await TestUtils.getProfile(web3, ipfs, ipld, accounts[0]);
+  it('should be able to set a contact as unknown', async () => {
+    const initRuntime = await TestUtils.getRuntime(identities[0]);
     await Onboarding.createProfile(initRuntime, {
       accountDetails: {
         profileType: 'company',
@@ -272,17 +267,16 @@ describe('Profile helper', function test() {
     });
 
     await profile.loadForAccount();
-    expect(await profile.getContactKnownState(accounts[1])).to.be.false;
-    await profile.setContactKnownState(accounts[1], true);
-    expect(await profile.getContactKnownState(accounts[1])).to.be.true;
-    await profile.setContactKnownState(accounts[1], false);
-    expect(await profile.getContactKnownState(accounts[1])).to.be.false;
+    expect(await profile.getContactKnownState(identities[1])).to.be.false;
+    await profile.setContactKnownState(identities[1], true);
+    expect(await profile.getContactKnownState(identities[1])).to.be.true;
+    await profile.setContactKnownState(identities[1], false);
+    expect(await profile.getContactKnownState(identities[1])).to.be.false;
   });
 
   describe('Handle data contract entries in profile', () => {
     const mnemonics = {
-      company: 'place connect elite pigeon toilet song suggest primary endless science lizard tomato',
-      device: 'cement fatal hybrid wing always amateur top good maximum snake screen first',
+      company: 'ocean language medal odor ketchup cupboard equal wave palm accuse ivory minute',
     };
 
     const dateString = Date.now().toString();
@@ -323,13 +317,17 @@ describe('Profile helper', function test() {
       return createDefaultRuntime(
         await TestUtils.getWeb3(),
         await TestUtils.getIpfs(),
-        { mnemonic, password },
+        {
+          mnemonic,
+          password,
+          useIdentity,
+        },
       );
     }
 
-    it('can transform user profile to company profile', async () => {
+    (useIdentity ? it.skip : it)('can transform user profile to company profile', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      const initRuntime = await TestUtils.getRuntime(accounts[0]);
+      const initRuntime = await TestUtils.getRuntime(identities[0]);
 
       await Onboarding.createNewProfile(initRuntime, newMnemonic, 'Test1234', {
         accountDetails: {
@@ -337,21 +335,21 @@ describe('Profile helper', function test() {
           accountName: 'test account',
         },
       });
-      const runtime = await getProfileRuntime(newMnemonic);
+      const localRuntime = await getProfileRuntime(newMnemonic);
 
-      await runtime.profile.setProfileProperties({
+      await localRuntime.profile.setProfileProperties({
         accountDetails: {
           accountName: 'New company',
           profileType: 'company',
         },
       });
-      const accountDetails = await runtime.profile.getProfileProperty('accountDetails');
+      const accountDetails = await localRuntime.profile.getProfileProperty('accountDetails');
       await expect(accountDetails.accountName).to.be.eq('New company');
     });
 
-    it('cannot transform specified profile to another profile type', async () => {
+    (useIdentity ? it.skip : it)('cannot transform specified profile to another profile type', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      const initRuntime = await TestUtils.getRuntime(accounts[0]);
+      const initRuntime = await TestUtils.getRuntime(identities[0]);
 
       await Onboarding.createNewProfile(initRuntime, newMnemonic, 'Test1234', {
         accountDetails: {
@@ -359,18 +357,18 @@ describe('Profile helper', function test() {
           accountName: 'test account',
         },
       });
-      const runtime = await getProfileRuntime(newMnemonic);
+      const localRuntime = await getProfileRuntime(newMnemonic);
 
-      await runtime.profile.setProfileProperties({
+      await localRuntime.profile.setProfileProperties({
         accountDetails: {
           accountName: 'New company',
           profileType: 'company',
         },
       });
-      const accountDetails = await runtime.profile.getProfileProperty('accountDetails');
+      const accountDetails = await localRuntime.profile.getProfileProperty('accountDetails');
       await expect(accountDetails.accountName).to.be.eq('New company');
 
-      const promise = runtime.profile.setProfileProperties({
+      const promise = localRuntime.profile.setProfileProperties({
         accountDetails: {
           accountName: 'Now it\'s a device',
           profileType: 'device',
@@ -380,9 +378,9 @@ describe('Profile helper', function test() {
       await expect(promise).to.be.rejected;
     });
 
-    it('can transform user profile to device profile', async () => {
+    (useIdentity ? it.skip : it)('can transform user profile to device profile', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      const initRuntime = await TestUtils.getRuntime(accounts[0]);
+      const initRuntime = await TestUtils.getRuntime(identities[0]);
 
       await Onboarding.createNewProfile(initRuntime, newMnemonic, 'Test1234', {
         accountDetails: {
@@ -390,21 +388,21 @@ describe('Profile helper', function test() {
           accountName: 'test account',
         },
       });
-      const runtime = await getProfileRuntime(newMnemonic);
+      const localRuntime = await getProfileRuntime(newMnemonic);
 
-      await runtime.profile.setProfileProperties({
+      await localRuntime.profile.setProfileProperties({
         accountDetails: {
           accountName: 'New device',
           profileType: 'device',
         },
       });
-      const accountDetails = await runtime.profile.getProfileProperty('accountDetails');
+      const accountDetails = await localRuntime.profile.getProfileProperty('accountDetails');
       await expect(accountDetails.accountName).to.be.eq('New device');
     });
 
-    it('can transform user profile to type that does not exists', async () => {
+    (useIdentity ? it.skip : it)('can transform user profile to type that does not exists', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      const initRuntime = await TestUtils.getRuntime(accounts[0]);
+      const initRuntime = await TestUtils.getRuntime(identities[0]);
 
       await Onboarding.createNewProfile(initRuntime, newMnemonic, 'Test1234', {
         accountDetails: {
@@ -412,9 +410,9 @@ describe('Profile helper', function test() {
           accountName: 'test account',
         },
       });
-      const runtime = await getProfileRuntime(newMnemonic);
+      const localRuntime = await getProfileRuntime(newMnemonic);
 
-      const promise = runtime.profile.setProfileProperties({
+      const promise = localRuntime.profile.setProfileProperties({
         accountDetails: {
           accountName: 'custom profile',
           profileType: 'my own type',
@@ -425,10 +423,10 @@ describe('Profile helper', function test() {
     });
 
     it('can save company profile specific properties to a profile of type company', async () => {
-      const runtime = await getProfileRuntime(mnemonics.company);
-      await runtime.profile.setProfileProperties(companyProfileProperties);
+      const localRuntime = await getProfileRuntime(mnemonics.company);
+      await localRuntime.profile.setProfileProperties(companyProfileProperties);
       const [accountDetails, contact, registration] = await Promise.all(['accountDetails', 'contact', 'registration'].map(
-        (p) => runtime.profile.getProfileProperty(p),
+        (p) => localRuntime.profile.getProfileProperty(p),
       ));
       await expect(accountDetails.profileType).to.be.eq('company');
       await expect(isEqual(companyProfileProperties.registration, registration)).to.be.true;
@@ -436,24 +434,8 @@ describe('Profile helper', function test() {
     });
 
     it('cannot save device profile specific properties into company profile', async () => {
-      const runtime = await getProfileRuntime(mnemonics.company);
-      const promise = runtime.profile.setProfileProperties(deviceProfileProperties);
-      await expect(promise).to.be.rejected;
-    });
-
-    it('can save device profile specific properties to a profile of type device', async () => {
-      const runtime = await getProfileRuntime(mnemonics.device);
-      await runtime.profile.setProfileProperties(deviceProfileProperties);
-      const [accountDetails, deviceDetails] = await Promise.all(['accountDetails', 'deviceDetails'].map(
-        (p) => runtime.profile.getProfileProperty(p),
-      ));
-      await expect(accountDetails.profileType).to.be.eq('device');
-      await expect(isEqual(deviceProfileProperties.deviceDetails, deviceDetails)).to.be.true;
-    });
-
-    it('cannot save company profile specific properties into device profile', async () => {
-      const runtime = await getProfileRuntime(mnemonics.device);
-      const promise = runtime.profile.setProfileProperties(companyProfileProperties);
+      const localRuntime = await getProfileRuntime(mnemonics.company);
+      const promise = localRuntime.profile.setProfileProperties(deviceProfileProperties);
       await expect(promise).to.be.rejected;
     });
   });

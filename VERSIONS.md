@@ -2,6 +2,8 @@
 
 ## Next Version
 ### Features
+- add support for identity based accounts to `KeyExchange`, `Sharing` and `Profile` modules
+- update test setup to support identity based accounts
 
 ### Fixes
 

@@ -417,11 +417,27 @@ export class Onboarding extends Logger {
       reqProfileReq.end();
     });
 
+    const newIdentity = (requestedProfile as any).identity;
+    const accountHash = runtime.web3.utils.soliditySha3(accountId);
+    const identityHash = runtime.web3.utils.soliditySha3(newIdentity);
+    const targetAccount = runtime.activeIdentity ? newIdentity : accountId;
+    const targetAccountHash = runtime.activeIdentity ? identityHash : accountHash;
+
+    const dataKey = runtime.keyProvider.keys[accountHash];
+
+    profile.ipld.originator = runtime.web3.utils.soliditySha3(targetAccount);
+    profile.activeAccount = targetAccount;
+
+    // eslint-disable-next-line
+    runtime.keyProvider.keys[targetAccountHash] = dataKey;
+    // eslint-disable-next-line
+    runtime.keyProvider.keys[runtime.web3.utils.soliditySha3(targetAccountHash, targetAccountHash)] = dataKey;
+
     const dhKeys = runtime.keyExchange.getDiffieHellmanKeys();
     await profile.addContactKey(
-      runtime.activeAccount, 'dataKey', dhKeys.privateKey.toString('hex'),
+      targetAccount, 'dataKey', dhKeys.privateKey.toString('hex'),
     );
-    await profile.addProfileKey(runtime.activeAccount, 'alias', profileData.accountDetails.accountName);
+    await profile.addProfileKey(targetAccount, 'alias', profileData.accountDetails.accountName);
     await profile.addPublicKey(dhKeys.publicKey.toString('hex'));
 
     // set initial structure by creating addressbook structure and saving it to ipfs
@@ -444,13 +460,13 @@ export class Onboarding extends Logger {
     const profileKeys = Object.keys(profileData);
     // add hashKey
     await runtime.sharing.extendSharings(
-      sharings, accountId, accountId, '*', 'hashKey', hashKey,
+      sharings, targetAccount, targetAccount, '*', 'hashKey', hashKey,
     );
     // extend sharings for profile data
     const dataContentKeys = await Promise.all(profileKeys.map(() => cryptorAes.generateKey()));
     for (let i = 0; i < profileKeys.length; i += 1) {
       await runtime.sharing.extendSharings(
-        sharings, accountId, accountId, profileKeys[i], blockNr, dataContentKeys[i],
+        sharings, targetAccount, targetAccount, profileKeys[i], blockNr, dataContentKeys[i],
       );
     }
     // upload sharings
@@ -518,6 +534,7 @@ export class Onboarding extends Logger {
 
     const data = {
       accountId,
+      identityId: runtime.activeIdentity ? newIdentity : undefined,
       signature,
       profileInfo: fileHashes,
       accessToken: (requestedProfile as any).accessToken,
