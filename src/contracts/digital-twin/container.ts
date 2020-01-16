@@ -435,7 +435,7 @@ export class Container extends Logger {
   public static purgeDescriptionForTemplate(
     description: any,
     allowedProperties: Array<string> = ['author', 'dapp', 'dbcpVersion', 'description', 'i18n',
-      'imgSquare', 'imgWide', 'license', 'name', 'tags'],
+      'imgSquare', 'imgWide', 'license', 'name', 'tags', 'version'],
   ): any {
     const purged: any = { };
     allowedProperties.forEach((prop: string) => {
