@@ -7,6 +7,7 @@
 - ensure `DigitalTwin` and `Container` description to use at least `dbcpVersion` 2
 
 ### Fixes
+- use typescript version `3.7.4`
 
 ### Deprecations
 
