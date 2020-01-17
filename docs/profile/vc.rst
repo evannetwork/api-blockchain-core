@@ -202,8 +202,8 @@ Example
   const otherStoredVcDoc = await vc.getVc('vc:evan:testcore:0x2a838a6961be98f6a182f375bb9158848ee9760ca97a379939ccdf03fc442a23');
 
   // using encryption
-  const fetchedEncryptedVcDoc = await vc.getVc('0x2a838a6961be98f6a182f375bb9158848ee9760ca97a379939ccdf03fc442a23', encryptionInfo);
-  const otherFetchedEncryptedVcDoc = await vc.getVc('vc:evan:testcore:0x2a838a6961be98f6a182f375bb9158848ee9760ca97a379939ccdf03fc442a23', encryptionInfo);
+  encryptionInfo = { key: vcKey };
+  const EncryptedVcDoc = await vc.getVc( 'vc:evan:testcore:0x5f7514378963d3a1211a3b015c51dd9fbd1e52d66a2fbb411fcdf80fdfd7bbd4', encryptionInfo);
 
 --------------------------------------------------------------------------------
 
