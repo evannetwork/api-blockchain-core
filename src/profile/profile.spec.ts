@@ -257,7 +257,7 @@ describe('Profile helper', function test() {
     expect(await profile.getContactKnownState(identities[1])).to.be.true;
   });
 
-  it('should be able to set a contact as unknown', async () => {
+  it.skip('should be able to set a contact as unknown', async () => {
     const initRuntime = await TestUtils.getRuntime(identities[0]);
     await Onboarding.createProfile(initRuntime, {
       accountDetails: {
