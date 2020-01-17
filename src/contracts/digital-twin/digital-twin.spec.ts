@@ -74,6 +74,7 @@ describe('DigitalTwin', function test() {
       cryptoProvider: await TestUtils.getCryptoProvider(),
       dataContract: await TestUtils.getDataContract(web3, dfs),
       description: await TestUtils.getDescription(web3, dfs),
+      did: await TestUtils.getDid(web3, accounts[0], dfs),
       executor,
       nameResolver: await TestUtils.getNameResolver(web3),
       profile: await TestUtils.getProfile(web3, dfs, null, accounts[0]),
@@ -166,6 +167,24 @@ describe('DigitalTwin', function test() {
       const twin = await DigitalTwin.create(runtime, defaultConfig);
       const newDesc = await twin.getDescription();
       expect(newDesc.dbcpVersion).to.be.eq(2);
+    });
+
+    it('automatically creates a valid did document upon twin creation', async () => {
+      const twin = await DigitalTwin.create(runtime, defaultConfig);
+      const twinIdentity = (await twin.getDescription()).identity;
+      const did = await runtime.did.convertIdentityToDid(twinIdentity);
+      const ownerIdentity = await runtime.verifications
+        .getIdentityForAccount(defaultConfig.accountId, true);
+      const ownerDid = await runtime.did.convertIdentityToDid(ownerIdentity);
+      const ownerDidDocument = await runtime.did.getDidDocument(ownerDid);
+
+      const promise = runtime.did.getDidDocument(did);
+
+      expect(ownerDidDocument).not.to.be.null;
+      expect(promise).not.to.be.rejected;
+      expect(promise).to.eventually.have.property('id').that.equals(did);
+      expect(promise).to.eventually.have.property('controller').that.equals(ownerDid);
+      expect(promise).to.eventually.have.property('authentication').that.include(ownerDidDocument.authentication[0]);
     });
   });
 
