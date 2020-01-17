@@ -467,6 +467,7 @@ export async function createDefaultRuntime(
       executor,
       nameResolver,
       signerIdentity: signer,
+      verifications,
       web3,
     });
     vc = new Vc(
