@@ -61,6 +61,7 @@ const configTestcore = {
   alwaysAutoGasLimit: 10,
   // owner of the evan root verification domain
   ensRootOwner: '0x4a6723fC5a926FA150bAeAf04bfD673B056Ba83D',
+  rootVerificationIssuer: '0x003095339E7bb73ac30B198c48331FA52527EC56',
   ipfsConfig: { host: 'ipfs.test.evan.network', port: '443', protocol: 'https' },
 };
 
