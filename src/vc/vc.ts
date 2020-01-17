@@ -310,14 +310,13 @@ export class Vc extends Logger {
       throw Error(`VC for address ${vcId} does not exist`);
     }
 
+    let document = JSON.parse(await this.options.dfs.get(vcDfsHash) as any);
     if (!encryptionInfo) {
-      const document = JSON.parse(await this.options.dfs.get(vcDfsHash) as any) as VcDocument;
-      await this.validateProof(document);
+      await this.validateProof(document as VcDocument);
       return document;
     }
 
     const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aes');
-    let document = JSON.parse(await this.options.dfs.get(vcDfsHash) as any);
     document = Buffer.from(document.data);
     try {
       const decryptedDocument = await cryptor.decrypt(document, { key: encryptionInfo.key });
@@ -381,30 +380,24 @@ export class Vc extends Logger {
     };
 
     const documentToStore = await this.createVc(dataTemplate);
+    let vcDfsAddress;
     if (!encryptionInfo) {
-      const vcDfsAddress = await this.options.dfs.add('vc',
+      vcDfsAddress = await this.options.dfs.add('vc',
         Buffer.from(JSON.stringify(documentToStore), 'utf-8'));
-      await this.options.executor.executeContractTransaction(
-        await this.getRegistryContract(),
-        'setVc',
-        { from: this.options.signerIdentity.activeIdentity },
-        internalId,
-        vcDfsAddress,
-      );
     } else {
       const cryptor = this.options.cryptoProvider.getCryptorByCryptoAlgo('aes');
       const encryptedDocumentToStore = await cryptor.encrypt(documentToStore,
         { key: encryptionInfo.key });
-      const vcDfsAddress = await this.options.dfs.add('vc',
+      vcDfsAddress = await this.options.dfs.add('vc',
         Buffer.from(JSON.stringify(encryptedDocumentToStore), 'utf-8'));
-      await this.options.executor.executeContractTransaction(
-        await this.getRegistryContract(),
-        'setVc',
-        { from: this.options.signerIdentity.activeIdentity },
-        internalId,
-        vcDfsAddress,
-      );
     }
+    await this.options.executor.executeContractTransaction(
+      await this.getRegistryContract(),
+      'setVc',
+      { from: this.options.signerIdentity.activeIdentity },
+      internalId,
+      vcDfsAddress,
+    );
     return documentToStore;
   }
 

@@ -412,7 +412,7 @@ describe('VC Resolver', function () {
 
       const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData,
         encryptionInfo);
-      const fetchedVcDoc = await runtime.vc.getVc(storedVcDoc.id.replace('vc:evan:testcore:', ''),
+      const fetchedVcDoc = await runtime.vc.getVc(storedVcDoc.id,
         encryptionInfo);
 
       expect(storedVcDoc).to.be.deep.eq(fetchedVcDoc);
@@ -430,7 +430,6 @@ describe('VC Resolver', function () {
       const fetchedVcDoc = runtime.vc.getVc(storedVcDoc.id.replace('vc:evan:testcore:', ''),
         encryptionInfo);
 
-      await expect(Error).to.exist;
       await expect(fetchedVcDoc).to.be.rejectedWith('Incorrect key: decryption failed');
     });
 
@@ -443,7 +442,7 @@ describe('VC Resolver', function () {
       const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
       const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData,
         encryptionInfo);
-      const fetchedVcDoc = await otherRuntime.vc.getVc(storedVcDoc.id.replace('vc:evan:testcore:', ''),
+      const fetchedVcDoc = await otherRuntime.vc.getVc(storedVcDoc.id,
         encryptionInfo);
 
       expect(storedVcDoc).to.be.deep.eq(fetchedVcDoc);
@@ -459,10 +458,9 @@ describe('VC Resolver', function () {
       const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData,
         encryptionInfo);
       encryptionInfo = { key: vcKey2 };
-      const fetchedVcDoc = otherRuntime.vc.getVc(storedVcDoc.id.replace('vc:evan:testcore:', ''),
+      const fetchedVcDoc = otherRuntime.vc.getVc(storedVcDoc.id,
         encryptionInfo);
 
-      await expect(Error).to.exist;
       await expect(fetchedVcDoc).to.be.rejectedWith('Incorrect key: decryption failed');
     });
 
