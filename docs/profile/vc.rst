@@ -39,7 +39,7 @@ Creates a new `Vc` instance.
 Parameters
 ----------
 
-#. ``options`` - ``DidOptions``: options for Vc constructor.
+#. ``options`` - ``VcOptions``: options for Vc constructor.
     * ``accountStore`` - |source accountStore|_: |source accountStore|_ instance
     * ``activeAccount`` - ``string``: ID of the active account
     * ``contractLoader`` - |source contractLoader|_: |source contractLoader|_ instance
