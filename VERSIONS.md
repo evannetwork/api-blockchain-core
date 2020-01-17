@@ -4,8 +4,10 @@
 ### Features
 - allow `plugins` property within `DigitalTwin.create` to create initial containers
 - add `DigitalTwin.exportAsTemplate` to copy a existing twin configuration
+- ensure `DigitalTwin` and `Container` description to use at least `dbcpVersion` 2
 
 ### Fixes
+- use typescript version `3.7.4`
 
 ### Deprecations
 

@@ -323,6 +323,11 @@ export class Container extends Logger {
       };
     }
 
+    // ensure dbcp version 2 or higher
+    if (!envelope.public.dbcpVersion || envelope.public.dbcpVersion < 2) {
+      envelope.public.dbcpVersion = 2;
+    }
+
     const validation = options.description.validateDescription(envelope);
     if (validation !== true) {
       throw new Error(`validation of description failed with: ${JSON.stringify(validation)}`);
@@ -430,7 +435,7 @@ export class Container extends Logger {
   public static purgeDescriptionForTemplate(
     description: any,
     allowedProperties: Array<string> = ['author', 'dapp', 'dbcpVersion', 'description', 'i18n',
-      'imgSquare', 'imgWide', 'license', 'name', 'tags'],
+      'imgSquare', 'imgWide', 'license', 'name', 'tags', 'version'],
   ): any {
     const purged: any = { };
     allowedProperties.forEach((prop: string) => {
@@ -934,11 +939,18 @@ export class Container extends Logger {
    * @param      {any}  description  description (public part)
    */
   public async setDescription(description: any): Promise<void> {
+    const toSave = JSON.parse(JSON.stringify(description));
+
+    // ensure dbcp version 2 or higher
+    if (!toSave.dbcpVersion || toSave.dbcpVersion < 2) {
+      toSave.dbcpVersion = 2;
+    }
+
     await this.ensureContract();
     await this.wrapPromise(
       'set description',
       this.options.description.setDescription(
-        this.contract.options.address, { public: description }, this.config.accountId,
+        this.contract.options.address, { public: toSave }, this.config.accountId,
       ),
     );
   }
