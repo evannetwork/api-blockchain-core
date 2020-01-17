@@ -276,7 +276,9 @@ describe('Profile helper', function test() {
 
   describe('Handle data contract entries in profile', () => {
     const mnemonics = {
-      company: 'ocean language medal odor ketchup cupboard equal wave palm accuse ivory minute',
+      company: useIdentity
+        ? 'ocean language medal odor ketchup cupboard equal wave palm accuse ivory minute'
+        : 'place connect elite pigeon toilet song suggest primary endless science lizard tomato',
     };
 
     const dateString = Date.now().toString();
