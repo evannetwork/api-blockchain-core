@@ -32,10 +32,8 @@ import {
   ContainerPlugin,
 } from './container';
 import { Profile } from '../../profile/profile';
-
-
-// empty address
-const nullAddress = '0x0000000000000000000000000000000000000000';
+import { nullAddress } from '../../common/utils';
+import { Did } from '../../did/did';
 
 /**
  * possible entry types for entries in index
@@ -124,6 +122,7 @@ export interface DigitalTwinVerificationEntry {
  */
 export interface DigitalTwinOptions extends ContainerOptions {
   profile: Profile;
+  did?: Did;
 }
 
 /**
@@ -248,10 +247,15 @@ export class DigitalTwin extends Logger {
     instanceConfig.address = contractId;
 
     // create identity for index and write it to description
-    await options.verifications.createIdentity(config.accountId, contractId);
-
+    const twinIdentityId = await options.verifications.createIdentity(config.accountId, contractId);
     const twin = new DigitalTwin(options, instanceConfig);
     await twin.ensureContract();
+
+    if (options.did) {
+      const ownerIdentity = await options.verifications
+        .getIdentityForAccount(config.accountId, true);
+      await twin.createAndStoreDidDocument(twinIdentityId, ownerIdentity);
+    }
 
     // if plugins were applied to the twin, run the createContainers function
     if (config.plugins) {
@@ -664,6 +668,18 @@ export class DigitalTwin extends Logger {
       toSet,
       entryType,
     );
+  }
+
+  private async createAndStoreDidDocument(twinIdentityId: string, controllerId: string):
+  Promise<void> {
+    const twinDid = await this.options.did.convertIdentityToDid(twinIdentityId);
+    const controllerDid = await this.options.did.convertIdentityToDid(controllerId);
+
+    // Get all key IDs of the controller's public keys
+    const authKeyIds = (await this.options.did.getDidDocument(controllerDid))
+      .publicKey.map((key) => key.id).join(',');
+    const doc = await this.options.did.getDidDocumentTemplate(twinDid, controllerDid, authKeyIds);
+    await this.options.did.setDidDocument(twinDid, doc);
   }
 
   /**
