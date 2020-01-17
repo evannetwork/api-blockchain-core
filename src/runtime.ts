@@ -481,6 +481,7 @@ export async function createDefaultRuntime(
         signerIdentity: signer,
         verifications,
         web3,
+        cryptoProvider,
       },
       { credentialStatusEndpoint: config.smartAgents.didAndVc.vcRevokationStatusEndpoint },
     );

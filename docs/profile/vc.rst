@@ -39,7 +39,7 @@ Creates a new `Vc` instance.
 Parameters
 ----------
 
-#. ``options`` - ``DidOptions``: options for Did constructor.
+#. ``options`` - ``VcOptions``: options for Vc constructor.
     * ``accountStore`` - |source accountStore|_: |source accountStore|_ instance
     * ``activeAccount`` - ``string``: ID of the active account
     * ``contractLoader`` - |source contractLoader|_: |source contractLoader|_ instance
@@ -54,7 +54,8 @@ Parameters
     * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
     * ``logLogLevel`` - |source logLevel|_ (optional): messages with this level will be pushed to ``logLog``
-#. ``credentialStatusEndpoint`` - ``string``: URL of the credential status endpoint
+#. ``config`` - ``VcConfig``: custom configuration for Vc constructor.
+    * ``credentialStatusEndpoint`` - ``string``: URL of the credential status endpoint
 
 -------
 Returns
@@ -139,7 +140,7 @@ Create a signed **off-chain** VC document
 Parameters
 ----------
 
-#. ``vcData`` - ``VcDocumentTemplate``: Collection of mandatory and optional VC properties to store in the VC document
+#. ``vcData`` - :ref:`VcDocumentTemplate`: Collection of mandatory and optional VC properties to store in the VC document
 
 -------
 Returns
@@ -167,7 +168,7 @@ Example
 
 --------------------------------------------------------------------------------
 
-.. _vc_getVc:
+.. _vc_getVc_VcEncryptionInfo:
 
 getVc
 ================================================================================
@@ -176,13 +177,14 @@ Get VC document for given VC ID.
 
 .. code-block:: typescript
 
-  vc.getVc(vcId);
+  vc.getVc(vcId, encryptionInfo);
 
 ----------
 Parameters
 ----------
 
 #. ``vcId`` - ``string``: ID to fetch VC document for. Can be either a full VC URI (starting with ``vc:evan:``) or just the VC ID (starting with ``0x``)
+#. ``encryptionInfo`` - :ref:`VcEncryptionInfo`: (optional): Information required for decryption
 
 -------
 Returns
@@ -199,17 +201,23 @@ Example
   const storedVcDoc = await vc.getVc('0x2a838a6961be98f6a182f375bb9158848ee9760ca97a379939ccdf03fc442a23');
   const otherStoredVcDoc = await vc.getVc('vc:evan:testcore:0x2a838a6961be98f6a182f375bb9158848ee9760ca97a379939ccdf03fc442a23');
 
+  // using encryption
+  encryptionInfo = { key: vcKey };
+  const EncryptedVcDoc = await vc.getVc( 'vc:evan:testcore:0x5f7514378963d3a1211a3b015c51dd9fbd1e52d66a2fbb411fcdf80fdfd7bbd4', encryptionInfo);
+
 --------------------------------------------------------------------------------
 
 
-.. _vc_storeVc:
+.. _vc_storeVc_VcEncryptionInfo:
+.. _vc_storeVc_VcDocumentTemplate:
+.. _vc_storeVc_Vc:
 
 storeVc
 ================================================================================
 
 .. code-block:: typescript
 
-  vc.storeVc(vcData, shouldRegisterNewId);
+  vc.storeVc(vcData, encryptionInfo);
 
 Create a new VC that holds the given data and **store it on the chain**.
 Whether a new ID should be registered with the VC registry or the given ID in the document should be used depends of if ``vcData.id`` is set. If set, the method calls ``createId()`` to generate a new ID.
@@ -218,7 +226,8 @@ Whether a new ID should be registered with the VC registry or the given ID in th
 Parameters
 ----------
 
-#. ``vcData`` - ``VcDocumentTemplate``: Collection of mandatory and optional VC properties to store in the VC document
+#. ``vcData`` - :ref:`VcDocumentTemplate`: Collection of mandatory and optional VC properties to store in the VC document
+#. ``encryptionInfo`` - :ref:`VcEncryptionInfo`: (optional): Information required for encryption
 
 -------
 Returns
@@ -245,6 +254,7 @@ Example
   const permanentVcAddress = createdVcDoc.id;
 
 .. code-block:: typescript
+
   const myRegisteredId = await runtime.vc.createId();
   const minimalVcData = {
       issuer: {
@@ -338,6 +348,104 @@ Example
 
 
 
+--------------------------------------------------------------------------------
+
+Additional Components
+======================
+
+
+Interfaces
+==========
+
+.. _VcEncryptionInfo:
+
+--------------
+EncryptionInfo
+--------------
+
+configuration settings required for the encryption and decryption
+
+#. ``key``-``string``: the encryption key required for encrypting and decrypting the VC
+
+
+
+.. _VcDocumentTemplate:
+
+----------------
+DocumentTemplate
+----------------
+
+Template for the VC document containing the relevant data
+
+#. ``id``-``string``: the id of the VC
+#. ``type``-``string``: set of unordered URIs
+#. ``issuer``- :ref:`VcIssuer`: VC issuer details
+#. ``validFrom``-``string``: date from which the VC is valid
+#. ``validUntil``-``string`` (optional): date until which the VC is valid
+#. ``credentialSubject``- :ref:`VcCredentialSubject`: subject details of VC
+#. ``credentialStatus``- :ref:`VcCredentialStatus` (optional): details regarding the status of VC
+#. ``proof``- :ref:`VcProof` (optional): proof of the respective VC
+
+
+
+.. _VcIssuer:
+
+--------
+VcIssuer
+--------
+
+Template for the VC Issuer containing the relevant data
+
+#. ``id``-``string``: the id of the issuer
+#. ``name``-``string`` (optional): name of the issuer
+
+
+
+.. _VcCredentialSubject:
+
+-------------------
+VcCredentialSubject
+-------------------
+
+Template for the VC credential subject containing the relevant data
+
+#. ``id``-``string``: the id of the subject
+#. ``data``-``VcCredentialSubjectPayload`` (optional): data payload for subject
+#. ``description``-``string`` (optional): description about subject
+#. ``uri``-``string`` (optional): uri of subject 
+
+
+
+.. _VcCredentialStatus:
+
+------------------
+VcCredentialStatus
+------------------
+
+Template for the VC credential status containing the status data
+
+#. ``id``-``string``: the id of the VC
+#. ``type``-``string``: VC status type 
+
+
+
+.. _VcProof:
+
+-------
+VcProof
+-------
+
+proof for VC, contains JWS and metadata
+
+#. ``type``-``string``: VC status type
+#. ``created``-``string``: date when the proof was created
+#. ``proofPurpose``-``string``: purpose of the proof
+#. ``verificationmethod``-``string``: method used for verification
+#. ``jws``-``string``: JSON Web Signature
+
+
+
+--------------------------------------------------------------------------------
 
 .. required for building markup
 
