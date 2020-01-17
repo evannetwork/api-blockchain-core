@@ -150,7 +150,7 @@ describe('Container', function test() {
       expect(await container.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
     });
 
-    it('ensure that dbcpVersion 2 is used', async () => {
+    it('ensures that dbcpVersion 2 is used', async () => {
       // create custom config without dbcpVersion
       const customConfig = JSON.parse(JSON.stringify(defaultConfig));
       delete customConfig.description.dbcpVersion;
