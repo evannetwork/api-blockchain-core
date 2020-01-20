@@ -1033,7 +1033,7 @@ export class Verifications extends Logger {
             // if issuer === subject and only if a parent is passed, so if the root one is empty
             // and no slash is available
             if (verification.issuerAccount === verification.subject && verification.parent
-                && verification.issuerAccount !== this.options.config.ensRootOwner) {
+                && verification.issuerAccount !== this.options.config.rootVerificationIssuer) {
               verification.warnings.push('selfIssued');
             }
 
@@ -1068,7 +1068,7 @@ export class Verifications extends Logger {
               verification.parents = [];
 
               if (verification.name === '/evan'
-                && verification.issuerAccount !== this.options.config.ensRootOwner) {
+                && verification.issuerAccount !== this.options.config.rootVerificationIssuer) {
                 // eslint-disable-next-line no-param-reassign
                 verification.warnings = ['notEnsRootOwner'];
               } else {

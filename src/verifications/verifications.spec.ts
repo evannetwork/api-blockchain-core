@@ -660,6 +660,30 @@ describe('Verifications handler', function test() {
 
       it('verifications with the base "/evan" should be issued by the evan root account',
         async () => {
+          const testAccount = '0x1813587e095cDdfd174DdB595372Cb738AA2753A';
+          const topic = '/evan/company/108158972712';
+
+          // check issued case
+          const computed = await verifications.getComputedVerification(testAccount, topic);
+          await expect(computed.warnings).not.to.include('notEnsRootOwner');
+
+          // V2
+          const localQueryOptions = {
+            validationOptions: {
+              [VerificationsStatusFlagsV2.parentUntrusted]: VerificationsStatusV2.Green,
+              [VerificationsStatusFlagsV2.notEnsRootOwner]: VerificationsStatusV2.Yellow,
+            },
+          };
+          const v2 = await verifications.getNestedVerificationsV2(
+            testAccount, topic, false, localQueryOptions,
+          );
+          await expect(v2.status).to.eq(VerificationsStatusV2.Green);
+          await expect(v2.verifications[0].statusFlags)
+            .not.to.include(VerificationsStatusFlagsV2.notEnsRootOwner);
+        });
+
+      it('verifications with the base "/evan" not should be issued by another account than root',
+        async () => {
           const topic = '/evan';
 
           // check issued case
