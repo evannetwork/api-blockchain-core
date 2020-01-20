@@ -27,6 +27,7 @@ import { VcDocumentTemplate, VcDocument } from './vc';
 import { Verifications } from '../verifications/verifications';
 import { accounts } from '../test/accounts';
 
+
 use(chaiAsPromised);
 
 // eslint-disable-next-line func-names
@@ -245,7 +246,7 @@ describe('VC Resolver', function () {
 
     it('allows me to get an existing VC using only the VC ID (discarding vc:evan prefix)', async () => {
       const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData);
-      const promise = runtime.vc.getVc(storedVcDoc.id.replace('vc:evan:testcore:', ''));
+      const promise = runtime.vc.getVc(storedVcDoc.id);
 
       await expect(promise).to.not.be.rejected;
       expect((await promise).id).to.eq(storedVcDoc.id);

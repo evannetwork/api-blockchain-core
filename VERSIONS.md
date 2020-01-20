@@ -2,6 +2,8 @@
 
 ## Next Version
 ### Features
+- add support for identity based accounts to `KeyExchange`, `Sharing` and `Profile` modules
+- update test setup to support identity based accounts
 
 ### Fixes
 
@@ -11,12 +13,13 @@
 ## Version 2.16.0
 ### Features
 - add `getPublicKey` implementation to `SignerIdentity`
-- add `DidResolver` module for managing DID documents
+- add `Did` module for managing DID documents
 - add possiblity to instantiate a new `SignerIdentity` in two steps
   - can be used to create circular structures if required
   - first call constructor, you can omit `config` argument
   - when rest (e.g. verifications) has been set up you can call `updateConfig` to finalize `SignerIdenty` instantiation
 - add `getService`, `setService` to `DidResolver`
+- add `Vc` module for managing VC documents and revocations
 
 ### Fixes
 - fix `Container` documentation links and add warning to `ContainerUnshareConfig` documentation
