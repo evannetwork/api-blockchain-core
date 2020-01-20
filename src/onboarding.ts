@@ -22,15 +22,20 @@ import { cloneDeep, merge } from 'lodash';
 import {
   Logger,
   LoggerOptions,
+  SignerInternal,
 } from '@evan.network/dbcp';
 
 import { createDefaultRuntime, Runtime } from './runtime';
 import { Mail, Mailbox } from './mailbox';
 import { Profile } from './profile/profile';
 import * as AccountType from './profile/types/types';
+import { SignerIdentity } from './contracts/signer-identity';
+import { Did } from './did/did';
+import { VerificationsDelegationInfo } from './verifications/verifications';
 
 import KeyStore = require('../libs/eth-lightwallet/keystore');
 import https = require('https');
+import http = require('http');
 
 /**
  * mail that will be sent to invitee
@@ -380,16 +385,17 @@ export class Onboarding extends Logger {
     const { signature } = runtime.web3.eth.accounts.sign('Gimme Gimme Gimme!', pk);
     // request a new profile contract
 
-    const requestedProfile = await new Promise((resolve) => {
+    const requestMode = process.env.TEST_ONBOARDING ? http : https;
+
+    const requestedProfile = await new Promise((resolve, reject) => {
       const requestProfilePayload = JSON.stringify({
         accountId,
         signature,
         captchaToken: recaptchaToken,
       });
-
       const reqOptions = {
-        hostname: `agents${network === 'testcore' ? '.test' : ''}.evan.network`,
-        port: 443,
+        hostname: this.getAgentHost(network),
+        port: this.getAgentPort(),
         path: '/api/smart-agents/profile/create',
         method: 'POST',
         headers: {
@@ -398,11 +404,18 @@ export class Onboarding extends Logger {
         },
       };
 
-      const reqProfileReq = https.request(reqOptions, (res) => {
+      const reqProfileReq = requestMode.request(reqOptions, (res) => {
         const chunks = [];
+        if (res.statusCode > 299) {
+          reject(Error(`Bad response: HTTP ${res.statusCode}: ${res.statusMessage}`));
+        }
 
         res.on('data', (chunk) => {
           chunks.push(chunk);
+        });
+
+        res.on('error', (error) => {
+          reject(error);
         });
 
         res.on('end', () => {
@@ -413,12 +426,27 @@ export class Onboarding extends Logger {
       reqProfileReq.write(requestProfilePayload);
       reqProfileReq.end();
     });
+    const newIdentity = (requestedProfile as any).identity;
+    const accountHash = runtime.web3.utils.soliditySha3(accountId);
+    const identityHash = runtime.web3.utils.soliditySha3(newIdentity);
+    const targetAccount = runtime.activeIdentity ? newIdentity : accountId;
+    const targetAccountHash = runtime.activeIdentity ? identityHash : accountHash;
+
+    const dataKey = runtime.keyProvider.keys[accountHash];
+
+    profile.ipld.originator = runtime.web3.utils.soliditySha3(targetAccount);
+    profile.activeAccount = targetAccount;
+
+    // eslint-disable-next-line
+    runtime.keyProvider.keys[targetAccountHash] = dataKey;
+    // eslint-disable-next-line
+    runtime.keyProvider.keys[runtime.web3.utils.soliditySha3(targetAccountHash, targetAccountHash)] = dataKey;
 
     const dhKeys = runtime.keyExchange.getDiffieHellmanKeys();
     await profile.addContactKey(
-      runtime.activeAccount, 'dataKey', dhKeys.privateKey.toString('hex'),
+      targetAccount, 'dataKey', dhKeys.privateKey.toString('hex'),
     );
-    await profile.addProfileKey(runtime.activeAccount, 'alias', profileData.accountDetails.accountName);
+    await profile.addProfileKey(targetAccount, 'alias', profileData.accountDetails.accountName);
     await profile.addPublicKey(dhKeys.publicKey.toString('hex'));
 
     // set initial structure by creating addressbook structure and saving it to ipfs
@@ -441,13 +469,13 @@ export class Onboarding extends Logger {
     const profileKeys = Object.keys(profileData);
     // add hashKey
     await runtime.sharing.extendSharings(
-      sharings, accountId, accountId, '*', 'hashKey', hashKey,
+      sharings, targetAccount, targetAccount, '*', 'hashKey', hashKey,
     );
     // extend sharings for profile data
     const dataContentKeys = await Promise.all(profileKeys.map(() => cryptorAes.generateKey()));
     for (let i = 0; i < profileKeys.length; i += 1) {
       await runtime.sharing.extendSharings(
-        sharings, accountId, accountId, profileKeys[i], blockNr, dataContentKeys[i],
+        sharings, targetAccount, targetAccount, profileKeys[i], blockNr, dataContentKeys[i],
       );
     }
     // upload sharings
@@ -513,38 +541,123 @@ export class Onboarding extends Logger {
     // re-enable pinning
     profile.ipld.ipfs.disablePin = false;
 
-    const data = JSON.stringify({
+    const data = {
       accountId,
+      identityId: runtime.activeIdentity ? newIdentity : undefined,
       signature,
       profileInfo: fileHashes,
       accessToken: (requestedProfile as any).accessToken,
       contractId: (requestedProfile as any).contractId,
-    });
+    } as any;
+
+    // TODO if statement can be removed after account/identity switch is done
+    if ((requestedProfile as any).identity) {
+      const didTransactionTuple = await this.createOfflineDidTransaction(runtime,
+        accountId, (requestedProfile as any).identity);
+      const didTransaction = didTransactionTuple[0];
+      const documentHash = didTransactionTuple[1];
+      data.didTransaction = didTransaction;
+      fileHashes.ipfsHashes.push(documentHash);
+    }
+
+    const jsonPayload = JSON.stringify(data);
     const options = {
-      hostname: `agents${network === 'testcore' ? '.test' : ''}.evan.network`,
-      port: 443,
+      hostname: this.getAgentHost(network),
+      port: this.getAgentPort(),
       path: '/api/smart-agents/profile/fill',
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Content-Length': data.length,
+        'Content-Length': jsonPayload.length,
       },
     };
 
     await new Promise((resolve, reject) => {
-      const req = https.request(options, (res) => {
+      const req = requestMode.request(options, (res) => {
+        if (res.statusCode > 299) {
+          reject(Error(`Bad response: HTTP ${res.statusCode}: ${res.statusMessage}`));
+        }
         res.on('data', () => {
           resolve();
         });
       });
-
       req.on('error', (error) => {
         reject(error);
       });
 
-      req.write(data);
+      req.write(jsonPayload);
       req.end();
     });
+  }
+
+  /**
+   * Create an offline did document for an account identity transaction
+   *
+   * @param runtime Runtime object
+   * @param accountId Account ID of the identity's owner
+   */
+  private static async createOfflineDidTransaction(runtime: any, account: string, identity: string):
+  Promise<[VerificationsDelegationInfo, string]> {
+    const underlyingSigner = new SignerInternal({
+      accountStore: runtime.accountStore,
+      contractLoader: runtime.contractLoader,
+      config: {},
+      web3: runtime.web3,
+    });
+    const signer = new SignerIdentity({
+      contractLoader: runtime.contractLoader,
+      verifications: runtime.verifications,
+      web3: runtime.web3,
+    },
+    {
+      activeIdentity: identity,
+      underlyingAccount: account,
+      underlyingSigner,
+    });
+
+    const did = new Did({
+      contractLoader: runtime.contractLoader,
+      dfs: runtime.dfs,
+      executor: runtime.executor,
+      nameResolver: runtime.nameResolver,
+      signerIdentity: signer,
+      verifications: runtime.verifications,
+      web3: runtime.web3,
+    });
+
+    const doc = await did.getDidDocumentTemplate();
+    const identityDid = await did.convertIdentityToDid(identity);
+    const [txInfo, documentHash] = await did.setDidDocumentOffline(identityDid, doc);
+
+    return [txInfo, documentHash];
+  }
+
+  /**
+   * Checks for env variable TEST_ONBOARDING and if given
+   * issues http requests to localhost (used for testing)
+   *
+   * @param {string} network Network to use
+   * @returns {string} host address
+   */
+  private static getAgentHost(network: string): string {
+    if (process.env.TEST_ONBOARDING) {
+      return 'localhost';
+    }
+    return `agents${network === 'testcore' ? '.test' : ''}.evan.network`;
+  }
+
+  /**
+   * Checks for env variable and if given
+   * parses given port number to use for http requests (used for testing)
+   *
+   * @returns {number} port
+   */
+  private static getAgentPort(): number {
+    if (process.env.TEST_ONBOARDING) {
+      const { port } = JSON.parse(process.env.TEST_ONBOARDING);
+      return port;
+    }
+    return 443;
   }
 
   public constructor(optionsInput: OnboardingOptions) {

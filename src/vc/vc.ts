@@ -130,7 +130,6 @@ export interface VcIssuer {
  */
 export interface VcOptions extends LoggerOptions {
   accountStore: AccountStore;
-  activeAccount: string;
   contractLoader: ContractLoader;
   dfs: DfsInterface;
   did: Did;
@@ -421,7 +420,7 @@ export class Vc extends Logger {
    */
   private async createJwtForVc(vc: VcDocument, proofType: VcProofType): Promise<string> {
     const signer = didJWT.SimpleSigner(
-      await this.options.accountStore.getPrivateKey(this.options.activeAccount),
+      await this.options.accountStore.getPrivateKey(this.options.signerIdentity.underlyingAccount),
     );
     let jwt = '';
     await didJWT.createJWT(
@@ -456,12 +455,8 @@ export class Vc extends Logger {
     } catch (e) {
       throw Error(`Invalid issuer DID: ${vc.issuer.id}`);
     }
-    const accountIdentity = await this.options.verifications.getIdentityForAccount(
-      this.options.activeAccount,
-      true,
-    );
 
-    if (accountIdentity !== issuerIdentity) {
+    if (this.options.signerIdentity.activeIdentity !== issuerIdentity) {
       throw Error('You are not authorized to issue this VC');
     }
 
