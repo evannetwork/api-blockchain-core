@@ -322,7 +322,7 @@ Handling Templates and Plugins
 
 Container definitions can be saved as plugins, so they can easy be shared and the structure can be imported by anyone else. These plugins can be combined, including a dbcp description, that represents a whole twin structure, a so called **Twin Template**.
 
-You can find a basic twin template here: `Sample Twin Template <https://github.com/evannetwork/api-blockchain-core/blob/master/src/contracts/digital-twin/testfiles/twin-template.ts>`__.
+You can find a basic twin template here: `Sample Twin Template <https://github.com/evannetwork/twin-templates/blob/master/test.json>`__.
 
 **Steps to your own twin template:**
 
