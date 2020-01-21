@@ -133,7 +133,7 @@ export class SignerIdentity extends Logger implements SignerInterface {
    *
    * @return    {Promeise<string>} hex string with gas price
    */
-  getGasPrice(): Promise<string> {
+  public async getGasPrice(): Promise<string> {
     return this.config.underlyingSigner.getGasPrice();
   }
 
