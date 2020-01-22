@@ -393,6 +393,12 @@ describe('Verifications handler', function test() {
         .to.have.deep.property('rejectReason', { reason: 'denied' });
     });
 
+    it('correctly maps accounts to identities and vice versa', async () => {
+      const identity = await verifications.getIdentityForAccount(accounts[0], true);
+      const account = await verifications.getAccountAddressForIdentity(identity);
+      expect(account).to.eq(accounts[0]);
+    });
+
     it('can not re accept a rejected verification', async () => {
       await verifications.setVerification(accounts[0], accounts[0], '/company');
       await verifications.setVerification(accounts[0], accounts[0], '/company/b-s-s');
