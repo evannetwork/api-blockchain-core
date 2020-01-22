@@ -769,6 +769,22 @@ export class Verifications extends Logger {
   }
 
   /**
+   * Gets an identity's owner account's address
+   *
+   * @param {string} identityAddress The identity address to fetch the owner for
+   * @returns {string} The address of the owner account
+   */
+  public async getAccountAddressForIdentity(identityAddress: string): Promise<string> {
+    const ownerAddress = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'owners',
+      identityAddress,
+    );
+
+    return ownerAddress;
+  }
+
+  /**
    * Loads a list of verifications for a topic and a subject and combines to a single view for a
    * simple verification status check.
    *
