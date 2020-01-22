@@ -769,6 +769,26 @@ export class Verifications extends Logger {
   }
 
   /**
+   * Gets an identity's owner account's address
+   *
+   * @param {string} identityAddress The identity address to fetch the owner for
+   * @returns {string} The address of the owner account
+   */
+  public async getAccountAddressForIdentity(identityAddress: string): Promise<string> {
+    const ownerAddress = await this.options.executor.executeContractCall(
+      this.contracts.storage,
+      'owners',
+      identityAddress,
+    );
+
+    if (ownerAddress === nullAddress) {
+      throw Error(`No record found for ${identityAddress}. Is your identity valid?`);
+    }
+
+    return ownerAddress;
+  }
+
+  /**
    * Loads a list of verifications for a topic and a subject and combines to a single view for a
    * simple verification status check.
    *
@@ -1033,7 +1053,7 @@ export class Verifications extends Logger {
             // if issuer === subject and only if a parent is passed, so if the root one is empty
             // and no slash is available
             if (verification.issuerAccount === verification.subject && verification.parent
-                && verification.issuerAccount !== this.options.config.ensRootOwner) {
+                && verification.issuerAccount !== this.options.config.rootVerificationIssuer) {
               verification.warnings.push('selfIssued');
             }
 
@@ -1068,7 +1088,7 @@ export class Verifications extends Logger {
               verification.parents = [];
 
               if (verification.name === '/evan'
-                && verification.issuerAccount !== this.options.config.ensRootOwner) {
+                && verification.issuerAccount !== this.options.config.rootVerificationIssuer) {
                 // eslint-disable-next-line no-param-reassign
                 verification.warnings = ['notEnsRootOwner'];
               } else {

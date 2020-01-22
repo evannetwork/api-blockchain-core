@@ -2,10 +2,16 @@
 
 ## Next Version
 ### Features
+- add support for identity based accounts to `KeyExchange`, `Sharing` and `Profile` modules
+- update test setup to support identity based accounts
+- adding DID generation upon onboarding
 - allow `plugins` property within `DigitalTwin.create` to create initial containers
 - add `DigitalTwin.exportAsTemplate` to copy a existing twin configuration
+- ensure `DigitalTwin` and `Container` description to use at least `dbcpVersion` 2
+- update root verification handling to use genesis account
 
 ### Fixes
+- use typescript version `3.7.4`
 
 ### Deprecations
 

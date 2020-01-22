@@ -169,6 +169,12 @@ export class DigitalTwin extends Logger {
     const envelope: Envelope = {
       public: instanceConfig.description || DigitalTwin.defaultDescription,
     };
+
+    // ensure dbcp version 2 or higher
+    if (!envelope.public.dbcpVersion || envelope.public.dbcpVersion < 2) {
+      envelope.public.dbcpVersion = 2;
+    }
+
     const validation = options.description.validateDescription(envelope);
     if (validation !== true) {
       throw new Error(`validation of description failed with: ${JSON.stringify(validation)}`);
@@ -335,7 +341,11 @@ export class DigitalTwin extends Logger {
   public constructor(options: DigitalTwinOptions, config: DigitalTwinConfig) {
     super(options as LoggerOptions);
     this.config = config;
-    this.config.containerConfig = this.config.containerConfig || { accountId: nullAddress };
+    // fallback to twin accountId, if containerConfig is specified
+    this.config.containerConfig = {
+      accountId: this.config.accountId,
+      ...this.config.containerConfig,
+    };
     this.options = options;
     this.mutexes = {};
   }
@@ -609,11 +619,15 @@ export class DigitalTwin extends Logger {
   public async setDescription(description: any): Promise<void> {
     await this.ensureContract();
     await this.getMutex('description').runExclusive(async () => {
-      const descriptionParam = description;
+      const descriptionParam = JSON.parse(JSON.stringify(description));
       // ensure, that the evan digital twin tag is set
       descriptionParam.tags = descriptionParam.tags || [];
       if (descriptionParam.tags.indexOf('evan-digital-twin') === -1) {
         descriptionParam.tags.push('evan-digital-twin');
+      }
+      // ensure dbcp version 2 or higher
+      if (!descriptionParam.dbcpVersion || descriptionParam.dbcpVersion < 2) {
+        descriptionParam.dbcpVersion = 2;
       }
 
       await this.options.description.setDescription(

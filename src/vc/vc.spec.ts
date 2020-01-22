@@ -23,9 +23,10 @@ import { expect, use } from 'chai';
 
 import { Runtime } from '../index';
 import { TestUtils } from '../test/test-utils';
-import { VcDocumentTemplate, VcDocument } from './vc';
+import { VcDocumentTemplate, VcDocument, VcEncryptionInfo } from './vc';
 import { Verifications } from '../verifications/verifications';
 import { accounts } from '../test/accounts';
+
 
 use(chaiAsPromised);
 
@@ -38,8 +39,8 @@ describe('VC Resolver', function () {
   const subjectAccountId = accounts[1];
   let issuerIdentityId;
   let subjectIdentityId;
-
   let minimalValidVcData: VcDocumentTemplate;
+  let encryptionInfo: VcEncryptionInfo;
 
   // Mock the did-resolver package that did-jwt usually requires
   const evanResolver = {
@@ -245,7 +246,7 @@ describe('VC Resolver', function () {
 
     it('allows me to get an existing VC using only the VC ID (discarding vc:evan prefix)', async () => {
       const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData);
-      const promise = runtime.vc.getVc(storedVcDoc.id.replace('vc:evan:testcore:', ''));
+      const promise = runtime.vc.getVc(storedVcDoc.id);
 
       await expect(promise).to.not.be.rejected;
       expect((await promise).id).to.eq(storedVcDoc.id);
@@ -384,6 +385,113 @@ describe('VC Resolver', function () {
 
       const vcRevokeStatusNew = await runtime.vc.getRevokeVcStatus(vcId);
       expect(vcRevokeStatusNew).to.be.false;
+    });
+  });
+
+  describe('When creating a private/sharable VC', async () => {
+    // Test for after sharable VCs have been implemented.
+
+
+    it('allows the current runtime to use generate key using vc api', async () => {
+      const vcKey = await runtime.vc.generateKey();
+      expect(vcKey).to.be.string;
+    });
+
+    it('does not allow the current runtime to generate same keys using vc api', async () => {
+      const vcKey = await runtime.vc.generateKey();
+      expect(vcKey).to.be.string;
+
+      const vcKey2 = await runtime.vc.generateKey();
+      expect(vcKey2).to.be.string;
+      expect(vcKey).to.be.not.eq(vcKey2);
+    });
+
+    it('allows to store and retrieve a sharable vc from the same account', async () => {
+      const vcKey = await runtime.vc.generateKey();
+      encryptionInfo = { key: vcKey };
+      expect(vcKey).to.be.string;
+
+      const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData,
+        encryptionInfo);
+      const fetchedVcDoc = await runtime.vc.getVc(storedVcDoc.id,
+        encryptionInfo);
+
+      expect(storedVcDoc).to.be.deep.eq(fetchedVcDoc);
+    });
+
+    it('does not allow to retrieve a sharable vc with wrong key', async () => {
+      const vcKey = await runtime.vc.generateKey();
+      const vcKey2 = await runtime.vc.generateKey();
+      expect(vcKey).to.be.string;
+
+      encryptionInfo = { key: vcKey };
+      const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData,
+        encryptionInfo);
+      encryptionInfo = { key: vcKey2 };
+      const fetchedVcDoc = runtime.vc.getVc(storedVcDoc.id.replace('vc:evan:testcore:', ''),
+        encryptionInfo);
+
+      await expect(fetchedVcDoc).to.be.rejectedWith('Incorrect key: decryption failed');
+    });
+
+
+    it('allows to store an sharable vc and retrieve it from different account', async () => {
+      const vcKey = await runtime.vc.generateKey();
+      encryptionInfo = { key: vcKey };
+      expect(vcKey).to.be.string;
+
+      const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
+      const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData,
+        encryptionInfo);
+      const fetchedVcDoc = await otherRuntime.vc.getVc(storedVcDoc.id,
+        encryptionInfo);
+
+      expect(storedVcDoc).to.be.deep.eq(fetchedVcDoc);
+    });
+
+    it('does not allow to retrieve sharable VC with wrong key from a diffirent account', async () => {
+      const vcKey = await runtime.vc.generateKey();
+      const vcKey2 = await runtime.vc.generateKey();
+      encryptionInfo = { key: vcKey };
+      expect(vcKey).to.be.string;
+
+      const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
+      const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData,
+        encryptionInfo);
+      encryptionInfo = { key: vcKey2 };
+      const fetchedVcDoc = otherRuntime.vc.getVc(storedVcDoc.id,
+        encryptionInfo);
+
+      await expect(fetchedVcDoc).to.be.rejectedWith('Incorrect key: decryption failed');
+    });
+
+
+    it('does not allow me to store a valid private VC non issuer account', async () => {
+      const vcKey = await runtime.vc.generateKey();
+      encryptionInfo = { key: vcKey };
+      const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
+      const someoneElsesId = await otherRuntime.vc.createId();
+
+      const vcData = {
+        ...minimalValidVcData,
+        id: someoneElsesId,
+      };
+
+      const promise = runtime.vc.storeVc(vcData, encryptionInfo);
+      await expect(promise).to.be.rejectedWith(
+        `Active identity is not the owner of the given VC ID ${someoneElsesId}`,
+      );
+    });
+
+    it('allows to store an sharable vc', async () => {
+      const vcKey = await runtime.vc.generateKey();
+      expect(vcKey).to.be.string;
+
+      encryptionInfo = { key: vcKey };
+      const storedVcDoc = runtime.vc.storeVc(minimalValidVcData,
+        encryptionInfo);
+
+      await expect(storedVcDoc).to.be.not.rejected;
     });
   });
 });
