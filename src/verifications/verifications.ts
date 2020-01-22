@@ -775,11 +775,33 @@ export class Verifications extends Logger {
    * @returns {string} The address of the owner account
    */
   public async getAccountAddressForIdentity(identityAddress: string): Promise<string> {
-    const ownerAddress = await this.options.executor.executeContractCall(
-      this.contracts.storage,
-      'owners',
-      identityAddress,
-    );
+    let ownerAddress;
+    if (identityAddress.length === 42) { // 20 bytes address + '0x' prefix
+      ownerAddress = await this.options.executor.executeContractCall(
+        this.contracts.storage,
+        'owners',
+        identityAddress,
+      );
+    } else if (identityAddress.length === 66) { // 32 bytes address + '0x' prefix
+      ownerAddress = await this.options.executor.executeContractCall(
+        this.contracts.registry,
+        'getOwner',
+        identityAddress,
+      );
+
+      // Found a 20B address, find out whether this is an identity or an account
+      try {
+        // Try to find this address' owner account
+        return await this.getAccountAddressForIdentity(ownerAddress);
+      } catch (e) {
+        // Address is already an account, therefore we can return it
+        if (e.message.contains('No record found for')) {
+          return ownerAddress;
+        }
+
+        throw e; // Unrelated error was thrown
+      }
+    }
 
     if (ownerAddress === nullAddress) {
       throw Error(`No record found for ${identityAddress}. Is your identity valid?`);
