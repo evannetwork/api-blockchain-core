@@ -283,10 +283,10 @@ describe('DID Resolver', function test() {
       expect(runtimes[0].did.getDidDocument(did)).to.eventually.deep.eq(document);
     });
 
-    it.only('can fetch did documents for alias identities that have not set a doc themselves, yet', async () => {
+    it('can fetch did documents for alias identities that have not set a doc themselves, yet', async () => {
       const aliasHash = TestUtils.getRandomBytes32();
       const aliasIdentity = await runtimes[0].verifications.createIdentity(
-        runtimes[0].underlyingAccount,
+        runtimes[0].underlyingAccount, aliasHash, false,
       );
 
       const did = await runtimes[0].did.convertIdentityToDid(aliasIdentity);
@@ -304,7 +304,6 @@ describe('DID Resolver', function test() {
       };
 
       const didPromise = await runtimes[0].did.getDidDocument(did);
-      // expect(didPromise).to.eventually.deep.eq(expectedDefaultDid);
       expect(didPromise).to.deep.eq(expectedDefaultDid);
     });
   });
