@@ -286,6 +286,38 @@ Example
 
 
 
+------------------------------------------------------------------------------
+
+.. _signerIdentity_getGasPricex:
+
+getGasPrice
+===================
+
+.. code-block:: javascript
+
+    signer.getGasPrice();
+
+get gas price (either from config or from api.eth.web3.eth.gasPrice (gas price median of last blocks) or api.config.eth.gasPrice; unset config value or set it to falsy for median gas price
+
+-------
+Returns
+-------
+
+``string``: hex string with gas price.
+
+-------
+Example
+-------
+
+.. code-block:: javascript
+
+    const gasPrice = await signer.getGasPrice();
+    // returns 0x2e90edd000
+
+------------------------------------------------------------------------------
+
+
+
 .. required for building markup
 
 .. |source contractLoader| replace:: ``ContractLoader``
