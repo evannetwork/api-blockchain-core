@@ -399,6 +399,15 @@ describe('Verifications handler', function test() {
       expect(account).to.eq(accounts[0]);
     });
 
+    it.only('finds the eventual owner account address for a given alias identity', async () => {
+      const aliasHash = TestUtils.getRandomBytes32();
+      const aliasIdentity = await verifications.createIdentity(
+        accounts[0], aliasHash, false,
+      );
+      const ownerAccountAddress = await verifications.getAccountAddressForIdentity(aliasIdentity);
+      expect(ownerAccountAddress).to.eq(accounts[0]);
+    });
+
     it('can not re accept a rejected verification', async () => {
       await verifications.setVerification(accounts[0], accounts[0], '/company');
       await verifications.setVerification(accounts[0], accounts[0], '/company/b-s-s');
