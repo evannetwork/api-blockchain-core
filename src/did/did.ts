@@ -314,8 +314,13 @@ export class Did extends Logger {
    */
   private async getDefaultDidDocument(did: string): Promise<any> {
     const identity = await this.convertDidToIdentity(did);
+    let ownerAccount;
 
-    const ownerAccount = ''; // TODO: await this.options.verifications.getAccountForIdentity(identity);
+    try {
+      ownerAccount = await this.options.verifications.getAccountAddressForIdentity(identity);
+    } catch (e) {
+      throw Error('This DID does not point to an existing identity');
+    }
 
     return JSON.parse(`{
       "@context": "https://w3id.org/did/v1",
