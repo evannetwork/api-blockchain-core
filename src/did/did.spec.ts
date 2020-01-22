@@ -282,5 +282,30 @@ describe('DID Resolver', function test() {
 
       expect(runtimes[0].did.getDidDocument(did)).to.eventually.deep.eq(document);
     });
+
+    it.only('can fetch did documents for alias identities that have not set a doc themselves, yet', async () => {
+      const aliasHash = TestUtils.getRandomBytes32();
+      const aliasIdentity = await runtimes[0].verifications.createIdentity(
+        runtimes[0].underlyingAccount,
+      );
+
+      const did = await runtimes[0].did.convertIdentityToDid(aliasIdentity);
+
+      const expectedDefaultDid = {
+        '@context': 'https://w3id.org/did/v1',
+        id: `${did}`,
+        publicKey: [{
+          id: `${did}#key-1`,
+          type: 'Secp256k1SignatureVerificationKey2018',
+          owner: `${runtimes[0].underlyingAccount}`,
+          ethereumAddress: `${runtimes[0].underlyingAccount}`,
+        }],
+        authentication: [`${did}#key-1`],
+      };
+
+      const didPromise = await runtimes[0].did.getDidDocument(did);
+      // expect(didPromise).to.eventually.deep.eq(expectedDefaultDid);
+      expect(didPromise).to.deep.eq(expectedDefaultDid);
+    });
   });
 });

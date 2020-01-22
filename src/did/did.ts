@@ -314,27 +314,25 @@ export class Did extends Logger {
    */
   private async getDefaultDidDocument(did: string): Promise<any> {
     const identity = await this.convertDidToIdentity(did);
-    let ownerAccount;
 
     try {
-      ownerAccount = await this.options.verifications.getAccountAddressForIdentity(identity);
+      const ownerAccount = await this.options.verifications.getAccountAddressForIdentity(identity);
+      return JSON.parse(`{
+        "@context": "https://w3id.org/did/v1",
+        "id": "${did}",
+        "publicKey": [{
+          "id": "${did}#key-1",
+          "type": "Secp256k1SignatureVerificationKey2018",
+          "owner": "${ownerAccount}",
+          "ethereumAddress": "${ownerAccount}"
+        }],
+        "authentication": [
+          "${did}#key-1"
+        ]
+      }`);
     } catch (e) {
       throw Error('This DID does not point to an existing identity');
     }
-
-    return JSON.parse(`{
-      "@context": "https://w3id.org/did/v1",
-      "id": "${did}",
-      "publicKey": [{
-        "id": "${did}#key-1",
-        "type": "Secp256k1SignatureVerificationKey2018",
-        "owner": "${ownerAccount}",
-        "ethereumAddress": "${ownerAccount}"
-      }],
-      "authentication": [
-        "${did}#key-1"
-      ]
-    }`);
   }
 
   /**
