@@ -12,6 +12,7 @@
 
 ### Fixes
 - use typescript version `3.7.4`
+- fix behavior of `DataContract` for unencrypted data
 
 ### Deprecations
 

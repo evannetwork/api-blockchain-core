@@ -953,6 +953,54 @@ describe('DataContract', function test() {
   });
   describe('when working with raw values', async () => {
     runTestSubset(true);
+    it('can store dfs data unencrypted and another account can read this unencrypted data', async () => {
+      const contract = await dc.create('testdatacontract', accounts[0], businessCenterDomain);
+      await dc.inviteToContract(
+        businessCenterDomain, contract.options.address, accounts[0], accounts[1],
+      );
+      await dc.setEntry(
+        contract,
+        'entry_settable_by_owner',
+        sampleValues[0],
+        accounts[0],
+        true,
+        false,
+        'unencrypted',
+      );
+      dc.clearSharingCache();
+      await expect(dc.getEntry(
+        contract,
+        'entry_settable_by_owner',
+        accounts[1],
+        true,
+        false,
+      )).to.eventually.eq(sampleValues[0]);
+    });
+    it('can invite accounts and let them write data to a contract without sharing keys', async () => {
+      const contract = await dc.create('testdatacontract', accounts[0], businessCenterDomain);
+      await dc.inviteToContract(
+        businessCenterDomain, contract.options.address, accounts[0], accounts[1],
+      );
+      await TestUtils.nextBlock(executor, accounts[0]);
+      dc.clearSharingCache();
+
+      await expect(dc.setEntry(
+        contract,
+        'entry_settable_by_member',
+        sampleValues[0],
+        accounts[1],
+        true,
+        false,
+        'unencrypted',
+      )).not.to.be.rejected;
+      await expect(dc.getEntry(
+        contract,
+        'entry_settable_by_member',
+        accounts[0],
+        true,
+        false,
+      )).to.eventually.eq(sampleValues[0]);
+    });
   });
   describe('when changing the contract state', async () => {
     it('allows to change the state with a configured transition', async () => {
