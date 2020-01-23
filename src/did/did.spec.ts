@@ -102,23 +102,23 @@ describe('DID Resolver', function test() {
     });
 
     it('allows me to fetch a default did document for accounts that have not set a did document yet', async () => {
-      const randomAccount = TestUtils.getRandomAddress();
-      const accountDid = await runtimes[0].did.convertIdentityToDid(randomAccount);
+      const randomIdentity = TestUtils.getRandomAddress();
+      const did = await runtimes[0].did.convertIdentityToDid(randomIdentity);
 
       const expectedDefaultDid = {
         '@context': 'https://w3id.org/did/v1',
-        id: accountDid,
+        id: did,
         publicKey: [{
-          id: `${accountDid}#key-1`,
+          id: `${did}#key-1`,
           type: 'Secp256k1VerificationKey2018',
-          owner: accountDid,
-          ethereumAddress: randomAccount,
+          owner: did,
+          ethereumAddress: randomIdentity,
         }],
-        authentication: [`${accountDid}#key-1`],
+        authentication: [`${did}#key-1`],
       };
 
-      const accountDidDoc = await runtimes[0].did.getDidDocument(accountDid);
-      expect(accountDidDoc).to.deep.eq(expectedDefaultDid);
+      const identityDidDoc = await runtimes[0].did.getDidDocument(did);
+      expect(identityDidDoc).to.deep.eq(expectedDefaultDid);
     });
   });
 
@@ -265,13 +265,14 @@ describe('DID Resolver', function test() {
       const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);
       const controllerDid = await runtimes[0].did.convertIdentityToDid(runtimes[0].activeIdentity);
       const controllerDidDoc = await runtimes[0].did.getDidDocument(controllerDid);
+      const authKeyIds = controllerDidDoc.publicKey.map((key) => key.id).join(',');
 
       const expectedDefaultDid = {
         '@context': 'https://w3id.org/did/v1',
         id: twinDid,
         controller: controllerDidDoc.id,
         authentication: [
-          controllerDidDoc.authentication[0],
+          authKeyIds,
         ],
       };
 
@@ -346,13 +347,14 @@ describe('DID Resolver', function test() {
       const controllerDid = await runtimes[0].did.convertIdentityToDid(ownerIdentity);
       const controllerDidDoc = await runtimes[0].did.getDidDocument(controllerDid);
       const did = await runtimes[0].did.convertIdentityToDid(aliasIdentity);
+      const authKeyIds = controllerDidDoc.publicKey.map((key) => key.id).join(',');
 
       const expectedDefaultDid = {
         '@context': 'https://w3id.org/did/v1',
         id: did,
         controller: controllerDidDoc.id,
         authentication: [
-          controllerDidDoc.authentication[0],
+          authKeyIds,
         ],
       };
 

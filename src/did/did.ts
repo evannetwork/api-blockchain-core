@@ -314,35 +314,33 @@ export class Did extends Logger {
    */
   private async getDefaultDidDocument(did: string): Promise<any> {
     const identity = await this.convertDidToIdentity(did);
-    try {
-      // Try to get Owner address for identity and return doc for it
-      const controllerIdentity = await this.options.verifications
-        .getOwnerAddressForIdentity(identity);
-      const controllerDid = await this.convertIdentityToDid(controllerIdentity);
-      const controllerDidDoc = await this.getDidDocument(controllerDid);
-      return await this.getDidDocumentTemplate(did,
-        controllerDid,
-        controllerDidDoc.authentication[0]);
-    } catch (e) {
-      if (e.message && e.message.includes('No record found for')) {
-        // Is account, return default doc
-        return JSON.parse(`{
-          "@context": "https://w3id.org/did/v1",
-          "id": "${did}",
-          "publicKey": [{
-            "id": "${did}#key-1",
-            "type": "Secp256k1VerificationKey2018",
-            "owner": "${did}",
-            "ethereumAddress": "${identity}"
-          }],
-          "authentication": [
-            "${did}#key-1"
-          ]
-        }`);
-      }
 
-      throw (e);
+    if (identity.length === 42) {
+      // Identity is account identity and therefore self-sovereign
+      return JSON.parse(`{
+        "@context": "https://w3id.org/did/v1",
+        "id": "${did}",
+        "publicKey": [{
+          "id": "${did}#key-1",
+          "type": "Secp256k1VerificationKey2018",
+          "owner": "${did}",
+          "ethereumAddress": "${identity}"
+        }],
+        "authentication": [
+          "${did}#key-1"
+        ]
+      }`);
     }
+    // Identity is contract identity and therefore controlled by another identity
+    const controllerIdentity = await this.options.verifications
+      .getOwnerAddressForIdentity(identity);
+    const controllerDid = await this.convertIdentityToDid(controllerIdentity);
+    const controllerDidDoc = await this.getDidDocument(controllerDid);
+    const authKeyIds = controllerDidDoc.publicKey.map((key) => key.id).join(',');
+
+    return this.getDidDocumentTemplate(did,
+      controllerDid,
+      authKeyIds);
   }
 
   /**
