@@ -314,24 +314,31 @@ export class Did extends Logger {
    */
   private async getDefaultDidDocument(did: string): Promise<any> {
     const identity = await this.convertDidToIdentity(did);
-
     try {
-      const ownerAccount = await this.options.verifications.getAccountAddressForIdentity(identity);
-      return JSON.parse(`{
-        "@context": "https://w3id.org/did/v1",
-        "id": "${did}",
-        "publicKey": [{
-          "id": "${did}#key-1",
-          "type": "Secp256k1SignatureVerificationKey2018",
-          "owner": "${ownerAccount}",
-          "ethereumAddress": "${ownerAccount}"
-        }],
-        "authentication": [
-          "${did}#key-1"
-        ]
-      }`);
+      // Try to get Owner address for identity and return doc for it
+      const controllerIdentity = await this.options.verifications
+        .getAccountAddressForIdentity(identity);
+      const controllerDid = await this.convertIdentityToDid(controllerIdentity);
+      return await this.getDidDocumentTemplate(did, controllerDid, `${controllerDid}#key-1`);
     } catch (e) {
-      throw Error('This DID does not point to an existing identity');
+      if (e.message && e.message.contains('No record found for')) {
+        // Is account, return default doc
+        return JSON.parse(`{
+          "@context": "https://w3id.org/did/v1",
+          "id": "${did}",
+          "publicKey": [{
+            "id": "${did}#key-1",
+            "type": "Secp256k1VerificationKey2018",
+            "owner": "${did}",
+            "ethereumAddress": "${identity}"
+          }],
+          "authentication": [
+            "${did}#key-1"
+          ]
+        }`);
+      }
+
+      throw (e);
     }
   }
 
