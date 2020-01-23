@@ -317,11 +317,14 @@ export class Did extends Logger {
     try {
       // Try to get Owner address for identity and return doc for it
       const controllerIdentity = await this.options.verifications
-        .getAccountAddressForIdentity(identity);
+        .getOwnerAddressForIdentity(identity);
       const controllerDid = await this.convertIdentityToDid(controllerIdentity);
-      return await this.getDidDocumentTemplate(did, controllerDid, `${controllerDid}#key-1`);
+      const controllerDidDoc = await this.getDidDocument(controllerDid);
+      return await this.getDidDocumentTemplate(did,
+        controllerDid,
+        controllerDidDoc.authentication[0]);
     } catch (e) {
-      if (e.message && e.message.contains('No record found for')) {
+      if (e.message && e.message.includes('No record found for')) {
         // Is account, return default doc
         return JSON.parse(`{
           "@context": "https://w3id.org/did/v1",
