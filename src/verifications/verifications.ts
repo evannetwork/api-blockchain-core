@@ -769,12 +769,12 @@ export class Verifications extends Logger {
   }
 
   /**
-   * Gets an identity's owner account's address
+   * Gets an identity's owner's address. This can be either an account or an identity address.
    *
-   * @param {string} identityAddress The identity address to fetch the owner for
-   * @returns {string} The address of the owner account
+   * @param {string} identityAddress The identity address to fetch the owner for.
+   * @returns {string} The address of the owner.
    */
-  public async getAccountAddressForIdentity(identityAddress: string): Promise<string> {
+  public async getOwnerAddressForIdentity(identityAddress: string): Promise<string> {
     let ownerAddress;
     if (identityAddress.length === 42) { // 20 bytes address + '0x' prefix
       ownerAddress = await this.options.executor.executeContractCall(
@@ -788,23 +788,10 @@ export class Verifications extends Logger {
         'getOwner',
         identityAddress,
       );
-
-      // Found a 20B address, find out whether this is an identity or an account
-      try {
-        // Try to find this address' owner account
-        return await this.getAccountAddressForIdentity(ownerAddress);
-      } catch (e) {
-        // Address is already an account, therefore we can return it
-        if (e.message.contains('No record found for')) {
-          return ownerAddress;
-        }
-
-        throw e; // Unrelated error was thrown
-      }
     }
 
     if (ownerAddress === nullAddress) {
-      throw Error(`No record found for ${identityAddress}. Is your identity valid?`);
+      throw Error(`No record found for ${identityAddress}. Is this a valid identity address?`);
     }
 
     return ownerAddress;

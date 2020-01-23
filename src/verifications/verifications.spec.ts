@@ -395,7 +395,7 @@ describe('Verifications handler', function test() {
 
     it('correctly maps accounts to identities and vice versa', async () => {
       const identity = await verifications.getIdentityForAccount(accounts[0], true);
-      const account = await verifications.getAccountAddressForIdentity(identity);
+      const account = await verifications.getOwnerAddressForIdentity(identity);
       expect(account).to.eq(accounts[0]);
     });
 
@@ -404,8 +404,9 @@ describe('Verifications handler', function test() {
       const aliasIdentity = await verifications.createIdentity(
         accounts[0], aliasHash, false,
       );
-      const ownerAccountAddress = await verifications.getAccountAddressForIdentity(aliasIdentity);
-      expect(ownerAccountAddress).to.eq(accounts[0]);
+      const identity = await verifications.getIdentityForAccount(accounts[0], true);
+      const ownerAddress = await verifications.getOwnerAddressForIdentity(aliasIdentity);
+      expect(identity).to.eq(ownerAddress);
     });
 
     it('can not re accept a rejected verification', async () => {
