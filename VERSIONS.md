@@ -9,6 +9,7 @@
 - add `DigitalTwin.exportAsTemplate` to copy a existing twin configuration
 - ensure `DigitalTwin` and `Container` description to use at least `dbcpVersion` 2
 - update root verification handling to use genesis account
+- add lookup method for an identity's owner's address
 
 ### Fixes
 - use typescript version `3.7.4`
