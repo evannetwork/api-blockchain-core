@@ -65,7 +65,7 @@ install:
     rm -rf node_modules/@evan.network/dbcp
     git clone https://github.com/evannetwork/dbcp.git ../dbcp
     cd ../dbcp
-    echo $TRAVIS_PULL_REQUEST_BRANCH
+    exists=`git show-ref refs/remotes/$TRAVIS_PULL_REQUEST_BRANCH`
     if [ -n "$exists" ]; then
         echo 'branch $TRAVIS_PULL_REQUEST_BRANCH exists on dbcp, checking out'
         git checkout $TRAVIS_PULL_REQUEST_BRANCH
@@ -82,7 +82,7 @@ install:
     git clone https://github.com/evannetwork/smart-contracts-core.git
     cd smart-contracts-core
     git show-ref
-    exists=`git show-ref refs/heads/$TRAVIS_PULL_REQUEST_BRANCH`
+    exists=`git show-ref refs/remotes/$TRAVIS_PULL_REQUEST_BRANCH`
     if [ -n "$exists" ]; then
         echo 'branch $TRAVIS_PULL_REQUEST_BRANCH exists on smart-contracts-core, checking out'
         git checkout $TRAVIS_PULL_REQUEST_BRANCH
