@@ -65,6 +65,7 @@ install:
     rm -rf node_modules/@evan.network/dbcp
     git clone https://github.com/evannetwork/dbcp.git ../dbcp
     cd ../dbcp
+    echo $TRAVIS_PULL_REQUEST_BRANCH
     if [ -n "$exists" ]; then
         echo 'branch $TRAVIS_PULL_REQUEST_BRANCH exists on dbcp, checking out'
         git checkout $TRAVIS_PULL_REQUEST_BRANCH
