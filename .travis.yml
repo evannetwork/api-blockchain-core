@@ -81,6 +81,7 @@ install:
     rm -rf smart-contracts-core
     git clone https://github.com/evannetwork/smart-contracts-core.git
     cd smart-contracts-core
+    git show-ref
     exists=`git show-ref refs/heads/$TRAVIS_PULL_REQUEST_BRANCH`
     if [ -n "$exists" ]; then
         echo 'branch $TRAVIS_PULL_REQUEST_BRANCH exists on smart-contracts-core, checking out'
