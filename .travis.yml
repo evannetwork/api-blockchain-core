@@ -23,7 +23,7 @@ matrix:
   - name: "data contract & IPFS tests & did/vc tests"
     node_js: "11"
     env:
-      - TESTSPECS="src/contracts/data-contract/*.spec.ts src/encryption/*.spec.ts src/dfs/*.spec.ts src/vc/*.spec.ts src/did/*.spec.ts"
+      - TESTSPECS="src/contracts/data-contract/*.spec.ts src/encryption/*.spec.ts src/dfs/*.spec.ts src/did/*.spec.ts src/vc/*.spec.ts"
       - CHAIN_ENDPOINT='ws://localhost:7545'
     script:
       - npm run testunitcoverage
@@ -65,11 +65,12 @@ install:
     rm -rf node_modules/@evan.network/dbcp
     git clone https://github.com/evannetwork/dbcp.git ../dbcp
     cd ../dbcp
+    exists=`git show-ref refs/remotes/origin/$TRAVIS_PULL_REQUEST_BRANCH`
     if [ -n "$exists" ]; then
-        echo 'branch $TRAVIS_PULL_REQUEST_BRANCH exists on dbcp, checking out'
-        git checkout $TRAVIS_PULL_REQUEST_BRANCH
+        echo 'branch "$TRAVIS_PULL_REQUEST_BRANCH" exists on dbcp, checking out'
+        git checkout "$TRAVIS_PULL_REQUEST_BRANCH"
     else
-        echo 'branch $TRAVIS_PULL_REQUEST_BRANCH not exists on dbcp, checking out develop'
+        echo 'branch "$TRAVIS_PULL_REQUEST_BRANCH" not exists on dbcp, checking out develop'
         git checkout develop
     fi
     npm i
@@ -80,12 +81,12 @@ install:
     rm -rf smart-contracts-core
     git clone https://github.com/evannetwork/smart-contracts-core.git
     cd smart-contracts-core
-    exists=`git show-ref refs/heads/$TRAVIS_PULL_REQUEST_BRANCH`
+    exists=`git show-ref refs/remotes/origin/$TRAVIS_PULL_REQUEST_BRANCH`
     if [ -n "$exists" ]; then
-        echo 'branch $TRAVIS_PULL_REQUEST_BRANCH exists on smart-contracts-core, checking out'
-        git checkout $TRAVIS_PULL_REQUEST_BRANCH
+        echo 'branch "$TRAVIS_PULL_REQUEST_BRANCH" exists on smart-contracts-core, checking out'
+        git checkout "$TRAVIS_PULL_REQUEST_BRANCH"
     else
-        echo 'branch $TRAVIS_PULL_REQUEST_BRANCH not exists on smart-contracts-core, checking out develop'
+        echo 'branch "$TRAVIS_PULL_REQUEST_BRANCH" not exists on smart-contracts-core, checking out develop'
         git checkout develop
     fi
     npm i
