@@ -275,6 +275,11 @@ describe('signer-identity (identity based signer)', function test() {
         expect(diff.eq(new BigNumber(amountToSend))).to.be.true;
       });
 
+      it('can get the gas price', async () => {
+        const gasPrice = await signer.getGasPrice();
+        expect(gasPrice).to.be.string;
+      });
+
       it('should reject transfer and balance of identity should remain same', async () => {
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
         const contract = await executor.createContract(

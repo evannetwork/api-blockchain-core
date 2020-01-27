@@ -128,6 +128,16 @@ export class SignerIdentity extends Logger implements SignerInterface {
   }
 
   /**
+   * get gas price (either from config or from api.eth.web3.eth.gasPrice (gas price median of last
+   * blocks) or api.config.eth.gasPrice; unset config value or set it to falsy for median gas price
+   *
+   * @return    {Promeise<string>} hex string with gas price
+   */
+  public async getGasPrice(): Promise<string> {
+    return this.config.underlyingSigner.getGasPrice();
+  }
+
+  /**
    * get public key for given account
    *
    * @param      {string}  accountId  account to get public key for
