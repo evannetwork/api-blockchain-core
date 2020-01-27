@@ -322,7 +322,11 @@ Handling Templates and Plugins
 
 Container definitions can be saved as plugins, so they can easy be shared and the structure can be imported by anyone else. These plugins can be combined, including a dbcp description, that represents a whole twin structure, a so called **Twin Template**.
 
-You can find a basic twin template here: `Sample Twin Template <https://github.com/evannetwork/api-blockchain-core/blob/master/src/contracts/digital-twin/testfiles/twin-template.ts>`__.
+Have a look at several example twin templates in our separated `Twin Templates repository <https://github.com/evannetwork/twin-templates>`__:
+
+- `Sample Twin Template <https://github.com/evannetwork/twin-templates/blob/master/test.json>`__.
+- `Car Template <https://github.com/evannetwork/twin-templates/blob/master/car.json>`__.
+- `Bicycle Template <https://github.com/evannetwork/twin-templates/blob/master/bicycle.json>`__.
 
 **Steps to your own twin template:**
 
@@ -481,7 +485,7 @@ You can find a basic twin template here: `Sample Twin Template <https://github.c
 
 --------------------------------------------------------------------------------
 
-.. _template_plugins:
+.. _template_data_structure:
 
 Setup plugin data structure 
 ===========================
@@ -489,6 +493,7 @@ Setup plugin data structure
 Data structure of the plugins is defined within the plugins template part. Each plugin will result in one container, that have several data sets, which are defined under the `properties` parameter. All data in this parameter, is defined using the `ajv <https://github.com/epoberezkin/ajv>`__ validator. You can also have a look at the |source container_create|_ documentation. Read the following points for a short conclusion about **dataSchema** and it's structure.
 
 #. dataset1
+
   #. dataSchema - AJV data schema definition for the entry / listentry. Could be e.g. type of string, number, files, nested objects
   #. permissions - Initial permission setup, that is directly rolled out by container initialization with this plugin. You can directly define, which role is allowed to "set" or "remove" data of this entry.
   #. type - type of the datacontract entry ("entry" / "list")
