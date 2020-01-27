@@ -218,7 +218,7 @@ getOwnerAddressForIdentity
 
   verifications.getOwnerAddressForIdentity(identityAddress);
 
-Gets the identity contract for a given account id or contract.
+Gets an identity's owner's address. This can be either an account or an identity address.
 
 ----------
 Parameters
