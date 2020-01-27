@@ -399,7 +399,7 @@ describe('Verifications handler', function test() {
       expect(account).to.eq(accounts[0]);
     });
 
-    it('finds the eventual owner account address for a given alias identity', async () => {
+    it('finds the owner identity of a given alias identity', async () => {
       const aliasHash = TestUtils.getRandomBytes32();
       const aliasIdentity = await verifications.createIdentity(
         accounts[0], aliasHash, false,
