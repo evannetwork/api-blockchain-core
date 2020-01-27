@@ -470,7 +470,7 @@ export class Verifications extends Logger {
 
   /**
    * Creates a new identity for account or contract and registers them on the storage. Returned
-   * identity is either a 40B contract address (for account identities) or a 32B identity hash
+   * identity is either a 20B contract address (for account identities) or a 32B identity hash
    * contract identities
    *
    * @param      {string}  accountId          account that runs transaction, receiver of identity
@@ -481,7 +481,7 @@ export class Verifications extends Logger {
    * @param      {bool}    updateDescription  (optional) update description of contract, defaults to
    *                                          ``true``
    * @param      {bool}    linkContract       link contract address to its identity
-   * @return     {Promise<string>}  new identity (40Bytes for accounts, 32Bytes for other)
+   * @return     {Promise<string>}  new identity (20Bytes for accounts, 32Bytes for other)
    */
   public async createIdentity(
     accountId: string,

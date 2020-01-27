@@ -220,6 +220,7 @@ getOwnerAddressForIdentity
 
 Gets an identity's owner's address. This can be either an account or an identity address.
 
+
 ----------
 Parameters
 ----------

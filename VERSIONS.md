@@ -12,6 +12,7 @@
 - add lookup method for an identity's owner's address
 - add `signer-identity` to enable identity to getGasPrice using underlying account 
 
+
 ### Fixes
 - use typescript version `3.7.4`
 - fix behavior of `DataContract` for unencrypted data

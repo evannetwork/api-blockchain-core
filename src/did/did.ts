@@ -158,10 +158,11 @@ export class Did extends Logger {
       identity,
     );
     if (documentHash === nullBytes32) {
-      throw Error(`There is no DID document associated to ${did} yet`);
+      return this.getDefaultDidDocument(did);
     }
     result = JSON.parse(await this.options.dfs.get(documentHash) as any);
     result = await this.removePublicKeyTypeArray(result);
+
     return result;
   }
 
@@ -195,8 +196,8 @@ export class Did extends Logger {
       }`);
     } if (!(did || controllerDid || authenticationKey)) {
       const identity = this.options.signerIdentity.activeIdentity;
-      const [didInfix, publicKey] = await Promise.all([
-        this.getDidInfix(),
+      const [didAddress, publicKey] = await Promise.all([
+        this.convertIdentityToDid(identity),
         this.options.signerIdentity.getPublicKey(
           this.options.signerIdentity.underlyingAccount,
         ),
@@ -204,14 +205,14 @@ export class Did extends Logger {
 
       return JSON.parse(`{
         "@context": "https://w3id.org/did/v1",
-        "id": "did:evan:${didInfix}${identity}",
+        "id": "${didAddress}",
         "publicKey": [{
-          "id": "did:evan:${didInfix}${identity}#key-1",
+          "id": "${didAddress}#key-1",
           "type": "Secp256k1SignatureVerificationKey2018",
           "publicKeyHex": "${publicKey}"
         }],
         "authentication": [
-          "did:evan:${didInfix}${identity}#key-1"
+          "${didAddress}#key-1"
         ]
       }`);
     }
@@ -304,6 +305,42 @@ export class Did extends Logger {
    */
   public async validateDid(did: string): Promise<void> {
     await this.validateDidAndGetSections(did);
+  }
+
+  /**
+   * Retrieve a default DID document for identities that do not have a document associated yet.
+   * @param did DID to fetch a document for.
+   * @returns Resolves to a DID document.
+   */
+  private async getDefaultDidDocument(did: string): Promise<any> {
+    const identity = await this.convertDidToIdentity(did);
+
+    if (identity.length === 42) {
+      // Identity is account identity and therefore self-sovereign
+      return JSON.parse(`{
+        "@context": "https://w3id.org/did/v1",
+        "id": "${did}",
+        "publicKey": [{
+          "id": "${did}#key-1",
+          "type": "Secp256k1VerificationKey2018",
+          "owner": "${did}",
+          "ethereumAddress": "${identity}"
+        }],
+        "authentication": [
+          "${did}#key-1"
+        ]
+      }`);
+    }
+    // Identity is contract identity and therefore controlled by another identity
+    const controllerIdentity = await this.options.verifications
+      .getOwnerAddressForIdentity(identity);
+    const controllerDid = await this.convertIdentityToDid(controllerIdentity);
+    const controllerDidDoc = await this.getDidDocument(controllerDid);
+    const authKeyIds = controllerDidDoc.publicKey.map((key) => key.id).join(',');
+
+    return this.getDidDocumentTemplate(did,
+      controllerDid,
+      authKeyIds);
   }
 
   /**
