@@ -288,7 +288,7 @@ Example
 
 ------------------------------------------------------------------------------
 
-.. _signerIdentity_getGasPricex:
+.. _signerIdentity_getGasPrice:
 
 getGasPrice
 ===================
