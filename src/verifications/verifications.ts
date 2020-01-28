@@ -1942,7 +1942,7 @@ export class Verifications extends Logger {
    *                             otherwise void
    */
   // eslint-disable-next-line consistent-return
-  private async executeAndHandleEventResult(
+  public async executeAndHandleEventResult(
     accountId: string,
     data: string,
     eventInfo?: any,

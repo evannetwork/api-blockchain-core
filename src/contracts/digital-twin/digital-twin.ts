@@ -429,6 +429,61 @@ export class DigitalTwin extends Logger {
     return result;
   }
 
+  public async deactivate(): Promise<void> {
+    await this.ensureContract();
+    const description = await this.getDescription();
+
+    const containers = await this.getEntries();
+    // Unset ENS if given
+
+    // TODO Delete consumers as well?
+    for (const container in containers) {
+      if (containers[container].entryType === DigitalTwinEntryType.Container) {
+        const contract = await this.options.contractLoader.loadContract('BaseContractInterface', containers[container].value.config.address);
+        await this.options.executor.executeContractTransaction(
+          contract,
+          'setAuthority',
+          { from: this.config.accountId },
+          nullAddress,
+        );
+        await this.options.executor.executeContractTransaction(
+          contract,
+          'setOwner',
+          { from: this.config.accountId },
+          nullAddress,
+        );
+      }
+    }
+
+    // Unset did
+    const twinDid = await this.options.did.convertIdentityToDid(description.identity);
+    await this.options.did.removeDidDocument(twinDid);
+
+    // Deactivate identity
+    const verificationRegistry = this.options.verifications.contracts.registry;
+    await this.options.verifications.executeAndHandleEventResult(
+      this.config.accountId,
+      verificationRegistry.methods.transferIdentity(
+        description.identity,
+        nullAddress,
+      ).encodeABI(),
+    );
+
+    // Deactivate twin contract
+    await this.options.executor.executeContractTransaction(
+      this.contract,
+      'setAuthority',
+      { from: this.config.accountId },
+      nullAddress,
+    );
+    await this.options.executor.executeContractTransaction(
+      this.contract,
+      'setOwner',
+      { from: this.config.accountId },
+      nullAddress,
+    );
+  }
+
   /**
    * Check if digital twin contract already has been loaded, load from address / ENS if required
    * and throw an error, when no contract exists or the description doesn't match the twin
