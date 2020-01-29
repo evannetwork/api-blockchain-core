@@ -1012,23 +1012,20 @@ export class Container extends Logger {
     }
 
     // for all share configs
-    const userPromises = [];
-
-    userPromises.concat(localShareConfig.map(async (shareConfig) => {
+    await Throttle.all(localShareConfig.map((shareConfig) => async () => {
       const {
         accountId, read = [], readWrite = [], removeListEntries = [],
       } = shareConfig;
-
-      const accessPromises = [];
+      let accessPromises = [];
 
       // //////////////////////////////////////////////// ensure that account is member in contract
       if (!await this.options.executor.executeContractCall(
         this.contract, 'isConsumer', accountId,
       )
       ) {
-        accessPromises.push(this.options.dataContract.inviteToContract(
+        await this.options.dataContract.inviteToContract(
           null, this.contract.options.address, this.config.accountId, accountId,
-        ));
+        );
       }
 
       // ///////////////////////////////////////////////////// ensure property roles and membership
@@ -1037,7 +1034,7 @@ export class Container extends Logger {
         read.push('type');
       }
       // ensure that roles for fields exist and that accounts have permissions
-      accessPromises.concat(readWrite.map(async (property) => {
+      accessPromises = accessPromises.concat(readWrite.map((property) => async () => {
         // get permissions from contract
         const hash = this.options.rightsAndRoles.getOperationCapabilityHash(
           property,
@@ -1082,7 +1079,7 @@ export class Container extends Logger {
         }
       }));
 
-      accessPromises.concat(removeListEntries.map(async (property) => {
+      accessPromises = accessPromises.concat(removeListEntries.map((property) => async () => {
         const propertyType = getPropertyType(schemaProperties[property].type);
 
         // throw error if remove should be given on no list
@@ -1133,9 +1130,7 @@ export class Container extends Logger {
           );
         }
       }));
-
       await Throttle.all(accessPromises, { maxInProgress: 10 });
-
       // ensure that content keys were created for all shared properties
       await Promise.all([...read, ...readWrite].map(
         (property) => this.ensureKeyInSharing(property),
@@ -1192,8 +1187,6 @@ export class Container extends Logger {
         }
       });
     }));
-
-    await Throttle.all(userPromises);
   }
 
   /**
@@ -1384,10 +1377,8 @@ export class Container extends Logger {
       }
     }
 
-    const shareConfigPromises = [];
     // for all share configs
-
-    shareConfigPromises.concat(localUnshareConfigs.map(async (unshareConfig) => {
+    await Throttle.all(localUnshareConfigs.map(async (unshareConfig) => {
       const {
         accountId, readWrite = [], removeListEntries = [], write = [],
       } = unshareConfig;
@@ -1395,9 +1386,9 @@ export class Container extends Logger {
       this.log('checking unshare configs', 'debug');
       // remove write permissions for all in readWrite and write
 
-      const accessPromises = [];
+      let accessPromises = [];
 
-      accessPromises.concat([...readWrite, ...write].map(async (property) => {
+      accessPromises = accessPromises.concat([...readWrite, ...write].map(async (property) => {
         this.log(`removing write permissions for ${property}`, 'debug');
         const propertyType = getPropertyType(schemaProperties[property].type);
         // search for role with permissions
@@ -1438,7 +1429,7 @@ export class Container extends Logger {
       }));
 
       // ///////////////////////////////////////////////////////////// remove list entries handling
-      accessPromises.concat(removeListEntries.map(async (property) => {
+      accessPromises = accessPromises.concat(removeListEntries.map(async (property) => {
         const propertyType = getPropertyType(schemaProperties[property].type);
         const permittedRole = await this.getPermittedRole(
           authority, property, propertyType, ModificationType.Remove,
@@ -1567,8 +1558,6 @@ export class Container extends Logger {
         });
       });
     }));
-
-    await Throttle.all(shareConfigPromises);
   }
 
   /**
