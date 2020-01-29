@@ -507,8 +507,8 @@ export async function createDefaultRuntime(
       },
       { credentialStatusEndpoint: config.smartAgents.didAndVc.vcRevokationStatusEndpoint },
     );
+    verifications.updateOptions({ did, vc });
   }
-
 
   if (await profile.exists()) {
     logger.log(`profile for ${activeIdentity} exists, fetching keys`, 'debug');
