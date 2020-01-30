@@ -1378,7 +1378,7 @@ export class Container extends Logger {
     }
 
     // for all share configs
-    await Throttle.all(localUnshareConfigs.map(async (unshareConfig) => {
+    await Throttle.all(localUnshareConfigs.map((unshareConfig) => async () => {
       const {
         accountId, readWrite = [], removeListEntries = [], write = [],
       } = unshareConfig;
@@ -1429,7 +1429,7 @@ export class Container extends Logger {
       }));
 
       // ///////////////////////////////////////////////////////////// remove list entries handling
-      accessPromises = accessPromises.concat(removeListEntries.map(async (property) => {
+      accessPromises = accessPromises.concat(removeListEntries.map((property) => async () => {
         const propertyType = getPropertyType(schemaProperties[property].type);
         const permittedRole = await this.getPermittedRole(
           authority, property, propertyType, ModificationType.Remove,
