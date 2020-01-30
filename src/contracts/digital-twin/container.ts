@@ -1386,9 +1386,9 @@ export class Container extends Logger {
       this.log('checking unshare configs', 'debug');
       // remove write permissions for all in readWrite and write
 
-      let accessPromises = [];
+      let accessP = [];
 
-      accessPromises = accessPromises.concat([...readWrite, ...write].map(async (property) => {
+      accessP = accessP.concat([...readWrite, ...write].map((property) => async () => {
         this.log(`removing write permissions for ${property}`, 'debug');
         const propertyType = getPropertyType(schemaProperties[property].type);
         // search for role with permissions
@@ -1429,7 +1429,7 @@ export class Container extends Logger {
       }));
 
       // ///////////////////////////////////////////////////////////// remove list entries handling
-      accessPromises = accessPromises.concat(removeListEntries.map((property) => async () => {
+      accessP = accessP.concat(removeListEntries.map((property) => async () => {
         const propertyType = getPropertyType(schemaProperties[property].type);
         const permittedRole = await this.getPermittedRole(
           authority, property, propertyType, ModificationType.Remove,
@@ -1462,7 +1462,7 @@ export class Container extends Logger {
         }
       }));
 
-      await Throttle.all(accessPromises);
+      await Throttle.all(accessP);
 
       // /////////////////// check if only remaining property is 'type', cleanup if that's the case
       const shareConfig = await this.getContainerShareConfigForAccount(accountId);
