@@ -10,6 +10,7 @@
 - ensure `DigitalTwin` and `Container` description to use at least `dbcpVersion` 2
 - update root verification handling to use genesis account
 - add `signer-identity` to enable identity to getGasPrice using underlying account 
+- add `setVerificationAndVc` function to enable VC creation for verification
 
 ### Fixes
 - use typescript version `3.7.4`

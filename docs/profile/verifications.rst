@@ -316,6 +316,58 @@ Example
 
 --------------------------------------------------------------------------------
 
+.. _verifications_setVerificationAndVc:
+
+setVerification
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.setVerificationAndVc(issuer, subject, topic, expirationDate, verificationValue, descriptionDomain, disableSubVerifications);
+
+Sets or creates a verification along with a verifiable credential; the verification creation requires the issuer to have permissions for the parent verification (if verification name seen as a path, the parent 'folder').
+
+The "verificationValue" field can also be set to a custom JSON object with any data. The verificationValue works as same as in the setVerification function however in this function it is also added to the VC document.
+
+----------
+Parameters
+----------
+
+#. ``issuer`` - ``string``: issuer of the verification
+#. ``subject`` - ``string``: subject of the verification and the owner of the verification node
+#. ``topic`` - ``string``: name of the verification (full path)
+#. ``expirationDate`` - ``number`` (optional): expiration date, for the verification, defaults to ``0`` (does not expire)
+#. ``verificationValue`` - ``any`` (optional): json object which will be stored in the verification
+#. ``descriptionDomain`` - ``string`` (optional): domain of the verification, this is a subdomain under 'verifications.evan', so passing 'example' will link verifications description to 'example.verifications.evan', unset if omitted
+#. ``disableSubVerifications`` - ``boolean`` (optional): invalidate all verifications that gets issued as children of this verification (warning will include the disableSubVerifications warning)
+#. ``isIdentity`` - ``boolean`` (optional): boolean value if the subject is already a identity address (default false)
+#. ``uri`` - ``string`` (optional): adds a specific URI to the verification
+
+-------
+Returns
+-------
+
+``Promise`` returns ``string``: verificationId and vcId
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // accounts[0] issues verification '/company' for accounts[1]
+  const verification = verifications.setVerificationAndVc(accounts[0], accounts[1], '/company');
+
+``{ vcId:
+   'vc:evan:testcore:0x9becd31c7e5b6a1fe8ee9e76f1af56bcf84b6718548dbdfd1412f935b515ebe0',
+  verificationId:
+   '0x5373812c3cba3fdee77730a45e7bd05cf52a5f2195abf1f623a9b22d94cea939' };``
+
+
+
+
+--------------------------------------------------------------------------------
+
 .. _verifications_getVerifications:
 
 getVerifications
