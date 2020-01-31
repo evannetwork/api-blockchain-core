@@ -54,6 +54,11 @@ export interface DidDocumentTemplate {
     id: string;
     type: string;
     publicKeyHex: string;
+  }[] | {
+    id: string;
+    type: string;
+    owner: string;
+    ethereumAddress: string;
   }[];
   service?: {
     id: string;
@@ -136,7 +141,7 @@ export class Did extends Logger {
    *                                 did:evan:testcore:0x000000000000000000000000000000000000001234
    */
   public async convertIdentityToDid(identity: string): Promise<string> {
-    return `did:evan:${await this.getDidInfix()}${identity}`;
+    return `did:evan:${await this.getDidInfix()}${identity.toLowerCase()}`;
   }
 
   /**
@@ -158,10 +163,11 @@ export class Did extends Logger {
       identity,
     );
     if (documentHash === nullBytes32) {
-      throw Error(`There is no DID document associated to ${did} yet`);
+      return this.getDefaultDidDocument(did);
     }
     result = JSON.parse(await this.options.dfs.get(documentHash) as any);
     result = await this.removePublicKeyTypeArray(result);
+
     return result;
   }
 
@@ -195,23 +201,19 @@ export class Did extends Logger {
       }`);
     } if (!(did || controllerDid || authenticationKey)) {
       const identity = this.options.signerIdentity.activeIdentity;
-      const [didInfix, publicKey] = await Promise.all([
-        this.getDidInfix(),
-        this.options.signerIdentity.getPublicKey(
-          this.options.signerIdentity.underlyingAccount,
-        ),
-      ]);
+      const didAddress = await this.convertIdentityToDid(identity);
 
       return JSON.parse(`{
         "@context": "https://w3id.org/did/v1",
-        "id": "did:evan:${didInfix}${identity}",
+        "id": "${didAddress}",
         "publicKey": [{
-          "id": "did:evan:${didInfix}${identity}#key-1",
-          "type": "Secp256k1SignatureVerificationKey2018",
-          "publicKeyHex": "${publicKey}"
+          "id": "${didAddress}#key-1",
+          "type": "Secp256k1VerificationKey2018",
+          "owner": "${didAddress}",
+          "ethereumAddress": "${this.options.signerIdentity.underlyingAccount.toLowerCase()}"
         }],
         "authentication": [
-          "did:evan:${didInfix}${identity}#key-1"
+          "${didAddress}#key-1"
         ]
       }`);
     }
@@ -304,6 +306,42 @@ export class Did extends Logger {
    */
   public async validateDid(did: string): Promise<void> {
     await this.validateDidAndGetSections(did);
+  }
+
+  /**
+   * Retrieve a default DID document for identities that do not have a document associated yet.
+   * @param did DID to fetch a document for.
+   * @returns Resolves to a DID document.
+   */
+  private async getDefaultDidDocument(did: string): Promise<any> {
+    const identity = await this.convertDidToIdentity(did);
+    const controllerIdentity = await this.options.verifications
+      .getOwnerAddressForIdentity(identity);
+
+    if (identity.length === 42) {
+      // Identity is account identity and therefore self-sovereign
+      return JSON.parse(`{
+        "@context": "https://w3id.org/did/v1",
+        "id": "${did}",
+        "publicKey": [{
+          "id": "${did}#key-1",
+          "type": "Secp256k1VerificationKey2018",
+          "owner": "${did}",
+          "ethereumAddress": "${controllerIdentity}"
+        }],
+        "authentication": [
+          "${did}#key-1"
+        ]
+      }`);
+    }
+    // Identity is contract identity and therefore controlled by another identity
+    const controllerDid = await this.convertIdentityToDid(controllerIdentity);
+    const controllerDidDoc = await this.getDidDocument(controllerDid);
+    const authKeyIds = controllerDidDoc.publicKey.map((key) => key.id).join(',');
+
+    return this.getDidDocumentTemplate(did,
+      controllerDid,
+      authKeyIds);
   }
 
   /**
