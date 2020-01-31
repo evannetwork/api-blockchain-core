@@ -1034,7 +1034,7 @@ export class Container extends Logger {
         read.push('type');
       }
       // ensure that roles for fields exist and that accounts have permissions
-      accessPromises = accessPromises.concat(readWrite.map((property) => async () => {
+      accessPromises = accessPromises.concat(readWrite.map((property, index) => async () => {
         // get permissions from contract
         const hash = this.options.rightsAndRoles.getOperationCapabilityHash(
           property,
@@ -1050,13 +1050,14 @@ export class Container extends Logger {
         const binary = (new BigNumber(rolesMap)).toString(2);
         // search for role with permissions
         let permittedRole = [...binary].reverse().join('').indexOf('1');
-        if (permittedRole < this.reservedRoles) {
+        if (permittedRole + index < this.reservedRoles) {
           // if not found or included in reserved roles, add new role
           const roleCount = await this.options.executor.executeContractCall(authority, 'roleCount');
           if (roleCount >= 256) {
             throw new Error(`could not share property "${property}", maximum role count reached`);
           }
           permittedRole = Math.max(this.reservedRoles, roleCount);
+          permittedRole += index;
           await this.options.rightsAndRoles.setOperationPermission(
             authority,
             this.config.accountId,
@@ -1072,6 +1073,7 @@ export class Container extends Logger {
         const hasRole = await this.options.executor.executeContractCall(
           authority, 'hasUserRole', accountId, permittedRole,
         );
+
         if (!hasRole) {
           await this.options.rightsAndRoles.addAccountToRole(
             this.contract, this.config.accountId, accountId, permittedRole,
