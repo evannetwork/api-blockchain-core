@@ -54,6 +54,11 @@ export interface DidDocumentTemplate {
     id: string;
     type: string;
     publicKeyHex: string;
+  }[] | {
+    id: string;
+    type: string;
+    owner: string;
+    ethereumAddress: string;
   }[];
   service?: {
     id: string;
@@ -136,7 +141,7 @@ export class Did extends Logger {
    *                                 did:evan:testcore:0x000000000000000000000000000000000000001234
    */
   public async convertIdentityToDid(identity: string): Promise<string> {
-    return `did:evan:${await this.getDidInfix()}${identity}`;
+    return `did:evan:${await this.getDidInfix()}${identity.toLowerCase()}`;
   }
 
   /**
@@ -196,20 +201,16 @@ export class Did extends Logger {
       }`);
     } if (!(did || controllerDid || authenticationKey)) {
       const identity = this.options.signerIdentity.activeIdentity;
-      const [didAddress, publicKey] = await Promise.all([
-        this.convertIdentityToDid(identity),
-        this.options.signerIdentity.getPublicKey(
-          this.options.signerIdentity.underlyingAccount,
-        ),
-      ]);
+      const didAddress = await this.convertIdentityToDid(identity);
 
       return JSON.parse(`{
         "@context": "https://w3id.org/did/v1",
         "id": "${didAddress}",
         "publicKey": [{
           "id": "${didAddress}#key-1",
-          "type": "Secp256k1SignatureVerificationKey2018",
-          "publicKeyHex": "${publicKey}"
+          "type": "Secp256k1VerificationKey2018",
+          "owner": "${didAddress}",
+          "ethereumAddress": "${this.options.signerIdentity.underlyingAccount.toLowerCase()}"
         }],
         "authentication": [
           "${didAddress}#key-1"
@@ -314,6 +315,8 @@ export class Did extends Logger {
    */
   private async getDefaultDidDocument(did: string): Promise<any> {
     const identity = await this.convertDidToIdentity(did);
+    const controllerIdentity = await this.options.verifications
+      .getOwnerAddressForIdentity(identity);
 
     if (identity.length === 42) {
       // Identity is account identity and therefore self-sovereign
@@ -324,7 +327,7 @@ export class Did extends Logger {
           "id": "${did}#key-1",
           "type": "Secp256k1VerificationKey2018",
           "owner": "${did}",
-          "ethereumAddress": "${identity}"
+          "ethereumAddress": "${controllerIdentity}"
         }],
         "authentication": [
           "${did}#key-1"
@@ -332,8 +335,6 @@ export class Did extends Logger {
       }`);
     }
     // Identity is contract identity and therefore controlled by another identity
-    const controllerIdentity = await this.options.verifications
-      .getOwnerAddressForIdentity(identity);
     const controllerDid = await this.convertIdentityToDid(controllerIdentity);
     const controllerDidDoc = await this.getDidDocument(controllerDid);
     const authKeyIds = controllerDidDoc.publicKey.map((key) => key.id).join(',');
