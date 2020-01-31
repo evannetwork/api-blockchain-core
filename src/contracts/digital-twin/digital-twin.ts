@@ -32,7 +32,7 @@ import {
   ContainerPlugin,
 } from './container';
 import { Profile } from '../../profile/profile';
-import { nullAddress } from '../../common/utils';
+import { nullAddress, nullBytes32 } from '../../common/utils';
 import { Did } from '../../did/did';
 
 /**
@@ -433,41 +433,28 @@ export class DigitalTwin extends Logger {
     await this.ensureContract();
     const description = await this.getDescription();
 
-    const containers = await this.getEntries();
-    // Unset ENS if given
+    // Remove description
+    const descriptionHash = await this.options.executor.executeContractCall(this.contract, 'contractDescription');
+    await this.options.dataContract.unpinFileHash(descriptionHash);
 
-    // TODO Delete consumers as well?
-    for (const container in containers) {
-      if (containers[container].entryType === DigitalTwinEntryType.Container) {
-        const contract = await this.options.contractLoader.loadContract('BaseContractInterface', containers[container].value.config.address);
-        await this.options.executor.executeContractTransaction(
-          contract,
-          'setAuthority',
-          { from: this.config.accountId },
-          nullAddress,
-        );
-        await this.options.executor.executeContractTransaction(
-          contract,
-          'setOwner',
-          { from: this.config.accountId },
-          nullAddress,
-        );
-      }
-    }
+    // Containers
+    await this.deactivateContainers();
 
     // Unset did
     const twinDid = await this.options.did.convertIdentityToDid(description.identity);
     await this.options.did.removeDidDocument(twinDid);
 
     // Deactivate identity
-    const verificationRegistry = this.options.verifications.contracts.registry;
-    await this.options.verifications.executeAndHandleEventResult(
-      this.config.accountId,
-      verificationRegistry.methods.transferIdentity(
-        description.identity,
-        nullAddress,
-      ).encodeABI(),
-    );
+    if (this.options.verifications.contracts.registry) {
+      const verificationRegistry = this.options.verifications.contracts.registry;
+      await this.options.verifications.executeAndHandleEventResult(
+        this.config.accountId,
+        verificationRegistry.methods.transferIdentity(
+          description.identity,
+          nullAddress,
+        ).encodeABI(),
+      );
+    }
 
     // Deactivate twin contract
     await this.options.executor.executeContractTransaction(
@@ -667,6 +654,19 @@ export class DigitalTwin extends Logger {
   }
 
   /**
+   * Removes entry from index contract
+   * @param name Name of entry
+   */
+  private async removeEntry(name: string): Promise<void> {
+    await this.options.executor.executeContractTransaction(
+      this.contract,
+      'removeEntry',
+      { from: this.config.accountId },
+      name,
+    );
+  }
+
+  /**
    * Write given description to digital twins DBCP.
    *
    * @param      {any}  description  description to set (`public` part)
@@ -750,6 +750,96 @@ export class DigitalTwin extends Logger {
       .publicKey.map((key) => key.id).join(',');
     const doc = await this.options.did.getDidDocumentTemplate(twinDid, controllerDid, authKeyIds);
     await this.options.did.setDidDocument(twinDid, doc);
+  }
+
+  private async deactivateContainers(): Promise<void> {
+    const containers = await this.getEntries();
+    const { rightsAndRoles } = this.options;
+    let members;
+    let containerContract;
+    let consumerCount;
+    let consumerAddress = '';
+    let descriptionHash = '';
+    let sharingHash = '';
+    for (const containerName of Object.keys(containers)) {
+      await this.removeEntry(containerName);
+      // TODO Delete & unpin all container entries --> do that before removing sharings!
+      //  Need sharings to unencrypt entry hashes
+
+      // TODO: Search for DigitalTwinEntryType.FileHash & unpin
+      if (containers[containerName].entryType === DigitalTwinEntryType.Container) {
+        containerContract = await this.options.contractLoader.loadContract(
+          'DataContract',
+          containers[containerName].value.config.address,
+        );
+
+        // Unpin description
+        descriptionHash = await this.options.executor.executeContractCall(
+          containerContract,
+          'contractDescription',
+        );
+        await this.options.dataContract.unpinFileHash(descriptionHash);
+
+        // Remove & unpin sharings
+        sharingHash = await this.options.executor.executeContractCall(containerContract, 'sharing');
+        await this.options.dataContract.unpinFileHash(sharingHash);
+        await this.options.executor.executeContractTransaction(
+          containerContract,
+          'setSharing',
+          { from: this.config.accountId },
+          nullBytes32,
+        );
+
+        // Removing consumers
+        consumerCount = await this.options.executor.executeContractCall(
+          containerContract,
+          'consumerCount',
+        );
+        for (let i = 1; i <= consumerCount; i += 1) { // The first consumer is at index 1
+          consumerAddress = await this.options.executor.executeContractCall(
+            containerContract,
+            'index2consumer',
+            i,
+          );
+          if (consumerAddress !== nullAddress) {
+            await this.options.executor.executeContractTransaction(
+              containerContract,
+              'removeConsumer',
+              { from: this.config.accountId },
+              consumerAddress,
+              nullAddress, // No business center
+            );
+          }
+        }
+
+        // Remove all members
+        members = await rightsAndRoles.getMembers(containerContract);
+        for (const role of Object.keys(members)) {
+          for (const member of members[role]) {
+            await rightsAndRoles.removeAccountFromRole(
+              containerContract,
+              this.config.accountId,
+              member,
+              Number(role),
+            );
+          }
+        }
+
+        // Unset authority and owner of container contract
+        await this.options.executor.executeContractTransaction(
+          containerContract,
+          'setAuthority',
+          { from: this.config.accountId },
+          nullAddress,
+        );
+        await this.options.executor.executeContractTransaction(
+          containerContract,
+          'setOwner',
+          { from: this.config.accountId },
+          nullAddress,
+        );
+      }
+    }
   }
 
   /**

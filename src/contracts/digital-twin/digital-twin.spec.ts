@@ -186,9 +186,28 @@ describe('DigitalTwin', function test() {
       expect(promise).to.eventually.have.property('controller').that.equals(ownerDid);
       expect(promise).to.eventually.have.property('authentication').that.include(ownerDidDocument.authentication[0]);
     });
+
+    it.skip('can deactivate a created twin', async () => {
+      // TODO WIP
+      const configWithTemplate = {
+        ...defaultConfig,
+        ...twinTemplate,
+      };
+      const twin = await DigitalTwin.create(runtime, configWithTemplate);
+      const contract = await runtime.contractLoader.loadContract('DigitalTwin', await twin.getContractAddress());
+      console.log(await runtime.sharing.getSharingsFromContract(contract));
+      // Create sharings
+      // Get sharings
+      // Get description
+      // Get containers
+
+      // Check if containers owner == 0x0
+      // Check if description unpinned
+      // Check if sharings empty and unpinned
+    });
   });
 
-  describe('when working with tempaltes', () => {
+  describe('when working with templates', () => {
     it('can create new contracts using twin templates', async () => {
       const configWithTemplate = {
         ...defaultConfig,
