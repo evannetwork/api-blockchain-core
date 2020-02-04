@@ -36,6 +36,7 @@ import {
   DigitalTwinConfig,
   DigitalTwinEntryType,
   DigitalTwinOptions,
+  DigitalTwinTemplate,
   DigitalTwinVerificationEntry,
 } from './digital-twin';
 
@@ -284,6 +285,20 @@ describe('DigitalTwin', function test() {
       expect(plugin1.template.properties.dataset1.value).to.be.eq(undefined);
       expect(plugin1.template.properties.dataset2.value.prop1).to.be.eq('test value 1');
       expect(plugin1.template.properties.dataset2.value.prop2).to.be.eq('test value 2');
+    });
+
+    it('should throw if invalid plugin is applied', async () => {
+      const brokenTemplate: DigitalTwinTemplate = JSON.parse(JSON.stringify(twinTemplate));
+      brokenTemplate.plugins.plugin1.template.properties.dataset1.dataSchema.properties
+        .prop1.type = 'text';
+      const createPromise = DigitalTwin.create(runtime, {
+        ...defaultConfig,
+        ...twinTemplate,
+      });
+
+      expect(createPromise).to.be.rejectedWith(
+        /^validation of plugin "plugin1" description failed with/,
+      );
     });
   });
 

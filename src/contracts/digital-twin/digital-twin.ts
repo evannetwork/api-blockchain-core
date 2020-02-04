@@ -184,7 +184,10 @@ export class DigitalTwin extends Logger {
     if (config.plugins) {
       Object.keys(config.plugins).forEach((pluginName: string) => {
         const pluginDescription = {
-          public: config.plugins[pluginName].description || config.containerConfig.description,
+          public: {
+            ...config.plugins[pluginName].description || config.containerConfig.description,
+            dataSchema: config.plugins[pluginName].template.properties,
+          },
         };
 
         const pluginValidation = options.description.validateDescription(pluginDescription);
