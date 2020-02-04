@@ -142,7 +142,7 @@ describe('Verifications handler', function test() {
       .to.have.property('status', VerificationsStatus.Issued);
   });
 
-  describe.skip('when using external account based identities', () => {
+  describe('when using external account based identities', () => {
     it('can add a verification', async () => {
       const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
       await timeout(1000);
@@ -834,7 +834,7 @@ describe('Verifications handler', function test() {
     });
   });
 
-  describe.skip('when using identities for contracts', () => {
+  describe('when using identities for contracts', () => {
     function runGenericContractTests(context) {
       let isIdentity: boolean;
       let extraArgs: any[];
@@ -859,7 +859,7 @@ describe('Verifications handler', function test() {
           .to.have.property('status', VerificationsStatus.Issued);
       });
 
-      it.skip('can add a verification from an account that is not the owner of the contract',
+      (useIdentity ? it.skip : it)('can add a verification from an account that is not the owner of the contract',
         async () => {
           const newruntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity });
           const oldLength = (await newruntime.verifications.getVerifications(
@@ -1072,7 +1072,7 @@ describe('Verifications handler', function test() {
         expect(parseInt(verificationsForAccount[last].creationBlock, 10)).to.be.lte(after);
       });
 
-      it('can add a description to a verification', async () => {
+      (useIdentity ? it.skip : it)('can add a description to a verification', async () => {
         const sampleVerificationsDomain = 'sample';
         const sampleVerificationTopic = '/company';
         const sampleDescription = {
@@ -1467,7 +1467,7 @@ describe('Verifications handler', function test() {
     });
   });
 
-  describe.skip('when using "cold" verifications and submitting them with an unrelated account', () => {
+  describe('when using "cold" verifications and submitting them with an unrelated account', () => {
     it('allows to submit a "cold" transaction from another account to an account identity',
       async () => {
         const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
@@ -1562,7 +1562,7 @@ describe('Verifications handler', function test() {
     });
   });
 
-  describe.skip('when performing "cold" transactions for any transactions', () => {
+  describe('when performing "cold" transactions for any transactions', () => {
     it('can prepare transactions and submit them with another account', async () => {
       // create test contract
       const testContract = await executor.createContract(
@@ -1646,7 +1646,7 @@ describe('Verifications handler', function test() {
   });
 
   describe('when working with verifications and VCs using identities', () => {
-    (useIdentity ? it.only : it.skip)('can create a verification with a Vc', async () => {
+    (useIdentity ? it : it.skip)('can create a verification with a Vc', async () => {
       const verification = verifications.setVerificationAndVc(accounts[0], accounts[1], '/company');
       await expect(verification).to.not.be.rejected;
     });
