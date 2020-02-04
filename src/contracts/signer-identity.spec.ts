@@ -408,6 +408,51 @@ describe('signer-identity (identity based signer)', function test() {
     });
   });
 
+  describe('when trying to make transactions with an unrelated accountId', () => {
+    it('cannnot create a new contract', async () => {
+      const randomString = Math.floor(Math.random() * 1e12).toString(36);
+      const promise = executor.createContract(
+        'TestContract', [randomString], { from: accounts[2], gas: 1e6 },
+      );
+      await expect(promise)
+        .to.be.rejectedWith(`given accountId ${accounts[2]} `
+          + 'is neither configured as underlying accountId or active identity');
+    });
+
+    it('cannnot make transactions on contracts', async () => {
+      const contract = await executor.createContract(
+        'TestContract', [''], { from: signer.underlyingAccount, gas: 1e6 },
+      );
+      const randomString = Math.floor(Math.random() * 1e12).toString(36);
+      const promise = executor.executeContractTransaction(
+        contract, 'setData', { from: accounts[2] }, randomString,
+      );
+      await expect(promise)
+        .to.be.rejectedWith(`given accountId ${accounts[2]} `
+          + 'is neither configured as underlying accountId or active identity');
+    });
+
+    it('cannnot send funds', async () => {
+      const amountToSend = Math.floor(Math.random() * 1e3);
+      const promise = executor.executeSend(
+        {
+          from: accounts[2], to: accounts[1], gas: 10e6, value: amountToSend,
+        },
+      );
+      await expect(promise)
+        .to.be.rejectedWith(`given accountId ${accounts[2]} `
+          + 'is neither configured as underlying accountId or active identity');
+    });
+
+    it('cannnot sign messages', async () => {
+      const randomString = Math.floor(Math.random() * 1e12).toString(36);
+      const promise = signer.signMessage(accounts[2], randomString);
+      await expect(promise)
+        .to.be.rejectedWith('signing messages with identities is only supported for '
+          + '\'underlyingAccount\'');
+    });
+  });
+
   describe('when dealing with encryption for identity based accounts', async () => {
     let cryptoProvider: CryptoProvider;
     let identityAddress: string;

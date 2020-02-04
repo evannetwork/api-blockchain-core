@@ -96,6 +96,10 @@ export class SignerIdentity extends Logger implements SignerInterface {
     if (options.from === this.underlyingAccount) {
       return this.config.underlyingSigner.createContract(contractName, functionArguments, options);
     }
+    if (options.from !== this.activeIdentity) {
+      throw new Error(`given accountId ${options.from} `
+          + 'is neither configured as underlying accountId or active identity');
+    }
     // build input for constructor call
     const compiledContract = this.options.contractLoader.getCompiledContract(contractName);
     if (!compiledContract || !compiledContract.bytecode) {
@@ -166,6 +170,11 @@ export class SignerIdentity extends Logger implements SignerInterface {
     if (options.from === this.underlyingAccount) {
       return this.config.underlyingSigner.signAndExecuteSend(options, handleTxResult);
     }
+    if (options.from !== this.activeIdentity) {
+      handleTxResult(`given accountId ${options.from} `
+        + 'is neither configured as underlying accountId or active identity');
+      return Promise.resolve();
+    }
 
     try {
       handleTxResult(
@@ -201,6 +210,11 @@ export class SignerIdentity extends Logger implements SignerInterface {
       return this.config.underlyingSigner.signAndExecuteTransaction(
         contract, functionName, functionArguments, options, handleTxResult,
       );
+    }
+    if (options.from !== this.activeIdentity) {
+      handleTxResult(`given accountId ${options.from} `
+        + 'is neither configured as underlying accountId or active identity');
+      return Promise.resolve();
     }
 
     try {
