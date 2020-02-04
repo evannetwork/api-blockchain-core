@@ -542,7 +542,7 @@ export class Onboarding extends Logger {
 
     const data = {
       accountId,
-      identityId: runtime.activeIdentity ? newIdentity : undefined,
+      identityId: runtime.activeIdentity !== accountId ? newIdentity : undefined,
       signature,
       profileInfo: fileHashes,
       accessToken: (requestedProfile as any).accessToken,
