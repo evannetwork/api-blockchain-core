@@ -1012,10 +1012,9 @@ export class Container extends Logger {
     }
 
     // for all share configs
-    await Throttle.all(localShareConfig.map((shareConfig) => async () => {
-      const {
-        accountId, read = [], readWrite = [], removeListEntries = [],
-      } = shareConfig;
+    for (const {
+      accountId, read = [], readWrite = [], removeListEntries = [],
+    } of localShareConfig) {
       let accessPromises = [];
 
       // //////////////////////////////////////////////// ensure that account is member in contract
@@ -1188,7 +1187,7 @@ export class Container extends Logger {
           );
         }
       });
-    }));
+    }
   }
 
   /**
