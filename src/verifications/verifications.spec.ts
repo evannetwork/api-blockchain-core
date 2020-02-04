@@ -54,10 +54,6 @@ try {
 describe('Verifications handler', function test() {
   this.timeout(600000);
 
-  function getRandomTopic(prefix: string) {
-    return `${prefix}/${Date.now().toString() + Math.random().toString().slice(2, 20)}`;
-  }
-
   let baseContract: BaseContract;
   let verifications: Verifications;
   let contractLoader: ContractLoader;
@@ -67,28 +63,7 @@ describe('Verifications handler', function test() {
   let executor: Executor;
   let web3: any;
 
-  before(async () => {
-    // web3 = TestUtils.getWeb3();
-    // executor = await TestUtils.getExecutor(web3);
-    // contractLoader = await TestUtils.getContractLoader(web3);
-    // dfs = await TestUtils.getIpfs();
-    // verifications = await TestUtils.getVerifications(web3, dfs);
-    // baseContract = await TestUtils.getBaseContract(web3);
-    // description = await TestUtils.getDescription(web3, dfs);
-    // encryptionWrapper = await TestUtils.getEncryptionWrapper(web3, dfs);
-    ({
-      baseContract,
-      contractLoader,
-      description,
-      dfs,
-      encryptionWrapper,
-      executor,
-      verifications,
-      web3,
-    } = await TestUtils.getRuntime(accounts[0], null, { useIdentity }));
-  });
-
-  it('can deploy a new structure', async () => {
+  async function deployStructure() {
     const libs = {};
     const deploy = async (contractAndPath) => {
       const contractName = /^[^:]*:(.*)$/g.exec(contractAndPath)[1];
@@ -124,11 +99,30 @@ describe('Verifications handler', function test() {
       // eslint-disable-next-line no-console
       console.log(`${/[^:]:(.*)/g.exec(key)[1]}: ${libs[key].slice(2)}`);
     }
-  });
+  }
 
-  (useIdentity ? it.skip : it)('can create identities', async () => {
-    await verifications.createIdentity(accounts[0]);
-    await verifications.createIdentity(accounts[1]);
+  function getRandomTopic(prefix: string) {
+    return `${prefix}/${Date.now().toString() + Math.random().toString().slice(2, 20)}`;
+  }
+
+  before(async () => {
+    ({
+      baseContract,
+      contractLoader,
+      description,
+      dfs,
+      encryptionWrapper,
+      executor,
+      verifications,
+      web3,
+    } = await TestUtils.getRuntime(accounts[0], null, { useIdentity }));
+
+    // create new structure and identities for new test run
+    await deployStructure();
+    if (!useIdentity) {
+      await verifications.createIdentity(accounts[0]);
+      await verifications.createIdentity(accounts[1]);
+    }
   });
 
   it('can add a verification', async () => {
