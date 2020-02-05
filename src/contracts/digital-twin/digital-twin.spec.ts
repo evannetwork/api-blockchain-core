@@ -21,9 +21,9 @@ import 'mocha';
 import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
 import {
-  Executor,
-  Ipfs,
+  Executor, SignerInternal,
 } from '@evan.network/dbcp';
+import { Ipfs } from '../../dfs/ipfs';
 
 import { accounts } from '../../test/accounts';
 import { configTestcore as config } from '../../config-testcore';
@@ -38,14 +38,82 @@ import {
   DigitalTwinOptions,
   DigitalTwinVerificationEntry,
 } from './digital-twin';
+import { nullAddress, nullBytes32, getSmartAgentAuthHeaders } from '../../common/utils';
+import { Runtime } from '../../runtime';
 
+import https = require('https');
 
 use(chaiAsPromised);
 
 const ownedDomain = 'twintest.fifs.registrar.test.evan';
 
+async function getRuntimeWithEnabledPinning(defaultRuntime: Runtime): Promise<Runtime> {
+  const { web3 } = defaultRuntime;
+
+  const signer = new SignerInternal({
+    accountStore: await TestUtils.getAccountStore(),
+    contractLoader: defaultRuntime.contractLoader,
+    config: {},
+    web3,
+  });
+  const dfs = new Ipfs({
+    dfsConfig: { host: 'ipfs.test.evan.network', port: '443', protocol: 'https' },
+    disablePin: false, // <--
+  });
+  dfs.setRuntime({
+    activeAccount: accounts[0],
+    signer,
+    underlyingAccount: accounts[0],
+    web3,
+  });
+  const runtime = {
+    contractLoader: defaultRuntime.contractLoader,
+    cryptoProvider: defaultRuntime.cryptoProvider,
+    dataContract: await TestUtils.getDataContract(web3, dfs),
+    description: await TestUtils.getDescription(web3, dfs),
+    did: await TestUtils.getDid(web3, accounts[0], dfs),
+    executor: defaultRuntime.executor,
+    nameResolver: defaultRuntime.nameResolver,
+    profile: await TestUtils.getProfile(web3, dfs, null, accounts[0]),
+    rightsAndRoles: defaultRuntime.rightsAndRoles,
+    sharing: await TestUtils.getSharing(web3, dfs),
+    verifications: await TestUtils.getVerifications(web3, dfs),
+    web3,
+  };
+
+  return runtime;
+}
+
+async function getPinnedFileHashes(): Promise<string[]> {
+  // TODO WIP
+  const authHeaders = await getSmartAgentAuthHeaders(
+    await TestUtils.getRuntime(accounts[0]),
+    JSON.stringify(Date.now()),
+  );
+  const reqOptions = {
+    hostname: 'payments.test.evan.network',
+    path: '/api/smart-agents/ipfs-payments/hash/get/',
+    headers: {
+      authorization: authHeaders,
+    },
+  };
+  const response = await new Promise<any>((resolve) => {
+    https.get(reqOptions, (res) => {
+      let rawData = '';
+      let parsedData = '';
+      res.on('data', (chunk) => { rawData += chunk; });
+      res.on('end', () => {
+        parsedData = JSON.parse(rawData);
+        resolve(parsedData);
+      });
+    });
+  });
+
+  return Object.keys(response.hashes);
+}
+
 describe('DigitalTwin', function test() {
-  this.timeout(60000);
+  this.timeout(600000);
   let dfs: Ipfs;
   let defaultConfig: DigitalTwinConfig;
   let executor: Executor;
@@ -83,6 +151,7 @@ describe('DigitalTwin', function test() {
       verifications: await TestUtils.getVerifications(web3, dfs),
       web3,
     };
+
     runtime.executor.eventHub = await TestUtils.getEventHub(web3);
     defaultConfig = {
       accountId: accounts[0],
@@ -188,22 +257,99 @@ describe('DigitalTwin', function test() {
     });
 
     it.skip('can deactivate a created twin', async () => {
-      // TODO WIP
+      // TODO: WIP CORE-939
+      const localRuntime = await getRuntimeWithEnabledPinning(runtime);
+
       const configWithTemplate = {
         ...defaultConfig,
         ...twinTemplate,
       };
-      const twin = await DigitalTwin.create(runtime, configWithTemplate);
-      const contract = await runtime.contractLoader.loadContract('DigitalTwin', await twin.getContractAddress());
-      console.log(await runtime.sharing.getSharingsFromContract(contract));
-      // Create sharings
+      const twin = await DigitalTwin.create(localRuntime as DigitalTwinOptions, configWithTemplate);
+
+      const twinContract = runtime.contractLoader.loadContract(
+        'DigitalTwin',
+        await twin.getContractAddress(),
+      );
+      const twinDescriptionHash = await localRuntime.executor.executeContractCall(
+        twinContract,
+        'contractDescription',
+      );
+
+      // Create sharing
+      const entries = await twin.getEntries();
+      const randomSecret = `super secret; ${Math.random()}`;
+      await localRuntime.sharing.addSharing(
+        entries.plugin1.value.config.address,
+        accounts[0],
+        accounts[1],
+        '*',
+        0,
+        randomSecret,
+        null,
+        false,
+        null,
+      );
+
+      const pinnedSharings = [];
+      let containerAddress;
+      let containerContract;
+
+      // Collect all sharings to later test if they have been unpinned
+      for (const entry of Object.keys(entries)) {
+        if (entries[entry].entryType === DigitalTwinEntryType.Container) {
+          containerAddress = entries[entry].value.config.address;
+          if (entry === 'plugin2') {
+            await (entries[entry].value as Container).addListEntries('testlist', [{ prop1: 'foo', prop2: 'bar' }]);
+          }
+          containerContract = await localRuntime.contractLoader.loadContract('DataContract', containerAddress);
+          pinnedSharings.push(await localRuntime.executor.executeContractCall(containerContract, 'sharing'));
+        }
+      }
+
+      await twin.deactivate();
+
       // Get sharings
+      // const sharings = await runtime.sharing.getSharingsFromContract(containerContract);
+      // expect(sharings).to.include.keys(runtime.web3.utils.soliditySha3(accounts[1]));
       // Get description
       // Get containers
 
-      // Check if containers owner == 0x0
+      // Check if container's owner == 0x0
+      // & consumers are removed
+      // & authority is removed
+      // & description is unpinned
+      // & sharing is unpinned & removed
+      let containerOwner;
+      let containerAuthority;
+      let consumerCount;
+      let sharingAddress;
+
+      for (const entry of Object.keys(entries)) {
+        if (entries[entry].entryType === DigitalTwinEntryType.Container) {
+          containerAddress = entries[entry].value.config.address;
+          containerContract = await localRuntime.contractLoader.loadContract('DataContract', containerAddress);
+          containerOwner = await localRuntime.executor.executeContractCall(containerContract, 'owner');
+          containerAuthority = await localRuntime.executor.executeContractCall(containerContract, 'authority');
+          consumerCount = await localRuntime.executor.executeContractCall(containerContract, 'consumerCount');
+          sharingAddress = await localRuntime.executor.executeContractCall(containerContract, 'sharing');
+
+          expect(containerOwner).to.eq(nullAddress);
+          expect(containerAuthority).to.eq(nullAddress);
+          expect(consumerCount.toString()).to.eq('0'); // BigNumber
+          expect(sharingAddress).to.eq(nullBytes32);
+        }
+      }
+
+      const accountsPinnedHashes = await getPinnedFileHashes();
+      // Check if all sharings are unpinned
+      pinnedSharings.forEach((pinned) => {
+        expect(accountsPinnedHashes.includes(pinned)).to.be.false;
+      });
       // Check if description unpinned
-      // Check if sharings empty and unpinned
+      expect(accountsPinnedHashes.includes(twinDescriptionHash)).to.be.false;
+      // TODO:
+      // Check if all container entries unpinned
+      // Check if all container decriptions unpinned
     });
   });
 

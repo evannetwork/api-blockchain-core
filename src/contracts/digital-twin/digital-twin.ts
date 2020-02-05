@@ -24,7 +24,6 @@ import {
   Logger,
   LoggerOptions,
 } from '@evan.network/dbcp';
-
 import {
   Container,
   ContainerConfig,
@@ -438,7 +437,7 @@ export class DigitalTwin extends Logger {
     await this.options.dataContract.unpinFileHash(descriptionHash);
 
     // Containers
-    await this.deactivateContainers();
+    await this.deactivateEntries();
 
     // Unset did
     const twinDid = await this.options.did.convertIdentityToDid(description.identity);
@@ -752,93 +751,130 @@ export class DigitalTwin extends Logger {
     await this.options.did.setDidDocument(twinDid, doc);
   }
 
-  private async deactivateContainers(): Promise<void> {
-    const containers = await this.getEntries();
-    const { rightsAndRoles } = this.options;
-    let members;
-    let containerContract;
-    let consumerCount;
-    let consumerAddress = '';
-    let descriptionHash = '';
-    let sharingHash = '';
-    for (const containerName of Object.keys(containers)) {
-      await this.removeEntry(containerName);
-      // TODO Delete & unpin all container entries --> do that before removing sharings!
-      //  Need sharings to unencrypt entry hashes
+  private async deactivateContainer(containerContract: any): Promise<void> {
+    const descriptionHash = await this.options.executor.executeContractCall(
+      containerContract,
+      'contractDescription',
+    );
 
-      // TODO: Search for DigitalTwinEntryType.FileHash & unpin
+    // Unpin all container entries
+    await this.deactivateContainerEntries(containerContract, descriptionHash);
+    // Unpin description
+    await this.options.dataContract.unpinFileHash(descriptionHash);
+
+    // Remove & unpin sharings
+    const sharingHash = await this.options.executor.executeContractCall(containerContract, 'sharing');
+    await this.options.dataContract.unpinFileHash(sharingHash);
+    await this.options.executor.executeContractTransaction(
+      containerContract,
+      'setSharing',
+      { from: this.config.accountId },
+      nullBytes32,
+    );
+
+    // Remove consumers
+    const consumerCount = await this.options.executor.executeContractCall(
+      containerContract,
+      'consumerCount',
+    );
+
+    let consumerAddress = '';
+    for (let i = 1; i <= consumerCount; i += 1) { // The first consumer is at index 1
+      consumerAddress = await this.options.executor.executeContractCall(
+        containerContract,
+        'index2consumer',
+        i,
+      );
+      if (consumerAddress !== nullAddress) {
+        await this.options.executor.executeContractTransaction(
+          containerContract,
+          'removeConsumer',
+          { from: this.config.accountId },
+          consumerAddress,
+          nullAddress, // No business center
+        );
+      }
+    }
+
+    // Unset authority and owner of container contract
+    await this.options.executor.executeContractTransaction(
+      containerContract,
+      'setAuthority',
+      { from: this.config.accountId },
+      nullAddress,
+    );
+    await this.options.executor.executeContractTransaction(
+      containerContract,
+      'setOwner',
+      { from: this.config.accountId },
+      nullAddress,
+    );
+  }
+
+  private async deactivateContainerEntries(containerContract: any, descriptionHash: string):
+  Promise<void> {
+    const content = (await this.options.dataContract.getDfsContent(descriptionHash)).toString('binary');
+    const result = JSON.parse(content);
+    // Collect entry hashes
+    const encryptedHashes = [];
+    for (const entryName of Object.keys(result.public.dataSchema)) {
+      if (result.public.dataSchema[entryName].type === 'array') {
+        // Get all list entries
+        const entryCount = await this.options.executor.executeContractCall(
+          containerContract,
+          'getListEntryCount',
+          this.options.web3.utils.sha3(entryName),
+        );
+        for (let i = 0; i < entryCount; i += 1) {
+          const encryptedEntryHash = await this.options.executor.executeContractCall(
+            containerContract,
+            'getListEntry',
+            this.options.web3.utils.sha3(entryName),
+            i,
+          );
+          encryptedHashes.push(encryptedEntryHash);
+        }
+      } else {
+        // Get single entry
+        const encryptedEntryHash = await this.options.executor.executeContractCall(
+          containerContract,
+          'getEntry',
+          this.options.web3.utils.sha3(entryName),
+        );
+        encryptedHashes.push(encryptedEntryHash);
+      }
+    }
+
+    // Unpin entry hashes
+    const filteredForNull = encryptedHashes.filter((hash) => hash !== nullBytes32);
+    for (const hash in filteredForNull) {
+      if (Object.prototype.hasOwnProperty.call(filteredForNull, hash)) {
+        const unencryptedHash = await this.options.dataContract.decryptHash(
+          filteredForNull[hash],
+          containerContract,
+          this.config.accountId,
+        );
+        await this.options.dataContract.unpinFileHash(unencryptedHash);
+      }
+    }
+  }
+
+  private async deactivateEntries(): Promise<void> {
+    const containers = await this.getEntries();
+    let containerContract;
+
+    for (const containerName of Object.keys(containers)) {
       if (containers[containerName].entryType === DigitalTwinEntryType.Container) {
         containerContract = await this.options.contractLoader.loadContract(
           'DataContract',
           containers[containerName].value.config.address,
         );
-
-        // Unpin description
-        descriptionHash = await this.options.executor.executeContractCall(
-          containerContract,
-          'contractDescription',
-        );
-        await this.options.dataContract.unpinFileHash(descriptionHash);
-
-        // Remove & unpin sharings
-        sharingHash = await this.options.executor.executeContractCall(containerContract, 'sharing');
-        await this.options.dataContract.unpinFileHash(sharingHash);
-        await this.options.executor.executeContractTransaction(
-          containerContract,
-          'setSharing',
-          { from: this.config.accountId },
-          nullBytes32,
-        );
-
-        // Removing consumers
-        consumerCount = await this.options.executor.executeContractCall(
-          containerContract,
-          'consumerCount',
-        );
-        for (let i = 1; i <= consumerCount; i += 1) { // The first consumer is at index 1
-          consumerAddress = await this.options.executor.executeContractCall(
-            containerContract,
-            'index2consumer',
-            i,
-          );
-          if (consumerAddress !== nullAddress) {
-            await this.options.executor.executeContractTransaction(
-              containerContract,
-              'removeConsumer',
-              { from: this.config.accountId },
-              consumerAddress,
-              nullAddress, // No business center
-            );
-          }
-        }
-
-        // Remove all members
-        members = await rightsAndRoles.getMembers(containerContract);
-        for (const role of Object.keys(members)) {
-          for (const member of members[role]) {
-            await rightsAndRoles.removeAccountFromRole(
-              containerContract,
-              this.config.accountId,
-              member,
-              Number(role),
-            );
-          }
-        }
-
-        // Unset authority and owner of container contract
-        await this.options.executor.executeContractTransaction(
-          containerContract,
-          'setAuthority',
-          { from: this.config.accountId },
-          nullAddress,
-        );
-        await this.options.executor.executeContractTransaction(
-          containerContract,
-          'setOwner',
-          { from: this.config.accountId },
-          nullAddress,
-        );
+        await this.deactivateContainer(containerContract);
+      } else if (containers[containerName].entryType === DigitalTwinEntryType.FileHash) {
+        await this.options.dataContract.unpinFileHash(containers[containerName].value);
       }
+
+      await this.removeEntry(containerName);
     }
   }
 
