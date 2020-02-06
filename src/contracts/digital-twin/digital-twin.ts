@@ -434,12 +434,18 @@ export class DigitalTwin extends Logger {
 
     await this.removeFromFavorites();
 
-    // Unpin twin description
+    // Unset & unpin twin description
     const descriptionHash = await this.options.executor.executeContractCall(
       this.contract,
       'contractDescription',
     );
     await this.options.dataContract.unpinFileHash(descriptionHash);
+    await this.options.executor.executeContractTransaction(
+      this.contract,
+      'setContractDescription',
+      { from: this.config.accountId },
+      nullBytes32,
+    );
 
     // Containers
     await this.deactivateEntries();

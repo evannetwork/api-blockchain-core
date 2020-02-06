@@ -254,8 +254,8 @@ describe('DigitalTwin', function test() {
       expect(promise).to.eventually.have.property('authentication').that.include(ownerDidDocument.authentication[0]);
     });
 
-    it.only('can deactivate a created twin', async () => {
-      // TODO: WIP CORE-939
+    it.skip('can deactivate a created twin (also checks for hashes, unskip this as soon as'
+      + 'ticket is included & remove other test', async () => {
       const localRuntime = await getRuntimeWithEnabledPinning(runtime);
 
       const configWithTemplate = {
@@ -264,16 +264,17 @@ describe('DigitalTwin', function test() {
       };
       const twin = await DigitalTwin.create(localRuntime as DigitalTwinOptions, configWithTemplate);
 
-      const twinContract = runtime.contractLoader.loadContract(
+      const twinIdentity = (await twin.getDescription()).identity;
+      const twinContract = await localRuntime.contractLoader.loadContract(
         'DigitalTwin',
         await twin.getContractAddress(),
       );
-      const twinDescriptionHash = await localRuntime.executor.executeContractCall(
+      let twinDescriptionHash = await localRuntime.executor.executeContractCall(
         twinContract,
         'contractDescription',
       );
 
-      // Create sample sharing
+      // Create sharing
       const entries = await twin.getEntries();
       const randomSecret = `super secret; ${Math.random()}`;
       await localRuntime.sharing.addSharing(
@@ -298,7 +299,7 @@ describe('DigitalTwin', function test() {
         if (entries[entry].entryType === DigitalTwinEntryType.Container) {
           containerAddress = entries[entry].value.config.address;
           containerContract = await localRuntime.contractLoader.loadContract('DataContract', containerAddress);
-          containerDescriptionHash = await runtime.executor.executeContractCall(
+          containerDescriptionHash = await localRuntime.executor.executeContractCall(
             containerContract,
             'contractDescription',
           );
@@ -313,9 +314,10 @@ describe('DigitalTwin', function test() {
       }
       pinnedHashes.push(twinDescriptionHash);
 
+      const pinnedHashesAfterCreation = await getPinnedFileHashes();
+
       // Make sure hashes have indeed been pinned, as a safety mechanism
       // in case the smart agent acts weird
-      const pinnedHashesAfterCreation = await getPinnedFileHashes();
       pinnedHashes.forEach((hash) => {
         expect(
           pinnedHashesAfterCreation.includes(hash),
@@ -350,12 +352,153 @@ describe('DigitalTwin', function test() {
         }
       }
 
+      // Check if twin's description is 0x0
+      // & twin's owner is 0x0
+      // & twin's authority is 0x0
+      // & twin's identity's owner is 0x0
+      const twinOwner = await localRuntime.executor.executeContractCall(
+        twinContract,
+        'owner',
+      );
+      const twinAuthority = await localRuntime.executor.executeContractCall(
+        twinContract,
+        'owner',
+      );
+
+      expect((localRuntime.verifications.getOwnerAddressForIdentity(twinIdentity)))
+        .to.be.eventually.rejectedWith('No record found for');
+
+      twinDescriptionHash = await localRuntime.executor.executeContractCall(
+        twinContract,
+        'contractDescription',
+      );
+
+      expect(twinOwner).to.equal(nullAddress);
+      expect(twinAuthority).to.equal(nullAddress);
+      expect(twinDescriptionHash).to.equal(nullBytes32);
+
+      // Check if did registry points to 0x0
+      // Directly access the registry to be independent of default DID
+      // document behaviour by the API
+      const did = await TestUtils.getDid(
+        localRuntime.web3,
+        localRuntime.activeAccount,
+        localRuntime.dfs,
+      );
+      const didContract = await (did as any).getRegistryContract();
+      const didDocumentHash = await runtime.executor.executeContractCall(
+        didContract,
+        'didDocuments',
+        (did as any).padIdentity(twinIdentity),
+      );
+
+      expect(didDocumentHash).to.eq(nullBytes32);
+
       // Check if all pinned hashes have been unpinned
-      // TODO: Still failing due to hashes still being pinned ==> why?
       const pinnedHashesAfterDeactivation = await getPinnedFileHashes();
       pinnedHashes.forEach((pinned) => {
         expect(pinnedHashesAfterDeactivation.includes(pinned)).to.be.false;
       });
+    });
+
+    it('can deactivate a created twin (without hash unpinning check)', async () => {
+      const localRuntime = await getRuntimeWithEnabledPinning(runtime);
+
+      const configWithTemplate = {
+        ...defaultConfig,
+        ...twinTemplate,
+      };
+      const twin = await DigitalTwin.create(localRuntime as DigitalTwinOptions, configWithTemplate);
+      const twinIdentity = (await twin.getDescription()).identity;
+      const twinContract = await localRuntime.contractLoader.loadContract(
+        'DigitalTwin',
+        await twin.getContractAddress(),
+      );
+
+      // Create sharing
+      const entries = await twin.getEntries();
+      const randomSecret = `super secret; ${Math.random()}`;
+      await localRuntime.sharing.addSharing(
+        entries.plugin1.value.config.address,
+        accounts[0],
+        accounts[1],
+        '*',
+        0,
+        randomSecret,
+        null,
+        false,
+        null,
+      );
+
+      await twin.deactivate();
+
+      // Check if container's owner == 0x0
+      // & consumers are removed
+      // & authority is removed
+      // & description is unpinned
+      // & sharing is unpinned & removed
+      let containerAddress;
+      let containerContract;
+      let containerOwner;
+      let containerAuthority;
+      let consumerCount;
+      let sharingAddress;
+      for (const entry of Object.keys(entries)) {
+        if (entries[entry].entryType === DigitalTwinEntryType.Container) {
+          containerAddress = entries[entry].value.config.address;
+          containerContract = await localRuntime.contractLoader.loadContract('DataContract', containerAddress);
+          containerOwner = await localRuntime.executor.executeContractCall(containerContract, 'owner');
+          containerAuthority = await localRuntime.executor.executeContractCall(containerContract, 'authority');
+          consumerCount = await localRuntime.executor.executeContractCall(containerContract, 'consumerCount');
+          sharingAddress = await localRuntime.executor.executeContractCall(containerContract, 'sharing');
+
+          expect(containerOwner).to.eq(nullAddress);
+          expect(containerAuthority).to.eq(nullAddress);
+          expect(consumerCount.toString()).to.eq('0'); // BigNumber
+          expect(sharingAddress).to.eq(nullBytes32);
+        }
+      }
+
+      // Check if twin's description is 0x0
+      // & twin's owner is 0x0
+      // & twin's authority is 0x0
+      // & twin's identity's owner is 0x0
+      const twinOwner = await localRuntime.executor.executeContractCall(
+        twinContract,
+        'owner',
+      );
+      const twinAuthority = await localRuntime.executor.executeContractCall(
+        twinContract,
+        'owner',
+      );
+
+      expect((localRuntime.verifications.getOwnerAddressForIdentity(twinIdentity)))
+        .to.be.eventually.rejectedWith('No record found for');
+
+      const twinDescriptionHash = await localRuntime.executor.executeContractCall(
+        twinContract,
+        'contractDescription',
+      );
+
+      expect(twinOwner).to.equal(nullAddress);
+      expect(twinAuthority).to.equal(nullAddress);
+      expect(twinDescriptionHash).to.equal(nullBytes32);
+
+      // Check if did registry points to 0x0
+      // Directly access the registry to be independent DID api implementation
+      const did = await TestUtils.getDid(
+        localRuntime.web3,
+        localRuntime.activeAccount,
+        localRuntime.dfs,
+      );
+      const didContract = await (did as any).getRegistryContract();
+      const didDocumentHash = await runtime.executor.executeContractCall(
+        didContract,
+        'didDocuments',
+        (did as any).padIdentity(twinIdentity),
+      );
+
+      expect(didDocumentHash).to.eq(nullBytes32);
     });
   });
 
