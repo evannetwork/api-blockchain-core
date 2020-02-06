@@ -428,6 +428,15 @@ export class DigitalTwin extends Logger {
     return result;
   }
 
+  /**
+   * Deactivates a twin. This includes unsetting & unpinning of all associated containers, sharings,
+   * and the description.
+   * Removes the owner and the authority from the twin so that no access to the twin is possible
+   * after deactivation.
+   * Removes the twin from the account's favorites.
+   * Unsets the identity owner.
+   * Unsets the DID document.
+   */
   public async deactivate(): Promise<void> {
     await this.ensureContract();
     const description = await this.getDescription();
@@ -762,6 +771,12 @@ export class DigitalTwin extends Logger {
     await this.options.did.setDidDocument(twinDid, doc);
   }
 
+  /**
+   * Deactivates a container. Deletes and unpins description, sharings, consumers, and entries.
+   * Unsets authority and owner
+   *
+   * @param containerContract Contract object of the container to be deactivated
+   */
   private async deactivateContainer(containerContract: any): Promise<void> {
     const descriptionHash = await this.options.executor.executeContractCall(
       containerContract,
@@ -769,7 +784,7 @@ export class DigitalTwin extends Logger {
     );
 
     // Unpin all container entries
-    await this.deactivateContainerEntries(containerContract, descriptionHash);
+    await this.unpinContainerEntries(containerContract, descriptionHash);
 
     // Unpin description
     await this.options.dataContract.unpinFileHash(descriptionHash);
@@ -822,6 +837,12 @@ export class DigitalTwin extends Logger {
     );
   }
 
+  /**
+   * Gets the unencrypted IPFS hashes for all container entries.
+   *
+   * @param containerContract Contract object of the corresponding container.
+   * @param descriptionHash IPFS hash of the container's description.
+   */
   private async getContainerEntryHashes(containerContract: any, descriptionHash: string):
   Promise<string[]> {
     const description = JSON.parse(
@@ -869,7 +890,13 @@ export class DigitalTwin extends Logger {
     return unencryptedHashes;
   }
 
-  private async deactivateContainerEntries(containerContract: any, descriptionHash: string):
+  /**
+   * Unpins all entries of a container from the IPFS.
+   *
+   * @param containerContract Contract object of the corresponding container.
+   * @param descriptionHash IPFS hash of the container's description.
+   */
+  private async unpinContainerEntries(containerContract: any, descriptionHash: string):
   Promise<void> {
     const entryHashes = await this.getContainerEntryHashes(containerContract, descriptionHash);
 
@@ -879,6 +906,9 @@ export class DigitalTwin extends Logger {
     }
   }
 
+  /**
+   * Removes all of this twin's entries and deactivates all container entries.
+   */
   private async deactivateEntries(): Promise<void> {
     const containers = await this.getEntries();
     let containerContract;

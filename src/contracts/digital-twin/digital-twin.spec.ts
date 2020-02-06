@@ -21,7 +21,8 @@ import 'mocha';
 import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
 import {
-  Executor, SignerInternal,
+  Executor,
+  SignerInternal,
 } from '@evan.network/dbcp';
 import { Ipfs } from '../../dfs/ipfs';
 
@@ -38,7 +39,11 @@ import {
   DigitalTwinOptions,
   DigitalTwinVerificationEntry,
 } from './digital-twin';
-import { nullAddress, nullBytes32, getSmartAgentAuthHeaders } from '../../common/utils';
+import {
+  nullAddress,
+  nullBytes32,
+  getSmartAgentAuthHeaders,
+} from '../../common/utils';
 import { Runtime } from '../../runtime';
 
 import https = require('https');
@@ -327,7 +332,7 @@ describe('DigitalTwin', function test() {
 
       await twin.deactivate();
 
-      // Check if container's owner == 0x0
+      // Check if all containers' owner == 0x0
       // & consumers are removed
       // & authority is removed
       // & description is unpinned
@@ -365,7 +370,10 @@ describe('DigitalTwin', function test() {
         'owner',
       );
 
-      expect((localRuntime.verifications.getOwnerAddressForIdentity(twinIdentity)))
+      const twinIdentityOwnerPromise = localRuntime.verifications.getOwnerAddressForIdentity(
+        twinIdentity,
+      );
+      expect(twinIdentityOwnerPromise)
         .to.be.eventually.rejectedWith('No record found for');
 
       twinDescriptionHash = await localRuntime.executor.executeContractCall(
@@ -378,8 +386,7 @@ describe('DigitalTwin', function test() {
       expect(twinDescriptionHash).to.equal(nullBytes32);
 
       // Check if did registry points to 0x0
-      // Directly access the registry to be independent of default DID
-      // document behaviour by the API
+      // Directly access the registry to be independent of DID api implementation
       const did = await TestUtils.getDid(
         localRuntime.web3,
         localRuntime.activeAccount,
@@ -472,7 +479,10 @@ describe('DigitalTwin', function test() {
         'owner',
       );
 
-      expect((localRuntime.verifications.getOwnerAddressForIdentity(twinIdentity)))
+      const twinIdentityOwnerPromise = localRuntime.verifications.getOwnerAddressForIdentity(
+        twinIdentity,
+      );
+      expect(twinIdentityOwnerPromise)
         .to.be.eventually.rejectedWith('No record found for');
 
       const twinDescriptionHash = await localRuntime.executor.executeContractCall(
@@ -485,7 +495,7 @@ describe('DigitalTwin', function test() {
       expect(twinDescriptionHash).to.equal(nullBytes32);
 
       // Check if did registry points to 0x0
-      // Directly access the registry to be independent DID api implementation
+      // Directly access the registry to be independent of DID api implementation
       const did = await TestUtils.getDid(
         localRuntime.web3,
         localRuntime.activeAccount,
