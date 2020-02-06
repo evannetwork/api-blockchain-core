@@ -85,7 +85,6 @@ async function getRuntimeWithEnabledPinning(defaultRuntime: Runtime): Promise<Ru
 }
 
 async function getPinnedFileHashes(): Promise<string[]> {
-  // TODO WIP
   const authHeaders = await getSmartAgentAuthHeaders(
     await TestUtils.getRuntime(accounts[0]),
     JSON.stringify(Date.now()),
@@ -108,8 +107,7 @@ async function getPinnedFileHashes(): Promise<string[]> {
       });
     });
   });
-
-  return Object.keys(response.hashes);
+  return Object.keys(response.hashes).map((ipfsHash) => Ipfs.ipfsHashToBytes32(ipfsHash));
 }
 
 describe('DigitalTwin', function test() {
@@ -256,7 +254,7 @@ describe('DigitalTwin', function test() {
       expect(promise).to.eventually.have.property('authentication').that.include(ownerDidDocument.authentication[0]);
     });
 
-    it.skip('can deactivate a created twin', async () => {
+    it.only('can deactivate a created twin', async () => {
       // TODO: WIP CORE-939
       const localRuntime = await getRuntimeWithEnabledPinning(runtime);
 
@@ -275,7 +273,7 @@ describe('DigitalTwin', function test() {
         'contractDescription',
       );
 
-      // Create sharing
+      // Create sample sharing
       const entries = await twin.getEntries();
       const randomSecret = `super secret; ${Math.random()}`;
       await localRuntime.sharing.addSharing(
@@ -290,29 +288,42 @@ describe('DigitalTwin', function test() {
         null,
       );
 
-      const pinnedSharings = [];
+      // Collect all pinned hashes to later test if they have been unpinned
+      let pinnedHashes = [];
       let containerAddress;
       let containerContract;
-
-      // Collect all sharings to later test if they have been unpinned
+      let containerEntries;
+      let containerDescriptionHash;
       for (const entry of Object.keys(entries)) {
         if (entries[entry].entryType === DigitalTwinEntryType.Container) {
           containerAddress = entries[entry].value.config.address;
-          if (entry === 'plugin2') {
-            await (entries[entry].value as Container).addListEntries('testlist', [{ prop1: 'foo', prop2: 'bar' }]);
-          }
           containerContract = await localRuntime.contractLoader.loadContract('DataContract', containerAddress);
-          pinnedSharings.push(await localRuntime.executor.executeContractCall(containerContract, 'sharing'));
+          containerDescriptionHash = await runtime.executor.executeContractCall(
+            containerContract,
+            'contractDescription',
+          );
+          containerEntries = await (twin as any).getContainerEntryHashes( // sshhh
+            containerContract,
+            containerDescriptionHash,
+          );
+          pinnedHashes = pinnedHashes.concat(containerEntries);
+          pinnedHashes.push(await localRuntime.executor.executeContractCall(containerContract, 'sharing'));
+          pinnedHashes.push(containerDescriptionHash);
         }
       }
+      pinnedHashes.push(twinDescriptionHash);
+
+      // Make sure hashes have indeed been pinned, as a safety mechanism
+      // in case the smart agent acts weird
+      const pinnedHashesAfterCreation = await getPinnedFileHashes();
+      pinnedHashes.forEach((hash) => {
+        expect(
+          pinnedHashesAfterCreation.includes(hash),
+          'Hash should have been pinned upon creation, but wasn\'t',
+        ).to.be.true;
+      });
 
       await twin.deactivate();
-
-      // Get sharings
-      // const sharings = await runtime.sharing.getSharingsFromContract(containerContract);
-      // expect(sharings).to.include.keys(runtime.web3.utils.soliditySha3(accounts[1]));
-      // Get description
-      // Get containers
 
       // Check if container's owner == 0x0
       // & consumers are removed
@@ -323,7 +334,6 @@ describe('DigitalTwin', function test() {
       let containerAuthority;
       let consumerCount;
       let sharingAddress;
-
       for (const entry of Object.keys(entries)) {
         if (entries[entry].entryType === DigitalTwinEntryType.Container) {
           containerAddress = entries[entry].value.config.address;
@@ -340,16 +350,12 @@ describe('DigitalTwin', function test() {
         }
       }
 
-      const accountsPinnedHashes = await getPinnedFileHashes();
-      // Check if all sharings are unpinned
-      pinnedSharings.forEach((pinned) => {
-        expect(accountsPinnedHashes.includes(pinned)).to.be.false;
+      // Check if all pinned hashes have been unpinned
+      // TODO: Still failing due to hashes still being pinned ==> why?
+      const pinnedHashesAfterDeactivation = await getPinnedFileHashes();
+      pinnedHashes.forEach((pinned) => {
+        expect(pinnedHashesAfterDeactivation.includes(pinned)).to.be.false;
       });
-      // Check if description unpinned
-      expect(accountsPinnedHashes.includes(twinDescriptionHash)).to.be.false;
-      // TODO:
-      // Check if all container entries unpinned
-      // Check if all container decriptions unpinned
     });
   });
 
