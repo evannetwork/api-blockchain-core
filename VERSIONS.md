@@ -16,6 +16,7 @@
 ### Fixes
 - use typescript version `3.7.4`
 - fix behavior of `DataContract` for unencrypted data
+- fix did public key handling to properly support proofs
 
 ### Deprecations
 
