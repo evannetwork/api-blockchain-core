@@ -432,8 +432,11 @@ export class DigitalTwin extends Logger {
     await this.ensureContract();
     const description = await this.getDescription();
 
-    // Remove description
-    const descriptionHash = await this.options.executor.executeContractCall(this.contract, 'contractDescription');
+    // Unpin twin description
+    const descriptionHash = await this.options.executor.executeContractCall(
+      this.contract,
+      'contractDescription',
+    );
     await this.options.dataContract.unpinFileHash(descriptionHash);
 
     // Containers
@@ -759,6 +762,7 @@ export class DigitalTwin extends Logger {
 
     // Unpin all container entries
     await this.deactivateContainerEntries(containerContract, descriptionHash);
+
     // Unpin description
     await this.options.dataContract.unpinFileHash(descriptionHash);
 
@@ -777,7 +781,6 @@ export class DigitalTwin extends Logger {
       containerContract,
       'consumerCount',
     );
-
     let consumerAddress = '';
     for (let i = 1; i <= consumerCount; i += 1) { // The first consumer is at index 1
       consumerAddress = await this.options.executor.executeContractCall(
@@ -811,14 +814,15 @@ export class DigitalTwin extends Logger {
     );
   }
 
-  private async deactivateContainerEntries(containerContract: any, descriptionHash: string):
-  Promise<void> {
-    const content = (await this.options.dataContract.getDfsContent(descriptionHash)).toString('binary');
-    const result = JSON.parse(content);
+  private async getContainerEntryHashes(containerContract: any, descriptionHash: string):
+  Promise<string[]> {
+    const description = JSON.parse(
+      (await this.options.dataContract.getDfsContent(descriptionHash)).toString('binary'),
+    );
     // Collect entry hashes
     const encryptedHashes = [];
-    for (const entryName of Object.keys(result.public.dataSchema)) {
-      if (result.public.dataSchema[entryName].type === 'array') {
+    for (const entryName of Object.keys(description.public.dataSchema)) {
+      if (description.public.dataSchema[entryName].type === 'array') {
         // Get all list entries
         const entryCount = await this.options.executor.executeContractCall(
           containerContract,
@@ -845,17 +849,25 @@ export class DigitalTwin extends Logger {
       }
     }
 
+    const unencryptedHashes = [];
+    for (const encryptedHash of encryptedHashes.filter((hash) => hash !== nullBytes32)) {
+      const unencryptedHash = await this.options.dataContract.decryptHash(
+        encryptedHash,
+        containerContract,
+        this.config.accountId,
+      );
+      unencryptedHashes.push(unencryptedHash);
+    }
+    return unencryptedHashes;
+  }
+
+  private async deactivateContainerEntries(containerContract: any, descriptionHash: string):
+  Promise<void> {
+    const entryHashes = await this.getContainerEntryHashes(containerContract, descriptionHash);
+
     // Unpin entry hashes
-    const filteredForNull = encryptedHashes.filter((hash) => hash !== nullBytes32);
-    for (const hash in filteredForNull) {
-      if (Object.prototype.hasOwnProperty.call(filteredForNull, hash)) {
-        const unencryptedHash = await this.options.dataContract.decryptHash(
-          filteredForNull[hash],
-          containerContract,
-          this.config.accountId,
-        );
-        await this.options.dataContract.unpinFileHash(unencryptedHash);
-      }
+    for (const hash of entryHashes) {
+      await this.options.dataContract.unpinFileHash(hash);
     }
   }
 
