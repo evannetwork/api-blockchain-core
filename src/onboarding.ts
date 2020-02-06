@@ -429,8 +429,8 @@ export class Onboarding extends Logger {
     const newIdentity = (requestedProfile as any).identity;
     const accountHash = runtime.web3.utils.soliditySha3(accountId);
     const identityHash = runtime.web3.utils.soliditySha3(newIdentity);
-    const targetAccount = runtime.activeIdentity ? newIdentity : accountId;
-    const targetAccountHash = runtime.activeIdentity ? identityHash : accountHash;
+    const targetAccount = runtime.activeIdentity !== accountId ? newIdentity : accountId;
+    const targetAccountHash = runtime.activeIdentity !== accountId ? identityHash : accountHash;
 
     const dataKey = runtime.keyProvider.keys[accountHash];
 
@@ -538,12 +538,11 @@ export class Onboarding extends Logger {
     )(fileHashes.ipfsHashes);
     // clear hash log
     profile.ipld.hashLog = [];
-    // re-enable pinning
-    profile.ipld.ipfs.disablePin = false;
+
 
     const data = {
       accountId,
-      identityId: runtime.activeIdentity ? newIdentity : undefined,
+      identityId: runtime.activeIdentity !== accountId ? newIdentity : undefined,
       signature,
       profileInfo: fileHashes,
       accessToken: (requestedProfile as any).accessToken,
@@ -559,6 +558,9 @@ export class Onboarding extends Logger {
       data.didTransaction = didTransaction;
       fileHashes.ipfsHashes.push(documentHash);
     }
+
+    // re-enable pinning
+    profile.ipld.ipfs.disablePin = false;
 
     const jsonPayload = JSON.stringify(data);
     const options = {
