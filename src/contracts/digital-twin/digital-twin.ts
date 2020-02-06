@@ -432,6 +432,8 @@ export class DigitalTwin extends Logger {
     await this.ensureContract();
     const description = await this.getDescription();
 
+    await this.removeFromFavorites();
+
     // Unpin twin description
     const descriptionHash = await this.options.executor.executeContractCall(
       this.contract,
