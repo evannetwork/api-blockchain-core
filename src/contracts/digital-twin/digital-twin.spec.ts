@@ -293,10 +293,10 @@ describe('DigitalTwin', function test() {
         .prop1.type = 'text';
       const createPromise = DigitalTwin.create(runtime, {
         ...defaultConfig,
-        ...twinTemplate,
+        ...brokenTemplate,
       });
 
-      expect(createPromise).to.be.rejectedWith(
+      await expect(createPromise).to.be.rejectedWith(
         /^validation of plugin "plugin1" description failed with/,
       );
     });
