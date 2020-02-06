@@ -17,7 +17,10 @@
   the following URL: https://evan.network/license/
 */
 
+import * as didJWT from 'did-jwt';
+
 import {
+  AccountStore,
   ContractLoader,
   DfsInterface,
   Executor,
@@ -55,6 +58,13 @@ export interface DidDocumentTemplate {
     type: string;
     publicKeyHex: string;
   }[];
+  updated?: {
+    time: string;
+  };
+  created?: {
+    time: string;
+  };
+  proof?: DidProof;
   service?: {
     id: string;
     type: string;
@@ -74,9 +84,31 @@ export interface DidServiceEntry {
 }
 
 /**
+ * interface for proof in DIDs
+ */
+export interface DidProof {
+  type: string;
+  created: string;
+  proofPurpose: string;
+  verificationMethod: string;
+  jws: string;
+}
+
+/**
+ * Holds a list of supported proof types for DID (JWS) proofs
+ */
+export const enum DidProofType {
+  EcdsaPublicKeySecp256k1 = 'EcdsaPublicKeySecp256k1',
+}
+
+const JWTProofMapping = {};
+JWTProofMapping[(DidProofType.EcdsaPublicKeySecp256k1)] = 'ES256K-R';
+
+/**
  * options for Did constructor
  */
 export interface DidOptions extends LoggerOptions {
+  accountStore: AccountStore;
   contractLoader: ContractLoader;
   dfs: DfsInterface;
   executor: Executor;
@@ -305,6 +337,74 @@ export class Did extends Logger {
    */
   public async validateDid(did: string): Promise<void> {
     await this.validateDidAndGetSections(did);
+  }
+
+  /**
+   * Create a JWT over a DID document
+   *
+   * @param      {didDocument}   DID         The DID document
+   * @param      {DidProofType}  proofType  The type of algorithm used for generating the JWT
+   */
+  private async createJwtForDid(didDocument, proofType: DidProofType): Promise<string> {
+    const signer = didJWT.SimpleSigner(
+      await this.options.accountStore.getPrivateKey(this.options.signerIdentity.underlyingAccount),
+    );
+    let jwt = '';
+    await didJWT.createJWT(
+      {
+        didDocument,
+      }, {
+        alg: JWTProofMapping[proofType],
+        issuer: didDocument.id,
+        signer,
+      },
+    ).then((response) => { jwt = response; });
+
+    return jwt;
+  }
+
+  /**
+   * Creates a new `VcProof` object for a given VC document, including generating a JWT token over
+   * the whole document.
+   *
+   * @param      {DidDocument}   Did         The VC document to create the proof for.
+   * @param      {DidProofType}  proofType  Specify if you want a proof type different from the
+   *                                       default one.
+   * @returns    {DidProof}                 A proof object containing a JWT.
+   * @throws           If the Decentralized identity and the signer identity differ from each other
+   */
+  private async createProofForDid(didDocument,
+    proofType: DidProofType = DidProofType.EcdsaPublicKeySecp256k1): Promise<DidProof> {
+    let issuerIdentity;
+    try {
+      issuerIdentity = await this.convertDidToIdentity(didDocument.id);
+    } catch (e) {
+      throw Error(`Invalid issuer DID: ${didDocument.id}`);
+    }
+
+    if (this.options.signerIdentity.activeIdentity !== issuerIdentity) {
+      throw Error('You are not authorized to issue this Did');
+    }
+
+    const jwt = await this.createJwtForDid(didDocument, proofType);
+    const signaturePublicKey = await this.options.signerIdentity.getPublicKey(
+      this.options.signerIdentity.underlyingAccount,
+    );
+    const key = didDocument.publicKey
+      .filter((entry) => entry.publicKeyHex === signaturePublicKey)[0];
+    if (!key) {
+      throw Error('The signature key for the active account is not associated to its DID document.');
+    }
+
+    const proof: DidProof = {
+      type: `${proofType}`,
+      created: new Date(Date.now()).toISOString(),
+      proofPurpose: 'assertionMethod',
+      verificationMethod: key.id,
+      jws: jwt,
+    };
+
+    return proof;
   }
 
   /**
