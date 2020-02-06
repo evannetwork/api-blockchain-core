@@ -121,7 +121,61 @@ Example
 
 --------------------------------------------------------------------------------
 
+.. _verifications_updateConfig:
 
+updateConfig
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.updateConfig([options[, config]]);
+
+Merge given partial options and config into current options and config.
+
+This function is mainly used to decouple the creation process of required libraries by setting at a later point of time.
+
+
+
+----------
+Parameters
+----------
+
+#. ``options`` - ``Partial<VerificationsOptions>`` (optional): updates for options
+#. ``config`` - ``Partial<VerificationsConfig>`` (optional): updates for config
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // create initial instance of `Verifications`, that is missing `Vc` and `Did` instances
+  const verifications = new Verifications({
+    accountStore,
+    config,
+    contractLoader,
+    description,
+    dfs,
+    executor,
+    nameResolver,
+    storage: '0x0000000000000000000000000000000000000001',
+  });
+
+  // required libraries and config values are are created by other logic
+  const { activeIdentity, did, vc, underlyingAccount } = await someHelper();
+
+  // now update setup
+  verifications.updateConfig({ did, vc }, { activeIdentity, underlyingAccount });
+
+
+
+--------------------------------------------------------------------------------
 
 = Issuers =
 ==========================

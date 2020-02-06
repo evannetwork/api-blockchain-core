@@ -12,6 +12,7 @@
 - add lookup method for an identity's owner's address
 - add `signer-identity` to enable identity to getGasPrice using underlying account 
 - add `setVerificationAndVc` function to enable VC creation for verification
+- update `Verifications` logic and tests to support identity based account
 
 
 ### Fixes

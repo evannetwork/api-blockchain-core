@@ -1692,8 +1692,13 @@ export class Verifications extends Logger {
     } = await this.getTransactionInfo(contract, functionName, options, ...args);
 
     // note that issuer is given for signing, as this ACCOUNT is used to sign the message
+    // try to sign with underlying account for active identity, as they are related
+    // otherwise try to use given account
     const signedTransactionInfo = await this.signPackedHash(
-      options.from, [sourceIdentity, nonce, to, value, input],
+      options.from === this.config.activeIdentity
+        ? this.config.underlyingAccount
+        : options.from,
+      [sourceIdentity, nonce, to, value, input],
     );
 
     return {
@@ -1825,13 +1830,16 @@ export class Verifications extends Logger {
   }
 
   /**
-   * Mergen given partial optionsn and config into current options and config.
+   * Merge given partial options and config into current options and config.
    *
-   * @param      {Partial<VerificationsOptions>}  options  updates for options
-   * @param      {Partial<VerificationsConfig>}   config   updates for config
+   * This function is mainly used to decouple the creation process of required libraries
+   * by setting at a later point of time.
+   *
+   * @param      {Partial<VerificationsOptions>}  options  (optional) updates for options
+   * @param      {Partial<VerificationsConfig>}   config   (optional) updates for config
    */
   public updateConfig(
-    options: Partial<VerificationsOptions>,
+    options?: Partial<VerificationsOptions>,
     config?: Partial<VerificationsConfig>,
   ): void {
     this.options = {
@@ -1922,7 +1930,8 @@ export class Verifications extends Logger {
         isIdentity ? subject : await this.getIdentityForAccount(subject),
         ...args,
       );
-    } if (subjectType === 'account') {
+    }
+    if (subjectType === 'account') {
       // account identity
       return this.options.executor.executeContractCall(
         isIdentity
@@ -2193,7 +2202,8 @@ export class Verifications extends Logger {
         );
       }
       return this.executeAndHandleEventResult(options.from, abiOnRegistry);
-    } if (subjectType === 'account') {
+    }
+    if (subjectType === 'account') {
       // account identity
       let targetIdentityAddress;
       if (isIdentity) {

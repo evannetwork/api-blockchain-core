@@ -19,25 +19,25 @@
 
 import 'mocha';
 import * as chaiAsPromised from 'chai-as-promised';
-import * as didJWT from 'did-jwt';
-import { expect, use } from 'chai';
 import { ContractLoader, Executor } from '@evan.network/dbcp';
+import { expect, use } from 'chai';
 
-import { accounts } from '../test/accounts';
 import { BaseContract } from '../contracts/base-contract/base-contract';
 import { Description } from '../shared-description';
 import { EncryptionWrapper, EncryptionWrapperKeyType } from '../encryption/encryption-wrapper';
+import { Runtime } from '../runtime';
 import { TestUtils } from '../test/test-utils';
+import { VcDocument } from '../vc/vc';
+import { accounts } from '../test/accounts';
 import {
   Verifications,
   VerificationsQueryOptions,
   VerificationsResultV2,
   VerificationsStatus,
-  VerificationsStatusV2,
   VerificationsStatusFlagsV2,
+  VerificationsStatusV2,
   VerificationsValidationOptions,
 } from './verifications';
-import { VcDocumentTemplate, VcDocument, VcEncryptionInfo } from '../vc/vc';
 
 function timeout(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -61,6 +61,7 @@ describe('Verifications handler', function test() {
   let dfs: any;
   let encryptionWrapper: EncryptionWrapper;
   let executor: Executor;
+  let runtimes: Runtime[];
   let web3: any;
 
   async function deployStructure() {
@@ -68,11 +69,13 @@ describe('Verifications handler', function test() {
     const deploy = async (contractAndPath) => {
       const contractName = /^[^:]*:(.*)$/g.exec(contractAndPath)[1];
       const replace = (target, name, address) => {
-        contractLoader.contracts[target].bytecode = contractLoader.contracts[target].bytecode
-          .replace(
-            new RegExp(contractLoader.contracts[name]
-              .deployedAt.slice(2), 'g'), address.slice(2),
-          );
+        for (const runtime of runtimes) {
+          runtime.contractLoader.contracts[target].bytecode = contractLoader.contracts[target]
+            .bytecode.replace(
+              new RegExp(contractLoader.contracts[name]
+                .deployedAt.slice(2), 'g'), address.slice(2),
+            );
+        }
       };
       const updateBytecode = (librayName, libraryAddress) => {
         // eslint-disable-next-line
@@ -106,6 +109,9 @@ describe('Verifications handler', function test() {
   }
 
   before(async () => {
+    runtimes = await Promise.all(accounts.map(
+      (account) => TestUtils.getRuntime(account, null, { useIdentity }),
+    ));
     ({
       baseContract,
       contractLoader,
@@ -120,15 +126,15 @@ describe('Verifications handler', function test() {
     // create new structure and identities for new test run
     await deployStructure();
     if (!useIdentity) {
-      await verifications.createIdentity(accounts[0]);
-      await verifications.createIdentity(accounts[1]);
+      await runtimes[0].verifications.createIdentity(accounts[0]);
+      await runtimes[1].verifications.createIdentity(accounts[1]);
     }
   });
 
   it('can add a verification', async () => {
     const oldLength = (await verifications.getVerifications(accounts[1], '/company')).length;
     await timeout(1000);
-    const verification = await verifications.setVerification(accounts[0], accounts[1], '/company');
+    await verifications.setVerification(accounts[0], accounts[1], '/company');
     await timeout(1000);
     const verificationsForAccount = await verifications.getVerifications(accounts[1], '/company');
     expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
@@ -232,7 +238,7 @@ describe('Verifications handler', function test() {
       await verifications.setVerification(accounts[0], accounts[1], '/company/b-s-s/employee/swo3');
       const verificationsForAccount = await verifications
         .getVerifications(accounts[1], '/company/b-s-s/employee/swo3');
-      expect(verificationsForAccount).to.have.lengthOf(1);
+      expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
       expect(verificationsForAccount[oldLength]).to.have.property(
         'status', VerificationsStatus.Issued,
       );
@@ -248,7 +254,7 @@ describe('Verifications handler', function test() {
       const verificationId = await verifications.setVerification(
         accounts[0], accounts[1], '/company/b-s-s/employee/swo4',
       );
-      await verifications.confirmVerification(accounts[1], accounts[1], verificationId);
+      await runtimes[1].verifications.confirmVerification(accounts[1], accounts[1], verificationId);
       const verificationsForAccount = await verifications.getVerifications(
         accounts[1], '/company/b-s-s/employee/swo4',
       );
@@ -285,6 +291,9 @@ describe('Verifications handler', function test() {
     });
 
     it('can delete a subverification path with the subject user', async () => {
+      const oldLength = (await verifications.getVerifications(
+        accounts[1], '/company/b-s-s/employee/swo6',
+      )).length;
       await verifications.setVerification(accounts[0], accounts[0], '/company');
       await verifications.setVerification(accounts[0], accounts[0], '/company/b-s-s');
       await verifications.setVerification(accounts[0], accounts[0], '/company/b-s-s/employee');
@@ -293,11 +302,17 @@ describe('Verifications handler', function test() {
         accounts[0], accounts[1], '/company/b-s-s/employee/swo6',
       );
       await timeout(1000);
-      await verifications.deleteVerification(accounts[1], accounts[1], verificationId);
-      const verificationsForAccount = await verifications.getVerifications(
+      let verificationsForAccount = await verifications.getVerifications(
         accounts[1], '/company/b-s-s/employee/swo6',
       );
-      expect(verificationsForAccount).to.have.lengthOf(0);
+      expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
+      await timeout(1000);
+      await runtimes[1].verifications.deleteVerification(accounts[1], accounts[1], verificationId);
+      await timeout(1000);
+      verificationsForAccount = await verifications.getVerifications(
+        accounts[1], '/company/b-s-s/employee/swo6',
+      );
+      expect(verificationsForAccount).to.have.lengthOf(oldLength);
     });
 
     it('can track the creation block', async () => {
@@ -312,7 +327,7 @@ describe('Verifications handler', function test() {
       expect(parseInt(verificationsForAccount[last].creationBlock, 10)).to.be.lte(after);
     });
 
-    (useIdentity ? it.skip : it.only)('can add a description to a verification', async () => {
+    (useIdentity ? it.skip : it)('can add a description to a verification', async () => {
       const sampleVerificationsDomain = 'sample';
       const sampleVerificationTopic = '/company';
       const sampleDescription = {
@@ -347,7 +362,7 @@ describe('Verifications handler', function test() {
       const verificationId = await verifications.setVerification(
         accounts[0], accounts[1], '/company/b-s-s/employee/swo4',
       );
-      await verifications.rejectVerification(accounts[1], accounts[1], verificationId);
+      await runtimes[1].verifications.rejectVerification(accounts[1], accounts[1], verificationId);
       const verificationsForAccount = await verifications.getVerifications(
         accounts[1], '/company/b-s-s/employee/swo4',
       );
@@ -368,7 +383,7 @@ describe('Verifications handler', function test() {
         accounts[0], accounts[1], '/company/b-s-s/employee/swo4',
       );
       await timeout(1000);
-      await verifications.rejectVerification(
+      await runtimes[1].verifications.rejectVerification(
         accounts[1], accounts[1], verificationId, { reason: 'denied' },
       );
       await timeout(1000);
@@ -428,8 +443,8 @@ describe('Verifications handler', function test() {
       const verificationId = await verifications.setVerification(
         accounts[0], accounts[1], '/company/b-s-s/employee/swo4',
       );
-      await verifications.rejectVerification(accounts[1], accounts[1], verificationId);
-      const reacceptedP = verifications.confirmVerification(
+      await runtimes[1].verifications.rejectVerification(accounts[1], accounts[1], verificationId);
+      const reacceptedP = runtimes[1].verifications.confirmVerification(
         accounts[1], accounts[1], verificationId,
       );
       await expect(reacceptedP).to.be.rejected;
@@ -514,7 +529,7 @@ describe('Verifications handler', function test() {
           validationOptions: localValidationOptions,
         };
 
-        const nested = await verifications.getNestedVerificationsV2(
+        const nested = await runtimes[1].verifications.getNestedVerificationsV2(
           accounts[1], topic, false, localQueryOptions,
         );
         expect(nested).to.haveOwnProperty('verifications');
@@ -530,7 +545,7 @@ describe('Verifications handler', function test() {
         const topic = getRandomTopic('/evan');
 
         // check issued case
-        await verifications.setVerification(accounts[0], accounts[1], topic);
+        const verificationId = await verifications.setVerification(accounts[0], accounts[1], topic);
         computed = await verifications.getComputedVerification(accounts[1], topic);
         await expect(computed.status).to.be.eq(0);
         await expect(computed.warnings).to.include('issued');
@@ -552,13 +567,18 @@ describe('Verifications handler', function test() {
         await expect(v2.verifications[0].statusFlags).to.include(VerificationsStatusFlagsV2.issued);
 
         // test issued is missing after confirm
-        await verifications.confirmVerification(accounts[1], accounts[1],
-          computed.verifications[0].id);
-        computed = await verifications.getComputedVerification(accounts[1], topic);
+        await runtimes[1].verifications.confirmVerification(
+          accounts[1], accounts[1], verificationId,
+        );
+        // explicitely clear cache
+        runtimes[1].verifications.verificationCache = {};
+        computed = await runtimes[1].verifications.getComputedVerification(accounts[1], topic);
         await expect(computed.warnings).to.not.include('issued');
 
         // V2
         // test issued is missing after confirm
+        // explicitely clear cache
+        verifications.verificationCache = {};
         v2 = await verifications.getNestedVerificationsV2(
           accounts[1], topic, false, localQueryOptions,
         );
@@ -853,14 +873,13 @@ describe('Verifications handler', function test() {
           .to.have.property('status', VerificationsStatus.Issued);
       });
 
-      (useIdentity ? it.skip : it)('can add a verification from an account that is not the owner of the contract',
+      it('can add a verification from an account that is not the owner of the contract',
         async () => {
-          const newruntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity });
-          const oldLength = (await newruntime.verifications.getVerifications(
+          const oldLength = (await runtimes[1].verifications.getVerifications(
             subject, '/company', isIdentity,
           )).length;
-          await newruntime.verifications.setVerification(accounts[1], subject, '/company', ...extraArgs);
-          const verificationsForAccount = await newruntime.verifications.getVerifications(
+          await runtimes[1].verifications.setVerification(accounts[1], subject, '/company', ...extraArgs);
+          const verificationsForAccount = await runtimes[1].verifications.getVerifications(
             subject, '/company', isIdentity,
           );
           expect(verificationsForAccount).to.have.lengthOf(oldLength + 1);
@@ -1184,8 +1203,9 @@ describe('Verifications handler', function test() {
           const verificationId = await verifications.setVerification(
             accounts[0], subject, '/company/b-s-s/employee/swo4', ...extraArgs,
           );
-          await expect(verifications.confirmVerification(accounts[1], subject, verificationId))
-            .to.be.rejected;
+          await expect(runtimes[1].verifications.confirmVerification(
+            accounts[1], subject, verificationId,
+          )).to.be.rejected;
         });
 
       describe('when validating nested verifications', () => {
@@ -1326,10 +1346,12 @@ describe('Verifications handler', function test() {
       const context: any = {};
 
       before(async () => {
-        verificationsRegistry = await executor.createContract(
+        for (const runtime of runtimes) {
+          runtime.verifications.contracts.registry = verificationsRegistry;
+        }
+        verificationsRegistry = await runtimes[2].executor.createContract(
           'VerificationsRegistry', [], { from: accounts[2], gas: 8000000 },
         );
-        verifications.contracts.registry = verificationsRegistry;
 
         contractId = await baseContract.createUninitialized(
           'testdatacontract',
@@ -1350,9 +1372,7 @@ describe('Verifications handler', function test() {
           accounts[0],
         );
         context.subject = contractId;
-      });
-
-      it('can create a new identity for a contract', async () => {
+        // create identity for further tessts
         const identity = await verifications.createIdentity(accounts[0], contractId);
         expect(identity).to.match(/0x[0-9-a-f]{64}/i);
       });
@@ -1477,7 +1497,9 @@ describe('Verifications handler', function test() {
 
         // on account[2]s side
         // accounts[2] submits transaction, that actually issues verification
-        const verificationId = await verifications.executeVerification(accounts[2], txInfo);
+        const verificationId = await runtimes[2].verifications.executeVerification(
+          accounts[2], txInfo,
+        );
 
         await timeout(1000);
         expect(verificationId).to.be.ok;
@@ -1500,7 +1522,9 @@ describe('Verifications handler', function test() {
         );
 
         // on account[2]s side
-        const verificationId = await verifications.executeVerification(accounts[2], txInfo);
+        const verificationId = await runtimes[2].verifications.executeVerification(
+          accounts[2], txInfo,
+        );
 
         await timeout(1000);
         expect(verificationId).to.be.ok;
@@ -1542,8 +1566,11 @@ describe('Verifications handler', function test() {
       }
 
       // on account[2]s side
+      const runtime2 = await TestUtils.getRuntime(accounts[2], null, { useIdentity });
       for (const i of txInfos.keys()) {
-        const verificationId = await verifications.executeVerification(accounts[2], txInfos[i]);
+        const verificationId = await runtime2.verifications.executeVerification(
+          accounts[2], txInfos[i],
+        );
         await timeout(1000);
         expect(verificationId).to.be.ok;
         const verificationsForAccount = await verifications.getVerifications(
@@ -1570,12 +1597,16 @@ describe('Verifications handler', function test() {
       const txInfo = await verifications.signTransaction(
         testContract,
         'setData',
-        { from: accounts[0] },
+        {
+          from: useIdentity
+            ? (await verifications.getIdentityForAccount(accounts[0], true))
+            : accounts[0],
+        },
         'new data',
       );
 
       // on account[2]s side
-      await verifications.executeTransaction(accounts[2], txInfo);
+      await runtimes[2].verifications.executeTransaction(accounts[2], txInfo);
 
       // now check
       data = await executor.executeContractCall(testContract, 'data');
@@ -1596,7 +1627,11 @@ describe('Verifications handler', function test() {
       const txInfo = await verifications.signTransaction(
         testContract,
         'setData',
-        { from: accounts[0] },
+        {
+          from: useIdentity
+            ? (await verifications.getIdentityForAccount(accounts[0], true))
+            : accounts[0],
+        },
         'new data',
       );
 
@@ -1619,10 +1654,14 @@ describe('Verifications handler', function test() {
       const txInfo = await verifications.signTransaction(
         testContract,
         'fireEvent',
-        { from: accounts[0] },
+        {
+          from: useIdentity
+            ? (await verifications.getIdentityForAccount(accounts[0], true))
+            : accounts[0],
+        },
       );
 
-      const valueFromEvent = await verifications.executeTransaction(
+      const valueFromEvent = await runtimes[2].verifications.executeTransaction(
         accounts[2],
         txInfo,
         {
