@@ -718,7 +718,7 @@ Example
   const sharings = await sharing.getSharingsFromContract(serviceContract, callIdHash);
   // Output:
   { '0x6760305476495b089868ae42c2293d5e8c1c7bf9bfe51a9ad85b36d85f4113cb':
-   { '0x04994f67dc55b09e814ab7ffc8df3686b4afb2bb53e60eae97ef043fe03fb829': { hashKey: [Object] }
+   { '0x04994f67dc55b09e814ab7ffc8df3686b4afb2bb53e60eae97ef043fe03fb829': { hashKey: [Object] } }
 
   // make changes to sharing
   await sharing.extendSharings(sharings, accountId, target, section, 0, contentKeyToShare, null);
