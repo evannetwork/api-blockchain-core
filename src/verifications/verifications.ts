@@ -1928,15 +1928,16 @@ export class Verifications extends Logger {
   }
 
   /**
-   * run given data (serialized contract tx) with given users identity
+   * run given data (serialized contract transaction (tx)) with given users identity
    *
-   * @param      {string}        accountId        account execute given tx on own identity
+   * @param      {string}        accountId        account with whose identity the given tx is
+   *                                              executed
    * @param      {string}        data             serialized function data
    * @param      {any}           eventInfo        (optional) object with properties: 'eventName' and
    *                                              'contract' (web3 contract instance, that triggers
    *                                              event)
    * @param      {Function}      getEventResults  (optional) function with arguments event and
-   *                                              eventArges, that returns result of
+   *                                              eventArgs, that returns result of
    *                                              `executeAndHandleEventResult` call
    * @return     {Promise<any>}  if `eventInfo` and `getEventResults`, result of `getEventResults`,
    *                             otherwise void
