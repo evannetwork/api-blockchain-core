@@ -60,7 +60,6 @@ export interface VcCredentialStatus {
  */
 export interface VcCredentialSubject {
   id: string;
-  // data?: VcCredentialSubjectPayload[];
   data?: any;
   description?: any;
   uri?: string;

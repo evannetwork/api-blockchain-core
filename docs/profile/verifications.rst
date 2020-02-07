@@ -132,7 +132,7 @@ updateConfig
 
 Merge given partial options and config into current options and config.
 
-This function is mainly used to decouple the creation process of required libraries by setting at a later point of time.
+This function is mainly used to decouple the creation process of required libraries by setting them at a later point of time.
 
 
 
