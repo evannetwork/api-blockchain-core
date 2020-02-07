@@ -92,7 +92,7 @@ async function getRuntimeWithEnabledPinning(defaultRuntime: Runtime): Promise<Ru
 async function getPinnedFileHashes(): Promise<string[]> {
   const authHeaders = await getSmartAgentAuthHeaders(
     await TestUtils.getRuntime(accounts[0]),
-    JSON.stringify(Date.now()),
+    Date.now().toString(),
   );
   const reqOptions = {
     hostname: 'payments.test.evan.network',
@@ -308,7 +308,7 @@ describe('DigitalTwin', function test() {
             containerContract,
             'contractDescription',
           );
-          containerEntries = await (twin as any).getContainerEntryHashes( // sshhh
+          containerEntries = await (twin as any).getContainerEntryHashes(
             containerContract,
             containerDescriptionHash,
           );
@@ -367,7 +367,7 @@ describe('DigitalTwin', function test() {
       );
       const twinAuthority = await localRuntime.executor.executeContractCall(
         twinContract,
-        'owner',
+        'authority',
       );
 
       const twinIdentityOwnerPromise = localRuntime.verifications.getOwnerAddressForIdentity(
@@ -476,7 +476,7 @@ describe('DigitalTwin', function test() {
       );
       const twinAuthority = await localRuntime.executor.executeContractCall(
         twinContract,
-        'owner',
+        'authority',
       );
 
       const twinIdentityOwnerPromise = localRuntime.verifications.getOwnerAddressForIdentity(
