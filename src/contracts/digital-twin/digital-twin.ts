@@ -461,7 +461,7 @@ export class DigitalTwin extends Logger {
 
     // Unset did
     const twinDid = await this.options.did.convertIdentityToDid(description.identity);
-    await this.options.did.removeDidDocument(twinDid);
+    await this.options.did.deactivateDidDocument(twinDid);
 
     // Deactivate identity
     if (this.options.verifications.contracts.registry) {
