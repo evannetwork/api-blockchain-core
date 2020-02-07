@@ -272,7 +272,7 @@ describe('VC Resolver', function () {
     it('allows me to store online VC and revoke it using the bcc', async () => {
       const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData);
       const issuerId = storedVcDoc.issuer.id.replace('did:evan:testcore:', '');
-      expect(issuerId).to.be.eq(issuerIdentityId);
+      expect(issuerId).to.be.eq(issuerIdentityId.toLowerCase());
 
       const vcId = storedVcDoc.id.replace('vc:evan:testcore:', '');
       const vcRevokeStatus = await runtime.executor.executeContractCall(
@@ -301,7 +301,7 @@ describe('VC Resolver', function () {
     it('allows me to store online VC and revoke it using the vc api', async () => {
       const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData);
       const issuerId = storedVcDoc.issuer.id.replace('did:evan:testcore:', '');
-      expect(issuerId).to.be.eq(issuerIdentityId);
+      expect(issuerId).to.be.eq(issuerIdentityId.toLowerCase());
 
       const vcId = storedVcDoc.id;
 
@@ -331,7 +331,7 @@ describe('VC Resolver', function () {
     it('allows me to get revoke status of an existing VC using the vc api', async () => {
       const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData);
       const issuerId = storedVcDoc.issuer.id.replace('did:evan:testcore:', '');
-      expect(issuerId).to.be.eq(issuerIdentityId);
+      expect(issuerId).to.be.eq(issuerIdentityId.toLowerCase());
       const vcId = storedVcDoc.id;
 
       const vcRevokeStatus = await runtime.vc.getRevokeVcStatus(vcId);
@@ -341,7 +341,7 @@ describe('VC Resolver', function () {
     it('does not allow me to revoke VC using non issuer account via bcc', async () => {
       const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData);
       const issuerId = storedVcDoc.issuer.id.replace('did:evan:testcore:', '');
-      expect(issuerId).to.be.eq(issuerIdentityId);
+      expect(issuerId).to.be.eq(issuerIdentityId.toLowerCase());
       const vcId = storedVcDoc.id.replace('vc:evan:testcore:', '');
 
       const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
@@ -372,7 +372,7 @@ describe('VC Resolver', function () {
     it('allows me to store online VC but not revoke it using non issuer account via vc api', async () => {
       const storedVcDoc = await runtime.vc.storeVc(minimalValidVcData);
       const issuerId = storedVcDoc.issuer.id.replace('did:evan:testcore:', '');
-      expect(issuerId).to.be.eq(issuerIdentityId);
+      expect(issuerId).to.be.eq(issuerIdentityId.toLowerCase());
 
       const vcId = storedVcDoc.id;
       const otherRuntime = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });

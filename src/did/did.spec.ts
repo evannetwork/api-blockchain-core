@@ -144,24 +144,13 @@ describe('DID Resolver', function test() {
         .to.deep.eq({ ...document, service });
     });
 
-    it('allows me to fetch a default did document for accounts that have not set a did document yet', async () => {
+    it('does not allow me to fetch a default did document for accounts that have no identity set', async () => {
       const randomIdentity = TestUtils.getRandomAddress();
       const did = await runtimes[0].did.convertIdentityToDid(randomIdentity);
-
-      const expectedDefaultDid = {
-        '@context': 'https://w3id.org/did/v1',
-        id: did,
-        publicKey: [{
-          id: `${did}#key-1`,
-          type: 'Secp256k1VerificationKey2018',
-          owner: did,
-          ethereumAddress: randomIdentity,
-        }],
-        authentication: [`${did}#key-1`],
-      };
-
-      const identityDidDoc = await runtimes[0].did.getDidDocument(did);
-      expect(identityDidDoc).to.deep.eq(expectedDefaultDid);
+      const identityDidDocP = runtimes[0].did.getDidDocument(did);
+      await expect(identityDidDocP).to.be.rejectedWith(
+        new RegExp(`^No record found for ${randomIdentity}\\. Is this a valid identity address\\?$`, 'i'),
+      );
     });
   });
 
