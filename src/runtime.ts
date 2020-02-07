@@ -267,9 +267,10 @@ export async function createDefaultRuntime(
     }
   }
 
+  const activeAccount = Object.keys(runtimeConfig.accountMap)[0];
   const keyProvider = options.keyProvider
     || new KeyProvider({ keys: runtimeConfig.keyConfig, log });
-  keyProvider.currentAccountHash = nameResolver.soliditySha3(keyProvider);
+  keyProvider.currentAccountHash = nameResolver.soliditySha3(activeAccount);
 
   // description
   const description = options.description || new Description({
@@ -295,7 +296,6 @@ export async function createDefaultRuntime(
     nameResolver,
   });
 
-  const activeAccount = Object.keys(runtimeConfig.accountMap)[0];
   let activeIdentity: string;
   let underlyingAccount: string;
   if (runtimeConfig.useIdentity) {

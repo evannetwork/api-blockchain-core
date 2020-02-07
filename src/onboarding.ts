@@ -436,6 +436,7 @@ export class Onboarding extends Logger {
 
     profile.ipld.originator = runtime.web3.utils.soliditySha3(targetAccount);
     profile.activeAccount = targetAccount;
+    profile.profileOwner = targetAccount;
 
     // eslint-disable-next-line
     runtime.keyProvider.keys[targetAccountHash] = dataKey;
@@ -542,7 +543,7 @@ export class Onboarding extends Logger {
 
     const data = {
       accountId,
-      identityId: runtime.activeIdentity ? newIdentity : undefined,
+      identityId: runtime.activeIdentity !== accountId ? newIdentity : undefined,
       signature,
       profileInfo: fileHashes,
       accessToken: (requestedProfile as any).accessToken,
@@ -598,8 +599,11 @@ export class Onboarding extends Logger {
    * @param runtime Runtime object
    * @param accountId Account ID of the identity's owner
    */
-  private static async createOfflineDidTransaction(runtime: any, account: string, identity: string):
-  Promise<[VerificationsDelegationInfo, string]> {
+  private static async createOfflineDidTransaction(
+    runtime: any,
+    account: string,
+    identity: string,
+  ): Promise<[VerificationsDelegationInfo, string]> {
     const underlyingSigner = new SignerInternal({
       accountStore: runtime.accountStore,
       contractLoader: runtime.contractLoader,
@@ -616,6 +620,16 @@ export class Onboarding extends Logger {
       underlyingAccount: account,
       underlyingSigner,
     });
+
+    if (runtime.activeAccount !== runtime.activeIdentity) {
+      runtime.verifications.options.executor.signer.updateConfig({
+        verifications: runtime.verifications,
+      }, {
+        activeIdentity: identity,
+        underlyingAccount: account,
+        underlyingSigner,
+      });
+    }
 
     const did = new Did({
       contractLoader: runtime.contractLoader,

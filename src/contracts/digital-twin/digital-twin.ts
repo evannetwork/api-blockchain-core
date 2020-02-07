@@ -24,7 +24,6 @@ import {
   Logger,
   LoggerOptions,
 } from '@evan.network/dbcp';
-
 import {
   Container,
   ContainerConfig,
@@ -32,7 +31,7 @@ import {
   ContainerPlugin,
 } from './container';
 import { Profile } from '../../profile/profile';
-import { nullAddress } from '../../common/utils';
+import { nullAddress, nullBytes32 } from '../../common/utils';
 import { Did } from '../../did/did';
 
 /**
@@ -184,8 +183,18 @@ export class DigitalTwin extends Logger {
     if (config.plugins) {
       Object.keys(config.plugins).forEach((pluginName: string) => {
         const pluginDescription = {
-          public: config.plugins[pluginName].description || config.containerConfig.description,
+          public: {
+            ...config.plugins[pluginName].description || config.containerConfig.description,
+            dataSchema: {},
+          },
         };
+
+        // transform plugin dataSchema to the correct format to be validatable
+        const schemaProps = config.plugins[pluginName].template.properties;
+        Object.keys(schemaProps)
+          .forEach((key: string) => {
+            pluginDescription.public.dataSchema[key] = schemaProps[key].dataSchema;
+          });
 
         const pluginValidation = options.description.validateDescription(pluginDescription);
         if (pluginValidation !== true) {
@@ -430,6 +439,68 @@ export class DigitalTwin extends Logger {
   }
 
   /**
+   * Deactivates a twin. This includes unsetting & unpinning of all associated containers, sharings,
+   * and the description.
+   * Removes the owner and the authority from the twin so that no access to the twin is possible
+   * after deactivation.
+   * Removes the twin from the account's favorites.
+   * Unsets the identity owner.
+   * Unsets the DID document.
+   */
+  public async deactivate(): Promise<void> {
+    await this.ensureContract();
+    const description = await this.getDescription();
+
+    await this.removeFromFavorites();
+
+    // Unset & unpin twin description
+    const descriptionHash = await this.options.executor.executeContractCall(
+      this.contract,
+      'contractDescription',
+    );
+    await this.options.dataContract.unpinFileHash(descriptionHash);
+    await this.options.executor.executeContractTransaction(
+      this.contract,
+      'setContractDescription',
+      { from: this.config.accountId },
+      nullBytes32,
+    );
+
+    // Containers
+    await this.deactivateEntries();
+
+    // Unset did
+    const twinDid = await this.options.did.convertIdentityToDid(description.identity);
+    await this.options.did.removeDidDocument(twinDid);
+
+    // Deactivate identity
+    if (this.options.verifications.contracts.registry) {
+      const verificationRegistry = this.options.verifications.contracts.registry;
+      await this.options.verifications.executeAndHandleEventResult(
+        this.config.accountId,
+        verificationRegistry.methods.transferIdentity(
+          description.identity,
+          nullAddress,
+        ).encodeABI(),
+      );
+    }
+
+    // Deactivate twin contract
+    await this.options.executor.executeContractTransaction(
+      this.contract,
+      'setAuthority',
+      { from: this.config.accountId },
+      nullAddress,
+    );
+    await this.options.executor.executeContractTransaction(
+      this.contract,
+      'setOwner',
+      { from: this.config.accountId },
+      nullAddress,
+    );
+  }
+
+  /**
    * Check if digital twin contract already has been loaded, load from address / ENS if required
    * and throw an error, when no contract exists or the description doesn't match the twin
    * specifications.
@@ -612,6 +683,19 @@ export class DigitalTwin extends Logger {
   }
 
   /**
+   * Removes entry from index contract
+   * @param name Name of entry
+   */
+  private async removeEntry(name: string): Promise<void> {
+    await this.options.executor.executeContractTransaction(
+      this.contract,
+      'removeEntry',
+      { from: this.config.accountId },
+      name,
+    );
+  }
+
+  /**
    * Write given description to digital twins DBCP.
    *
    * @param      {any}  description  description to set (`public` part)
@@ -695,6 +779,171 @@ export class DigitalTwin extends Logger {
       .publicKey.map((key) => key.id).join(',');
     const doc = await this.options.did.getDidDocumentTemplate(twinDid, controllerDid, authKeyIds);
     await this.options.did.setDidDocument(twinDid, doc);
+  }
+
+  /**
+   * Deactivates a container. Deletes and unpins description, sharings, consumers, and entries.
+   * Unsets authority and owner
+   *
+   * @param containerContract Contract object of the container to be deactivated
+   */
+  private async deactivateContainer(containerContract: any): Promise<void> {
+    const descriptionHash = await this.options.executor.executeContractCall(
+      containerContract,
+      'contractDescription',
+    );
+
+    // Unpin all container entries
+    await this.unpinContainerEntries(containerContract, descriptionHash);
+
+    // Unpin description
+    await this.options.dataContract.unpinFileHash(descriptionHash);
+
+    // Remove & unpin sharings
+    const sharingHash = await this.options.executor.executeContractCall(containerContract, 'sharing');
+    await this.options.dataContract.unpinFileHash(sharingHash);
+    await this.options.executor.executeContractTransaction(
+      containerContract,
+      'setSharing',
+      { from: this.config.accountId },
+      nullBytes32,
+    );
+
+    // Remove consumers
+    const consumerCount = await this.options.executor.executeContractCall(
+      containerContract,
+      'consumerCount',
+    );
+    let consumerAddress = '';
+    for (let i = 1; i <= consumerCount; i += 1) { // The first consumer is at index 1
+      consumerAddress = await this.options.executor.executeContractCall(
+        containerContract,
+        'index2consumer',
+        i,
+      );
+      if (consumerAddress !== nullAddress) {
+        await this.options.executor.executeContractTransaction(
+          containerContract,
+          'removeConsumer',
+          { from: this.config.accountId },
+          consumerAddress,
+          nullAddress, // No business center
+        );
+      }
+    }
+
+    // Unset authority and owner of container contract
+    await this.options.executor.executeContractTransaction(
+      containerContract,
+      'setAuthority',
+      { from: this.config.accountId },
+      nullAddress,
+    );
+    await this.options.executor.executeContractTransaction(
+      containerContract,
+      'setOwner',
+      { from: this.config.accountId },
+      nullAddress,
+    );
+  }
+
+  /**
+   * Gets the unencrypted IPFS hashes for all container entries.
+   *
+   * @param containerContract Contract object of the corresponding container.
+   * @param descriptionHash IPFS hash of the container's description.
+   */
+  private async getContainerEntryHashes(containerContract: any, descriptionHash: string):
+  Promise<string[]> {
+    const description = JSON.parse(
+      (await this.options.dataContract.getDfsContent(descriptionHash)).toString('binary'),
+    );
+    // Collect entry hashes
+    const encryptedHashes = [];
+    for (const entryName of Object.keys(description.public.dataSchema)) {
+      if (description.public.dataSchema[entryName].type === 'array') {
+        // Get all list entries
+        const entryCount = await this.options.executor.executeContractCall(
+          containerContract,
+          'getListEntryCount',
+          this.options.web3.utils.sha3(entryName),
+        );
+        for (let i = 0; i < entryCount; i += 1) {
+          const encryptedEntryHash = await this.options.executor.executeContractCall(
+            containerContract,
+            'getListEntry',
+            this.options.web3.utils.sha3(entryName),
+            i,
+          );
+          encryptedHashes.push(encryptedEntryHash);
+        }
+      } else {
+        // Get single entry
+        const encryptedEntryHash = await this.options.executor.executeContractCall(
+          containerContract,
+          'getEntry',
+          this.options.web3.utils.sha3(entryName),
+        );
+        encryptedHashes.push(encryptedEntryHash);
+      }
+    }
+
+    const unencryptedHashes = [];
+    for (const encryptedHash of encryptedHashes.filter((hash) => hash !== nullBytes32)) {
+      const unencryptedHash = await this.options.dataContract.decryptHash(
+        encryptedHash,
+        containerContract,
+        this.config.accountId,
+      );
+      unencryptedHashes.push(unencryptedHash);
+    }
+    return unencryptedHashes;
+  }
+
+  /**
+   * Unpins all entries of a container from the IPFS.
+   *
+   * @param containerContract Contract object of the corresponding container.
+   * @param descriptionHash IPFS hash of the container's description.
+   */
+  private async unpinContainerEntries(containerContract: any, descriptionHash: string):
+  Promise<void> {
+    const entryHashes = await this.getContainerEntryHashes(containerContract, descriptionHash);
+
+    // Unpin entry hashes
+    for (const hash of entryHashes) {
+      await this.options.dataContract.unpinFileHash(hash);
+    }
+  }
+
+  /**
+   * Removes all of this twin's entries and deactivates all container entries.
+   */
+  private async deactivateEntries(): Promise<void> {
+    const entries = await this.getEntries();
+
+    let containerContract;
+    let containerOwner;
+    for (const entryName of Object.keys(entries)) {
+      if (entries[entryName].entryType === DigitalTwinEntryType.Container) {
+        containerContract = await this.options.contractLoader.loadContract(
+          'DataContract',
+          entries[entryName].value.config.address,
+        );
+        containerOwner = await this.options.executor.executeContractCall(
+          containerContract,
+          'owner',
+        );
+
+        if (containerOwner === this.config.accountId) {
+          await this.deactivateContainer(containerContract);
+        }
+      } else if (entries[entryName].entryType === DigitalTwinEntryType.FileHash) {
+        await this.options.dataContract.unpinFileHash(entries[entryName].value);
+      }
+
+      await this.removeEntry(entryName);
+    }
   }
 
   /**

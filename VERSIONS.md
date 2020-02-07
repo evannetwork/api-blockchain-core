@@ -10,7 +10,8 @@
 - ensure `DigitalTwin` and `Container` description to use at least `dbcpVersion` 2
 - update root verification handling to use genesis account
 - add lookup method for an identity's owner's address
-- add `signer-identity` to enable identity to getGasPrice using underlying account 
+- add deactivation mechanism for twins
+- add `signer-identity` to enable identity to getGasPrice using underlying account
 - add `setVerificationAndVc` function to enable VC creation for verification
 - update `Verifications` logic and tests to support identity based account
 
@@ -18,7 +19,10 @@
 ### Fixes
 - use typescript version `3.7.4`
 - fix behavior of `DataContract` for unencrypted data
+- fix did public key handling to properly support proofs
 - add checks for configured identity and account to prevent unintentional usage of active identity
+- add support for custom DID registries for DID tests
+
 
 ### Deprecations
 

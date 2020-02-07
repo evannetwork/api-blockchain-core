@@ -47,6 +47,8 @@ Parameters
     * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
     * ``logLogLevel`` - |source logLevel|_ (optional): messages with this level will be pushed to ``logLog``
+#. ``config`` - ``DidConfig`` (optional): description, defaults to ``123``
+    * ``registryAddress`` - ``string`` (optional): contract address or ENS name for `DidRegistry`
 
 -------
 Returns
