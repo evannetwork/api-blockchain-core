@@ -470,7 +470,7 @@ export class Verifications extends Logger {
 
   /**
    * Creates a new identity for account or contract and registers them on the storage. Returned
-   * identity is either a 40B contract address (for account identities) or a 32B identity hash
+   * identity is either a 20B contract address (for account identities) or a 32B identity hash
    * contract identities
    *
    * @param      {string}  accountId          account that runs transaction, receiver of identity
@@ -481,7 +481,7 @@ export class Verifications extends Logger {
    * @param      {bool}    updateDescription  (optional) update description of contract, defaults to
    *                                          ``true``
    * @param      {bool}    linkContract       link contract address to its identity
-   * @return     {Promise<string>}  new identity (40Bytes for accounts, 32Bytes for other)
+   * @return     {Promise<string>}  new identity (20Bytes for accounts, 32Bytes for other)
    */
   public async createIdentity(
     accountId: string,
@@ -769,6 +769,35 @@ export class Verifications extends Logger {
   }
 
   /**
+   * Gets an identity's owner's address. This can be either an account or an identity address.
+   *
+   * @param {string} identityAddress The identity address to fetch the owner for.
+   * @returns {string} The address of the owner.
+   */
+  public async getOwnerAddressForIdentity(identityAddress: string): Promise<string> {
+    let ownerAddress;
+    if (identityAddress.length === 42) { // 20 bytes address + '0x' prefix
+      ownerAddress = await this.options.executor.executeContractCall(
+        this.contracts.storage,
+        'owners',
+        identityAddress,
+      );
+    } else if (identityAddress.length === 66) { // 32 bytes address + '0x' prefix
+      ownerAddress = await this.options.executor.executeContractCall(
+        this.contracts.registry,
+        'getOwner',
+        identityAddress,
+      );
+    }
+
+    if (ownerAddress === nullAddress) {
+      throw Error(`No record found for ${identityAddress}. Is this a valid identity address?`);
+    }
+
+    return ownerAddress;
+  }
+
+  /**
    * Loads a list of verifications for a topic and a subject and combines to a single view for a
    * simple verification status check.
    *
@@ -1033,7 +1062,7 @@ export class Verifications extends Logger {
             // if issuer === subject and only if a parent is passed, so if the root one is empty
             // and no slash is available
             if (verification.issuerAccount === verification.subject && verification.parent
-                && verification.issuerAccount !== this.options.config.ensRootOwner) {
+                && verification.issuerAccount !== this.options.config.rootVerificationIssuer) {
               verification.warnings.push('selfIssued');
             }
 
@@ -1068,7 +1097,7 @@ export class Verifications extends Logger {
               verification.parents = [];
 
               if (verification.name === '/evan'
-                && verification.issuerAccount !== this.options.config.ensRootOwner) {
+                && verification.issuerAccount !== this.options.config.rootVerificationIssuer) {
                 // eslint-disable-next-line no-param-reassign
                 verification.warnings = ['notEnsRootOwner'];
               } else {
@@ -1913,7 +1942,7 @@ export class Verifications extends Logger {
    *                             otherwise void
    */
   // eslint-disable-next-line consistent-return
-  private async executeAndHandleEventResult(
+  public async executeAndHandleEventResult(
     accountId: string,
     data: string,
     eventInfo?: any,

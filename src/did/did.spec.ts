@@ -29,6 +29,7 @@ import {
   Runtime,
 } from '../index';
 
+
 use(chaiAsPromised);
 
 describe('DID Resolver', function test() {
@@ -42,7 +43,9 @@ describe('DID Resolver', function test() {
       TestUtils.getRuntime(accounts[0], null, { useIdentity: true }),
       TestUtils.getRuntime(accounts[1], null, { useIdentity: true }),
     ]);
-    accounts0Identity = await runtimes[0].verifications.getIdentityForAccount(accounts[0], true);
+    accounts0Identity = await runtimes[0].verifications.getIdentityForAccount(
+      runtimes[0].underlyingAccount, true,
+    );
     accounts0Did = await runtimes[0].did.convertIdentityToDid(accounts0Identity);
   });
 
@@ -71,7 +74,7 @@ describe('DID Resolver', function test() {
     it('does not allow to store a DID document for another identity', async () => {
       const document = await runtimes[0].did.getDidDocumentTemplate();
       const accounts1Identity = await runtimes[0].verifications.getIdentityForAccount(
-        accounts[1],
+        runtimes[1].underlyingAccount,
         true,
       );
       const accounts1Did = await runtimes[0].did.convertIdentityToDid(accounts1Identity);
@@ -97,6 +100,26 @@ describe('DID Resolver', function test() {
       expect(await runtimes[0].did.getDidDocument(accounts0Did))
         .to.deep.eq({ ...document, service });
     });
+
+    it('allows me to fetch a default did document for accounts that have not set a did document yet', async () => {
+      const randomIdentity = TestUtils.getRandomAddress();
+      const did = await runtimes[0].did.convertIdentityToDid(randomIdentity);
+
+      const expectedDefaultDid = {
+        '@context': 'https://w3id.org/did/v1',
+        id: did,
+        publicKey: [{
+          id: `${did}#key-1`,
+          type: 'Secp256k1VerificationKey2018',
+          owner: did,
+          ethereumAddress: randomIdentity,
+        }],
+        authentication: [`${did}#key-1`],
+      };
+
+      const identityDidDoc = await runtimes[0].did.getDidDocument(did);
+      expect(identityDidDoc).to.deep.eq(expectedDefaultDid);
+    });
   });
 
   describe('when storing did documents for contract identities', () => {
@@ -109,7 +132,9 @@ describe('DID Resolver', function test() {
     };
 
     it('allows to store a DID document for the identity of an own contract', async () => {
-      const accountRuntime = await TestUtils.getRuntime(accounts[0]);
+      const accountRuntime = await TestUtils.getRuntime(
+        runtimes[0].underlyingAccount, null, { useIdentity: true },
+      );
       const twin = await DigitalTwin.create(
         accountRuntime as DigitalTwinOptions,
         {
@@ -135,7 +160,9 @@ describe('DID Resolver', function test() {
     });
 
     it('can get retrieve an contract identities DID document', async () => {
-      const accountRuntime = await TestUtils.getRuntime(accounts[0]);
+      const accountRuntime = await TestUtils.getRuntime(
+        runtimes[0].underlyingAccount, null, { useIdentity: true },
+      );
       const twin = await DigitalTwin.create(
         accountRuntime as DigitalTwinOptions,
         {
@@ -162,7 +189,9 @@ describe('DID Resolver', function test() {
     });
 
     it('allows to get a DID document of another identity', async () => {
-      const accountRuntime = await TestUtils.getRuntime(accounts[0]);
+      const accountRuntime = await TestUtils.getRuntime(
+        runtimes[0].underlyingAccount, null, { useIdentity: true },
+      );
       const twin = await DigitalTwin.create(
         accountRuntime as DigitalTwinOptions,
         {
@@ -190,7 +219,9 @@ describe('DID Resolver', function test() {
     });
 
     it('does not allow to store a DID document for the identity of an own contract', async () => {
-      const accountRuntime = await TestUtils.getRuntime(accounts[0]);
+      const accountRuntime = await TestUtils.getRuntime(
+        runtimes[0].underlyingAccount, null, { useIdentity: true },
+      );
       const twin = await DigitalTwin.create(
         accountRuntime as DigitalTwinOptions,
         {
@@ -214,6 +245,121 @@ describe('DID Resolver', function test() {
       const runtime1 = runtimes[1];
       const promise = runtime1.did.setDidDocument(twinDid, document);
       await expect(promise).to.be.rejectedWith(/^could not estimate gas usage for setDidDocument/);
+    });
+
+    it('allows to fetch a default DID document for newly created contract identities', async () => {
+      const accountRuntime = await TestUtils.getRuntime(
+        runtimes[0].underlyingAccount, null, { useIdentity: true },
+      );
+      const twin = await DigitalTwin.create(
+        accountRuntime as DigitalTwinOptions,
+        {
+          accountId: accountRuntime.activeAccount,
+          containerConfig: null,
+          description: twinDescription,
+        },
+      );
+      const twinIdentity = await runtimes[0].verifications.getIdentityForAccount(
+        await twin.getContractAddress(), true,
+      );
+      const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);
+      const controllerDid = await runtimes[0].did.convertIdentityToDid(runtimes[0].activeIdentity);
+      const controllerDidDoc = await runtimes[0].did.getDidDocument(controllerDid);
+      const authKeyIds = controllerDidDoc.publicKey.map((key) => key.id).join(',');
+
+      const expectedDefaultDid = {
+        '@context': 'https://w3id.org/did/v1',
+        id: twinDid,
+        controller: controllerDidDoc.id,
+        authentication: [
+          authKeyIds,
+        ],
+      };
+
+      const defaultDidDoc = await runtimes[0].did.getDidDocument(twinDid);
+      await expect(defaultDidDoc).to.deep.eq(expectedDefaultDid);
+    });
+  });
+
+  describe('when storing did documents for alias identities', () => {
+    it('can create did documents for alias identities', async () => {
+      const aliasHash = TestUtils.getRandomBytes32();
+      const aliasIdentity = await runtimes[0].verifications.createIdentity(
+        runtimes[0].underlyingAccount, aliasHash, false,
+      );
+      const did = await runtimes[0].did.convertIdentityToDid(aliasIdentity);
+      const controllerDid = await runtimes[0].did.convertIdentityToDid(
+        runtimes[0].activeIdentity,
+      );
+      const controllerDidDocument = await runtimes[0].did.getDidDocument(accounts0Did);
+      const document = await runtimes[0].did.getDidDocumentTemplate(
+        aliasIdentity, controllerDid, controllerDidDocument.authentication[0],
+      );
+      const promise = runtimes[0].did.setDidDocument(did, document);
+
+      await expect(promise).not.to.be.rejected;
+    });
+
+    it('can create did documents for alias identities without backlinking to given hash', async () => {
+      const aliasHash = TestUtils.getRandomBytes32();
+      const aliasIdentity = await runtimes[0].verifications.createIdentity(
+        runtimes[0].underlyingAccount, aliasHash, false, false,
+      );
+      const did = await runtimes[0].did.convertIdentityToDid(aliasIdentity);
+      const controllerDid = await runtimes[0].did.convertIdentityToDid(
+        runtimes[0].activeIdentity,
+      );
+      const controllerDidDocument = await runtimes[0].did.getDidDocument(accounts0Did);
+      const document = await runtimes[0].did.getDidDocumentTemplate(
+        aliasIdentity, controllerDid, controllerDidDocument.authentication[0],
+      );
+      const promise = runtimes[0].did.setDidDocument(did, document);
+
+      await expect(promise).not.to.be.rejected;
+    });
+
+    it('can fetch did documents for alias identities', async () => {
+      const aliasHash = TestUtils.getRandomBytes32();
+      const aliasIdentity = await runtimes[0].verifications.createIdentity(
+        runtimes[0].underlyingAccount, aliasHash, false,
+      );
+      const did = await runtimes[0].did.convertIdentityToDid(aliasIdentity);
+      const controllerDid = await runtimes[0].did.convertIdentityToDid(
+        runtimes[0].activeIdentity,
+      );
+      const controllerDidDocument = await runtimes[0].did.getDidDocument(accounts0Did);
+      const document = await runtimes[0].did.getDidDocumentTemplate(
+        aliasIdentity, controllerDid, controllerDidDocument.authentication[0],
+      );
+      await runtimes[0].did.setDidDocument(did, document);
+
+      expect(runtimes[0].did.getDidDocument(did)).to.eventually.deep.eq(document);
+    });
+
+    it('can fetch did documents for alias identities that have not set a doc themselves, yet', async () => {
+      const aliasHash = TestUtils.getRandomBytes32();
+      const aliasIdentity = await runtimes[0].verifications.createIdentity(
+        runtimes[0].underlyingAccount, aliasHash, false,
+      );
+
+      const ownerIdentity = await runtimes[0].verifications
+        .getIdentityForAccount(runtimes[0].underlyingAccount, true);
+      const controllerDid = await runtimes[0].did.convertIdentityToDid(ownerIdentity);
+      const controllerDidDoc = await runtimes[0].did.getDidDocument(controllerDid);
+      const did = await runtimes[0].did.convertIdentityToDid(aliasIdentity);
+      const authKeyIds = controllerDidDoc.publicKey.map((key) => key.id).join(',');
+
+      const expectedDefaultDid = {
+        '@context': 'https://w3id.org/did/v1',
+        id: did,
+        controller: controllerDidDoc.id,
+        authentication: [
+          authKeyIds,
+        ],
+      };
+
+      const aliasIdentityDid = await runtimes[0].did.getDidDocument(did);
+      expect(aliasIdentityDid).to.deep.eq(expectedDefaultDid);
     });
   });
 });

@@ -209,6 +209,43 @@ Example
 
 --------------------------------------------------------------------------------
 
+.. _verifications_getOwnerAddressForIdentity:
+
+getOwnerAddressForIdentity
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.getOwnerAddressForIdentity(identityAddress);
+
+Gets the identity contract for a given account id or contract.
+
+----------
+Parameters
+----------
+
+#. ``identityAddress`` - ``string``: The identity address to look up the owner for. Works with both 20 bytes and 32 bytes addresses.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``string``: address of the owning account
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const ownerAddress = await verifications.getOwnerAddressForIdentity('0x16a2e6af9cf78ddf6a170f38fceacca6bfdcd68b');
+  console.log(`The owner is ${ownerAddress}`);
+  // The owner is 0x001de828935e8c7e4cb56fe610495cae63fb2612
+
+
+
+--------------------------------------------------------------------------------
+
 .. _verifications_getIdentityForAccount:
 
 getIdentityForAccount

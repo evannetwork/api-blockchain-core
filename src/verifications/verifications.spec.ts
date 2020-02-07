@@ -87,7 +87,7 @@ describe('Verifications handler', function test() {
           const before = contractLoader.contracts[contract].bytecode;
           replace(contract, librayName, libraryAddress);
           if (before !== contractLoader.contracts[contract].bytecode) {
-            // eslint-disable-next-line
+            // eslint-disable-next-line no-console
             console.log(`updated: ${contract}`);
           }
         });
@@ -103,7 +103,7 @@ describe('Verifications handler', function test() {
     await deploy('verifications/VerificationsRegistryLibrary.sol:VerificationsRegistryLibrary');
 
     for (const key of Object.keys(libs)) {
-      // eslint-disable-next-line
+      // eslint-disable-next-line no-console
       console.log(`${/[^:]:(.*)/g.exec(key)[1]}: ${libs[key].slice(2)}`);
     }
   });
@@ -393,6 +393,22 @@ describe('Verifications handler', function test() {
         .to.have.deep.property('rejectReason', { reason: 'denied' });
     });
 
+    it('correctly maps accounts to identities and vice versa', async () => {
+      const identity = await verifications.getIdentityForAccount(accounts[0], true);
+      const account = await verifications.getOwnerAddressForIdentity(identity);
+      expect(account).to.eq(accounts[0]);
+    });
+
+    it('finds the eventual owner account address for a given alias identity', async () => {
+      const aliasHash = TestUtils.getRandomBytes32();
+      const aliasIdentity = await verifications.createIdentity(
+        accounts[0], aliasHash, false,
+      );
+      const identity = await verifications.getIdentityForAccount(accounts[0], true);
+      const ownerAddress = await verifications.getOwnerAddressForIdentity(aliasIdentity);
+      expect(identity).to.eq(ownerAddress);
+    });
+
     it('can not re accept a rejected verification', async () => {
       await verifications.setVerification(accounts[0], accounts[0], '/company');
       await verifications.setVerification(accounts[0], accounts[0], '/company/b-s-s');
@@ -659,6 +675,30 @@ describe('Verifications handler', function test() {
         });
 
       it('verifications with the base "/evan" should be issued by the evan root account',
+        async () => {
+          const testAccount = '0x1813587e095cDdfd174DdB595372Cb738AA2753A';
+          const topic = '/evan/company/108158972712';
+
+          // check issued case
+          const computed = await verifications.getComputedVerification(testAccount, topic);
+          await expect(computed.warnings).not.to.include('notEnsRootOwner');
+
+          // V2
+          const localQueryOptions = {
+            validationOptions: {
+              [VerificationsStatusFlagsV2.parentUntrusted]: VerificationsStatusV2.Green,
+              [VerificationsStatusFlagsV2.notEnsRootOwner]: VerificationsStatusV2.Yellow,
+            },
+          };
+          const v2 = await verifications.getNestedVerificationsV2(
+            testAccount, topic, false, localQueryOptions,
+          );
+          await expect(v2.status).to.eq(VerificationsStatusV2.Green);
+          await expect(v2.verifications[0].statusFlags)
+            .not.to.include(VerificationsStatusFlagsV2.notEnsRootOwner);
+        });
+
+      it('verifications with the base "/evan" not should be issued by another account than root',
         async () => {
           const topic = '/evan';
 

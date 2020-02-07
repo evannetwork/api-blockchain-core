@@ -807,6 +807,14 @@ export class DataContract extends BaseContract {
     );
   }
 
+  public async unpinFileHash(hash: string): Promise<void> {
+    await this.options.dfs.remove(hash);
+  }
+
+  public async getDfsContent(hash: string): Promise<Buffer> {
+    return this.options.dfs.get(hash);
+  }
+
   private async validate(description: any, fieldName: string, toCheck: any[]) {
     // get merged description
     if (!description) {
