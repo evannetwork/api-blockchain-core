@@ -910,21 +910,29 @@ export class DigitalTwin extends Logger {
    * Removes all of this twin's entries and deactivates all container entries.
    */
   private async deactivateEntries(): Promise<void> {
-    const containers = await this.getEntries();
-    let containerContract;
+    const entries = await this.getEntries();
 
-    for (const containerName of Object.keys(containers)) {
-      if (containers[containerName].entryType === DigitalTwinEntryType.Container) {
+    let containerContract;
+    let containerOwner;
+    for (const entryName of Object.keys(entries)) {
+      if (entries[entryName].entryType === DigitalTwinEntryType.Container) {
         containerContract = await this.options.contractLoader.loadContract(
           'DataContract',
-          containers[containerName].value.config.address,
+          entries[entryName].value.config.address,
         );
-        await this.deactivateContainer(containerContract);
-      } else if (containers[containerName].entryType === DigitalTwinEntryType.FileHash) {
-        await this.options.dataContract.unpinFileHash(containers[containerName].value);
+        containerOwner = await this.options.executor.executeContractCall(
+          containerContract,
+          'owner',
+        );
+
+        if (containerOwner === this.config.accountId) {
+          await this.deactivateContainer(containerContract);
+        }
+      } else if (entries[entryName].entryType === DigitalTwinEntryType.FileHash) {
+        await this.options.dataContract.unpinFileHash(entries[entryName].value);
       }
 
-      await this.removeEntry(containerName);
+      await this.removeEntry(entryName);
     }
   }
 
