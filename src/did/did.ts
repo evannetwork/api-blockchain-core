@@ -142,6 +142,7 @@ export class Did extends Logger {
    *
    * @param      {string}  did     DID to fetch DID document for
    * @return     {Promise<any>}    a DID document that MAY resemble `DidDocumentTemplate` format
+   * @throws     if a DID has been deactivated or if no DID document has been set yet
    */
   public async getDidDocument(did: string): Promise<any> {
     let result = null;
@@ -150,11 +151,23 @@ export class Did extends Logger {
         ? await this.convertDidToIdentity(did)
         : this.options.signerIdentity.activeIdentity,
     );
+
+    const isDeactivated = await this.options.executor.executeContractCall(
+      await this.getRegistryContract(),
+      'deactivatedDids',
+      identity,
+    );
+
+    if (isDeactivated) {
+      throw Error(`DID ${did} has been deactivated.`);
+    }
+
     const documentHash = await this.options.executor.executeContractCall(
       await this.getRegistryContract(),
       'didDocuments',
       identity,
     );
+
     if (documentHash === nullBytes32) {
       throw Error(`There is no DID document associated to ${did} yet`);
     }
