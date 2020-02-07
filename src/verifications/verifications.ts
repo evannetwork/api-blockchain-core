@@ -775,6 +775,7 @@ export class Verifications extends Logger {
    * @returns {string} The address of the owner.
    */
   public async getOwnerAddressForIdentity(identityAddress: string): Promise<string> {
+    await this.ensureStorage();
     let ownerAddress;
     if (identityAddress.length === 42) { // 20 bytes address + '0x' prefix
       ownerAddress = await this.options.executor.executeContractCall(
