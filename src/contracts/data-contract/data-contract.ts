@@ -370,13 +370,15 @@ export class DataContract extends BaseContract {
     const dataContract = (typeof contract === 'object')
       ? contract : this.options.loader.loadContract('DataContractInterface', contract);
 
-    // get content key from contract
-    const contentKey = await this.options.sharing.getKey(
-      dataContract.options.address, accountId, propertyName, block,
-    );
-
-    if (!contentKey) {
-      throw new Error(`no content key found for contract "${dataContract.options.address}" and account "${accountId}"`);
+    // get content key from contracts sharing if required
+    let contentKey = null;
+    if (encryption !== 'unencrypted') {
+      contentKey = await this.options.sharing.getKey(
+        dataContract.options.address, accountId, propertyName, block,
+      );
+      if (!contentKey) {
+        throw new Error(`no content key found for contract "${dataContract.options.address}" and account "${accountId}"`);
+      }
     }
 
     // encrypt with content key

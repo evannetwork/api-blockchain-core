@@ -35,7 +35,16 @@ import {
 } from '../index';
 import { VerificationsDelegationInfo, Verifications } from '../verifications/verifications';
 
+
 const didRegEx = /^did:evan:(?:(testcore|core):)?(0x(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64}))$/;
+
+/**
+ * additional configuration for new `Did` instance
+ */
+export interface DidConfig {
+  /** contract address or ENS name for `DidRegistry` */
+  registryAddress?: string;
+}
 
 /**
  * template for a new DID document, can be used as a starting point for building own documents
@@ -94,16 +103,20 @@ export interface DidOptions extends LoggerOptions {
 export class Did extends Logger {
   private cached: any;
 
+  private config: DidConfig;
+
   private options: DidOptions;
 
   /**
    * Creates a new `Did` instance.
    *
    * @param      {DidOptions}  options  runtime like options for `Did`
+   * @param      {DidConfig}   options  (optional) additional config for `Did`
    */
-  public constructor(options: DidOptions) {
+  public constructor(options: DidOptions, config: DidConfig = {}) {
     super(options as LoggerOptions);
     this.options = options;
+    this.config = config;
     this.cached = {};
   }
 
@@ -393,10 +406,13 @@ export class Did extends Logger {
    */
   private async getRegistryContract(): Promise<any> {
     if (!this.cached.didRegistryContract) {
-      const didRegistryDomain = this.options.nameResolver.getDomainName(
-        this.options.nameResolver.config.domains.didRegistry,
-      );
-      const didRegistryAddress = await this.options.nameResolver.getAddress(didRegistryDomain);
+      const didRegistryAddress = this.config.registryAddress?.startsWith('0x')
+        ? this.config.registryAddress
+        : await this.options.nameResolver.getAddress(
+          this.options.nameResolver.getDomainName(
+            this.config.registryAddress || this.options.nameResolver.config.domains.didRegistry,
+          ),
+        );
       this.cached.didRegistryContract = this.options.contractLoader.loadContract(
         'DidRegistry', didRegistryAddress,
       );

@@ -1050,7 +1050,7 @@ data for verifications for digital twins
 .. _source sharing: ../contracts/sharing.html
 
 .. |source twinTemplate| replace:: ``TwinTemplate``
-.. _source twinTemplate: https://github.com/evannetwork/api-blockchain-core/blob/master/src/contracts/digital-twin/testfiles/twin-template.ts
+.. _source twinTemplate: https://github.com/evannetwork/twin-templates/blob/master/test.json
 
 .. |source verifications| replace:: ``Verifications``
 .. _source verifications: ../profile/verifications.html

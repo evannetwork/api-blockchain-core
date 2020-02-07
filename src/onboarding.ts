@@ -429,13 +429,14 @@ export class Onboarding extends Logger {
     const newIdentity = (requestedProfile as any).identity;
     const accountHash = runtime.web3.utils.soliditySha3(accountId);
     const identityHash = runtime.web3.utils.soliditySha3(newIdentity);
-    const targetAccount = runtime.activeIdentity ? newIdentity : accountId;
-    const targetAccountHash = runtime.activeIdentity ? identityHash : accountHash;
+    const targetAccount = runtime.activeIdentity !== accountId ? newIdentity : accountId;
+    const targetAccountHash = runtime.activeIdentity !== accountId ? identityHash : accountHash;
 
     const dataKey = runtime.keyProvider.keys[accountHash];
 
     profile.ipld.originator = runtime.web3.utils.soliditySha3(targetAccount);
     profile.activeAccount = targetAccount;
+    profile.profileOwner = targetAccount;
 
     // eslint-disable-next-line
     runtime.keyProvider.keys[targetAccountHash] = dataKey;
@@ -538,12 +539,11 @@ export class Onboarding extends Logger {
     )(fileHashes.ipfsHashes);
     // clear hash log
     profile.ipld.hashLog = [];
-    // re-enable pinning
-    profile.ipld.ipfs.disablePin = false;
+
 
     const data = {
       accountId,
-      identityId: runtime.activeIdentity ? newIdentity : undefined,
+      identityId: runtime.activeIdentity !== accountId ? newIdentity : undefined,
       signature,
       profileInfo: fileHashes,
       accessToken: (requestedProfile as any).accessToken,
@@ -559,6 +559,9 @@ export class Onboarding extends Logger {
       data.didTransaction = didTransaction;
       fileHashes.ipfsHashes.push(documentHash);
     }
+
+    // re-enable pinning
+    profile.ipld.ipfs.disablePin = false;
 
     const jsonPayload = JSON.stringify(data);
     const options = {
@@ -596,8 +599,11 @@ export class Onboarding extends Logger {
    * @param runtime Runtime object
    * @param accountId Account ID of the identity's owner
    */
-  private static async createOfflineDidTransaction(runtime: any, account: string, identity: string):
-  Promise<[VerificationsDelegationInfo, string]> {
+  private static async createOfflineDidTransaction(
+    runtime: any,
+    account: string,
+    identity: string,
+  ): Promise<[VerificationsDelegationInfo, string]> {
     const underlyingSigner = new SignerInternal({
       accountStore: runtime.accountStore,
       contractLoader: runtime.contractLoader,
@@ -614,6 +620,16 @@ export class Onboarding extends Logger {
       underlyingAccount: account,
       underlyingSigner,
     });
+
+    if (runtime.activeAccount !== runtime.activeIdentity) {
+      runtime.verifications.options.executor.signer.updateConfig({
+        verifications: runtime.verifications,
+      }, {
+        activeIdentity: identity,
+        underlyingAccount: account,
+        underlyingSigner,
+      });
+    }
 
     const did = new Did({
       contractLoader: runtime.contractLoader,
