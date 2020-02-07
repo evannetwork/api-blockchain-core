@@ -10,8 +10,8 @@
 - ensure `DigitalTwin` and `Container` description to use at least `dbcpVersion` 2
 - update root verification handling to use genesis account
 - add lookup method for an identity's owner's address
+- add deactivation mechanism for twins
 - add `signer-identity` to enable identity to getGasPrice using underlying account
-
 
 ### Fixes
 - use typescript version `3.7.4`

@@ -1136,6 +1136,59 @@ Example
 
 --------------------------------------------------------------------------------
 
+
+.. _verifications_executeAndHandleEventResult:
+
+executeAndHandleEventResult
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.executeAndHandleEventResult(accountId, data);
+
+Run given data (serialized contract transaction (tx)) with given user's identity.
+
+----------
+Parameters
+----------
+
+#. ``accountId`` - ``string``: account with whose identity the given tx is executed
+#. ``data`` - ``string``: serialized function data
+#. ``eventInfo`` - ``any`` (optional) object with properties: 'eventName' and 'contract' (web3 contract instance, that triggers event)
+#. ``getEventResults`` - ``Function`` (optional) function with arguments event and eventArgs, that returns result of `executeAndHandleEventResult` call
+#. ``sourceIdentity`` - ``string`` (optional) identity to execute given tx with. If omitted, account's identity is used
+#. ``value`` - ``number`` (optional) amount of EVEs to send. Defaults to 0
+#. ``to`` - ``string`` (optional) target address. Defaults to verifications registry.
+#. ``signedTransactionInfo``- ``string`` (optional) transaction signature if this execution call should be a delegated call.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``any``: if ``eventInfo`` and ``getEventResults``, result of ``getEventResults``, otherwise void
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const description = await myTwin.getDescription();
+  const newTwinOwner = '0x0123456789012345678901234567890123456789';
+  const verificationRegistry = this.options.verifications.contracts.registry;
+  await this.options.verifications.executeAndHandleEventResult(
+    this.config.accountId,
+    verificationRegistry.methods.transferIdentity(
+      description.identity,
+      newTwinOwner,
+    ).encodeABI(),
+  );
+
+
+
+--------------------------------------------------------------------------------
+
+
 = Descriptions =
 ==========================
 

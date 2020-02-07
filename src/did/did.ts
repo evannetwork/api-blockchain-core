@@ -258,6 +258,7 @@ export class Did extends Logger {
     const documentHash = await this.options.dfs.add(
       'did-document', Buffer.from(JSON.stringify(document), 'utf8'),
     );
+
     await this.options.executor.executeContractTransaction(
       await this.getRegistryContract(),
       'setDidDocument',
@@ -307,6 +308,24 @@ export class Did extends Logger {
     service: DidServiceEntry[] | DidServiceEntry,
   ): Promise<void> {
     await this.setDidDocument(did, { ...(await this.getDidDocument(did)), service });
+  }
+
+  /**
+   * Unlinks the current DID document from the DID
+   * @param did DID to unlink the DID document from
+   */
+  public async removeDidDocument(did: string): Promise<void> {
+    const identity = this.padIdentity(did
+      ? await this.convertDidToIdentity(did)
+      : this.options.signerIdentity.activeIdentity);
+
+    await this.options.executor.executeContractTransaction(
+      await this.getRegistryContract(),
+      'setDidDocument',
+      { from: this.options.signerIdentity.activeIdentity },
+      identity,
+      nullBytes32,
+    );
   }
 
   /**
