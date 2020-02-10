@@ -37,6 +37,10 @@ import {
   Ipfs,
 } from '../index';
 
+import { Vc, VcDocumentTemplate, VcDocument } from '../vc/vc';
+import { Did } from '../did/did';
+
+
 import crypto = require('crypto');
 import prottle = require('prottle');
 
@@ -96,6 +100,16 @@ export enum VerificationsStatusV2 {
   Yellow = 'yellow',
   /** verification is invalid, see status flags for details */
   Red = 'red',
+}
+
+/**
+ * additional configuration for verifications module
+ */
+export interface VerificationsConfig {
+  /** identity used for transactions */
+  activeIdentity: string;
+  /** account, that pays for transactions */
+  underlyingAccount: string;
 }
 
 /**
@@ -269,8 +283,10 @@ export interface VerificationsOptions extends LoggerOptions {
   dfs: DfsInterface;
   executor: Executor;
   nameResolver: NameResolver;
+  did?: Did;
   registry?: string;
   storage?: string;
+  vc?: Vc;
 }
 
 /**
@@ -298,6 +314,8 @@ export class Verifications extends Logger {
   };
 
   public cachedIdentities: any = { };
+
+  public config: VerificationsConfig;
 
   public contracts: any = { };
 
@@ -329,20 +347,9 @@ export class Verifications extends Logger {
    *
    * @param    {VerificationsOptions} options
    */
-  public constructor(options: VerificationsOptions) {
+  public constructor(options: VerificationsOptions, config?: VerificationsConfig) {
     super(options);
-    this.options = options;
-
-    if (options.storage) {
-      this.contracts.storage = this.options.contractLoader.loadContract(
-        'V00_UserRegistry', options.storage,
-      );
-    }
-    if (options.registry) {
-      this.contracts.registry = this.options.contractLoader.loadContract(
-        'VerificationsRegistry', options.registry,
-      );
-    }
+    this.updateConfig(options, config);
   }
 
   /**
@@ -844,11 +851,13 @@ export class Verifications extends Logger {
       await this.ensureStorage();
 
       // get the target identity contract for the subject
-      const targetIdentity = await this.options.executor.executeContractCall(
-        this.contracts.storage,
-        'users',
-        subject,
-      );
+      const targetIdentity = subject === this.config.activeIdentity
+        ? this.config.activeIdentity
+        : await this.options.executor.executeContractCall(
+          this.contracts.storage,
+          'users',
+          subject,
+        );
       // check if target identity exists
       if (targetIdentity !== nullAddress) {
         this.subjectTypes[subject] = 'account';
@@ -1453,6 +1462,96 @@ export class Verifications extends Logger {
   }
 
   /**
+   * Sets or creates a verification and a Verfiable credential document;
+   * this requires the issuer to have permissions for the parent
+   * verification (if verification name seen as a path, the parent 'folder').
+   *
+   * @param      {string}           issuer                   issuer of the verification
+   * @param      {string}           subject                  subject of the verification and the
+   *                                                         owner of the verification node
+   * @param      {string}           topic                    name of the verification (full path)
+   * @param      {number}           expirationDate           expiration date, for the verification,
+   *                                                         defaults to `0` (≈does not expire)
+   * @param      {any}              verificationValue        json object which will be stored in the
+   *                                                         verification
+   * @param      {string}           descriptionDomain        domain of the verification, this is a
+   *                                                         subdomain under 'verifications.evan',
+   *                                                         so passing 'example' will link
+   *                                                         verifications description to
+   *                                                         'example.verifications.evan'
+   * @param      {boolean}          disableSubVerifications  if true, verifications created under
+   *                                                         this path are invalid
+   * @param      {boolean}          isIdentity               if true, the subject is already a
+   *                                                         identity
+   * @param      {string}           uri                      when given this uri will be stored on
+   *                                                         the new verification
+   * @return     {Promise<{vcId: string; verificationId: string}>}  verificationId and vcId
+   */
+  public async setVerificationAndVc(
+    issuer: string,
+    subject: string,
+    topic: string,
+    expirationDate = 0,
+    verificationValue?: any,
+    descriptionDomain?: string,
+    disableSubVerifications = false,
+    isIdentity = false,
+    uri = '',
+  ): Promise<{vcId: string; verificationId: string}> {
+    const verificationId = await this.setVerification(
+      issuer,
+      subject,
+      topic,
+      expirationDate,
+      verificationValue,
+      descriptionDomain,
+      disableSubVerifications,
+      isIdentity,
+      uri,
+    );
+    const allVerifications = await this.getVerifications(
+      subject,
+      topic,
+      isIdentity,
+    );
+    const [lastVerification] = allVerifications.filter(
+      (verification) => verification.id === verificationId,
+    );
+    const creationDateNew = new Date(lastVerification.creationDate * 1000).toISOString();
+    const issuerIdentity = await this.getIdentityForAccount(issuer, true);
+    const vcData: VcDocumentTemplate = {
+      issuer: {
+        id: await this.options.did.convertIdentityToDid(issuerIdentity),
+      },
+      credentialSubject: {
+        id: await this.options.did.convertIdentityToDid(subject),
+        data:
+          {
+            value: verificationValue,
+          },
+        uri,
+        name: lastVerification.name,
+      },
+      validFrom: creationDateNew, // get verification creationdate
+
+    };
+    if (lastVerification.expirationDate) {
+      vcData.validUntil = new Date(
+        lastVerification.expirationdate * 1000,
+      ).toISOString();
+    }
+    if (descriptionDomain) {
+      const hash = this.options.nameResolver.soliditySha3(topic);
+      vcData.credentialSubject.description = `${hash.substr(2)}.${descriptionDomain}.verifications.evan`;
+    }
+    if (uri) {
+      vcData.credentialSubject.description = uri;
+    }
+    const docToReturn: VcDocument = await this.options.vc.storeVc(vcData);
+    return { vcId: docToReturn.id, verificationId: lastVerification.id };
+  }
+
+  /**
    * Sets or creates a verification; this requires the issuer to have permissions for the parent
    * verification (if verification name seen as a path, the parent 'folder').
    *
@@ -1509,7 +1608,6 @@ export class Verifications extends Logger {
       uri,
     );
 
-    // clear cache for this verification
     this.deleteFromVerificationCache(subject, topic);
 
     // add the verification to the target identity
@@ -1595,8 +1693,13 @@ export class Verifications extends Logger {
     } = await this.getTransactionInfo(contract, functionName, options, ...args);
 
     // note that issuer is given for signing, as this ACCOUNT is used to sign the message
+    // try to sign with underlying account for active identity, as they are related
+    // otherwise try to use given account
     const signedTransactionInfo = await this.signPackedHash(
-      options.from, [sourceIdentity, nonce, to, value, input],
+      options.from === this.config.activeIdentity
+        ? this.config.underlyingAccount
+        : options.from,
+      [sourceIdentity, nonce, to, value, input],
     );
 
     return {
@@ -1728,6 +1831,39 @@ export class Verifications extends Logger {
   }
 
   /**
+   * Merge given partial options and config into current options and config.
+   *
+   * This function is mainly used to decouple the creation process of required libraries
+   * by setting at a later point of time.
+   *
+   * @param      {Partial<VerificationsOptions>}  options  (optional) updates for options
+   * @param      {Partial<VerificationsConfig>}   config   (optional) updates for config
+   */
+  public updateConfig(
+    options?: Partial<VerificationsOptions>,
+    config?: Partial<VerificationsConfig>,
+  ): void {
+    this.options = {
+      ...(this.options || {}),
+      ...(options || {}),
+    } as VerificationsOptions;
+    this.config = {
+      ...(this.config || {}),
+      ...(config || {}),
+    } as VerificationsConfig;
+    if (options.storage) {
+      this.contracts.storage = this.options.contractLoader.loadContract(
+        'V00_UserRegistry', options.storage,
+      );
+    }
+    if (options.registry) {
+      this.contracts.registry = this.options.contractLoader.loadContract(
+        'VerificationsRegistry', options.registry,
+      );
+    }
+  }
+
+  /**
    * validates a given verificationId in case of integrity
    *
    * @param      {string}   subject         the subject of the verification
@@ -1795,7 +1931,8 @@ export class Verifications extends Logger {
         isIdentity ? subject : await this.getIdentityForAccount(subject),
         ...args,
       );
-    } if (subjectType === 'account') {
+    }
+    if (subjectType === 'account') {
       // account identity
       return this.options.executor.executeContractCall(
         isIdentity
@@ -2067,7 +2204,8 @@ export class Verifications extends Logger {
         );
       }
       return this.executeAndHandleEventResult(options.from, abiOnRegistry);
-    } if (subjectType === 'account') {
+    }
+    if (subjectType === 'account') {
       // account identity
       let targetIdentityAddress;
       if (isIdentity) {

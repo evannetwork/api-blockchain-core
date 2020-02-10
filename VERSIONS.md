@@ -2,6 +2,14 @@
 
 ## Next Version
 ### Features
+
+### Fixes
+
+### Deprecations
+
+
+## Version 2.17.0
+### Features
 - add support for identity based accounts to `KeyExchange`, `Sharing` and `Profile` modules
 - update test setup to support identity based accounts
 - adding DID generation upon onboarding
@@ -12,6 +20,9 @@
 - add lookup method for an identity's owner's address
 - add deactivation mechanism for twins
 - add `signer-identity` to enable identity to getGasPrice using underlying account
+- add `setVerificationAndVc` function to enable VC creation for verification
+- update `Verifications` logic and tests to support identity based account
+
 
 ### Fixes
 - use typescript version `3.7.4`
@@ -19,9 +30,6 @@
 - fix did public key handling to properly support proofs
 - add checks for configured identity and account to prevent unintentional usage of active identity
 - add support for custom DID registries for DID tests
-
-
-### Deprecations
 
 
 ## Version 2.16.0
