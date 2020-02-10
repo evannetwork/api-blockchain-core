@@ -80,11 +80,11 @@ export interface DidDocumentTemplate {
  * interface for services in DIDs
  */
 export interface DidServiceEntry {
+  [id: string]: any;
   type: any;
   serviceEndpoint: any;
   '@context'?: any;
   id?: any;
-  [id: string]: any;
 }
 
 /**

@@ -51,25 +51,25 @@ export interface KeyExchangeOptions extends LoggerOptions {
  * @class      KeyExchange (name)
  */
 export class KeyExchange extends Logger {
-  private SHARED_SECRET = Buffer.from('a832d7a4c60473d4fcddabf5c31f5b64dcb2382bbebbeb7c49b6cfc2f08fe9c3', 'hex');
-
-  private diffieHellman: any;
+  public publicKey: string;
 
   private COMM_KEY_CONTEXT = 'mailboxKeyExchange';
 
-  private mailbox: Mailbox;
+  private SHARED_SECRET = Buffer.from('a832d7a4c60473d4fcddabf5c31f5b64dcb2382bbebbeb7c49b6cfc2f08fe9c3', 'hex');
+
+  private account: string;
+
+  private aes: Aes;
 
   private cryptoProvider: CryptoProvider;
 
   private defaultCryptoAlgo: string;
 
-  private account: string;
+  private diffieHellman: any;
 
   private keyProvider: KeyProvider;
 
-  private aes: Aes;
-
-  public publicKey: string;
+  private mailbox: Mailbox;
 
   /**
    * Creates an instance of KeyExchange.

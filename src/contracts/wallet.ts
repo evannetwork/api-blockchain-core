@@ -280,7 +280,14 @@ export class Wallet extends Logger {
     return `${signature}${coder.encodeParameters(types, params).replace('0x', '')}`;
   }
 
-  public async submitAndHandleConfirmation(
+  private ensureContract(): any {
+    if (!this.walletContract) {
+      throw new Error('no wallet contract specified at wallet helper, load or create one');
+    }
+    return this.walletContract;
+  }
+
+  private async submitAndHandleConfirmation(
     target: any, functionName: string, inputOptions: any, ...functionArguments
   ): Promise<any> {
     const subscriptions = [];
@@ -419,12 +426,5 @@ export class Wallet extends Logger {
     }
 
     return receipt;
-  }
-
-  private ensureContract(): any {
-    if (!this.walletContract) {
-      throw new Error('no wallet contract specified at wallet helper, load or create one');
-    }
-    return this.walletContract;
   }
 }

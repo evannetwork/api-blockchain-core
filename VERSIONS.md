@@ -4,6 +4,7 @@
 ### Features
 
 ### Fixes
+- add `member-ordering` rule to eslint config
 
 ### Deprecations
 
