@@ -17,7 +17,7 @@ The blockchain core is a helper library, that offers helpers for interacting wit
 Adding blockchain core
 ======================
 
-First you need to get blockchain core and its dependencies into your project. This can be done using the following methods:
+First you need to get blockchain core into your project. This can be done using the following methods:
 
 - npm: ``npm install @evan.network/api-blockchain-core``
 
@@ -117,18 +117,16 @@ Create a new profile on evan.network via API
 
 When you want to create profiles programatically via our API, you can use the "Onboarding" class on the api-blockchain-core with the function ``createNewProfile``. To create a new profile you have the following prerequirements:
 
-1. A previous created profile on the testnet (https://dashboard.test.evan.network) or the mainnet (https://dashboard.evan.network)
-2. At least 1.01 EVE on this profile when you want to create a new one.
+1. A previously created profile on the testnet (https://dashboard.test.evan.network) or the mainnet (https://dashboard.evan.network)
+2. At least 1.01 EVE on this profile when you want to create a new one as the creation process will be initiated with your existing account.
 
 
 You can also generate your custom mnemonic from the Onboarding class as well.
 
-The only thing that should be defined is a password and an alias for the profile
+The only thing that should be defined is a password and an alias for the profile.
 
 .. code-block:: javascript
 
-
-    // require blockchain-core dependencies
     const Web3 = require('web3');
 
     // require blockchain-core
@@ -195,7 +193,7 @@ The only thing that should be defined is a password and an alias for the profile
 
 
 
-When all functions run successfully, the message printed out looks like the following and you can then login with the new mnemonic and password on the respective dashboard:
+When all functions have run successfully, a message like the following will be shown and you can then log in with the new mnemonic and password on the respective dashboard:
 
 .. code-block:: javascript
 Profile created successfully
@@ -211,4 +209,3 @@ Profile created successfully
          'f312ee3cfd634969910642b3d3686858364bc48740d76b993187a225ce1e967e',
         '0x402ed1f201d74382ad51a5ae45e5d6f0c76d037a1dc4e573bfe032f387d46860':
          'f312ee3cfd634969910642b3d3686858364bc48740d76b993187a225ce1e967e' } } }
-
