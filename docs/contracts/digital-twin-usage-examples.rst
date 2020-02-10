@@ -313,8 +313,273 @@ That's it for the simple case. If you want to get fancy, you can have a look at 
   test path: |source container_testListComplex|_
 
 
+--------------------------------------------------------------------------------
+
+.. _template_plugins:
+
+Handling Templates and Plugins
+==============================
+
+Container definitions can be saved as plugins, so they can easy be shared and the structure can be imported by anyone else. These plugins can be combined, including a dbcp description, that represents a whole twin structure, a so called **Twin Template**.
+
+Have a look at several example twin templates in our separated `Twin Templates repository <https://github.com/evannetwork/twin-templates>`__:
+
+- `Sample Twin Template <https://github.com/evannetwork/twin-templates/blob/master/test.json>`__.
+- `Car Template <https://github.com/evannetwork/twin-templates/blob/master/car.json>`__.
+- `Bicycle Template <https://github.com/evannetwork/twin-templates/blob/master/bicycle.json>`__.
+
+**Steps to your own twin template:**
+
+1. Define a short description of your twin template:
+
+.. code-block:: typescript
+
+  {
+    "description": {
+      "name": "Heavy Machine",
+      "description": "Basic Heavy Machine twin structure."
+    },
+    "plugins": { ... }
+  }
+
+2. Add default plugins to your template:
+
+.. code-block:: typescript
+
+  {
+    "description": { ... },
+    "plugins": {
+      "data": {
+        "description": {
+          ...
+        },
+        "template": {
+          "properties": {
+            "productionProfile": {
+              "dataSchema": {
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "dateOfManufacturing": {
+                    "type": "string"
+                  },
+                  "category": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "permissions": {
+                "0": [
+                  "set"
+                ]
+              },
+              "type": "entry"
+            }
+          },
+          "type": "heavyMachineData"
+        }
+      },
+      "plugin2": { ... },
+      "pluginX": { ... },
+    }
+  }
+
+3. You can also add translations for names and descriptions to your twin template and plugins. Also labels and placeholders can be defined for fields within data sets. You can simply apply a i18n property within the description:
+
+.. code-block:: typescript
+
+  {
+    "description": {
+      "name": "Heavy Machine",
+      "description": "Basic Heavy Machine twin structure.",
+      "i18n": {
+        "de": {
+          "description": "Beispiel für eine Vorlage eines Digitalen Zwillings.",
+          "name": "Beispiel Vorlage"
+        },
+        "en": {
+          "description": "Example of a template for a digital twin.",
+          "name": "Sample Twin Template"
+        }
+      }
+    },
+    "plugins": {
+      "data": {
+        "description": {
+          "i18n": {
+            "de": {
+              "productionProfile": {
+                "description": "Beschreibung Datenset",
+                "name": "Datenset 1",
+                "properties": {
+                  "id": {
+                    "label": "TWIN ID",
+                    "placeholder": "Bitte geben Sie eine Produktions-ID ein."
+                  },
+                  ...
+                }
+              },
+              "description": "Generelle Daten einer Baumaschine.",
+              "name": "Produktdaten"
+            },
+            "en": {
+              "productionProfile": {
+                "description": "description data set",
+                "name": "dataset 1",
+                "properties": {
+                  "id": {
+                    "label": "TWIN ID.",
+                    "placeholder": "Please insert production id."
+                  },
+                  ...
+                }
+              },
+              "description": "General information about a heavy machine.",
+              "name": "Product data"
+            }
+          }
+        },
+      }
+    }
+  }
+
+4. Create a new Digital Twin using with a twin template
+  
+.. code-block:: typescript
+
+  const twinTemplate = {
+    "description": { ... },
+    "plugins": { ... }
+  };
+  const bigCrane250 = await DigitalTwin.create(runtime, {
+    accountId: manufacturer,
+    ...twinTemplate
+  });
+
+5. Export your existing twin structure to a twin template
+
+.. code-block:: typescript
+
+  const bigCraneTemplate = await bigCrane250.exportAsTemplate(true);
+
+  console.log(bigCraneTemplate);
+
+  // {
+  //   "description": { ... },
+  //   "plugins": {
+  //     "data": {
+  //       "description": {
+  //         ...
+  //       },
+  //       "template": {
+  //         ...
+  //       }
+  //     },
+  //     "pluginX": {
+  //       ...
+  //     }
+  //   }
+  // }
 
 --------------------------------------------------------------------------------
+
+.. _template_data_structure:
+
+Setup plugin data structure 
+===========================
+
+Data structure of the plugins is defined within the plugins template part. Each plugin will result in one container, that have several data sets, which are defined under the `properties` parameter. All data in this parameter, is defined using the `ajv <https://github.com/epoberezkin/ajv>`__ validator. You can also have a look at the |source container_create|_ documentation. Read the following points for a short conclusion about **dataSchema** and it's structure.
+
+#. dataset1
+
+  #. dataSchema - AJV data schema definition for the entry / listentry. Could be e.g. type of string, number, files, nested objects
+  #. permissions - Initial permission setup, that is directly rolled out by container initialization with this plugin. You can directly define, which role is allowed to "set" or "remove" data of this entry.
+  #. type - type of the datacontract entry ("entry" / "list")
+  #. value - initial value that should be passed to the entry / added as listentries to a list
+
+
+Sample AJV data type configurations are listed below and pleae keep in mind, that JSON structures can be nested using a array or a object type:
+
+- string
+
+.. code-block:: typescript
+
+  {
+    "type": "string"
+  }
+
+- number
+
+.. code-block:: typescript
+
+  {
+    "type": "number"
+  }
+
+- files (it's evan specific)
+
+.. code-block:: typescript
+
+  {
+    "type": "object",
+    "$comment": "{\"isEncryptedFile\": true}",
+    "properties": {
+      "additionalProperties": false,
+      "files": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "files"
+    ],
+    "default": {
+      "files": []
+    }
+  }
+
+- objects
+
+.. code-block:: typescript
+
+  {
+    "properties": {
+      "prop1": {
+        "type": "string"
+      },
+      "prop2": {
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
+
+- lists including objects
+
+.. code-block:: typescript
+
+  {
+    "items": {
+      "properties": {
+        "prop1": {
+          "type": "string"
+        },
+        "prop2": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "type": "array"
+  }
+
+--------------------------------------------------------------------------------
+
+
 
 .. required for building markup
 

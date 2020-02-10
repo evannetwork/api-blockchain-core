@@ -22,29 +22,102 @@ import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
 import {
   Executor,
-  Ipfs,
+  SignerInternal,
 } from '@evan.network/dbcp';
+import { Ipfs } from '../../dfs/ipfs';
 
 import { accounts } from '../../test/accounts';
 import { configTestcore as config } from '../../config-testcore';
 import { Container } from './container';
 import { TestUtils } from '../../test/test-utils';
 import { VerificationsStatus } from '../../verifications/verifications';
+import twinTemplate from './testfiles/twin-template';
 import {
   DigitalTwin,
   DigitalTwinConfig,
   DigitalTwinEntryType,
   DigitalTwinOptions,
+  DigitalTwinTemplate,
   DigitalTwinVerificationEntry,
 } from './digital-twin';
+import {
+  nullAddress,
+  nullBytes32,
+  getSmartAgentAuthHeaders,
+} from '../../common/utils';
+import { Runtime } from '../../runtime';
 
+import https = require('https');
 
 use(chaiAsPromised);
 
 const ownedDomain = 'twintest.fifs.registrar.test.evan';
 
+async function getRuntimeWithEnabledPinning(defaultRuntime: Runtime): Promise<Runtime> {
+  const { web3 } = defaultRuntime;
+
+  const signer = new SignerInternal({
+    accountStore: await TestUtils.getAccountStore(),
+    contractLoader: defaultRuntime.contractLoader,
+    config: {},
+    web3,
+  });
+  const dfs = new Ipfs({
+    dfsConfig: { host: 'ipfs.test.evan.network', port: '443', protocol: 'https' },
+    disablePin: false, // <--
+  });
+  dfs.setRuntime({
+    activeAccount: accounts[0],
+    signer,
+    underlyingAccount: accounts[0],
+    web3,
+  });
+  const runtime = {
+    contractLoader: defaultRuntime.contractLoader,
+    cryptoProvider: defaultRuntime.cryptoProvider,
+    dataContract: await TestUtils.getDataContract(web3, dfs),
+    description: await TestUtils.getDescription(web3, dfs),
+    did: await TestUtils.getDid(web3, accounts[0], dfs),
+    executor: defaultRuntime.executor,
+    nameResolver: defaultRuntime.nameResolver,
+    profile: await TestUtils.getProfile(web3, dfs, null, accounts[0]),
+    rightsAndRoles: defaultRuntime.rightsAndRoles,
+    sharing: await TestUtils.getSharing(web3, dfs),
+    verifications: await TestUtils.getVerifications(web3, dfs),
+    web3,
+  };
+
+  return runtime;
+}
+
+async function getPinnedFileHashes(): Promise<string[]> {
+  const authHeaders = await getSmartAgentAuthHeaders(
+    await TestUtils.getRuntime(accounts[0]),
+    Date.now().toString(),
+  );
+  const reqOptions = {
+    hostname: 'payments.test.evan.network',
+    path: '/api/smart-agents/ipfs-payments/hash/get/',
+    headers: {
+      authorization: authHeaders,
+    },
+  };
+  const response = await new Promise<any>((resolve) => {
+    https.get(reqOptions, (res) => {
+      let rawData = '';
+      let parsedData = '';
+      res.on('data', (chunk) => { rawData += chunk; });
+      res.on('end', () => {
+        parsedData = JSON.parse(rawData);
+        resolve(parsedData);
+      });
+    });
+  });
+  return Object.keys(response.hashes).map((ipfsHash) => Ipfs.ipfsHashToBytes32(ipfsHash));
+}
+
 describe('DigitalTwin', function test() {
-  this.timeout(60000);
+  this.timeout(600000);
   let dfs: Ipfs;
   let defaultConfig: DigitalTwinConfig;
   let executor: Executor;
@@ -73,6 +146,7 @@ describe('DigitalTwin', function test() {
       cryptoProvider: await TestUtils.getCryptoProvider(),
       dataContract: await TestUtils.getDataContract(web3, dfs),
       description: await TestUtils.getDescription(web3, dfs),
+      did: await TestUtils.getDid(web3, accounts[0], dfs),
       executor,
       nameResolver: await TestUtils.getNameResolver(web3),
       profile: await TestUtils.getProfile(web3, dfs, null, accounts[0]),
@@ -81,6 +155,7 @@ describe('DigitalTwin', function test() {
       verifications: await TestUtils.getVerifications(web3, dfs),
       web3,
     };
+
     runtime.executor.eventHub = await TestUtils.getEventHub(web3);
     defaultConfig = {
       accountId: accounts[0],
@@ -146,6 +221,408 @@ describe('DigitalTwin', function test() {
       await twin.removeFromFavorites();
       favorites = await DigitalTwin.getFavorites(runtime);
       expect(favorites).to.not.include(await twin.getContractAddress());
+    });
+
+    it('can pass empty containerConfig to twin constructor', () => {
+      // create custom config without container config
+      const customConfig = JSON.parse(JSON.stringify(defaultConfig));
+      delete customConfig.containerConfig;
+
+      const twin = new DigitalTwin(runtime, customConfig);
+      expect((twin as any).config.containerConfig.accountId).to.be.eq(defaultConfig.accountId);
+    });
+
+    it('ensure that dbcpVersion 2 is used', async () => {
+      // create custom config without dbcpVersion
+      const customConfig = JSON.parse(JSON.stringify(defaultConfig));
+      delete customConfig.description.dbcpVersion;
+
+      const twin = await DigitalTwin.create(runtime, defaultConfig);
+      const newDesc = await twin.getDescription();
+      expect(newDesc.dbcpVersion).to.be.eq(2);
+    });
+
+    it('automatically creates a valid did document upon twin creation', async () => {
+      const twin = await DigitalTwin.create(runtime, defaultConfig);
+      const twinIdentity = (await twin.getDescription()).identity;
+      const did = await runtime.did.convertIdentityToDid(twinIdentity);
+      const ownerIdentity = await runtime.verifications
+        .getIdentityForAccount(defaultConfig.accountId, true);
+      const ownerDid = await runtime.did.convertIdentityToDid(ownerIdentity);
+      const ownerDidDocument = await runtime.did.getDidDocument(ownerDid);
+
+      const promise = runtime.did.getDidDocument(did);
+
+      expect(ownerDidDocument).not.to.be.null;
+      expect(promise).not.to.be.rejected;
+      expect(promise).to.eventually.have.property('id').that.equals(did);
+      expect(promise).to.eventually.have.property('controller').that.equals(ownerDid);
+      expect(promise).to.eventually.have.property('authentication').that.include(ownerDidDocument.authentication[0]);
+    });
+
+    it.skip('can deactivate a created twin (also checks for hashes, unskip this as soon as'
+      + 'ticket is included & remove other test', async () => {
+      const localRuntime = await getRuntimeWithEnabledPinning(runtime);
+
+      const configWithTemplate = {
+        ...defaultConfig,
+        ...twinTemplate,
+      };
+      const twin = await DigitalTwin.create(localRuntime as DigitalTwinOptions, configWithTemplate);
+
+      const twinIdentity = (await twin.getDescription()).identity;
+      const twinContract = await localRuntime.contractLoader.loadContract(
+        'DigitalTwin',
+        await twin.getContractAddress(),
+      );
+      let twinDescriptionHash = await localRuntime.executor.executeContractCall(
+        twinContract,
+        'contractDescription',
+      );
+
+      // Create sharing
+      const entries = await twin.getEntries();
+      const randomSecret = `super secret; ${Math.random()}`;
+      await localRuntime.sharing.addSharing(
+        entries.plugin1.value.config.address,
+        accounts[0],
+        accounts[1],
+        '*',
+        0,
+        randomSecret,
+        null,
+        false,
+        null,
+      );
+
+      // Collect all pinned hashes to later test if they have been unpinned
+      let pinnedHashes = [];
+      let containerAddress;
+      let containerContract;
+      let containerEntries;
+      let containerDescriptionHash;
+      for (const entry of Object.keys(entries)) {
+        if (entries[entry].entryType === DigitalTwinEntryType.Container) {
+          containerAddress = entries[entry].value.config.address;
+          containerContract = await localRuntime.contractLoader.loadContract('DataContract', containerAddress);
+          containerDescriptionHash = await localRuntime.executor.executeContractCall(
+            containerContract,
+            'contractDescription',
+          );
+          containerEntries = await (twin as any).getContainerEntryHashes(
+            containerContract,
+            containerDescriptionHash,
+          );
+          pinnedHashes = pinnedHashes.concat(containerEntries);
+          pinnedHashes.push(await localRuntime.executor.executeContractCall(containerContract, 'sharing'));
+          pinnedHashes.push(containerDescriptionHash);
+        }
+      }
+      pinnedHashes.push(twinDescriptionHash);
+
+      const pinnedHashesAfterCreation = await getPinnedFileHashes();
+
+      // Make sure hashes have indeed been pinned, as a safety mechanism
+      // in case the smart agent acts weird
+      pinnedHashes.forEach((hash) => {
+        expect(
+          pinnedHashesAfterCreation.includes(hash),
+          'Hash should have been pinned upon creation, but wasn\'t',
+        ).to.be.true;
+      });
+
+      await twin.deactivate();
+
+      // Check if all containers' owner == 0x0
+      // & consumers are removed
+      // & authority is removed
+      // & description is unpinned
+      // & sharing is unpinned & removed
+      let containerOwner;
+      let containerAuthority;
+      let consumerCount;
+      let sharingAddress;
+      for (const entry of Object.keys(entries)) {
+        if (entries[entry].entryType === DigitalTwinEntryType.Container) {
+          containerAddress = entries[entry].value.config.address;
+          containerContract = await localRuntime.contractLoader.loadContract('DataContract', containerAddress);
+          containerOwner = await localRuntime.executor.executeContractCall(containerContract, 'owner');
+          containerAuthority = await localRuntime.executor.executeContractCall(containerContract, 'authority');
+          consumerCount = await localRuntime.executor.executeContractCall(containerContract, 'consumerCount');
+          sharingAddress = await localRuntime.executor.executeContractCall(containerContract, 'sharing');
+
+          expect(containerOwner).to.eq(nullAddress);
+          expect(containerAuthority).to.eq(nullAddress);
+          expect(consumerCount.toString()).to.eq('0'); // BigNumber
+          expect(sharingAddress).to.eq(nullBytes32);
+        }
+      }
+
+      // Check if twin's description is 0x0
+      // & twin's owner is 0x0
+      // & twin's authority is 0x0
+      // & twin's identity's owner is 0x0
+      const twinOwner = await localRuntime.executor.executeContractCall(
+        twinContract,
+        'owner',
+      );
+      const twinAuthority = await localRuntime.executor.executeContractCall(
+        twinContract,
+        'authority',
+      );
+
+      const twinIdentityOwnerPromise = localRuntime.verifications.getOwnerAddressForIdentity(
+        twinIdentity,
+      );
+      expect(twinIdentityOwnerPromise)
+        .to.be.eventually.rejectedWith('No record found for');
+
+      twinDescriptionHash = await localRuntime.executor.executeContractCall(
+        twinContract,
+        'contractDescription',
+      );
+
+      expect(twinOwner).to.equal(nullAddress);
+      expect(twinAuthority).to.equal(nullAddress);
+      expect(twinDescriptionHash).to.equal(nullBytes32);
+
+      // Check if did registry points to 0x0
+      // Directly access the registry to be independent of DID api implementation
+      const did = await TestUtils.getDid(
+        localRuntime.web3,
+        localRuntime.activeAccount,
+        localRuntime.dfs,
+      );
+      const didContract = await (did as any).getRegistryContract();
+      const didDocumentHash = await runtime.executor.executeContractCall(
+        didContract,
+        'didDocuments',
+        (did as any).padIdentity(twinIdentity),
+      );
+
+      expect(didDocumentHash).to.eq(nullBytes32);
+
+      // Check if all pinned hashes have been unpinned
+      const pinnedHashesAfterDeactivation = await getPinnedFileHashes();
+      pinnedHashes.forEach((pinned) => {
+        expect(pinnedHashesAfterDeactivation.includes(pinned)).to.be.false;
+      });
+    });
+
+    it('can deactivate a created twin (without hash unpinning check)', async () => {
+      const localRuntime = await getRuntimeWithEnabledPinning(runtime);
+
+      const configWithTemplate = {
+        ...defaultConfig,
+        ...twinTemplate,
+      };
+      const twin = await DigitalTwin.create(localRuntime as DigitalTwinOptions, configWithTemplate);
+      const twinIdentity = (await twin.getDescription()).identity;
+      const twinContract = await localRuntime.contractLoader.loadContract(
+        'DigitalTwin',
+        await twin.getContractAddress(),
+      );
+
+      // Create sharing
+      const entries = await twin.getEntries();
+      const randomSecret = `super secret; ${Math.random()}`;
+      await localRuntime.sharing.addSharing(
+        entries.plugin1.value.config.address,
+        accounts[0],
+        accounts[1],
+        '*',
+        0,
+        randomSecret,
+        null,
+        false,
+        null,
+      );
+
+      await twin.deactivate();
+
+      // Check if container's owner == 0x0
+      // & consumers are removed
+      // & authority is removed
+      // & description is unpinned
+      // & sharing is unpinned & removed
+      let containerAddress;
+      let containerContract;
+      let containerOwner;
+      let containerAuthority;
+      let consumerCount;
+      let sharingAddress;
+      for (const entry of Object.keys(entries)) {
+        if (entries[entry].entryType === DigitalTwinEntryType.Container) {
+          containerAddress = entries[entry].value.config.address;
+          containerContract = await localRuntime.contractLoader.loadContract('DataContract', containerAddress);
+          containerOwner = await localRuntime.executor.executeContractCall(containerContract, 'owner');
+          containerAuthority = await localRuntime.executor.executeContractCall(containerContract, 'authority');
+          consumerCount = await localRuntime.executor.executeContractCall(containerContract, 'consumerCount');
+          sharingAddress = await localRuntime.executor.executeContractCall(containerContract, 'sharing');
+
+          expect(containerOwner).to.eq(nullAddress);
+          expect(containerAuthority).to.eq(nullAddress);
+          expect(consumerCount.toString()).to.eq('0'); // BigNumber
+          expect(sharingAddress).to.eq(nullBytes32);
+        }
+      }
+
+      // Check if twin's description is 0x0
+      // & twin's owner is 0x0
+      // & twin's authority is 0x0
+      // & twin's identity's owner is 0x0
+      const twinOwner = await localRuntime.executor.executeContractCall(
+        twinContract,
+        'owner',
+      );
+      const twinAuthority = await localRuntime.executor.executeContractCall(
+        twinContract,
+        'authority',
+      );
+
+      const twinIdentityOwnerPromise = localRuntime.verifications.getOwnerAddressForIdentity(
+        twinIdentity,
+      );
+      expect(twinIdentityOwnerPromise)
+        .to.be.eventually.rejectedWith('No record found for');
+
+      const twinDescriptionHash = await localRuntime.executor.executeContractCall(
+        twinContract,
+        'contractDescription',
+      );
+
+      expect(twinOwner).to.equal(nullAddress);
+      expect(twinAuthority).to.equal(nullAddress);
+      expect(twinDescriptionHash).to.equal(nullBytes32);
+
+      // Check if did registry points to 0x0
+      // Directly access the registry to be independent of DID api implementation
+      const did = await TestUtils.getDid(
+        localRuntime.web3,
+        localRuntime.activeAccount,
+        localRuntime.dfs,
+      );
+      const didContract = await (did as any).getRegistryContract();
+      const didDocumentHash = await runtime.executor.executeContractCall(
+        didContract,
+        'didDocuments',
+        (did as any).padIdentity(twinIdentity),
+      );
+
+      expect(didDocumentHash).to.eq(nullBytes32);
+    });
+  });
+
+  describe('when working with templates', () => {
+    it('can create new contracts using twin templates', async () => {
+      const configWithTemplate = {
+        ...defaultConfig,
+        ...twinTemplate,
+      };
+      const twin = await DigitalTwin.create(runtime, configWithTemplate);
+      expect(await twin.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
+
+      // check if containers were created
+      const entries = await twin.getEntries();
+      expect(entries).to.have.property('plugin1');
+      expect(entries).to.have.property('plugin2');
+
+      // ensure plugin descriptions
+      const plugin1: Container = entries.plugin1.value;
+      const plugin2: Container = entries.plugin2.value;
+
+      // check plugin 1
+      const plugin1Desc = await plugin1.getDescription();
+      // check correct i18n
+      expect(plugin1Desc.i18n.en).to.have.property('dataset1');
+      expect(plugin1Desc.i18n.en.dataset1.name).to.be.eq('dataset 1');
+      // check correct properties
+      expect(plugin1Desc.dataSchema).to.have.property('dataset1');
+      expect(plugin1Desc.dataSchema).to.have.property('dataset2');
+      expect(plugin1Desc.dataSchema.dataset1.type).to.be.eq('object');
+      expect(plugin1Desc.dataSchema.dataset1.properties).to.have.property('prop1');
+      expect(plugin1Desc.dataSchema.dataset1.properties.prop1.type).to.be.eq('string');
+
+      // check plugin 2
+      const plugin2Desc = await plugin2.getDescription();
+      // check correct i18n
+      expect(plugin2Desc).to.not.have.property('i18n');
+      // check correct properties
+      expect(plugin2Desc.dataSchema).to.have.property('testlist');
+      expect(plugin2Desc.dataSchema.testlist.type).to.be.eq('array');
+      expect(plugin2Desc.dataSchema.testlist.items.type).to.be.eq('object');
+      expect(plugin2Desc.dataSchema.testlist.items.properties).to.have.property('prop1');
+      expect(plugin2Desc.dataSchema.testlist.items.properties.prop1.type).to.be.eq('string');
+
+      // check initial values
+      const dataset1Value = await plugin1.getEntry('dataset1');
+      expect(dataset1Value.prop1).to.be.eq(undefined);
+      const dataset2Value = await plugin1.getEntry('dataset2');
+      expect(dataset2Value.prop1).to.be.eq('test value 1');
+      expect(dataset2Value.prop2).to.be.eq('test value 2');
+    });
+
+    it('can export a twin template from a twin', async () => {
+      const configWithTemplate = {
+        ...defaultConfig,
+        ...twinTemplate,
+      };
+      const twin = await DigitalTwin.create(runtime, configWithTemplate);
+      const template = await twin.exportAsTemplate();
+
+      // check exported description
+      expect(template.description.name).to.be.eq('sampletwin');
+      expect(template.description.author).to.be.eq('sample author');
+      expect(template.description.description).to.be.eq('Sample Twin Template');
+      expect(template.description.i18n.en.name).to.be.eq('Sample Twin Template');
+      expect(template.description).to.not.have.property('dataSchema');
+
+      // checkup plugin1
+      const { plugin1, plugin2 } = template.plugins;
+      expect(template.plugins).to.have.property('plugin1');
+      expect(plugin1.description.name).to.be.eq('plugin1');
+      expect(plugin1.description.i18n.en.name).to.be.eq('Container 1');
+      expect(plugin1.description.i18n.en.dataset1.properties).to.have.property('prop1');
+      expect(plugin1.template.type).to.be.eq('plugin1');
+      expect(plugin1.template.properties).to.have.property('dataset1');
+      expect(plugin1.template.properties.dataset1.dataSchema.properties).to.have.property('prop1');
+      expect(plugin1.template.properties).to.have.property('dataset2');
+
+      // checkup plugin2
+      expect(template.plugins).to.have.property('plugin2');
+      expect(plugin2.description).to.not.have.property('i18n');
+      expect(plugin2.template.type).to.be.eq('plugin2');
+      expect(plugin2.template.properties).to.have.property('testlist');
+      expect(plugin2.template.properties.testlist.dataSchema.items.properties).to.have
+        .property('prop1');
+    });
+
+    it('can export a twin template from a twin with value', async () => {
+      const configWithTemplate = {
+        ...defaultConfig,
+        ...twinTemplate,
+      };
+      const twin = await DigitalTwin.create(runtime, configWithTemplate);
+      const { plugins: { plugin1, plugin2 } } = await twin.exportAsTemplate(true);
+
+      expect(plugin2.template.properties.testlist.value).to.be.eq(undefined);
+      expect(plugin1.template.properties.dataset1.value).to.be.eq(undefined);
+      expect(plugin1.template.properties.dataset2.value.prop1).to.be.eq('test value 1');
+      expect(plugin1.template.properties.dataset2.value.prop2).to.be.eq('test value 2');
+    });
+
+    it('should throw if invalid plugin is applied', async () => {
+      const brokenTemplate: DigitalTwinTemplate = JSON.parse(JSON.stringify(twinTemplate));
+      brokenTemplate.plugins.plugin1.template.properties.dataset1.dataSchema.properties
+        .prop1.type = 'text';
+      const createPromise = DigitalTwin.create(runtime, {
+        ...defaultConfig,
+        ...brokenTemplate,
+      });
+
+      await expect(createPromise).to.be.rejectedWith(
+        /^validation of plugin "plugin1" description failed with/,
+      );
     });
   });
 

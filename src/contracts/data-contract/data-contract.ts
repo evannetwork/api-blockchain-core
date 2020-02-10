@@ -370,13 +370,15 @@ export class DataContract extends BaseContract {
     const dataContract = (typeof contract === 'object')
       ? contract : this.options.loader.loadContract('DataContractInterface', contract);
 
-    // get content key from contract
-    const contentKey = await this.options.sharing.getKey(
-      dataContract.options.address, accountId, propertyName, block,
-    );
-
-    if (!contentKey) {
-      throw new Error(`no content key found for contract "${dataContract.options.address}" and account "${accountId}"`);
+    // get content key from contracts sharing if required
+    let contentKey = null;
+    if (encryption !== 'unencrypted') {
+      contentKey = await this.options.sharing.getKey(
+        dataContract.options.address, accountId, propertyName, block,
+      );
+      if (!contentKey) {
+        throw new Error(`no content key found for contract "${dataContract.options.address}" and account "${accountId}"`);
+      }
     }
 
     // encrypt with content key
@@ -805,6 +807,24 @@ export class DataContract extends BaseContract {
       this.options.web3.utils.sha3(entryName),
       toSet,
     );
+  }
+
+  /**
+   * Removes a file hash from the DFS
+   *
+   * @param hash Reference to the DFS file. Can be either an IPFS or a bytes32 hash.
+   */
+  public async unpinFileHash(hash: string): Promise<void> {
+    await this.options.dfs.remove(hash);
+  }
+
+  /**
+   * Gets a file's content from the DFS.
+   *
+   * @param hash Reference to the DFS file. Can be either an IPFS or a bytes32 hash.
+   */
+  public async getDfsContent(hash: string): Promise<Buffer> {
+    return this.options.dfs.get(hash);
   }
 
   private async validate(description: any, fieldName: string, toCheck: any[]) {

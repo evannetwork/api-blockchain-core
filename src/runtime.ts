@@ -267,9 +267,10 @@ export async function createDefaultRuntime(
     }
   }
 
+  const activeAccount = Object.keys(runtimeConfig.accountMap)[0];
   const keyProvider = options.keyProvider
     || new KeyProvider({ keys: runtimeConfig.keyConfig, log });
-  keyProvider.currentAccountHash = nameResolver.soliditySha3(keyProvider);
+  keyProvider.currentAccountHash = nameResolver.soliditySha3(activeAccount);
 
   // description
   const description = options.description || new Description({
@@ -295,7 +296,6 @@ export async function createDefaultRuntime(
     nameResolver,
   });
 
-  const activeAccount = Object.keys(runtimeConfig.accountMap)[0];
   let activeIdentity: string;
   let underlyingAccount: string;
   if (runtimeConfig.useIdentity) {
@@ -489,6 +489,7 @@ export async function createDefaultRuntime(
       executor,
       nameResolver,
       signerIdentity: signer,
+      verifications,
       web3,
     });
     vc = new Vc(
@@ -502,11 +503,12 @@ export async function createDefaultRuntime(
         signerIdentity: signer,
         verifications,
         web3,
+        cryptoProvider,
       },
       { credentialStatusEndpoint: config.smartAgents.didAndVc.vcRevokationStatusEndpoint },
     );
+    verifications.updateConfig({ did, vc }, { activeIdentity, underlyingAccount });
   }
-
 
   if (await profile.exists()) {
     logger.log(`profile for ${activeIdentity} exists, fetching keys`, 'debug');

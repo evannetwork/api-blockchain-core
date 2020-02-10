@@ -184,6 +184,7 @@ export class TestUtils {
       executor,
       nameResolver: await this.getNameResolver(web3),
       signerIdentity,
+      verifications: await this.getVerifications(web3, await TestUtils.getIpfs()),
       web3,
     });
   }

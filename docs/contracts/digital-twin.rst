@@ -134,6 +134,7 @@ Parameters
     * ``address`` - ``string`` (optional): ENS address used for digital twin
     * ``description`` - ``string``: description has to be passed to ``.create`` to apply it to to contract
     * ``factoryAddress`` - ``string`` (optional): factory address can be passed to ``.create`` for customer digital twin factory
+    * ``plugins`` - ``{ [pluginName: string]: ContainerPlugin }`` (optional): set of container plugins that should be applied to the twin directly with the creationg (will be passed to the `createContainers` function)
 
 -------
 Returns
@@ -823,6 +824,61 @@ Example
 
 --------------------------------------------------------------------------------
 
+.. _digital-twin_exportAsTemplate:
+
+exportAsTemplate
+================================================================================
+
+.. code-block:: typescript
+
+  digitalTwin.exportAsTemplate();
+
+Exports the twin template definition for this twin. Includes the twins dbcp descriptions and all plugins, created out of the twin containers definitions. Can also export container values within the plugin definitions.
+
+You can find a sample twin template here: |source twinTemplate|_
+
+-------
+Returns
+-------
+
+``Promise`` returns ``DigitalTwinTemplate``: digital twin template definition
+  * ``descriptions`` - ``any``: digital twin description
+  * ``plugins`` - `` { [pluginName: string]: ContainerPlugin }``: plugins for all containers
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const configWithTemplate = {
+    ...defaultConfig,
+    ...twinTemplate,
+  };
+  const twin = await DigitalTwin.create(runtime, configWithTemplate);
+  const template = await twin.exportAsTemplate();
+
+  console.log(template);
+  // {
+  //   "description": { ... },
+  //   "plugins": {
+  //     "plugin1": {
+  //       "description": {
+  //         ...
+  //       },
+  //       "template": {
+  //         ...
+  //       }
+  //     },
+  //     "pluginX": {
+  //       ...
+  //     }
+  //   }
+  // }
+
+
+--------------------------------------------------------------------------------
+
 .. _digital-twin_getContractAddress:
 
 getContractAddress
@@ -992,6 +1048,9 @@ data for verifications for digital twins
 
 .. |source sharing| replace:: ``Sharing``
 .. _source sharing: ../contracts/sharing.html
+
+.. |source twinTemplate| replace:: ``TwinTemplate``
+.. _source twinTemplate: https://github.com/evannetwork/twin-templates/blob/master/test.json
 
 .. |source verifications| replace:: ``Verifications``
 .. _source verifications: ../profile/verifications.html

@@ -203,9 +203,9 @@ export class Ipfs extends Logger implements DfsInterface {
         return Buffer.from(buffer).toString('binary');
       }
     }
-
+    let wait;
     const timeout = new Promise((resolve, reject) => {
-      const wait = setTimeout(() => {
+      wait = setTimeout(() => {
         clearTimeout(wait);
 
         reject(new Error(`error while getting ipfs hash ${ipfsHash}: rejected after ${IPFS_TIMEOUT}ms`));
@@ -222,9 +222,11 @@ export class Ipfs extends Logger implements DfsInterface {
         if (returnBuffer) {
           return fileBuffer;
         }
+        clearTimeout(wait);
         return ret;
       })
       .catch(() => {
+        clearTimeout(wait);
         throw new Error(`error while getting ipfs hash ${ipfsHash}`);
       });
     return Promise.race([

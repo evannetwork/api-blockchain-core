@@ -54,7 +54,7 @@ export interface ContainerConfig {
   description?: any;
   /** factory address can be passed to ``.create`` for custom container factory */
   factoryAddress?: string;
-  /** plugin to be used in ``.create``, can be string with name or a ``ContainerTemplate`` */
+  /** plugin to be used in ``.create``, can be string with name or a ``ContainerPlugin`` */
   plugin?: string | ContainerPlugin;
 }
 
@@ -295,27 +295,37 @@ export class Container extends Logger {
       () => { /* action already handled in filter block */ },
     );
 
+    // setup description: instanceConfig => pluginConfig => defaultContainerConfig
+    // check description values and upload it
+    const envelope: Envelope = { public: instanceConfig.description };
+
+    if (!envelope.public) {
+      if (instanceConfig.plugin && instanceConfig.plugin.description) {
+        envelope.public = instanceConfig.plugin.description;
+      } else {
+        envelope.public = Container.defaultDescription;
+      }
+    }
+    // copy description, so configuration params will not be changed
+    envelope.public = JSON.parse(JSON.stringify(envelope.public));
+
     // convert template properties to jsonSchema
-    if (instanceConfig.plugin
-        && instanceConfig.plugin.template
-        && instanceConfig.plugin.template.properties) {
-      instanceConfig.description.dataSchema = toJsonSchema(
+    if (instanceConfig?.plugin?.template?.properties) {
+      envelope.public.dataSchema = toJsonSchema(
         instanceConfig.plugin.template.properties,
       );
     }
-
-    // check description values and upload it
-    const envelope: Envelope = {
-      public: JSON.parse(
-        JSON.stringify(instanceConfig.description || Container.defaultDescription),
-      ),
-    };
 
     // ensure abi definition is saved to the data container
     if (!envelope.public.abis) {
       envelope.public.abis = {
         own: JSON.parse(options.contractLoader.contracts.DataContract.interface),
       };
+    }
+
+    // ensure dbcp version 2 or higher
+    if (!envelope.public.dbcpVersion || envelope.public.dbcpVersion < 2) {
+      envelope.public.dbcpVersion = 2;
     }
 
     const validation = options.description.validateDescription(envelope);
@@ -413,6 +423,28 @@ export class Container extends Logger {
     profile: Profile,
   ): Promise<{[id: string]: ContainerPlugin}> {
     return (await profile.getPlugins() || { });
+  }
+
+  /**
+   * Removes properties from a description that aren't necessary for a plugin / template export.
+   *
+   * @param      {any}          description        dbcp container description
+   * @param      {Arraystring}  allowedProperties  array of properties that should be kept
+   * @return     {any}          purged dbcp description
+   */
+  public static purgeDescriptionForTemplate(
+    description: any,
+    allowedProperties: Array<string> = ['author', 'dapp', 'dbcpVersion', 'description', 'i18n',
+      'imgSquare', 'imgWide', 'license', 'name', 'tags', 'version'],
+  ): any {
+    const purged: any = { };
+    allowedProperties.forEach((prop: string) => {
+      if (Object.prototype.hasOwnProperty.call(description, prop)) {
+        purged[prop] = description[prop];
+      }
+    });
+
+    return purged;
   }
 
   /**
@@ -907,11 +939,18 @@ export class Container extends Logger {
    * @param      {any}  description  description (public part)
    */
   public async setDescription(description: any): Promise<void> {
+    const toSave = JSON.parse(JSON.stringify(description));
+
+    // ensure dbcp version 2 or higher
+    if (!toSave.dbcpVersion || toSave.dbcpVersion < 2) {
+      toSave.dbcpVersion = 2;
+    }
+
     await this.ensureContract();
     await this.wrapPromise(
       'set description',
       this.options.description.setDescription(
-        this.contract.options.address, { public: description }, this.config.accountId,
+        this.contract.options.address, { public: toSave }, this.config.accountId,
       ),
     );
   }
@@ -1190,8 +1229,7 @@ export class Container extends Logger {
    */
   public async toPlugin(getValues = false): Promise<ContainerPlugin> {
     await this.ensureContract();
-
-    // fetch description, add fields from data schema
+    // fetch description and create a lean structure
     const description = await this.getDescription();
 
     // create empty plugin
@@ -1199,7 +1237,7 @@ export class Container extends Logger {
       properties: { },
     };
     const plugin: ContainerPlugin = {
-      description,
+      description: Container.purgeDescriptionForTemplate(description),
       template: template as ContainerTemplate,
     };
 

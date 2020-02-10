@@ -96,6 +96,10 @@ export class SignerIdentity extends Logger implements SignerInterface {
     if (options.from === this.underlyingAccount) {
       return this.config.underlyingSigner.createContract(contractName, functionArguments, options);
     }
+    if (options.from !== this.activeIdentity) {
+      throw new Error(`given accountId ${options.from} `
+          + 'is neither configured as underlying accountId or active identity');
+    }
     // build input for constructor call
     const compiledContract = this.options.contractLoader.getCompiledContract(contractName);
     if (!compiledContract || !compiledContract.bytecode) {
@@ -128,6 +132,16 @@ export class SignerIdentity extends Logger implements SignerInterface {
   }
 
   /**
+   * get gas price (either from config or from api.eth.web3.eth.gasPrice (gas price median of last
+   * blocks) or api.config.eth.gasPrice; unset config value or set it to falsy for median gas price
+   *
+   * @return    {Promeise<string>} hex string with gas price
+   */
+  public async getGasPrice(): Promise<string> {
+    return this.config.underlyingSigner.getGasPrice();
+  }
+
+  /**
    * get public key for given account
    *
    * @param      {string}  accountId  account to get public key for
@@ -155,6 +169,11 @@ export class SignerIdentity extends Logger implements SignerInterface {
   ): Promise<void> {
     if (options.from === this.underlyingAccount) {
       return this.config.underlyingSigner.signAndExecuteSend(options, handleTxResult);
+    }
+    if (options.from !== this.activeIdentity) {
+      handleTxResult(`given accountId ${options.from} `
+        + 'is neither configured as underlying accountId or active identity');
+      return Promise.resolve();
     }
 
     try {
@@ -191,6 +210,11 @@ export class SignerIdentity extends Logger implements SignerInterface {
       return this.config.underlyingSigner.signAndExecuteTransaction(
         contract, functionName, functionArguments, options, handleTxResult,
       );
+    }
+    if (options.from !== this.activeIdentity) {
+      handleTxResult(`given accountId ${options.from} `
+        + 'is neither configured as underlying accountId or active identity');
+      return Promise.resolve();
     }
 
     try {
