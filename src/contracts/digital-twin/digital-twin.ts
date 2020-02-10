@@ -856,7 +856,7 @@ export class DigitalTwin extends Logger {
   private async getContainerEntryHashes(containerContract: any, descriptionHash: string):
   Promise<string[]> {
     const description = JSON.parse(
-      (await this.options.dataContract.getDfsContent(descriptionHash)).toString('binary'),
+      (await this.options.dataContract.getDfsContent(descriptionHash)).toString('utf8'),
     );
     // Collect entry hashes
     const encryptedHashes = [];
