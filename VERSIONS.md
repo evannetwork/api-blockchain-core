@@ -4,6 +4,7 @@
 ### Features
 
 ### Fixes
+- fix buffer to-string conversion, try to decode to `utf8`, if this fails, decode it to `binary`
 
 ### Deprecations
 
