@@ -78,6 +78,82 @@ Example
 = Working with DID documents =
 ==============================
 
+.. _did_deactivateDidDocument:
+
+deactivateDidDocument
+================================================================================
+
+.. code-block:: typescript
+
+  did.deactivateDidDocument(did);
+
+Unlinks the current DID document from the given DID
+
+----------
+Parameters
+----------
+
+#. ``did`` - ``string``: DID to unlink the DID document from
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: Resolves when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+    const twinIdentity = '0x1234512345123451234512345123451234512345';
+    const twinDid = await runtime.did.convertIdentityToDid(twinIdentity);
+    await runtime.did.deactivateDidDocument(twinDid);
+
+
+--------------------------------------------------------------------------------
+
+
+.. _did_didIsDeactivated:
+
+didIsDeactivated
+================================================================================
+
+.. code-block:: typescript
+
+  did.didIsDeactivated(did);
+
+Gets the deactivation status of a DID.
+
+----------
+Parameters
+----------
+
+#. ``did`` - ``string``: DID to check
+
+-------
+Returns
+-------
+
+``Promise`` returns ``boolean``: True if the DID has been deactivated
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+    const twinIdentity = '0x1234512345123451234512345123451234512345';
+    const twinDid = await runtime.did.convertIdentityToDid(twinIdentity);
+    await runtime.did.deactivateDidDocument(twinDid);
+    console.log(await runtime.did.didIsDeactivated(twinDid));
+    // Output: true
+
+
+--------------------------------------------------------------------------------
+
+
 .. _did_getDidDocument:
 
 getDidDocument
@@ -85,7 +161,7 @@ getDidDocument
 
 .. code-block:: typescript
 
-  did.getDidDocument([did]);
+  did.getDidDocument(did);
 
 Get DID document for given DID.
 
@@ -123,7 +199,7 @@ getService
 
 .. code-block:: typescript
 
-  did.getService([did]);
+  did.getService(did);
 
 Get service from DID document.
 
@@ -156,6 +232,8 @@ Example
   }];
   await runtime.did.setService(did, service);
   const retrieved = await runtime.did.getService(did);
+
+--------------------------------------------------------------------------------
 
 .. _did_setDidDocument:
 
@@ -201,7 +279,7 @@ setService
 
 .. code-block:: typescript
 
-  did.setService(service[, did]);
+  did.setService(did, [service]);
 
 Sets service in DID document.
 
