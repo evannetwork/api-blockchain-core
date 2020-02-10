@@ -140,6 +140,25 @@ export class Did extends Logger {
   }
 
   /**
+   * Gets the deactivation status of a DID
+   *
+   * @param did DID to check
+   * @returns {boolean} true, if the DID is deactivated
+   */
+  public async didIsDeactivated(did: string): Promise<boolean> {
+    let identity = await this.convertDidToIdentity(did);
+    identity = this.padIdentity(identity);
+
+    const isDeactivated = await this.options.executor.executeContractCall(
+      await this.getRegistryContract(),
+      'deactivatedDids',
+      identity,
+    );
+
+    return isDeactivated;
+  }
+
+  /**
    * Get DID document for given DID.
    *
    * @param      {string}  did     DID to fetch DID document for
@@ -148,21 +167,15 @@ export class Did extends Logger {
    */
   public async getDidDocument(did: string): Promise<any> {
     let result = null;
+    if (await this.didIsDeactivated(did)) {
+      throw Error(`DID ${did} has been deactivated.`);
+    }
+
     const identity = this.padIdentity(
       did
         ? await this.convertDidToIdentity(did)
         : this.options.signerIdentity.activeIdentity,
     );
-
-    const isDeactivated = await this.options.executor.executeContractCall(
-      await this.getRegistryContract(),
-      'deactivatedDids',
-      identity,
-    );
-
-    if (isDeactivated) {
-      throw Error(`DID ${did} has been deactivated.`);
-    }
 
     const documentHash = await this.options.executor.executeContractCall(
       await this.getRegistryContract(),
@@ -252,6 +265,10 @@ export class Did extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async setDidDocument(did: string, document: any): Promise<void> {
+    if (await this.didIsDeactivated(did)) {
+      throw Error('Cannot set document for deactivated DID');
+    }
+
     const identity = this.padIdentity(did
       ? await this.convertDidToIdentity(did)
       : this.options.signerIdentity.activeIdentity);
@@ -314,18 +331,20 @@ export class Did extends Logger {
    * Unlinks the current DID document from the DID
    * @param did DID to unlink the DID document from
    */
-  public async removeDidDocument(did: string): Promise<void> {
+  public async deactivateDidDocument(did: string): Promise<void> {
     const identity = this.padIdentity(did
       ? await this.convertDidToIdentity(did)
       : this.options.signerIdentity.activeIdentity);
-
-    await this.options.executor.executeContractTransaction(
-      await this.getRegistryContract(),
-      'setDidDocument',
-      { from: this.options.signerIdentity.activeIdentity },
-      identity,
-      nullBytes32,
-    );
+    try {
+      await this.options.executor.executeContractTransaction(
+        await this.getRegistryContract(),
+        'deactivateDid',
+        { from: this.options.signerIdentity.activeIdentity },
+        identity,
+      );
+    } catch (e) {
+      throw Error('Deactivation failed. Is the DID active and do you have permission to deactivate the DID?');
+    }
   }
 
   /**
