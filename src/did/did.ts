@@ -168,7 +168,7 @@ export class Did extends Logger {
   public async getDidDocument(did: string): Promise<any> {
     let result = null;
     if (await this.didIsDeactivated(did)) {
-      throw Error(`DID ${did} has been deactivated.`);
+      return this.getDeactivatedDidDocument(did);
     }
 
     const identity = this.padIdentity(
@@ -356,6 +356,19 @@ export class Did extends Logger {
    */
   public async validateDid(did: string): Promise<void> {
     await this.validateDidAndGetSections(did);
+  }
+
+  /**
+   * Returns the standard DID document for deactivated DIDs
+   */
+  private async getDeactivatedDidDocument(did: string): Promise<any> {
+    return JSON.parse(`{
+      "@context": "https://w3id.org/did/v1",
+      "id": "${did}",
+      "publicKey": [],
+      "authentication": [],
+      "services": []
+    }`);
   }
 
   /**
