@@ -162,8 +162,9 @@ export class Did extends Logger {
    * Get DID document for given DID.
    *
    * @param      {string}  did     DID to fetch DID document for
-   * @return     {Promise<any>}    a DID document that MAY resemble `DidDocumentTemplate` format
-   * @throws     if a DID has been deactivated or if no DID document has been set yet
+   * @return     {Promise<any>}    a DID document that MAY resemble `DidDocumentTemplate` format.
+   *                               For deactiated DIDs it returns a default DID document containing
+   *                               no authentication mateiral.
    */
   public async getDidDocument(did: string): Promise<any> {
     let result = null;
