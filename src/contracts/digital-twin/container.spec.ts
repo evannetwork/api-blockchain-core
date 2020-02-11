@@ -19,15 +19,13 @@
 
 import 'mocha';
 import * as chaiAsPromised from 'chai-as-promised';
+import { Executor } from '@evan.network/dbcp';
 import { expect, use } from 'chai';
 import { promisify } from 'util';
 import { readFile } from 'fs';
-import {
-  Executor,
-  Ipfs,
-} from '@evan.network/dbcp';
 
 import { accounts } from '../../test/accounts';
+import { Ipfs } from '../../dfs/ipfs';
 import { TestUtils } from '../../test/test-utils';
 import { VerificationsStatus } from '../../verifications/verifications';
 import {
