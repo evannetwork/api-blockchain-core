@@ -112,10 +112,24 @@ export class Profile extends Logger {
   };
 
   /**
-   * All available account types, mapped to it's data contract template specification. Each account
+   * All available account types, mapped to its data contract template specification. Each account
    * type is based on the uspecified type, so each type includes this data too.
    */
   public accountTypes = accountTypes;
+
+  public constructor(options: ProfileOptions) {
+    super(options);
+    this.activeAccount = options.accountId;
+    this.contractLoader = options.contractLoader;
+    this.dataContract = options.dataContract;
+    this.defaultCryptoAlgo = options.defaultCryptoAlgo;
+    this.executor = options.executor;
+    this.ipld = options.ipld;
+    this.nameResolver = options.nameResolver;
+    this.options = options;
+    this.profileOwner = options.profileOwner || this.activeAccount;
+    this.trees = {};
+  }
 
   /**
    * Check if profile data is correct, according to a specific profile type. Throws, when the data
@@ -138,20 +152,6 @@ export class Profile extends Logger {
     }
 
     return true;
-  }
-
-  public constructor(options: ProfileOptions) {
-    super(options);
-    this.activeAccount = options.accountId;
-    this.contractLoader = options.contractLoader;
-    this.dataContract = options.dataContract;
-    this.defaultCryptoAlgo = options.defaultCryptoAlgo;
-    this.executor = options.executor;
-    this.ipld = options.ipld;
-    this.nameResolver = options.nameResolver;
-    this.options = options;
-    this.profileOwner = options.profileOwner || this.activeAccount;
-    this.trees = {};
   }
 
   /**

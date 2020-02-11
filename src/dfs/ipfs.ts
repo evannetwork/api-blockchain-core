@@ -70,6 +70,22 @@ export class Ipfs extends Logger implements DfsInterface {
 
   public runtime: Runtime;
 
+  public constructor(options) {
+    super(options);
+    this.disablePin = options.disablePin || false;
+    if (options.cache) {
+      this.cache = options.cache;
+    }
+    if (options.remoteNode) {
+      this.remoteNode = options.remoteNode;
+    } else if (options.dfsConfig) {
+      this.dfsConfig = options.dfsConfig;
+      this.remoteNode = new IpfsLib(options.dfsConfig);
+    } else {
+      this.log('No IPFS config of ipfs remotenode are given', 'error');
+    }
+  }
+
   /**
    * convert IPFS hash to bytes 32 see
    * https://www.reddit.com/r/ethdev/comments/6lbmhy/a_practical_guide_to_cheap_ipfs_hash_storage_in
@@ -100,22 +116,6 @@ export class Ipfs extends Logger implements DfsInterface {
     const bytes = Buffer.from(`1220${remove0x}`, 'hex');
     const hash = bs58.encode(bytes);
     return hash;
-  }
-
-  public constructor(options) {
-    super(options);
-    this.disablePin = options.disablePin || false;
-    if (options.cache) {
-      this.cache = options.cache;
-    }
-    if (options.remoteNode) {
-      this.remoteNode = options.remoteNode;
-    } else if (options.dfsConfig) {
-      this.dfsConfig = options.dfsConfig;
-      this.remoteNode = new IpfsLib(options.dfsConfig);
-    } else {
-      this.log('No IPFS config of ipfs remotenode are given', 'error');
-    }
   }
 
   /**

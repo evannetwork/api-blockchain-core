@@ -86,6 +86,7 @@
     "build-all": "env-cmd --fallback -f ./.env.local npm run build-contracts && env-cmd --fallback -f ./.env.local npm run build",
     "build-contracts": "node ./scripts/buildContracts.js",
     "installl": "npm install && ./scripts/link.sh",
+    "lint": "eslint --ext .js,.ts -c .eslintrc.js ./src",
     "test:contracts": "env-cmd --fallback -f ./.env.local npm run build && env-cmd --fallback -f ./.env.local mocha --exit --inspect -r ts-node/register src/contracts/*.spec.ts src/contracts/base-contract/*.spec.ts src/contracts/business-center/*.spec.ts src/contracts/service-contract/*.spec.ts",
     "test:datacontract": "env-cmd --fallback -f ./.env.local npm run build && env-cmd --fallback -f ./.env.local mocha --exit --inspect -r ts-node/register src/contracts/data-contract/*.spec.ts",
     "test:services": "env-cmd --fallback -f ./.env.local npm run build && env-cmd --fallback -f ./.env.local mocha --exit --inspect -r ts-node/register src/claims/*.spec.ts src/dfs/*.spec.ts src/encryption/*.spec.ts src/profile/*.spec.ts src/*.spec.ts",

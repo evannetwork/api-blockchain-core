@@ -65,6 +65,11 @@ export interface OnboardingOptions extends LoggerOptions {
 export class Onboarding extends Logger {
   public options: OnboardingOptions;
 
+  public constructor(optionsInput: OnboardingOptions) {
+    super(optionsInput);
+    this.options = optionsInput;
+  }
+
   /**
    * creates a new random mnemonic
    */
@@ -674,11 +679,6 @@ export class Onboarding extends Logger {
       return port;
     }
     return 443;
-  }
-
-  public constructor(optionsInput: OnboardingOptions) {
-    super(optionsInput);
-    this.options = optionsInput;
   }
 
   /**
