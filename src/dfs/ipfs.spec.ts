@@ -129,7 +129,7 @@ describe('IPFS handler', function test() {
       expect(fileContent.toString(encoding)).to.eq(content);
     });
 
-    it('should be not be able to add a file with extended unicodes (properly), that have been encoded as binary', async () => {
+    it('should not be able to add a file with extended unicodes (properly), that have been encoded as binary', async () => {
       const content = '🌂';
       const encoding = 'binary';
       const broken = Buffer.from('🌂', encoding).toString(encoding);
