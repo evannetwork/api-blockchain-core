@@ -200,7 +200,7 @@ export class Ipfs extends Logger implements DfsInterface {
         if (returnBuffer) {
           return Buffer.from(buffer);
         }
-        return Buffer.from(buffer).toString('binary');
+        return this.decodeBuffer(Buffer.from(buffer));
       }
     }
     let wait;
@@ -215,7 +215,7 @@ export class Ipfs extends Logger implements DfsInterface {
     const getRemoteHash = this.remoteNode.files.cat(ipfsHash)
       .then((buffer: any) => {
         const fileBuffer = buffer;
-        const ret = fileBuffer.toString('binary');
+        const ret = this.decodeBuffer(buffer);
         if (this.cache) {
           this.cache.add(ipfsHash, fileBuffer);
         }
@@ -297,5 +297,18 @@ export class Ipfs extends Logger implements DfsInterface {
         delete this.remoteNode.provider.headers.authorization;
       }, 60 * 1000);
     }
+  }
+
+  /**
+   * Tries to decode given Buffer to UTF-8, if this leads to invalid characters, decode to Latin-1.
+   *
+   * @param      {Buffer}  buffer  buffer to decrypt, may be UTF-8 or Latin-1 encoded.
+   * @return     {string}  decoded string
+   */
+  private decodeBuffer(buffer: Buffer): string {
+    const decodedToUtf8 = buffer.toString('utf8');
+    return decodedToUtf8.indexOf('�') === -1
+      ? decodedToUtf8
+      : buffer.toString('binary');
   }
 }

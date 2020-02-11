@@ -319,7 +319,7 @@ export class Verifications extends Logger {
 
   public contracts: any = { };
 
-  public encodingEnvelope = 'binary';
+  public encodingEnvelope = 'utf8';
 
   /** cache all the ens owners */
   public ensOwners: any = { };

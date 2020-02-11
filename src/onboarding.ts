@@ -177,7 +177,7 @@ export class Onboarding extends Logger {
       },
     };
     const descriptionHash = await runtime.dfs.add(
-      'description', Buffer.from(JSON.stringify(description), 'binary'),
+      'description', Buffer.from(JSON.stringify(description), 'utf8'),
     );
 
     const factory = runtime.contractLoader.loadContract(
