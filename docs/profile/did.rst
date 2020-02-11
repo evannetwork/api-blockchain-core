@@ -201,7 +201,7 @@ getService
 
   did.getService(did);
 
-Get service from DID document.
+Get the services from a DID document.
 
 ----------
 Parameters
@@ -213,7 +213,7 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``DidServiceEntry[] | DidServiceEntry``: service
+``Promise`` returns ``DidServiceEntry[] | DidServiceEntry``: Array of services, or a single service entry object.
 
 -------
 Example
@@ -279,7 +279,7 @@ setService
 
 .. code-block:: typescript
 
-  did.setService(did, [service]);
+  did.setService(did, service);
 
 Sets service in DID document.
 
@@ -288,7 +288,7 @@ Parameters
 ----------
 
 #. ``did`` - ``string``: DID name to set service for
-#. ``service`` - ``DidServiceEntry[] | DidServiceEntry``: service to set
+#. ``service`` - ``DidServiceEntry[] | DidServiceEntry``: service or array of services to set
 
 -------
 Returns
