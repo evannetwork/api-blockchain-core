@@ -147,6 +147,25 @@ export class DigitalTwin extends Logger {
   private mutexes: { [id: string]: Mutex };
 
   /**
+   * Create new DigitalTwin instance. This will not create a smart contract contract but is used
+   * to load existing containers. To create a new contract, use the static ``create`` function.
+   *
+   * @param      {DigitalTwinOptions}  options  runtime-like object with required modules
+   * @param      {DigitalTwinConfig}   config   digital twin related config
+   */
+  public constructor(options: DigitalTwinOptions, config: DigitalTwinConfig) {
+    super(options as LoggerOptions);
+    this.config = config;
+    // fallback to twin accountId, if containerConfig is specified
+    this.config.containerConfig = {
+      accountId: this.config.accountId,
+      ...this.config.containerConfig,
+    };
+    this.options = options;
+    this.mutexes = {};
+  }
+
+  /**
    * Create digital twin contract.
    *
    * @param      {DigitalTwinOptions}  options  twin runtime options
@@ -183,8 +202,18 @@ export class DigitalTwin extends Logger {
     if (config.plugins) {
       Object.keys(config.plugins).forEach((pluginName: string) => {
         const pluginDescription = {
-          public: config.plugins[pluginName].description || config.containerConfig.description,
+          public: {
+            ...config.plugins[pluginName].description || config.containerConfig.description,
+            dataSchema: {},
+          },
         };
+
+        // transform plugin dataSchema to the correct format to be validatable
+        const schemaProps = config.plugins[pluginName].template.properties;
+        Object.keys(schemaProps)
+          .forEach((key: string) => {
+            pluginDescription.public.dataSchema[key] = schemaProps[key].dataSchema;
+          });
 
         const pluginValidation = options.description.validateDescription(pluginDescription);
         if (pluginValidation !== true) {
@@ -328,25 +357,6 @@ export class DigitalTwin extends Logger {
     }
 
     return { valid, error, exists };
-  }
-
-  /**
-   * Create new DigitalTwin instance. This will not create a smart contract contract but is used
-   * to load existing containers. To create a new contract, use the static ``create`` function.
-   *
-   * @param      {DigitalTwinOptions}  options  runtime-like object with required modules
-   * @param      {DigitalTwinConfig}   config   digital twin related config
-   */
-  public constructor(options: DigitalTwinOptions, config: DigitalTwinConfig) {
-    super(options as LoggerOptions);
-    this.config = config;
-    // fallback to twin accountId, if containerConfig is specified
-    this.config.containerConfig = {
-      accountId: this.config.accountId,
-      ...this.config.containerConfig,
-    };
-    this.options = options;
-    this.mutexes = {};
   }
 
   /**
@@ -673,19 +683,6 @@ export class DigitalTwin extends Logger {
   }
 
   /**
-   * Removes entry from index contract
-   * @param name Name of entry
-   */
-  private async removeEntry(name: string): Promise<void> {
-    await this.options.executor.executeContractTransaction(
-      this.contract,
-      'removeEntry',
-      { from: this.config.accountId },
-      name,
-    );
-  }
-
-  /**
    * Write given description to digital twins DBCP.
    *
    * @param      {any}  description  description to set (`public` part)
@@ -755,6 +752,19 @@ export class DigitalTwin extends Logger {
       name,
       toSet,
       entryType,
+    );
+  }
+
+  /**
+   * Removes entry from index contract
+   * @param name Name of entry
+   */
+  private async removeEntry(name: string): Promise<void> {
+    await this.options.executor.executeContractTransaction(
+      this.contract,
+      'removeEntry',
+      { from: this.config.accountId },
+      name,
     );
   }
 
@@ -846,7 +856,7 @@ export class DigitalTwin extends Logger {
   private async getContainerEntryHashes(containerContract: any, descriptionHash: string):
   Promise<string[]> {
     const description = JSON.parse(
-      (await this.options.dataContract.getDfsContent(descriptionHash)).toString('binary'),
+      (await this.options.dataContract.getDfsContent(descriptionHash)).toString('utf8'),
     );
     // Collect entry hashes
     const encryptedHashes = [];
@@ -910,21 +920,29 @@ export class DigitalTwin extends Logger {
    * Removes all of this twin's entries and deactivates all container entries.
    */
   private async deactivateEntries(): Promise<void> {
-    const containers = await this.getEntries();
-    let containerContract;
+    const entries = await this.getEntries();
 
-    for (const containerName of Object.keys(containers)) {
-      if (containers[containerName].entryType === DigitalTwinEntryType.Container) {
+    let containerContract;
+    let containerOwner;
+    for (const entryName of Object.keys(entries)) {
+      if (entries[entryName].entryType === DigitalTwinEntryType.Container) {
         containerContract = await this.options.contractLoader.loadContract(
           'DataContract',
-          containers[containerName].value.config.address,
+          entries[entryName].value.config.address,
         );
-        await this.deactivateContainer(containerContract);
-      } else if (containers[containerName].entryType === DigitalTwinEntryType.FileHash) {
-        await this.options.dataContract.unpinFileHash(containers[containerName].value);
+        containerOwner = await this.options.executor.executeContractCall(
+          containerContract,
+          'owner',
+        );
+
+        if (containerOwner === this.config.accountId) {
+          await this.deactivateContainer(containerContract);
+        }
+      } else if (entries[entryName].entryType === DigitalTwinEntryType.FileHash) {
+        await this.options.dataContract.unpinFileHash(entries[entryName].value);
       }
 
-      await this.removeEntry(containerName);
+      await this.removeEntry(entryName);
     }
   }
 

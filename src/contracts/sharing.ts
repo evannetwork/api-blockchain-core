@@ -55,7 +55,7 @@ export interface SharingOptions extends LoggerOptions {
 export class Sharing extends Logger {
   public options: SharingOptions;
 
-  private readonly encodingUnencrypted = 'binary';
+  private readonly encodingUnencrypted = 'utf8';
 
   private readonly encodingEncrypted = 'hex';
 

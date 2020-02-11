@@ -121,7 +121,61 @@ Example
 
 --------------------------------------------------------------------------------
 
+.. _verifications_updateConfig:
 
+updateConfig
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.updateConfig([options[, config]]);
+
+Merge given partial options and config into current options and config.
+
+This function is mainly used to decouple the creation process of required libraries by setting them at a later point of time.
+
+
+
+----------
+Parameters
+----------
+
+#. ``options`` - ``Partial<VerificationsOptions>`` (optional): updates for options
+#. ``config`` - ``Partial<VerificationsConfig>`` (optional): updates for config
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // create initial instance of `Verifications`, that is missing `Vc` and `Did` instances
+  const verifications = new Verifications({
+    accountStore,
+    config,
+    contractLoader,
+    description,
+    dfs,
+    executor,
+    nameResolver,
+    storage: '0x0000000000000000000000000000000000000001',
+  });
+
+  // required libraries and config values are are created by other logic
+  const { activeIdentity, did, vc, underlyingAccount } = await someHelper();
+
+  // now update setup
+  verifications.updateConfig({ did, vc }, { activeIdentity, underlyingAccount });
+
+
+
+--------------------------------------------------------------------------------
 
 = Issuers =
 ==========================
@@ -218,7 +272,8 @@ getOwnerAddressForIdentity
 
   verifications.getOwnerAddressForIdentity(identityAddress);
 
-Gets the identity contract for a given account id or contract.
+Gets an identity's owner's address. This can be either an account or an identity address.
+
 
 ----------
 Parameters
@@ -348,6 +403,58 @@ Example
   // and links to description domain 'sample'
   const thirdVerification = await verifications.setVerification(
     accounts[0], accounts[1], '/company', expirationDate, verificationValue, 'example');
+
+
+
+--------------------------------------------------------------------------------
+
+.. _verifications_setVerificationAndVc:
+
+setVerification
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.setVerificationAndVc(issuer, subject, topic, expirationDate, verificationValue, descriptionDomain, disableSubVerifications);
+
+Sets or creates a verification along with a verifiable credential; the verification creation requires the issuer to have permissions for the parent verification (if verification name seen as a path, the parent 'folder').
+
+The "verificationValue" field can also be set to a custom JSON object with any data. The verificationValue works as same as in the setVerification function however in this function it is also added to the VC document.
+
+----------
+Parameters
+----------
+
+#. ``issuer`` - ``string``: issuer of the verification
+#. ``subject`` - ``string``: subject of the verification and the owner of the verification node
+#. ``topic`` - ``string``: name of the verification (full path)
+#. ``expirationDate`` - ``number`` (optional): expiration date, for the verification, defaults to ``0`` (does not expire)
+#. ``verificationValue`` - ``any`` (optional): json object which will be stored in the verification
+#. ``descriptionDomain`` - ``string`` (optional): domain of the verification, this is a subdomain under 'verifications.evan', so passing 'example' will link verifications description to 'example.verifications.evan', unset if omitted
+#. ``disableSubVerifications`` - ``boolean`` (optional): invalidate all verifications that gets issued as children of this verification (warning will include the disableSubVerifications warning)
+#. ``isIdentity`` - ``boolean`` (optional): boolean value if the subject is already a identity address (default false)
+#. ``uri`` - ``string`` (optional): adds a specific URI to the verification
+
+-------
+Returns
+-------
+
+``Promise`` returns ``string``: verificationId and vcId
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // accounts[0] issues verification '/company' for accounts[1]
+  const verification = verifications.setVerificationAndVc(accounts[0], accounts[1], '/company');
+
+``{ vcId:
+   'vc:evan:testcore:0x9becd31c7e5b6a1fe8ee9e76f1af56bcf84b6718548dbdfd1412f935b515ebe0',
+  verificationId:
+   '0x5373812c3cba3fdee77730a45e7bd05cf52a5f2195abf1f623a9b22d94cea939' };``
+
 
 
 
@@ -1134,6 +1241,59 @@ Example
 
 
 --------------------------------------------------------------------------------
+
+
+.. _verifications_executeAndHandleEventResult:
+
+executeAndHandleEventResult
+================================================================================
+
+.. code-block:: typescript
+
+  verifications.executeAndHandleEventResult(accountId, data);
+
+Run given data (serialized contract transaction (tx)) with given user's identity.
+
+----------
+Parameters
+----------
+
+#. ``accountId`` - ``string``: account with whose identity the given tx is executed
+#. ``data`` - ``string``: serialized function data
+#. ``eventInfo`` - ``any`` (optional) object with properties: 'eventName' and 'contract' (web3 contract instance, that triggers event)
+#. ``getEventResults`` - ``Function`` (optional) function with arguments event and eventArgs, that returns result of `executeAndHandleEventResult` call
+#. ``sourceIdentity`` - ``string`` (optional) identity to execute given tx with. If omitted, account's identity is used
+#. ``value`` - ``number`` (optional) amount of EVEs to send. Defaults to 0
+#. ``to`` - ``string`` (optional) target address. Defaults to verifications registry.
+#. ``signedTransactionInfo``- ``string`` (optional) transaction signature if this execution call should be a delegated call.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``any``: if ``eventInfo`` and ``getEventResults``, result of ``getEventResults``, otherwise void
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const description = await myTwin.getDescription();
+  const newTwinOwner = '0x0123456789012345678901234567890123456789';
+  const verificationRegistry = this.options.verifications.contracts.registry;
+  await this.options.verifications.executeAndHandleEventResult(
+    this.config.accountId,
+    verificationRegistry.methods.transferIdentity(
+      description.identity,
+      newTwinOwner,
+    ).encodeABI(),
+  );
+
+
+
+--------------------------------------------------------------------------------
+
 
 = Descriptions =
 ==========================

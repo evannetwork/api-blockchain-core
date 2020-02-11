@@ -37,6 +37,7 @@ import {
   DigitalTwinConfig,
   DigitalTwinEntryType,
   DigitalTwinOptions,
+  DigitalTwinTemplate,
   DigitalTwinVerificationEntry,
 } from './digital-twin';
 import {
@@ -92,7 +93,7 @@ async function getRuntimeWithEnabledPinning(defaultRuntime: Runtime): Promise<Ru
 async function getPinnedFileHashes(): Promise<string[]> {
   const authHeaders = await getSmartAgentAuthHeaders(
     await TestUtils.getRuntime(accounts[0]),
-    JSON.stringify(Date.now()),
+    Date.now().toString(),
   );
   const reqOptions = {
     hostname: 'payments.test.evan.network',
@@ -308,7 +309,7 @@ describe('DigitalTwin', function test() {
             containerContract,
             'contractDescription',
           );
-          containerEntries = await (twin as any).getContainerEntryHashes( // sshhh
+          containerEntries = await (twin as any).getContainerEntryHashes(
             containerContract,
             containerDescriptionHash,
           );
@@ -367,7 +368,7 @@ describe('DigitalTwin', function test() {
       );
       const twinAuthority = await localRuntime.executor.executeContractCall(
         twinContract,
-        'owner',
+        'authority',
       );
 
       const twinIdentityOwnerPromise = localRuntime.verifications.getOwnerAddressForIdentity(
@@ -469,7 +470,7 @@ describe('DigitalTwin', function test() {
       );
       const twinAuthority = await localRuntime.executor.executeContractCall(
         twinContract,
-        'owner',
+        'authority',
       );
 
       const twinIdentityOwnerPromise = localRuntime.verifications.getOwnerAddressForIdentity(
@@ -594,6 +595,20 @@ describe('DigitalTwin', function test() {
       expect(plugin1.template.properties.dataset1.value).to.be.eq(undefined);
       expect(plugin1.template.properties.dataset2.value.prop1).to.be.eq('test value 1');
       expect(plugin1.template.properties.dataset2.value.prop2).to.be.eq('test value 2');
+    });
+
+    it('should throw if invalid plugin is applied', async () => {
+      const brokenTemplate: DigitalTwinTemplate = JSON.parse(JSON.stringify(twinTemplate));
+      brokenTemplate.plugins.plugin1.template.properties.dataset1.dataSchema.properties
+        .prop1.type = 'text';
+      const createPromise = DigitalTwin.create(runtime, {
+        ...defaultConfig,
+        ...brokenTemplate,
+      });
+
+      await expect(createPromise).to.be.rejectedWith(
+        /^validation of plugin "plugin1" description failed with/,
+      );
     });
   });
 
