@@ -50,7 +50,7 @@ describe('DID Resolver', function test() {
   });
 
   describe('when storing did documents for account identities', async () => {
-    it('allows to store a DID document for the own identity', async () => {
+    it.only('allows to store a DID document for the own identity', async () => {
       const document = await runtimes[0].did.getDidDocumentTemplate();
       const promise = runtimes[0].did.setDidDocument(accounts0Did, document);
       await expect(promise).not.to.be.rejected;

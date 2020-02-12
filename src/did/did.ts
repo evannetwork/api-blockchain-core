@@ -216,6 +216,7 @@ export class Did extends Logger {
   public async getDidDocumentTemplate(
     did?: string, controllerDid?: string, authenticationKey?: string,
   ): Promise<DidDocumentTemplate> {
+    const now = new Date(Date.now()).toISOString();
     if (did && controllerDid && authenticationKey) {
       // use given key to create a contract DID document
       return JSON.parse(`{
@@ -274,6 +275,20 @@ export class Did extends Logger {
     const identity = this.padIdentity(did
       ? await this.convertDidToIdentity(did)
       : this.options.signerIdentity.activeIdentity);
+
+    const newDoc = document;
+
+    const now = (new Date(Date.now())).toISOString();
+    // Only set 'created' for new did documents
+    if (await this.didDocumentWasNeverSet(did)) {
+      newDoc.created = now;
+    } else if (!document.created) {
+      throw Error('DID documents must provide a \'created\' field');
+    }
+
+    newDoc.updated = now;
+    newDoc.proof = await this.createProofForDid(document, DidProofType.EcdsaPublicKeySecp256k1);
+
     const documentHash = await this.options.dfs.add(
       'did-document', Buffer.from(JSON.stringify(document), 'utf8'),
     );
@@ -349,8 +364,7 @@ export class Did extends Logger {
     const signer = didJWT.SimpleSigner(
       await this.options.accountStore.getPrivateKey(this.options.signerIdentity.underlyingAccount),
     );
-    let jwt = '';
-    await didJWT.createJWT(
+    const jwt = await didJWT.createJWT(
       {
         didDocument,
       }, {
@@ -358,10 +372,11 @@ export class Did extends Logger {
         issuer: didDocument.id,
         signer,
       },
-    ).then((response) => { jwt = response; });
+    );
 
     return jwt;
   }
+
 
   /**
    * Creates a new `VcProof` object for a given VC document, including generating a JWT token over
@@ -375,12 +390,7 @@ export class Did extends Logger {
    */
   private async createProofForDid(didDocument,
     proofType: DidProofType = DidProofType.EcdsaPublicKeySecp256k1): Promise<DidProof> {
-    let issuerIdentity;
-    try {
-      issuerIdentity = await this.convertDidToIdentity(didDocument.id);
-    } catch (e) {
-      throw Error(`Invalid issuer DID: ${didDocument.id}`);
-    }
+    const issuerIdentity = await this.convertDidToIdentity(didDocument.id);
 
     if (this.options.signerIdentity.activeIdentity !== issuerIdentity) {
       throw Error('You are not authorized to issue this Did');
@@ -393,7 +403,7 @@ export class Did extends Logger {
     const key = didDocument.publicKey
       .filter((entry) => entry.publicKeyHex === signaturePublicKey)[0];
     if (!key) {
-      throw Error('The signature key for the active account is not associated to its DID document.');
+      throw Error('The signature key of the active account is not associated to its DID document.');
     }
 
     const proof: DidProof = {
@@ -406,6 +416,27 @@ export class Did extends Logger {
 
     return proof;
   }
+
+  /**
+   * Determines whether a did document has been set before
+   * (relevant for setting 'created' field)
+   * @param did DID to check document status for
+   */
+  private async didDocumentWasNeverSet(did: string): Promise<boolean> {
+    const identity = await this.convertDidToIdentity(did);
+
+    const didHash = await this.options.executor.executeContractCall(
+      await this.getRegistryContract(),
+      'didDocuments',
+      this.padIdentity(identity),
+    );
+
+    if (didHash === nullBytes32) {
+      return true;
+    }
+    return false;
+  }
+
 
   /**
    * Retrieve a default DID document for identities that do not have a document associated yet.

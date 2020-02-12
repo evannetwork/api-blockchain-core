@@ -422,8 +422,8 @@ export class Vc extends Logger {
     const signer = didJWT.SimpleSigner(
       await this.options.accountStore.getPrivateKey(this.options.signerIdentity.underlyingAccount),
     );
-    let jwt = '';
-    await didJWT.createJWT(
+
+    const jwt = await didJWT.createJWT(
       {
         vc,
         exp: vc.validUntil,
@@ -432,7 +432,7 @@ export class Vc extends Logger {
         issuer: vc.issuer.id,
         signer,
       },
-    ).then((response) => { jwt = response; });
+    );
 
     return jwt;
   }
@@ -509,7 +509,7 @@ export class Vc extends Logger {
     const key = doc.publicKey.filter((entry) => entry.publicKeyHex === signaturePublicKey)[0];
 
     if (!key) {
-      throw Error('The signature key for the active account is not associated to its DID document. Cannot sign VC.');
+      throw Error('The signature key of the active account is not associated to its DID document. Cannot sign VC.');
     }
 
     return key.id;

@@ -20,10 +20,7 @@
 import 'mocha';
 import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
-import {
-  Executor,
-  Ipfs,
-} from '@evan.network/dbcp';
+import { Ipfs } from '../../dfs/ipfs';
 
 import { accounts } from '../../test/accounts';
 import { configTestcore as config } from '../../config-testcore';
@@ -38,6 +35,7 @@ import {
   DigitalTwinOptions,
   DigitalTwinVerificationEntry,
 } from './digital-twin';
+import { Executor } from '../..';
 
 
 use(chaiAsPromised);
