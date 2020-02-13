@@ -18,6 +18,7 @@ module.exports =  {
     // note you must disable the base rule as it can report incorrect errors
     '@typescript-eslint/indent': ['error', 2],
     '@typescript-eslint/explicit-function-return-type': ['off'],
+    '@typescript-eslint/member-ordering': ['error'],
     '@typescript-eslint/no-explicit-any': ['off'],
     '@typescript-eslint/no-unused-expressions': ['off'],
     'chai-friendly/no-unused-expressions': ['error'],
@@ -26,6 +27,6 @@ module.exports =  {
     // exclude cycle dependencies
     'import/no-cycle': ['off'],
     'no-await-in-loop': ['off'],
-    'no-restricted-syntax': ['off']
+    'no-restricted-syntax': ['off'],
    },
 };

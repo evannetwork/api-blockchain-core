@@ -47,6 +47,8 @@ Parameters
     * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
     * ``logLogLevel`` - |source logLevel|_ (optional): messages with this level will be pushed to ``logLog``
+#. ``config`` - ``DidConfig`` (optional): description, defaults to ``123``
+    * ``registryAddress`` - ``string`` (optional): contract address or ENS name for `DidRegistry`
 
 -------
 Returns
@@ -376,11 +378,9 @@ Example
   //   "publicKey": [
   //     {
   //       "id": "did:evan:testcore:0x126E901F6F408f5E260d95c62E7c73D9B60fd734#key-1",
-  //       "type": [
-  //         "Secp256k1SignatureVerificationKey2018",
-  //         "ERC725ManagementKey"
-  //       ],
-  //       "publicKeyHex": "045adfd502c0bc55f4fcb90eea36368d7e19c5b3045aa6f51dfa3699046e9751251d21bc6bdd06c1ff0014fcbbf9f1d83c714434f2b33d713aaf46760f2d53f10d"
+  //       "type": "Secp256k1VerificationKey2018",
+  //       "owner": "did:evan:testcore:0x126E901F6F408f5E260d95c62E7c73D9B60fd734",
+  //       "ethereumAddress": "0x126E901F6F408f5E260d95c62E7c73D9B60fd734"
   //     }
   //   ],
   //   "authentication": [

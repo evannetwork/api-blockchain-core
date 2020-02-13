@@ -65,6 +65,11 @@ export interface OnboardingOptions extends LoggerOptions {
 export class Onboarding extends Logger {
   public options: OnboardingOptions;
 
+  public constructor(optionsInput: OnboardingOptions) {
+    super(optionsInput);
+    this.options = optionsInput;
+  }
+
   /**
    * creates a new random mnemonic
    */
@@ -172,7 +177,7 @@ export class Onboarding extends Logger {
       },
     };
     const descriptionHash = await runtime.dfs.add(
-      'description', Buffer.from(JSON.stringify(description), 'binary'),
+      'description', Buffer.from(JSON.stringify(description), 'utf8'),
     );
 
     const factory = runtime.contractLoader.loadContract(
@@ -436,6 +441,7 @@ export class Onboarding extends Logger {
 
     profile.ipld.originator = runtime.web3.utils.soliditySha3(targetAccount);
     profile.activeAccount = targetAccount;
+    profile.profileOwner = targetAccount;
 
     // eslint-disable-next-line
     runtime.keyProvider.keys[targetAccountHash] = dataKey;
@@ -598,8 +604,11 @@ export class Onboarding extends Logger {
    * @param runtime Runtime object
    * @param accountId Account ID of the identity's owner
    */
-  private static async createOfflineDidTransaction(runtime: any, account: string, identity: string):
-  Promise<[VerificationsDelegationInfo, string]> {
+  private static async createOfflineDidTransaction(
+    runtime: any,
+    account: string,
+    identity: string,
+  ): Promise<[VerificationsDelegationInfo, string]> {
     const underlyingSigner = new SignerInternal({
       accountStore: runtime.accountStore,
       contractLoader: runtime.contractLoader,
@@ -616,6 +625,16 @@ export class Onboarding extends Logger {
       underlyingAccount: account,
       underlyingSigner,
     });
+
+    if (runtime.activeAccount !== runtime.activeIdentity) {
+      runtime.verifications.options.executor.signer.updateConfig({
+        verifications: runtime.verifications,
+      }, {
+        activeIdentity: identity,
+        underlyingAccount: account,
+        underlyingSigner,
+      });
+    }
 
     const did = new Did({
       accountStore: runtime.accountStore,
@@ -661,11 +680,6 @@ export class Onboarding extends Logger {
       return port;
     }
     return 443;
-  }
-
-  public constructor(optionsInput: OnboardingOptions) {
-    super(optionsInput);
-    this.options = optionsInput;
   }
 
   /**

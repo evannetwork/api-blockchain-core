@@ -23,10 +23,8 @@ import { expect, use } from 'chai';
 import { promisify } from 'util';
 import { readFile } from 'fs';
 import { Executor } from '../..';
-import { Ipfs } from '../../dfs/ipfs';
-
-
 import { accounts } from '../../test/accounts';
+import { Ipfs } from '../../dfs/ipfs';
 import { TestUtils } from '../../test/test-utils';
 import { VerificationsStatus } from '../../verifications/verifications';
 import {

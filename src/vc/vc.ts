@@ -60,9 +60,10 @@ export interface VcCredentialStatus {
  */
 export interface VcCredentialSubject {
   id: string;
-  data?: VcCredentialSubjectPayload[];
-  description?: string;
+  data?: any;
+  description?: any;
   uri?: string;
+  name?: string;
 }
 
 /**
@@ -456,7 +457,7 @@ export class Vc extends Logger {
       throw Error(`Invalid issuer DID: ${vc.issuer.id}`);
     }
 
-    if (this.options.signerIdentity.activeIdentity !== issuerIdentity) {
+    if (this.options.signerIdentity.activeIdentity.toLowerCase() !== issuerIdentity) {
       throw Error('You are not authorized to issue this VC');
     }
 
@@ -506,7 +507,11 @@ export class Vc extends Logger {
         + 'does not provide authentication material. Cannot sign VC.');
     }
 
-    const key = doc.publicKey.filter((entry) => entry.publicKeyHex === signaturePublicKey)[0];
+    const key = doc.publicKey.filter(
+      (entry) => entry.ethereumAddress
+        === this.options.signerIdentity.underlyingAccount.toLowerCase()
+        || entry.publicKeyHex === signaturePublicKey,
+    )[0];
 
     if (!key) {
       throw Error('The signature key of the active account is not associated to its DID document. Cannot sign VC.');

@@ -54,15 +54,15 @@ export class AesBlob extends Logger implements Cryptor {
     algorithm: 'aes-blob',
   };
 
-  private readonly encodingUnencrypted = 'utf-8';
-
-  private readonly encodingEncrypted = 'hex';
+  public algorithm: string;
 
   public options: any;
 
-  public algorithm: string;
-
   public webCryptoAlgo: string;
+
+  private readonly encodingUnencrypted = 'utf-8';
+
+  private readonly encodingEncrypted = 'hex';
 
   public constructor(options?: AesBlobOptions) {
     super(options);

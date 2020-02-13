@@ -86,22 +86,6 @@ export class Ipld extends Logger {
 
   private readonly encodingEncrypted = 'hex';
 
-  /**
-   * remove all cryptoInfos from tree
-   *
-   * @param      {any}     toPurge  tree to purge
-   */
-  public static purgeCryptoInfo(toPurge: any): void {
-    Object.keys(toPurge).forEach((key) => {
-      if (key === 'cryptoInfo') {
-        // eslint-disable-next-line no-param-reassign
-        delete toPurge.cryptoInfo;
-      } else if (typeof toPurge[key] === 'object' && toPurge[key] !== null) {
-        this.purgeCryptoInfo(toPurge[key]);
-      }
-    });
-  }
-
   public constructor(options: IpldOptions) {
     super(options);
     this.ipfs = options.ipfs;
@@ -182,6 +166,22 @@ export class Ipld extends Logger {
         timeout,
       ]);
     };
+  }
+
+  /**
+   * remove all cryptoInfos from tree
+   *
+   * @param      {any}     toPurge  tree to purge
+   */
+  public static purgeCryptoInfo(toPurge: any): void {
+    Object.keys(toPurge).forEach((key) => {
+      if (key === 'cryptoInfo') {
+        // eslint-disable-next-line no-param-reassign
+        delete toPurge.cryptoInfo;
+      } else if (typeof toPurge[key] === 'object' && toPurge[key] !== null) {
+        this.purgeCryptoInfo(toPurge[key]);
+      }
+    });
   }
 
   /**
