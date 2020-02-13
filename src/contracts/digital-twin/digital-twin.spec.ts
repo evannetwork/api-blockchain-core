@@ -386,21 +386,14 @@ describe('DigitalTwin', function test() {
       expect(twinAuthority).to.equal(nullAddress);
       expect(twinDescriptionHash).to.equal(nullBytes32);
 
-      // Check if did registry points to 0x0
-      // Directly access the registry to be independent of DID api implementation
+      // Check if did has been deactivated
       const did = await TestUtils.getDid(
         localRuntime.web3,
         localRuntime.activeAccount,
         localRuntime.dfs,
       );
-      const didContract = await (did as any).getRegistryContract();
-      const didDocumentHash = await runtime.executor.executeContractCall(
-        didContract,
-        'didDocuments',
-        (did as any).padIdentity(twinIdentity),
-      );
-
-      expect(didDocumentHash).to.eq(nullBytes32);
+      const twinDid = await did.convertIdentityToDid(twinIdentity);
+      expect(did.didIsDeactivated(twinDid)).to.eventually.be.true;
 
       // Check if all pinned hashes have been unpinned
       const pinnedHashesAfterDeactivation = await getPinnedFileHashes();
@@ -495,21 +488,14 @@ describe('DigitalTwin', function test() {
       expect(twinAuthority).to.equal(nullAddress);
       expect(twinDescriptionHash).to.equal(nullBytes32);
 
-      // Check if did registry points to 0x0
-      // Directly access the registry to be independent of DID api implementation
+      // Check if did has been deactivated
       const did = await TestUtils.getDid(
         localRuntime.web3,
         localRuntime.activeAccount,
         localRuntime.dfs,
       );
-      const didContract = await (did as any).getRegistryContract();
-      const didDocumentHash = await runtime.executor.executeContractCall(
-        didContract,
-        'didDocuments',
-        (did as any).padIdentity(twinIdentity),
-      );
-
-      expect(didDocumentHash).to.eq(nullBytes32);
+      const twinDid = await did.convertIdentityToDid(twinIdentity);
+      expect(did.didIsDeactivated(twinDid)).to.eventually.be.true;
     });
   });
 
