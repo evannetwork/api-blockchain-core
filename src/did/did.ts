@@ -46,7 +46,7 @@ const didRegEx = /^did:evan:(?:(testcore|core):)?(0x(?:[0-9a-fA-F]{40}|[0-9a-fA-
 export interface DidDocumentTemplate {
   '@context': string;
   id: string;
-  controller: string;
+  controller?: string;
   authentication: {
     type: string;
     publicKey: string;
