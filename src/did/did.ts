@@ -170,8 +170,8 @@ export class Did extends Logger {
     const groups = await this.validateDidAndGetSections(did);
     const [, didEnvironment = 'core', identity] = groups;
     const environment = await this.getEnvironment();
-    if ((environment === 'testcore' && didEnvironment !== 'testcore')
-        || (environment === 'core' && didEnvironment !== 'core')) {
+    if ((environment.toLocaleLowerCase() === 'testcore' && didEnvironment.toLocaleLowerCase() !== 'testcore')
+        || (environment.toLocaleLowerCase() === 'core' && didEnvironment.toLocaleLowerCase() !== 'core')) {
       throw new Error(`DIDs environment "${environment} does not match ${didEnvironment}`);
     }
 
@@ -464,10 +464,12 @@ export class Did extends Logger {
 
     let keys;
     let proofIssuer;
-    if (this.options.signerIdentity.activeIdentity === issuerIdentity) {
+    if (this.options.signerIdentity.activeIdentity.toLocaleLowerCase()
+    === issuerIdentity.toLocaleLowerCase()) {
       keys = didDocument.publicKey;
       proofIssuer = didDocument.id;
-    } else if (this.options.signerIdentity.activeIdentity === controllerIdentity) {
+    } else if (this.options.signerIdentity.activeIdentity.toLocaleLowerCase()
+    === controllerIdentity.toLocaleLowerCase()) {
       const controllerDidDoc = await this.getDidDocument(didDocument.controller);
       keys = controllerDidDoc.publicKey;
       proofIssuer = didDocument.controller;
@@ -475,10 +477,8 @@ export class Did extends Logger {
       throw Error('You are not authorized to issue this Did');
     }
 
-    const signaturePublicKey = await this.options.signerIdentity.getPublicKey(
-      this.options.signerIdentity.underlyingAccount,
-    );
-    const key = keys.filter((entry) => entry.publicKeyHex === signaturePublicKey)[0];
+    const key = keys.filter((entry) => entry.ethereumAddress.toLocaleLowerCase()
+      === this.options.signerIdentity.underlyingAccount.toLocaleLowerCase())[0];
     if (!key) {
       throw Error('The signature key of the active account is not associated to its DID document.');
     }
@@ -551,7 +551,8 @@ export class Did extends Logger {
    */
   private async getDidInfix(): Promise<string> {
     if (typeof this.cached.didInfix === 'undefined') {
-      this.cached.didInfix = (await this.getEnvironment()) === 'testcore' ? 'testcore:' : '';
+      this.cached.didInfix = (await this.getEnvironment()).toLocaleLowerCase()
+        === 'testcore' ? 'testcore:' : '';
     }
     return this.cached.didInfix;
   }
@@ -664,7 +665,7 @@ export class Did extends Logger {
     // Mock the did-resolver package that did-jwt usually requires
     const getResolver = (didModule) => ({
       async resolve(did) {
-        if (did === document.id) {
+        if (did.toLowerCase() === document.id.toLowerCase()) {
           return document; // Avoid JWT cycling through documents forever
         }
         return didModule.getDidDocument(document.controller);
