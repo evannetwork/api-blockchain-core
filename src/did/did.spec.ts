@@ -21,7 +21,7 @@ import 'mocha';
 import * as chaiAsPromised from 'chai-as-promised';
 import * as _ from 'lodash';
 import { expect, use } from 'chai';
-import { Did } from './did';
+import { Did, DidProofType } from './did';
 import { SignerIdentity } from '../contracts/signer-identity';
 import { TestUtils } from '../test/test-utils';
 import { accounts } from '../test/accounts';
@@ -30,7 +30,6 @@ import {
   DigitalTwinOptions,
   Runtime,
 } from '../index';
-import { DidProofType } from './did';
 
 
 use(chaiAsPromised);
@@ -56,6 +55,7 @@ describe('DID Resolver', function test() {
       'DidRegistry', [], { from: accounts[2], gas: 1_000_000 },
     );
     const options0 = (({
+      accountStore,
       contractLoader,
       dfs,
       executor,
@@ -64,6 +64,7 @@ describe('DID Resolver', function test() {
       verifications,
       web3,
     }) => ({
+      accountStore,
       contractLoader,
       dfs,
       executor,
@@ -74,6 +75,7 @@ describe('DID Resolver', function test() {
     }))(runtimes[0]);
     runtimes[0].did = new Did(options0, { registryAddress: registry.options.address });
     const options1 = (({
+      accountStore,
       contractLoader,
       dfs,
       executor,
@@ -82,6 +84,7 @@ describe('DID Resolver', function test() {
       verifications,
       web3,
     }) => ({
+      accountStore,
       contractLoader,
       dfs,
       executor,

@@ -343,19 +343,6 @@ export class Did extends Logger {
     return [txInfo, documentHash];
   }
 
-  private async setAdditionalProperties(document: any): Promise<any> {
-    const clone = _.cloneDeep(document);
-    const now = (new Date(Date.now())).toISOString();
-    // Only set 'created' for new did documents
-    if (!document.created) {
-      clone.created = now;
-    }
-
-    clone.updated = now;
-    clone.proof = await this.createProofForDid(clone, DidProofType.EcdsaPublicKeySecp256k1);
-
-    return clone;
-  }
 
   /**
    * Sets service in DID document.
@@ -591,6 +578,21 @@ export class Did extends Logger {
     }
     return cleanedResult;
   }
+
+  private async setAdditionalProperties(document: any): Promise<any> {
+    const clone = _.cloneDeep(document);
+    const now = (new Date(Date.now())).toISOString();
+    // Only set 'created' for new did documents
+    if (!document.created) {
+      clone.created = now;
+    }
+
+    clone.updated = now;
+    clone.proof = await this.createProofForDid(clone, DidProofType.EcdsaPublicKeySecp256k1);
+
+    return clone;
+  }
+
 
   /**
    * Validates if a given DID is a valid evan DID and returns its parts.

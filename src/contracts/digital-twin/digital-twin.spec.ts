@@ -35,7 +35,7 @@ import {
   DigitalTwinTemplate,
   DigitalTwinVerificationEntry,
 } from './digital-twin';
-import { Executor } from '../..';
+import { Executor, SignerInternal } from '../..';
 import {
   nullAddress,
   nullBytes32,
