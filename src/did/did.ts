@@ -18,7 +18,7 @@
 */
 
 import * as didJWT from 'did-jwt';
-
+import * as _ from 'lodash';
 import {
   AccountStore,
   ContractLoader,
@@ -27,7 +27,6 @@ import {
   Logger,
   LoggerOptions,
 } from '@evan.network/dbcp';
-
 import {
   getEnvironment,
   nullBytes32,
@@ -40,12 +39,14 @@ import { VerificationsDelegationInfo, Verifications } from '../verifications/ver
 
 const didRegEx = /^did:evan:(?:(testcore|core):)?(0x(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64}))$/;
 
+
 /**
  * template for a new DID document, can be used as a starting point for building own documents
  */
 export interface DidDocumentTemplate {
   '@context': string;
   id: string;
+  controller: string;
   authentication: {
     type: string;
     publicKey: string;
@@ -176,6 +177,7 @@ export class Did extends Logger {
    *
    * @param      {string}  did     DID to fetch DID document for
    * @return     {Promise<any>}    a DID document that MAY resemble `DidDocumentTemplate` format
+   * @throws                       if a DID document contains an invalid proof
    */
   public async getDidDocument(did: string): Promise<any> {
     let result = null;
@@ -195,6 +197,9 @@ export class Did extends Logger {
     result = JSON.parse(await this.options.dfs.get(documentHash) as any);
     result = await this.removePublicKeyTypeArray(result);
 
+    if (result.proof) {
+      await this.validateProof(result);
+    }
     return result;
   }
 
@@ -216,8 +221,9 @@ export class Did extends Logger {
   public async getDidDocumentTemplate(
     did?: string, controllerDid?: string, authenticationKey?: string,
   ): Promise<DidDocumentTemplate> {
-    const now = new Date(Date.now()).toISOString();
     if (did && controllerDid && authenticationKey) {
+      await this.validateDid(did);
+      await this.validateDid(controllerDid);
       // use given key to create a contract DID document
       return JSON.parse(`{
         "@context": "https://w3id.org/did/v1",
@@ -268,7 +274,7 @@ export class Did extends Logger {
    * @param      {string}  did       DID to store DID document for
    * @param      {any}     document  DID document to store
    * @param      {VerificationDelegationInfo} txInfo Optional. If given, the transaction
-   *    is executed on behalf of the tx signer.
+   *                                 is executed on behalf of the tx signer.
    * @return     {Promise<void>}  resolved when done
    */
   public async setDidDocument(did: string, document: any): Promise<void> {
@@ -276,21 +282,10 @@ export class Did extends Logger {
       ? await this.convertDidToIdentity(did)
       : this.options.signerIdentity.activeIdentity);
 
-    const newDoc = document;
-
-    const now = (new Date(Date.now())).toISOString();
-    // Only set 'created' for new did documents
-    if (await this.didDocumentWasNeverSet(did)) {
-      newDoc.created = now;
-    } else if (!document.created) {
-      throw Error('DID documents must provide a \'created\' field');
-    }
-
-    newDoc.updated = now;
-    newDoc.proof = await this.createProofForDid(document, DidProofType.EcdsaPublicKeySecp256k1);
-
+    const finalDoc = await this.setAdditionalProperties(document);
     const documentHash = await this.options.dfs.add(
-      'did-document', Buffer.from(JSON.stringify(document), 'utf8'),
+      'did-document',
+      Buffer.from(JSON.stringify(finalDoc), 'utf8'),
     );
     await this.options.executor.executeContractTransaction(
       await this.getRegistryContract(),
@@ -314,8 +309,12 @@ export class Did extends Logger {
     const identity = this.padIdentity(did
       ? await this.convertDidToIdentity(did)
       : this.options.signerIdentity.activeIdentity);
+
+    const finalDoc = await this.setAdditionalProperties(document);
+
     const documentHash = await this.options.dfs.add(
-      'did-document', Buffer.from(JSON.stringify(document), 'utf8'),
+      'did-document',
+      Buffer.from(JSON.stringify(finalDoc), 'utf8'),
     );
 
     const txInfo = await this.options.verifications.signTransaction(
@@ -327,6 +326,20 @@ export class Did extends Logger {
     );
 
     return [txInfo, documentHash];
+  }
+
+  private async setAdditionalProperties(document: any): Promise<any> {
+    const clone = _.cloneDeep(document);
+    const now = (new Date(Date.now())).toISOString();
+    // Only set 'created' for new did documents
+    if (!document.created) {
+      clone.created = now;
+    }
+
+    clone.updated = now;
+    clone.proof = await this.createProofForDid(clone, DidProofType.EcdsaPublicKeySecp256k1);
+
+    return clone;
   }
 
   /**
@@ -357,10 +370,12 @@ export class Did extends Logger {
   /**
    * Create a JWT over a DID document
    *
-   * @param      {didDocument}   DID         The DID document
+   * @param      {didDocument}   DID        The DID document
+   * @param      {string}        proofIssuer     The issuer (key owner) of the proof
    * @param      {DidProofType}  proofType  The type of algorithm used for generating the JWT
    */
-  private async createJwtForDid(didDocument, proofType: DidProofType): Promise<string> {
+  private async createJwtForDid(didDocument: any, proofIssuer: string, proofType: DidProofType):
+  Promise<string> {
     const signer = didJWT.SimpleSigner(
       await this.options.accountStore.getPrivateKey(this.options.signerIdentity.underlyingAccount),
     );
@@ -369,7 +384,7 @@ export class Did extends Logger {
         didDocument,
       }, {
         alg: JWTProofMapping[proofType],
-        issuer: didDocument.id,
+        issuer: proofIssuer,
         signer,
       },
     );
@@ -391,21 +406,32 @@ export class Did extends Logger {
   private async createProofForDid(didDocument,
     proofType: DidProofType = DidProofType.EcdsaPublicKeySecp256k1): Promise<DidProof> {
     const issuerIdentity = await this.convertDidToIdentity(didDocument.id);
+    const controllerIdentity = didDocument.controller
+      ? await this.convertDidToIdentity(didDocument.controller)
+      : '';
 
-    if (this.options.signerIdentity.activeIdentity !== issuerIdentity) {
+    let keys;
+    let proofIssuer;
+    if (this.options.signerIdentity.activeIdentity === issuerIdentity) {
+      keys = didDocument.publicKey;
+      proofIssuer = didDocument.id;
+    } else if (this.options.signerIdentity.activeIdentity === controllerIdentity) {
+      const controllerDidDoc = await this.getDidDocument(didDocument.controller);
+      keys = controllerDidDoc.publicKey;
+      proofIssuer = didDocument.controller;
+    } else {
       throw Error('You are not authorized to issue this Did');
     }
 
-    const jwt = await this.createJwtForDid(didDocument, proofType);
     const signaturePublicKey = await this.options.signerIdentity.getPublicKey(
       this.options.signerIdentity.underlyingAccount,
     );
-    const key = didDocument.publicKey
-      .filter((entry) => entry.publicKeyHex === signaturePublicKey)[0];
+    const key = keys.filter((entry) => entry.publicKeyHex === signaturePublicKey)[0];
     if (!key) {
       throw Error('The signature key of the active account is not associated to its DID document.');
     }
 
+    const jwt = await this.createJwtForDid(didDocument, proofIssuer, proofType);
     const proof: DidProof = {
       type: `${proofType}`,
       created: new Date(Date.now()).toISOString(),
@@ -416,27 +442,6 @@ export class Did extends Logger {
 
     return proof;
   }
-
-  /**
-   * Determines whether a did document has been set before
-   * (relevant for setting 'created' field)
-   * @param did DID to check document status for
-   */
-  private async didDocumentWasNeverSet(did: string): Promise<boolean> {
-    const identity = await this.convertDidToIdentity(did);
-
-    const didHash = await this.options.executor.executeContractCall(
-      await this.getRegistryContract(),
-      'didDocuments',
-      this.padIdentity(identity),
-    );
-
-    if (didHash === nullBytes32) {
-      return true;
-    }
-    return false;
-  }
-
 
   /**
    * Retrieve a default DID document for identities that do not have a document associated yet.
@@ -564,5 +569,47 @@ export class Did extends Logger {
       throw new Error(`Given did ("${did}") is no valid evan DID`);
     }
     return groups;
+  }
+
+  /**
+   * Validates the JWS of a VC Document proof
+   *
+   * @param      {VcDocument}    document  The VC Document
+   * @returns    {Promise<void>}           Resolves when done
+   */
+  private async validateProof(document: any): Promise<void> {
+    // Mock the did-resolver package that did-jwt usually requires
+    const getResolver = (didModule) => ({
+      async resolve(did) {
+        if (did === document.id) {
+          return document; // Avoid JWT cycling through documents forever
+        }
+        return didModule.getDidDocument(document.controller);
+      },
+    });
+
+    // fails if invalid signature
+    const verifiedSignature = await didJWT.verifyJWT(
+      document.proof.jws,
+      { resolver: getResolver(this) },
+    );
+
+    // fails if signed payload and the VC differ
+    const payload = {
+      ...verifiedSignature.payload.didDocument,
+    };
+    delete payload.proof;
+    const prooflessDocument = {
+      ...document,
+    };
+    delete prooflessDocument.proof;
+
+    const proofPayloadHash = await this.options.nameResolver.soliditySha3(JSON.stringify(payload));
+    const documentHash = await this.options.nameResolver.soliditySha3(
+      JSON.stringify(prooflessDocument),
+    );
+    if (proofPayloadHash !== documentHash) {
+      throw Error('Invalid proof. Signed payload does not match given document.');
+    }
   }
 }
