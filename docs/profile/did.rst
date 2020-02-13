@@ -85,7 +85,10 @@ setDidDocument
 
   did.setDidDocument(did, document);
 
-Store given DID document for given DID.
+Store given DID document for given DID. If the document misses the property `created`, it will automatically
+be appended. The `updated` property will be updated accordingly.
+A proof over the DID document will be generated automatically
+and appended to the document.
 
 ----------
 Parameters
@@ -124,7 +127,8 @@ getDidDocument
 
   did.getDidDocument([did]);
 
-Get DID document for given DID.
+Get DID document for given DID. If the DID has a proof property, `getDidDocument` will attempt to validate the proof
+and throw an error if the proof is invalid.
 
 ----------
 Parameters
