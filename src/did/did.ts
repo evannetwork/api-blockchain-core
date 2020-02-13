@@ -457,19 +457,18 @@ export class Did extends Logger {
    */
   private async createProofForDid(didDocument,
     proofType: DidProofType = DidProofType.EcdsaPublicKeySecp256k1): Promise<DidProof> {
-    const issuerIdentity = await this.convertDidToIdentity(didDocument.id);
+    const issuerIdentity = (await this.convertDidToIdentity(didDocument.id)).toLocaleLowerCase();
+    const activeIdentity = this.options.signerIdentity.activeIdentity.toLocaleLowerCase();
     const controllerIdentity = didDocument.controller
-      ? await this.convertDidToIdentity(didDocument.controller)
+      ? (await this.convertDidToIdentity(didDocument.controller)).toLocaleLowerCase()
       : '';
 
     let keys;
     let proofIssuer;
-    if (this.options.signerIdentity.activeIdentity.toLocaleLowerCase()
-    === issuerIdentity.toLocaleLowerCase()) {
+    if (activeIdentity === issuerIdentity) {
       keys = didDocument.publicKey;
       proofIssuer = didDocument.id;
-    } else if (this.options.signerIdentity.activeIdentity.toLocaleLowerCase()
-    === controllerIdentity.toLocaleLowerCase()) {
+    } else if (activeIdentity === controllerIdentity) {
       const controllerDidDoc = await this.getDidDocument(didDocument.controller);
       keys = controllerDidDoc.publicKey;
       proofIssuer = didDocument.controller;
