@@ -473,7 +473,7 @@ export class DigitalTwin extends Logger {
     // Handle accounts with missing DIDs for migration
     if (this.options.did) {
       const twinDid = await this.options.did.convertIdentityToDid(description.identity);
-      await this.options.did.removeDidDocument(twinDid);
+      await this.options.did.deactivateDidDocument(twinDid);
     }
 
     // Deactivate identity
