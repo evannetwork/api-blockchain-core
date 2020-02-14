@@ -15,6 +15,9 @@ Sharing
    * - Examples
      - `sharing.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/sharing.spec.ts>`_
 
+.. _Sharing_example:
+
+
 For getting a better understanding about how Sharings and Multikeys work, have a look at `Security <https://evannetwork.github.io/docs/developers/concepts/sharings.html>`_ in the evan.network wiki.
 
 Following is a sample for a sharing info with these properties:
@@ -36,12 +39,17 @@ Following is a sample for a sharing info with these properties:
   * ``secret area`` - available for all members
   * ``super secret area`` - available for ``0x03``
 
+Keep in mind, that an actual sharings object only stores the sha3-hashes of every property. For example, sharings for the user `0x01` were actually to be found
+at the property `"0x5fe7f977e71dba2ea1a68e21057beebb9be2ac30c6410aa38d4f3fbe41dcffd2"`.
+For the sake of understanding, the following sample uses clear text properties. For an example of an actual sharings object, please refer to the :ref:`getSharings <sharing_getSharings>`
+example section.
+
 .. code-block:: typescript
 
   {
     "0x01": {
-      "82745": {
-        "*": {
+      "*": {
+        "82745": {
           "private": "secret for 0x01, starting from block 82745 for all data",
           "cryptoInfo": {
             "originator": "0x01,0x01",
@@ -50,16 +58,18 @@ Following is a sample for a sharing info with these properties:
           }
         }
       },
-      "90000": {
-        "secret area": {
+      "secret area": {
+        "90000": {
           "private": "secret for 0x01, starting from block 90000 for 'secret area'",
           "cryptoInfo": {
             "originator": "0x01,0x01",
             "keyLength": 256,
             "algorithm": "aes-256-cbc"
           }
-        },
-        "super secret area": {
+        }
+      },
+      "super secret area": {
+        "90000": {
           "private": "secret for 0x01, starting from block 90000 for 'super secret area'",
           "cryptoInfo": {
             "originator": "0x01,0x01",
@@ -70,8 +80,8 @@ Following is a sample for a sharing info with these properties:
       }
     },
     "0x02": {
-      "82745": {
-        "*": {
+      "*": {
+        "82745": {
           "private": "secret for 0x02, starting from block 82745 for all data",
           "cryptoInfo": {
             "originator": "0x01,0x02",
@@ -80,17 +90,9 @@ Following is a sample for a sharing info with these properties:
           }
         }
       },
-      "90000": {
-        "secret area": {
+      "secret area": {
+        "90000": {
           "private": "secret for 0x02, starting from block 90000 for 'secret area'",
-          "cryptoInfo": {
-            "originator": "0x01,0x02",
-            "keyLength": 256,
-            "algorithm": "aes-256-cbc"
-          }
-        },
-        "super secret area": {
-          "private": "secret for 0x02, starting from block 90000 for 'super secret area'",
           "cryptoInfo": {
             "originator": "0x01,0x02",
             "keyLength": 256,
@@ -98,10 +100,20 @@ Following is a sample for a sharing info with these properties:
           }
         }
       },
+      "super secret area": {
+        "90000": {
+          "private": "secret for 0x02, starting from block 90000 for 'super secret area'",
+          "cryptoInfo": {
+            "originator": "0x01,0x02",
+            "keyLength": 256,
+            "algorithm": "aes-256-cbc"
+          }
+        }
+      }
     },
     "0x03": {
-      "90000": {
-        "secret area": {
+      "secret area": {
+        "90000": {
           "private": "secret for 0x03, starting from block 90000 for 'secret area'",
           "cryptoInfo": {
             "originator": "0x01,0x03",
@@ -121,7 +133,7 @@ There are two functions to share keys with another user:
 
 - :ref:`extendSharing <sharing_extendSharing>` is used to edit a sharings configuration that has been pulled or "checked out" with :ref:`getSharingsFromContract <sharing_getSharingsFromContract>`. Hash keys have to be shared manually, if required. :ref:`extendSharing <sharing_extendSharing>` make no transaction, so the contract isn't updated - this has to be done with :ref:`saveSharingsToContract <sharing_saveSharingsToContract>`. See function documentation :ref:`below <sharing_extendSharing>` for an example with hash key and storing updates.
 
-Be careful when performing multiple updates to sharings synchronously. As sharings are retrieved as a single file from a smart contract, updated and then saved back to it, doing two or more updates in parallel may overwrite each other and lead to unexpected and most probably undesired results. 
+Be careful when performing multiple updates to sharings synchronously. As sharings are retrieved as a single file from a smart contract, updated and then saved back to it, doing two or more updates in parallel may overwrite each other and lead to unexpected and most probably undesired results.
 
 Perform sharing updates for the same contracts **one after another**, this goes for :ref:`addSharing <sharing_addSharing>` **and** for :ref:`extendSharing <sharing_extendSharing>`. When wishing to speed things up, :ref:`extendSharing <sharing_extendSharing>` can be used, but its updates need to be performed synchronously as well. Keep in mind, that single updates will be made off-chain and therefore be performed much faster than multiple updates with :ref:`addSharing <sharing_addSharing>`.
 
@@ -594,6 +606,8 @@ getSharings
 
 Get sharing from a contract, if _partner, _section, _block matches.
 
+Sharings can also be retrieved using ENS address.
+
 ----------
 Parameters
 ----------
@@ -608,7 +622,7 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``void``: resolved when done
+``Promise`` returns ``any``: sharings as an object. For more details, refer to the :ref:`example at the top of the page <Sharing_example>`.
 
 -------
 Example
@@ -618,7 +632,22 @@ Example
 
   const randomSecret = `super secret; ${Math.random()}`;
   await sharing.addSharing(testAddress, accounts[1], accounts[0], '*', 0, randomSecret);
-  const sharings = await sharing.getSharings(testAddress);
+  await sharing.addSharing(testAddress, accounts[1], accounts[0], 'test', 100, randomSecret);
+  const sharings = await sharing.getSharings(contract.options.address, null, null, null, sharingId);
+  /* Output:
+  {
+  '0x2260228fd705cd9420a07827b8e64e808daba1b6675c3956783cc09fcc56a327': { // sha3(contract owner)
+    '0x04994f67dc55b09e814ab7ffc8df3686b4afb2bb53e60eae97ef043fe03fb829': { hashKey: [Object] },
+    '0x9c22ff5f21f0b81b113e63f7db6da94fedef11b2119b4088b89664fb9a3cb658': { '0': [Object] }, // sha3('test')
+    '0x02016836a56b71f0d02689e69e326f4f4c1b9057164ef592671cf0d37c8040c0': { '0': [Object] } // additional unshared field
+  },
+  '0xb45ce1cd2e464ce53a8102a5f855c112a2a384c36923fe5c6e249c2a9286369e': { // sha3(accounts[1])
+    '0x04994f67dc55b09e814ab7ffc8df3686b4afb2bb53e60eae97ef043fe03fb829': { hashKey: [Object] }, // '*'
+    '0x9c22ff5f21f0b81b113e63f7db6da94fedef11b2119b4088b89664fb9a3cb658': { // sha3('test')
+        '100': [Object] // Valid from block 100
+    }
+  }
+  */
 
 
 
@@ -686,7 +715,9 @@ getSharingsFromContract
 
 Get encrypted sharings from smart contract.
 
-This can be used in combination with :ref:`getSharingsFromContract<sharing_saveSharingsToContract>` to bulk editing sharing info.
+The encrypted sharings are usually used in combination with other functions for purposes of adding, removing, extending sharings etc.
+For Example:
+This can be used in combination with :ref:`saveSharingsToContract<sharing_saveSharingsToContract>` to bulk editing sharing info.
 
 ----------
 Parameters
@@ -699,7 +730,7 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``void``: resolved when done
+``Promise`` returns ``any``: sharings as an object
 
 -------
 Example
@@ -709,6 +740,9 @@ Example
 
   // get sharings (encrypted)
   const sharings = await sharing.getSharingsFromContract(serviceContract, callIdHash);
+  // Output:
+  { '0x6760305476495b089868ae42c2293d5e8c1c7bf9bfe51a9ad85b36d85f4113cb':
+   { '0x04994f67dc55b09e814ab7ffc8df3686b4afb2bb53e60eae97ef043fe03fb829': { hashKey: [Object] } }
 
   // make changes to sharing
   await sharing.extendSharings(sharings, accountId, target, section, 0, contentKeyToShare, null);
