@@ -206,8 +206,7 @@ describe('DID Resolver', function test() {
       );
 
       // Try to retrieve it
-      expect(runtimes[0].did.getDidDocument(accounts0Did))
-        .to.be.eventually.rejectedWith('Invalid proof');
+      await expect(runtimes[0].did.getDidDocument(accounts0Did)).to.be.rejectedWith('Invalid proof');
     });
   });
 
