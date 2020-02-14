@@ -15,7 +15,6 @@
 
 ### Deprecations
 
-
 ## Version 2.17.0
 ### Features
 - add support for identity based accounts to `KeyExchange`, `Sharing` and `Profile` modules
