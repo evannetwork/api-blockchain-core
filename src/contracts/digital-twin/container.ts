@@ -250,6 +250,20 @@ export class Container extends Logger {
   private reservedRoles = 64;
 
   /**
+   * Create new ``Container`` instance. This will not create a smart contract contract but is used
+   * to load existing containers. To create a new contract, use the static ``create`` function.
+   *
+   * @param      {ContainerOptions}  options  runtime for new container
+   * @param      {ContainerConfig}   config   config for new container
+   */
+  public constructor(options: ContainerOptions, config: ContainerConfig) {
+    super(options as LoggerOptions);
+    this.options = options;
+    this.config = config;
+    this.mutexes = {};
+  }
+
+  /**
    * Clone ``Container`` instance into template and creates new ``Container`` with it.
    *
    * @param      {ContainerOptions}  options  runtime for new `Container`
@@ -478,20 +492,6 @@ export class Container extends Logger {
     await profile.setPlugins(plugins);
     await profile.storeForAccount(profile.treeLabels.dtContainerPlugins);
     await profile.loadForAccount(profile.treeLabels.dtContainerPlugins);
-  }
-
-  /**
-   * Create new ``Container`` instance. This will not create a smart contract contract but is used
-   * to load existing containers. To create a new contract, use the static ``create`` function.
-   *
-   * @param      {ContainerOptions}  options  runtime for new container
-   * @param      {ContainerConfig}   config   config for new container
-   */
-  public constructor(options: ContainerOptions, config: ContainerConfig) {
-    super(options as LoggerOptions);
-    this.options = options;
-    this.config = config;
-    this.mutexes = {};
   }
 
   /**
