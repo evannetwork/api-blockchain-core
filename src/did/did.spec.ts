@@ -296,6 +296,103 @@ describe('DID Resolver', function test() {
       const defaultDidDoc = await runtimes[0].did.getDidDocument(twinDid);
       await expect(defaultDidDoc).to.deep.eq(expectedDefaultDid);
     });
+
+    it('allows to deactivate a DID', async () => {
+      const twin = await DigitalTwin.create(
+        runtimes[0] as DigitalTwinOptions,
+        {
+          accountId: runtimes[0].activeAccount,
+          containerConfig: null,
+          description: twinDescription,
+        },
+      );
+
+      const twinIdentity = await runtimes[0].verifications.getIdentityForAccount(
+        await twin.getContractAddress(),
+        true,
+      );
+      const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);
+      await runtimes[0].did.deactivateDidDocument(twinDid);
+
+      const deactivated = await runtimes[0].did.didIsDeactivated(twinDid);
+      expect(deactivated).to.be.true;
+    });
+
+    it('does not allow to deactivate someone else\'s DID', async () => {
+      const twin = await DigitalTwin.create(
+        runtimes[1] as DigitalTwinOptions,
+        {
+          accountId: runtimes[1].activeAccount,
+          containerConfig: null,
+          description: twinDescription,
+        },
+      );
+
+      const twinIdentity = await runtimes[0].verifications.getIdentityForAccount(
+        await twin.getContractAddress(),
+        true,
+      );
+      const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);
+      expect(
+        runtimes[0].did.deactivateDidDocument(twinDid),
+      ).to.eventually.be.rejectedWith('Deactivation failed');
+    });
+
+    it('does not allow to deactivate a DID twice', async () => {
+      const twin = await DigitalTwin.create(
+        runtimes[0] as DigitalTwinOptions,
+        {
+          accountId: runtimes[0].activeAccount,
+          containerConfig: null,
+          description: twinDescription,
+        },
+      );
+
+      const twinIdentity = await runtimes[0].verifications.getIdentityForAccount(
+        await twin.getContractAddress(),
+        true,
+      );
+      const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);
+      await runtimes[0].did.deactivateDidDocument(twinDid);
+      expect(
+        runtimes[0].did.deactivateDidDocument(twinDid),
+      ).to.eventually.be.rejectedWith('Deactivation failed');
+    });
+
+    it('does not allow to set a DID after deactivating it', async () => {
+      const twin = await DigitalTwin.create(
+        runtimes[0] as DigitalTwinOptions,
+        {
+          accountId: runtimes[0].activeAccount,
+          containerConfig: null,
+          description: twinDescription,
+        },
+      );
+
+      const twinIdentity = await runtimes[0].verifications.getIdentityForAccount(
+        await twin.getContractAddress(),
+        true,
+      );
+
+      const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);
+      await runtimes[0].did.deactivateDidDocument(twinDid);
+      const dummyDocument = await runtimes[0].did.getDidDocumentTemplate();
+
+      const promise = runtimes[0].did.setDidDocument(twinDid, dummyDocument);
+      expect(promise).to.eventually.be.rejectedWith('Cannot set document for deactivated DID');
+
+      // Also check on smart contract level
+      const didRegistryContract = await (runtimes[0].did as any).getRegistryContract();
+
+      const contractPromise = runtimes[0].executor.executeContractTransaction(
+        didRegistryContract,
+        'setDidDocument',
+        { from: runtimes[0].activeIdentity },
+        twinIdentity,
+        TestUtils.getRandomBytes32(),
+      );
+      expect(contractPromise).to.eventually.be.rejected;
+    });
   });
 
   describe('when storing did documents for alias identities', () => {

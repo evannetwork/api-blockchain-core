@@ -1,6 +1,8 @@
 # api-blockchain-core
 
 ## Next Version
+- add methods `deactivateDidDocument` and `didIsDeactivated` to check and handle DID deactivation status
+
 ### Features
 
 ### Fixes
