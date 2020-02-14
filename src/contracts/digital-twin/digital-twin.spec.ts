@@ -20,11 +20,8 @@
 import 'mocha';
 import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
-import {
-  Executor,
-  Ipfs,
-} from '@evan.network/dbcp';
-
+import { Ipfs } from '../../dfs/ipfs';
+import { Executor } from '../..';
 import { accounts } from '../../test/accounts';
 import { configTestcore as config } from '../../config-testcore';
 import { Container } from './container';

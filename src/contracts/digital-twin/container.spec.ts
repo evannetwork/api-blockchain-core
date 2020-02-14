@@ -22,11 +22,8 @@ import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
 import { promisify } from 'util';
 import { readFile } from 'fs';
-import {
-  Executor,
-  Ipfs,
-} from '@evan.network/dbcp';
-
+import { Ipfs } from '../../dfs/ipfs';
+import { Executor } from '../..';
 import { accounts } from '../../test/accounts';
 import { TestUtils } from '../../test/test-utils';
 import { VerificationsStatus } from '../../verifications/verifications';
