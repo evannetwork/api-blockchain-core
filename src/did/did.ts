@@ -142,7 +142,10 @@ export class Did extends Logger {
       throw new Error(`DIDs environment "${environment} does not match ${didEnvironment}`);
     }
 
-    return this.options.web3.utils.toChecksumAddress(identity);
+    // convert identities, that are addresses to checksum address
+    return identity.length === 42
+      ? this.options.web3.utils.toChecksumAddress(identity)
+      : identity;
   }
 
   /**
