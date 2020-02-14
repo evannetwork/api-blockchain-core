@@ -220,7 +220,6 @@ Example
 --------------------------------------------------------------------------------
 
 
-
 = Entries =
 ===========
 
@@ -916,6 +915,84 @@ Example
 
   dataContract.clearSharings();
 
+
+--------------------------------------------------------------------------------
+
+.. _data-contract_unpinFileHash:
+
+unpinFileHash
+================================================================================
+
+.. code-block:: typescript
+
+  dataContract.unpinFileHash(hash);
+
+Removes a file hash from the DFS.
+
+----------
+Parameters
+----------
+
+#. ``hash`` - ``string``: reference to the DFS file, which can be either an IPFS or a bytes32 hash
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const descriptionHash = await this.options.executor.executeContractCall(
+      myDataContract,
+      'contractDescription',
+    );
+  await this.options.dataContract.unpinFileHash(descriptionHash);
+
+
+--------------------------------------------------------------------------------
+
+.. _data-contract_getDfsContent:
+
+getDfsContent
+================================================================================
+
+.. code-block:: typescript
+
+  dataContract.getDfsContent(hash);
+
+Gets a file's content from the DFS.
+
+----------
+Parameters
+----------
+
+#. ``hash`` - ``string``: reference to the DFS file, which can be either an IPFS or a bytes32 hash
+
+-------
+Returns
+-------
+
+``Promise`` returns ``Buffer``: the content of the retrieved file
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const descriptionHash = await this.options.executor.executeContractCall(
+      myDataContract,
+      'contractDescription',
+    );
+  const descriptionContent = (await this.options.dataContract.getDfsContent(descriptionHash)).toString('binary');
+  const description = JSON.parse(
+      descriptionContent,
+  );
 
 
 .. required for building markup

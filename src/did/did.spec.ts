@@ -21,8 +21,10 @@ import 'mocha';
 import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
 
-import { accounts } from '../test/accounts';
+import { Did } from './did';
+import { SignerIdentity } from '../contracts/signer-identity';
 import { TestUtils } from '../test/test-utils';
+import { accounts } from '../test/accounts';
 import {
   DigitalTwin,
   DigitalTwinOptions,
@@ -42,11 +44,52 @@ describe('DID Resolver', function test() {
     runtimes = await Promise.all([
       TestUtils.getRuntime(accounts[0], null, { useIdentity: true }),
       TestUtils.getRuntime(accounts[1], null, { useIdentity: true }),
+      TestUtils.getRuntime(accounts[2], null, { useIdentity: false }),
     ]);
     accounts0Identity = await runtimes[0].verifications.getIdentityForAccount(
       runtimes[0].underlyingAccount, true,
     );
     accounts0Did = await runtimes[0].did.convertIdentityToDid(accounts0Identity);
+    // create new registry and update runtimes 0 and 1
+    const registry = await runtimes[2].executor.createContract(
+      'DidRegistry', [], { from: accounts[2], gas: 1_000_000 },
+    );
+    const options0 = (({
+      contractLoader,
+      dfs,
+      executor,
+      nameResolver,
+      signer,
+      verifications,
+      web3,
+    }) => ({
+      contractLoader,
+      dfs,
+      executor,
+      nameResolver,
+      signerIdentity: signer as SignerIdentity,
+      verifications,
+      web3,
+    }))(runtimes[0]);
+    runtimes[0].did = new Did(options0, { registryAddress: registry.options.address });
+    const options1 = (({
+      contractLoader,
+      dfs,
+      executor,
+      nameResolver,
+      signer,
+      verifications,
+      web3,
+    }) => ({
+      contractLoader,
+      dfs,
+      executor,
+      nameResolver,
+      signerIdentity: signer as SignerIdentity,
+      verifications,
+      web3,
+    }))(runtimes[1]);
+    runtimes[1].did = new Did(options1, { registryAddress: registry.options.address });
   });
 
   describe('when storing did documents for account identities', async () => {
@@ -101,24 +144,13 @@ describe('DID Resolver', function test() {
         .to.deep.eq({ ...document, service });
     });
 
-    it('allows me to fetch a default did document for accounts that have not set a did document yet', async () => {
+    it('does not allow me to fetch a default did document for accounts that have no identity set', async () => {
       const randomIdentity = TestUtils.getRandomAddress();
       const did = await runtimes[0].did.convertIdentityToDid(randomIdentity);
-
-      const expectedDefaultDid = {
-        '@context': 'https://w3id.org/did/v1',
-        id: did,
-        publicKey: [{
-          id: `${did}#key-1`,
-          type: 'Secp256k1VerificationKey2018',
-          owner: did,
-          ethereumAddress: randomIdentity,
-        }],
-        authentication: [`${did}#key-1`],
-      };
-
-      const identityDidDoc = await runtimes[0].did.getDidDocument(did);
-      expect(identityDidDoc).to.deep.eq(expectedDefaultDid);
+      const identityDidDocP = runtimes[0].did.getDidDocument(did);
+      await expect(identityDidDocP).to.be.rejectedWith(
+        new RegExp(`^No record found for ${randomIdentity}\\. Is this a valid identity address\\?$`, 'i'),
+      );
     });
   });
 
@@ -132,13 +164,10 @@ describe('DID Resolver', function test() {
     };
 
     it('allows to store a DID document for the identity of an own contract', async () => {
-      const accountRuntime = await TestUtils.getRuntime(
-        runtimes[0].underlyingAccount, null, { useIdentity: true },
-      );
       const twin = await DigitalTwin.create(
-        accountRuntime as DigitalTwinOptions,
+        runtimes[0] as DigitalTwinOptions,
         {
-          accountId: accountRuntime.activeAccount,
+          accountId: runtimes[0].activeAccount,
           containerConfig: null,
           description: twinDescription,
         },
@@ -160,13 +189,10 @@ describe('DID Resolver', function test() {
     });
 
     it('can get retrieve an contract identities DID document', async () => {
-      const accountRuntime = await TestUtils.getRuntime(
-        runtimes[0].underlyingAccount, null, { useIdentity: true },
-      );
       const twin = await DigitalTwin.create(
-        accountRuntime as DigitalTwinOptions,
+        runtimes[0] as DigitalTwinOptions,
         {
-          accountId: accountRuntime.activeAccount,
+          accountId: runtimes[0].activeAccount,
           containerConfig: null,
           description: twinDescription,
         },
@@ -189,13 +215,10 @@ describe('DID Resolver', function test() {
     });
 
     it('allows to get a DID document of another identity', async () => {
-      const accountRuntime = await TestUtils.getRuntime(
-        runtimes[0].underlyingAccount, null, { useIdentity: true },
-      );
       const twin = await DigitalTwin.create(
-        accountRuntime as DigitalTwinOptions,
+        runtimes[0] as DigitalTwinOptions,
         {
-          accountId: accountRuntime.activeAccount,
+          accountId: runtimes[0].activeAccount,
           containerConfig: null,
           description: twinDescription,
         },
@@ -219,13 +242,10 @@ describe('DID Resolver', function test() {
     });
 
     it('does not allow to store a DID document for the identity of an own contract', async () => {
-      const accountRuntime = await TestUtils.getRuntime(
-        runtimes[0].underlyingAccount, null, { useIdentity: true },
-      );
       const twin = await DigitalTwin.create(
-        accountRuntime as DigitalTwinOptions,
+        runtimes[0] as DigitalTwinOptions,
         {
-          accountId: accountRuntime.activeAccount,
+          accountId: runtimes[0].activeAccount,
           containerConfig: null,
           description: twinDescription,
         },
@@ -248,13 +268,10 @@ describe('DID Resolver', function test() {
     });
 
     it('allows to fetch a default DID document for newly created contract identities', async () => {
-      const accountRuntime = await TestUtils.getRuntime(
-        runtimes[0].underlyingAccount, null, { useIdentity: true },
-      );
       const twin = await DigitalTwin.create(
-        accountRuntime as DigitalTwinOptions,
+        runtimes[0] as DigitalTwinOptions,
         {
-          accountId: accountRuntime.activeAccount,
+          accountId: runtimes[0].activeAccount,
           containerConfig: null,
           description: twinDescription,
         },
@@ -278,6 +295,103 @@ describe('DID Resolver', function test() {
 
       const defaultDidDoc = await runtimes[0].did.getDidDocument(twinDid);
       await expect(defaultDidDoc).to.deep.eq(expectedDefaultDid);
+    });
+
+    it('allows to deactivate a DID', async () => {
+      const twin = await DigitalTwin.create(
+        runtimes[0] as DigitalTwinOptions,
+        {
+          accountId: runtimes[0].activeAccount,
+          containerConfig: null,
+          description: twinDescription,
+        },
+      );
+
+      const twinIdentity = await runtimes[0].verifications.getIdentityForAccount(
+        await twin.getContractAddress(),
+        true,
+      );
+      const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);
+      await runtimes[0].did.deactivateDidDocument(twinDid);
+
+      const deactivated = await runtimes[0].did.didIsDeactivated(twinDid);
+      expect(deactivated).to.be.true;
+    });
+
+    it('does not allow to deactivate someone else\'s DID', async () => {
+      const twin = await DigitalTwin.create(
+        runtimes[1] as DigitalTwinOptions,
+        {
+          accountId: runtimes[1].activeAccount,
+          containerConfig: null,
+          description: twinDescription,
+        },
+      );
+
+      const twinIdentity = await runtimes[0].verifications.getIdentityForAccount(
+        await twin.getContractAddress(),
+        true,
+      );
+      const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);
+      expect(
+        runtimes[0].did.deactivateDidDocument(twinDid),
+      ).to.eventually.be.rejectedWith('Deactivation failed');
+    });
+
+    it('does not allow to deactivate a DID twice', async () => {
+      const twin = await DigitalTwin.create(
+        runtimes[0] as DigitalTwinOptions,
+        {
+          accountId: runtimes[0].activeAccount,
+          containerConfig: null,
+          description: twinDescription,
+        },
+      );
+
+      const twinIdentity = await runtimes[0].verifications.getIdentityForAccount(
+        await twin.getContractAddress(),
+        true,
+      );
+      const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);
+      await runtimes[0].did.deactivateDidDocument(twinDid);
+      expect(
+        runtimes[0].did.deactivateDidDocument(twinDid),
+      ).to.eventually.be.rejectedWith('Deactivation failed');
+    });
+
+    it('does not allow to set a DID after deactivating it', async () => {
+      const twin = await DigitalTwin.create(
+        runtimes[0] as DigitalTwinOptions,
+        {
+          accountId: runtimes[0].activeAccount,
+          containerConfig: null,
+          description: twinDescription,
+        },
+      );
+
+      const twinIdentity = await runtimes[0].verifications.getIdentityForAccount(
+        await twin.getContractAddress(),
+        true,
+      );
+
+      const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);
+      await runtimes[0].did.deactivateDidDocument(twinDid);
+      const dummyDocument = await runtimes[0].did.getDidDocumentTemplate();
+
+      const promise = runtimes[0].did.setDidDocument(twinDid, dummyDocument);
+      expect(promise).to.eventually.be.rejectedWith('Cannot set document for deactivated DID');
+
+      // Also check on smart contract level
+      const didRegistryContract = await (runtimes[0].did as any).getRegistryContract();
+
+      const contractPromise = runtimes[0].executor.executeContractTransaction(
+        didRegistryContract,
+        'setDidDocument',
+        { from: runtimes[0].activeIdentity },
+        twinIdentity,
+        TestUtils.getRandomBytes32(),
+      );
+      expect(contractPromise).to.eventually.be.rejected;
     });
   });
 

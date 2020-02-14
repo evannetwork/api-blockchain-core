@@ -47,6 +47,8 @@ Parameters
     * ``logLevel`` - |source logLevel|_ (optional): messages with this level will be logged with ``log``
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
     * ``logLogLevel`` - |source logLevel|_ (optional): messages with this level will be pushed to ``logLog``
+#. ``config`` - ``DidConfig`` (optional): description, defaults to ``123``
+    * ``registryAddress`` - ``string`` (optional): contract address or ENS name for `DidRegistry`
 
 -------
 Returns
@@ -75,6 +77,163 @@ Example
 
 = Working with DID documents =
 ==============================
+
+.. _did_deactivateDidDocument:
+
+deactivateDidDocument
+================================================================================
+
+.. code-block:: typescript
+
+  did.deactivateDidDocument(did);
+
+Unlinks the current DID document from the given DID
+
+----------
+Parameters
+----------
+
+#. ``did`` - ``string``: DID to unlink the DID document from
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: Resolves when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+    const twinIdentity = '0x1234512345123451234512345123451234512345';
+    const twinDid = await runtime.did.convertIdentityToDid(twinIdentity);
+    await runtime.did.deactivateDidDocument(twinDid);
+
+
+--------------------------------------------------------------------------------
+
+
+.. _did_didIsDeactivated:
+
+didIsDeactivated
+================================================================================
+
+.. code-block:: typescript
+
+  did.didIsDeactivated(did);
+
+Gets the deactivation status of a DID.
+
+----------
+Parameters
+----------
+
+#. ``did`` - ``string``: DID to check
+
+-------
+Returns
+-------
+
+``Promise`` returns ``boolean``: True if the DID has been deactivated
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+    const twinIdentity = '0x1234512345123451234512345123451234512345';
+    const twinDid = await runtime.did.convertIdentityToDid(twinIdentity);
+    await runtime.did.deactivateDidDocument(twinDid);
+    console.log(await runtime.did.didIsDeactivated(twinDid));
+    // Output: true
+
+
+--------------------------------------------------------------------------------
+
+
+.. _did_getDidDocument:
+
+getDidDocument
+================================================================================
+
+.. code-block:: typescript
+
+  did.getDidDocument(did);
+
+Get DID document for given DID.
+
+----------
+Parameters
+----------
+
+#. ``did`` - ``string``: DID to fetch DID document for.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``any``: a DID document that MAY resemble `DidDocumentTemplate` format
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const identity = await runtime.verifications.getIdentityForAccount(accountsId, true);
+  const did = await runtime.did.convertIdentityToDid(identity);
+  const document = await runtime.did.getDidDocumentTemplate();
+  await runtime.did.setDidDocument(did, document);
+  const retrieved = await runtime.did.getDidDocument(did);
+
+
+--------------------------------------------------------------------------------
+
+.. _did_getService:
+
+getService
+================================================================================
+
+.. code-block:: typescript
+
+  did.getService(did);
+
+Get the services from a DID document.
+
+----------
+Parameters
+----------
+
+#. ``did`` - ``string``: DID to fetch DID service for.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``DidServiceEntry[] | DidServiceEntry``: Array of services, or a single service entry object.
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const document = await runtime.did.getDidDocumentTemplate();
+  const identity = await runtime.verifications.getIdentityForAccount(account, true);
+  const did = await runtime.did.convertIdentityToDid(identity);
+  await runtime.did.setDidDocument(did, document);
+  const service = [{
+    id: `${did}#randomService`,
+    type: `randomService-${random}`,
+    serviceEndpoint: `https://openid.example.com/${random}`,
+  }];
+  await runtime.did.setService(did, service);
+  const retrieved = await runtime.did.getService(did);
+
+--------------------------------------------------------------------------------
 
 .. _did_setDidDocument:
 
@@ -111,47 +270,6 @@ Example
   const document = await runtime.did.getDidDocumentTemplate();
   await runtime.did.setDidDocument(did, document);
 
-
-
---------------------------------------------------------------------------------
-
-.. _did_getDidDocument:
-
-getDidDocument
-================================================================================
-
-.. code-block:: typescript
-
-  did.getDidDocument([did]);
-
-Get DID document for given DID.
-
-----------
-Parameters
-----------
-
-#. ``did`` - ``string``: DID to fetch DID document for.
-
--------
-Returns
--------
-
-``Promise`` returns ``any``: a DID document that MAY resemble `DidDocumentTemplate` format
-
--------
-Example
--------
-
-.. code-block:: typescript
-
-  const identity = await runtime.verifications.getIdentityForAccount(accountsId, true);
-  const did = await runtime.did.convertIdentityToDid(identity);
-  const document = await runtime.did.getDidDocumentTemplate();
-  await runtime.did.setDidDocument(did, document);
-  const retrieved = await runtime.did.getDidDocument(did);
-
-
-
 --------------------------------------------------------------------------------
 
 .. _did_setService:
@@ -161,7 +279,7 @@ setService
 
 .. code-block:: typescript
 
-  did.setService(service[, did]);
+  did.setService(did, service);
 
 Sets service in DID document.
 
@@ -170,7 +288,7 @@ Parameters
 ----------
 
 #. ``did`` - ``string``: DID name to set service for
-#. ``service`` - ``DidServiceEntry[] | DidServiceEntry``: service to set
+#. ``service`` - ``DidServiceEntry[] | DidServiceEntry``: service or array of services to set
 
 -------
 Returns
@@ -194,51 +312,6 @@ Example
     serviceEndpoint: `https://openid.example.com/${random}`,
   }];
   await runtime.did.setService(did, service);
-
-
-
---------------------------------------------------------------------------------
-
-.. _did_getService:
-
-getService
-================================================================================
-
-.. code-block:: typescript
-
-  did.getService([did]);
-
-Get service from DID document.
-
-----------
-Parameters
-----------
-
-#. ``did`` - ``string``: DID to fetch DID service for.
-
--------
-Returns
--------
-
-``Promise`` returns ``DidServiceEntry[] | DidServiceEntry``: service
-
--------
-Example
--------
-
-.. code-block:: typescript
-
-  const document = await runtime.did.getDidDocumentTemplate();
-  const identity = await runtime.verifications.getIdentityForAccount(account, true);
-  const did = await runtime.did.convertIdentityToDid(identity);
-  await runtime.did.setDidDocument(did, document);
-  const service = [{
-    id: `${did}#randomService`,
-    type: `randomService-${random}`,
-    serviceEndpoint: `https://openid.example.com/${random}`,
-  }];
-  await runtime.did.setService(did, service);
-  const retrieved = await runtime.did.getService(did);
 
 
 
@@ -322,7 +395,6 @@ Example
   // did:evan:testcore:0x000000000000000000000000000000000000001234
 
 
-
 --------------------------------------------------------------------------------
 
 .. _did_getDidDocumentTemplate:
@@ -372,11 +444,9 @@ Example
   //   "publicKey": [
   //     {
   //       "id": "did:evan:testcore:0x126E901F6F408f5E260d95c62E7c73D9B60fd734#key-1",
-  //       "type": [
-  //         "Secp256k1SignatureVerificationKey2018",
-  //         "ERC725ManagementKey"
-  //       ],
-  //       "publicKeyHex": "045adfd502c0bc55f4fcb90eea36368d7e19c5b3045aa6f51dfa3699046e9751251d21bc6bdd06c1ff0014fcbbf9f1d83c714434f2b33d713aaf46760f2d53f10d"
+  //       "type": "Secp256k1VerificationKey2018",
+  //       "owner": "did:evan:testcore:0x126E901F6F408f5E260d95c62E7c73D9B60fd734",
+  //       "ethereumAddress": "0x126E901F6F408f5E260d95c62E7c73D9B60fd734"
   //     }
   //   ],
   //   "authentication": [
@@ -404,6 +474,13 @@ Example
 .. _source logLogInterface: ../common/logger.html#logloginterface
 
 .. |source nameResolver| replace:: ``NameResolver``
+.. _source nameResolver: ../blockchain/name-resolver.html
+
+.. |source signerIdentity| replace:: ``SignerIdentity``
+.. _source signerIdentity: ../blockchain/signer-identity.html
+
+.. |source web3| replace:: ``Web3``
+.. _source web3: https://github.com/ethereum/web3.js/
 .. _source nameResolver: ../blockchain/name-resolver.html
 
 .. |source signerIdentity| replace:: ``SignerIdentity``
