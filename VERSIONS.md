@@ -1,11 +1,13 @@
 # api-blockchain-core
 
 ## Next Version
+
+### Features
+- add methods `deactivateDidDocument` and `didIsDeactivated` to check and handle DID deactivation status
+- improve performance of `shareProperties`, `unshareProperties`, `setContainerShareConfigs` and related operations in `Container`
 - add methods `deactivateDidDocument` and `didIsDeactivated` to check and handle DID deactivation status
 - added additional properties `updated`, `created`, and `proof` to DID documents
 - added proof validation to `getDidDocument` (only for documents that actually contain a proof)
-
-### Features
 
 ### Fixes
 - fix buffer-to-string conversion, try to decode to `utf8`, if this fails, decode it to `binary`
