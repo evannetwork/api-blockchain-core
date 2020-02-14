@@ -462,6 +462,10 @@ export class Did extends Logger {
     const controllerIdentity = didDocument.controller
       ? (await this.convertDidToIdentity(didDocument.controller)).toLocaleLowerCase()
       : '';
+    const account = this.options.signerIdentity.underlyingAccount.toLocaleLowerCase();
+    const signaturePublicKey = (await this.options.signerIdentity.getPublicKey(
+      this.options.signerIdentity.underlyingAccount,
+    )).toLocaleLowerCase();
 
     let keys;
     let proofIssuer;
@@ -476,8 +480,16 @@ export class Did extends Logger {
       throw Error('You are not authorized to issue this Did');
     }
 
-    const key = keys.filter((entry) => entry.ethereumAddress.toLocaleLowerCase()
-      === this.options.signerIdentity.underlyingAccount.toLocaleLowerCase())[0];
+    const key = keys.filter((entry) => {
+      // Fallback for old DIDs still using publicKeyHex
+      if (entry.ethereumAddress) {
+        return entry.ethereumAddress.toLocaleLowerCase() === account;
+      }
+      if (entry.publicKeyHex) {
+        return entry.publicKeyHex.toLocaleLowerCase() === signaturePublicKey;
+      }
+      return false;
+    })[0];
     if (!key) {
       throw Error('The signature key of the active account is not associated to its DID document.');
     }

@@ -497,9 +497,10 @@ export class Vc extends Logger {
    *                   the active identity is found.
    */
   private async getPublicKeyUriFromDid(issuerDid: string): Promise<string> {
-    const signaturePublicKey = await this.options.signerIdentity.getPublicKey(
+    const signaturePublicKey = (await this.options.signerIdentity.getPublicKey(
       this.options.signerIdentity.underlyingAccount,
-    );
+    )).toLocaleLowerCase();
+    const account = this.options.signerIdentity.underlyingAccount.toLocaleLowerCase();
     const doc = await this.options.did.getDidDocument(issuerDid);
 
     if (!(doc.authentication || doc.publicKey || doc.publicKey.length === 0)) {
@@ -508,9 +509,15 @@ export class Vc extends Logger {
     }
 
     const key = doc.publicKey.filter(
-      (entry) => entry.ethereumAddress
-        === this.options.signerIdentity.underlyingAccount.toLowerCase()
-        || entry.publicKeyHex === signaturePublicKey,
+      (entry) => {
+        if (entry.ethereumAddress) {
+          return entry.ethereumAddress.toLocaleLowerCase() === account;
+        }
+        if (entry.publicKeyHex) {
+          return entry.publicKeyHex.toLocaleLowerCase() === signaturePublicKey;
+        }
+        return false;
+      },
     )[0];
 
     if (!key) {
