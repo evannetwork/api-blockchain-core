@@ -154,7 +154,7 @@ export class Did extends Logger {
    *                                 did:evan:testcore:0x000000000000000000000000000000000000001234
    */
   public async convertIdentityToDid(identity: string): Promise<string> {
-    return `did:evan:${await this.getDidInfix()}${identity.toLowerCase()}`;
+    return `did:evan:${await this.getDidInfix()}${identity}`;
   }
 
   /**

@@ -92,6 +92,16 @@ describe('DID Resolver', function test() {
     runtimes[1].did = new Did(options1, { registryAddress: registry.options.address });
   });
 
+  describe('when using general did functionality', async () => {
+    it('preserves the checksum\'s case when converting DIDs to identities and vice versa', async () => {
+      const identityMixedCase = '0xce651a6E82925e7c7acf462426e964C89E19F576d68941130013af42e812ffc1';
+      const did = await runtimes[0].did.convertIdentityToDid(identityMixedCase);
+      const identityAfter = await runtimes[0].did.convertDidToIdentity(did);
+
+      expect(identityAfter).to.eq(identityMixedCase);
+    });
+  });
+
   describe('when storing did documents for account identities', async () => {
     it('allows to store a DID document for the own identity', async () => {
       const document = await runtimes[0].did.getDidDocumentTemplate();
