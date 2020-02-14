@@ -1383,51 +1383,48 @@ export class Container extends Logger {
       } = unshareConfig;
 
       this.log('checking unshare configs', 'debug');
+
       // remove write permissions for all in readWrite and write
-
-      let accessP = [];
-
-      accessP = accessP.concat([...new Set([...readWrite, ...write])]
-        .map((property) => async () => {
-          this.log(`removing write permissions for ${property}`, 'debug');
-          const propertyType = getPropertyType(schemaProperties[property].type);
-          // search for role with permissions
-          const permittedRole = await this.getPermittedRole(
-            authority, property, propertyType, ModificationType.Set,
+      let accessP = [...new Set([...readWrite, ...write])].map((property) => async () => {
+        this.log(`removing write permissions for ${property}`, 'debug');
+        const propertyType = getPropertyType(schemaProperties[property].type);
+        // search for role with permissions
+        const permittedRole = await this.getPermittedRole(
+          authority, property, propertyType, ModificationType.Set,
+        );
+        // console.table([property, propertyType, ModificationType.Set, permittedRole])
+        if (permittedRole < this.reservedRoles) {
+          // if not found or included in reserved roles, exit
+          this.log(`can not find a role that has write permissions for property ${property}`);
+        } else {
+          // remove account from role
+          const hasRole = await this.options.executor.executeContractCall(
+            authority, 'hasUserRole', accountId, permittedRole,
           );
-          // console.table([property, propertyType, ModificationType.Set, permittedRole])
-          if (permittedRole < this.reservedRoles) {
-            // if not found or included in reserved roles, exit
-            this.log(`can not find a role that has write permissions for property ${property}`);
-          } else {
-            // remove account from role
-            const hasRole = await this.options.executor.executeContractCall(
-              authority, 'hasUserRole', accountId, permittedRole,
+          if (hasRole) {
+            await this.options.rightsAndRoles.removeAccountFromRole(
+              this.contract, this.config.accountId, accountId, permittedRole,
             );
-            if (hasRole) {
-              await this.options.rightsAndRoles.removeAccountFromRole(
-                this.contract, this.config.accountId, accountId, permittedRole,
-              );
-            }
-
-            // if no members are left, remove role
-            const memberCount = await this.options.executor.executeContractCall(
-              authority, 'role2userCount', permittedRole,
-            );
-            if (memberCount.eq(0)) {
-              this.log(`removing role for property "${property}"`, 'debug');
-              await this.options.rightsAndRoles.setOperationPermission(
-                authority,
-                this.config.accountId,
-                permittedRole,
-                property,
-                getPropertyType(schemaProperties[property].type),
-                ModificationType.Set,
-                false,
-              );
-            }
           }
-        }));
+
+          // if no members are left, remove role
+          const memberCount = await this.options.executor.executeContractCall(
+            authority, 'role2userCount', permittedRole,
+          );
+          if (memberCount.eq(0)) {
+            this.log(`removing role for property "${property}"`, 'debug');
+            await this.options.rightsAndRoles.setOperationPermission(
+              authority,
+              this.config.accountId,
+              permittedRole,
+              property,
+              getPropertyType(schemaProperties[property].type),
+              ModificationType.Set,
+              false,
+            );
+          }
+        }
+      });
 
       // ///////////////////////////////////////////////////////////// remove list entries handling
       accessP = accessP.concat(removeListEntries.map((property) => async () => {
