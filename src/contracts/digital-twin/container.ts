@@ -1015,8 +1015,6 @@ export class Container extends Logger {
     for (const {
       accountId, read = [], readWrite = [], removeListEntries = [],
     } of localShareConfig) {
-      let accessPromises = [];
-
       // //////////////////////////////////////////////// ensure that account is member in contract
       if (!await this.options.executor.executeContractCall(
         this.contract, 'isConsumer', accountId,
@@ -1033,7 +1031,7 @@ export class Container extends Logger {
         read.push('type');
       }
       // ensure that roles for fields exist and that accounts have permissions
-      accessPromises = accessPromises.concat(readWrite.map((property, index) => async () => {
+      let accessPromises = readWrite.map((property, index) => async () => {
         // get permissions from contract
         const hash = this.options.rightsAndRoles.getOperationCapabilityHash(
           property,
@@ -1078,7 +1076,7 @@ export class Container extends Logger {
             this.contract, this.config.accountId, accountId, permittedRole,
           );
         }
-      }));
+      });
 
       accessPromises = accessPromises.concat(removeListEntries.map((property) => async () => {
         const propertyType = getPropertyType(schemaProperties[property].type);
