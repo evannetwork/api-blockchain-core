@@ -446,10 +446,10 @@ export class Did extends Logger {
 
 
   /**
-   * Creates a new `VcProof` object for a given VC document, including generating a JWT token over
+   * Creates a new `DidProof` object for a given DID document, including generating a JWT token over
    * the whole document.
    *
-   * @param      {DidDocument}   Did         The VC document to create the proof for.
+   * @param      {DidDocument}   Did         The DID document to create the proof for.
    * @param      {DidProofType}  proofType  Specify if you want a proof type different from the
    *                                       default one.
    * @returns    {DidProof}                 A proof object containing a JWT.
@@ -667,9 +667,9 @@ export class Did extends Logger {
   }
 
   /**
-   * Validates the JWS of a VC Document proof
+   * Validates the JWS of a DID Document proof
    *
-   * @param      {VcDocument}    document  The VC Document
+   * @param      {any}    document  The DID Document
    * @returns    {Promise<void>}           Resolves when done
    */
   private async validateProof(document: any): Promise<void> {
@@ -689,7 +689,7 @@ export class Did extends Logger {
       { resolver: getResolver(this) },
     );
 
-    // fails if signed payload and the VC differ
+    // fails if signed payload and the DID document differ
     const payload = {
       ...verifiedSignature.payload.didDocument,
     };
