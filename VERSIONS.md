@@ -6,6 +6,8 @@
 - added proof validation to `getDidDocument` (only for documents that actually contain a proof)
 
 ### Features
+- add methods `deactivateDidDocument` and `didIsDeactivated` to check and handle DID deactivation status
+- improve performance of `shareProperties`, `unshareProperties`, `setContainerShareConfigs` and related operations in `Container`
 
 ### Fixes
 - fix buffer-to-string conversion, try to decode to `utf8`, if this fails, decode it to `binary`
