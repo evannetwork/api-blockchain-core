@@ -37,6 +37,7 @@ Parameters
 ----------
 
 #. ``options`` - ``DidOptions``: options for Did constructor.
+    * ``accountStore`` - |source accountStore|_: |source accountStore|_ instance
     * ``contractLoader`` - |source contractLoader|_: |source contractLoader|_ instance
     * ``dfs`` - |source dfsInterface|_: |source dfsInterface|_ instance
     * ``executor`` - |source executor|_: |source executor|_ instance
@@ -462,6 +463,9 @@ Example
 
 .. required for building markup
 
+.. |source accountStore| replace:: ``AccountStore``
+.. _source accountStore: ../blockchain/account-store.html
+
 .. |source contractLoader| replace:: ``ContractLoader``
 .. _source contractLoader: ../contracts/contract-loader.html
 
@@ -485,10 +489,5 @@ Example
 
 .. |source web3| replace:: ``Web3``
 .. _source web3: https://github.com/ethereum/web3.js/
+
 .. _source nameResolver: ../blockchain/name-resolver.html
-
-.. |source signerIdentity| replace:: ``SignerIdentity``
-.. _source signerIdentity: ../blockchain/signer-identity.html
-
-.. |source web3| replace:: ``Web3``
-.. _source web3: https://github.com/ethereum/web3.js/
