@@ -142,7 +142,7 @@ export class Did extends Logger {
       throw new Error(`DIDs environment "${environment} does not match ${didEnvironment}`);
     }
 
-    return identity;
+    return this.options.web3.utils.toChecksumAddress(identity);
   }
 
   /**
@@ -154,7 +154,7 @@ export class Did extends Logger {
    *                                 did:evan:testcore:0x000000000000000000000000000000000000001234
    */
   public async convertIdentityToDid(identity: string): Promise<string> {
-    return `did:evan:${await this.getDidInfix()}${identity}`;
+    return `did:evan:${await this.getDidInfix()}${identity.toLowerCase()}`;
   }
 
   /**

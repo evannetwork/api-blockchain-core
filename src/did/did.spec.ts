@@ -93,12 +93,16 @@ describe('DID Resolver', function test() {
   });
 
   describe('when using general did functionality', async () => {
-    it('preserves the checksum\'s case when converting DIDs to identities and vice versa', async () => {
-      const identityMixedCase = '0xce651a6E82925e7c7acf462426e964C89E19F576d68941130013af42e812ffc1';
-      const did = await runtimes[0].did.convertIdentityToDid(identityMixedCase);
-      const identityAfter = await runtimes[0].did.convertDidToIdentity(did);
+    it('returns a checksum ethereum address when converting dids to identities', async () => {
+      const identityChecksumCase = '0xc1912fEE45d61C87Cc5EA59DaE31190FFFFf232d';
+      const identityLowerCase = identityChecksumCase.toLowerCase();
+      const didMixed = await runtimes[0].did.convertIdentityToDid(identityChecksumCase);
+      const didLower = await runtimes[0].did.convertIdentityToDid(identityLowerCase);
+      const identityAfter = await runtimes[0].did.convertDidToIdentity(didMixed);
+      const identityLowerCaseAfter = await runtimes[0].did.convertDidToIdentity(didLower);
 
-      expect(identityAfter).to.eq(identityMixedCase);
+      expect(identityAfter).to.eq(identityChecksumCase);
+      expect(identityLowerCaseAfter).to.eq(identityChecksumCase);
     });
   });
 
