@@ -489,5 +489,3 @@ Example
 
 .. |source web3| replace:: ``Web3``
 .. _source web3: https://github.com/ethereum/web3.js/
-
-.. _source nameResolver: ../blockchain/name-resolver.html
