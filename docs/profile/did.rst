@@ -246,7 +246,7 @@ setDidDocument
   did.setDidDocument(did, document);
 
 Store given DID document for given DID.
-If the document misses the property `created`, it will automaticallybe appended.
+If the document misses the property `created`, it will automatically be appended.
 The `updated` property will be updated accordingly.
 A proof over the DID document will be generated automatically and appended to the document.
 
