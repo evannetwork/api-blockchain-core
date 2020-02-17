@@ -484,6 +484,7 @@ export async function createDefaultRuntime(
   let vc: Vc;
   if (runtimeConfig.useIdentity) {
     did = new Did({
+      accountStore,
       contractLoader,
       dfs,
       executor,

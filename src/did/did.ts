@@ -17,14 +17,16 @@
   the following URL: https://evan.network/license/
 */
 
+import * as didJWT from 'did-jwt';
+import * as _ from 'lodash';
 import {
+  AccountStore,
   ContractLoader,
   DfsInterface,
   Executor,
   Logger,
   LoggerOptions,
 } from '@evan.network/dbcp';
-
 import {
   getEnvironment,
   nullBytes32,
@@ -37,6 +39,7 @@ import { VerificationsDelegationInfo, Verifications } from '../verifications/ver
 
 
 const didRegEx = /^did:evan:(?:(testcore|core):)?(0x(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64}))$/;
+
 
 /**
  * additional configuration for new `Did` instance
@@ -52,6 +55,7 @@ export interface DidConfig {
 export interface DidDocumentTemplate {
   '@context': string;
   id: string;
+  controller?: string;
   authentication: {
     type: string;
     publicKey: string;
@@ -69,6 +73,13 @@ export interface DidDocumentTemplate {
     owner: string;
     ethereumAddress: string;
   }[];
+  updated?: {
+    time: string;
+  };
+  created?: {
+    time: string;
+  };
+  proof?: DidProof;
   service?: {
     id: string;
     type: string;
@@ -88,9 +99,31 @@ export interface DidServiceEntry {
 }
 
 /**
+ * interface for proof in DIDs
+ */
+export interface DidProof {
+  type: string;
+  created: string;
+  proofPurpose: string;
+  verificationMethod: string;
+  jws: string;
+}
+
+/**
+ * Holds a list of supported proof types for DID (JWS) proofs
+ */
+export const enum DidProofType {
+  EcdsaPublicKeySecp256k1 = 'EcdsaPublicKeySecp256k1',
+}
+
+const JWTProofMapping = {};
+JWTProofMapping[(DidProofType.EcdsaPublicKeySecp256k1)] = 'ES256K-R';
+
+/**
  * options for Did constructor
  */
 export interface DidOptions extends LoggerOptions {
+  accountStore: AccountStore;
   contractLoader: ContractLoader;
   dfs: DfsInterface;
   executor: Executor;
@@ -137,8 +170,8 @@ export class Did extends Logger {
     const groups = await this.validateDidAndGetSections(did);
     const [, didEnvironment = 'core', identity] = groups;
     const environment = await this.getEnvironment();
-    if ((environment === 'testcore' && didEnvironment !== 'testcore')
-        || (environment === 'core' && didEnvironment !== 'core')) {
+    if ((environment.toLocaleLowerCase() === 'testcore' && didEnvironment.toLocaleLowerCase() !== 'testcore')
+        || (environment.toLocaleLowerCase() === 'core' && didEnvironment.toLocaleLowerCase() !== 'core')) {
       throw new Error(`DIDs environment "${environment} does not match ${didEnvironment}`);
     }
 
@@ -182,7 +215,7 @@ export class Did extends Logger {
    * @param      {string}  did     DID to fetch DID document for
    * @return     {Promise<any>}    a DID document that MAY resemble `DidDocumentTemplate` format.
    *                               For deactiated DIDs it returns a default DID document containing
-   *                               no authentication mateiral.
+   *                               no authentication material.
    */
   public async getDidDocument(did: string): Promise<any> {
     let result = null;
@@ -208,6 +241,9 @@ export class Did extends Logger {
     result = JSON.parse(await this.options.dfs.get(documentHash) as any);
     result = await this.removePublicKeyTypeArray(result);
 
+    if (result.proof) {
+      await this.validateProof(result);
+    }
     return result;
   }
 
@@ -230,6 +266,8 @@ export class Did extends Logger {
     did?: string, controllerDid?: string, authenticationKey?: string,
   ): Promise<DidDocumentTemplate> {
     if (did && controllerDid && authenticationKey) {
+      await this.validateDid(did);
+      await this.validateDid(controllerDid);
       // use given key to create a contract DID document
       return JSON.parse(`{
         "@context": "https://w3id.org/did/v1",
@@ -276,7 +314,7 @@ export class Did extends Logger {
    * @param      {string}  did       DID to store DID document for
    * @param      {any}     document  DID document to store
    * @param      {VerificationDelegationInfo} txInfo Optional. If given, the transaction
-   *    is executed on behalf of the tx signer.
+   *                                 is executed on behalf of the tx signer.
    * @return     {Promise<void>}  resolved when done
    */
   public async setDidDocument(did: string, document: any): Promise<void> {
@@ -287,8 +325,11 @@ export class Did extends Logger {
     const identity = this.padIdentity(did
       ? await this.convertDidToIdentity(did)
       : this.options.signerIdentity.activeIdentity);
+
+    const finalDoc = await this.setAdditionalProperties(document);
     const documentHash = await this.options.dfs.add(
-      'did-document', Buffer.from(JSON.stringify(document), 'utf8'),
+      'did-document',
+      Buffer.from(JSON.stringify(finalDoc), 'utf8'),
     );
 
     await this.options.executor.executeContractTransaction(
@@ -313,8 +354,12 @@ export class Did extends Logger {
     const identity = this.padIdentity(did
       ? await this.convertDidToIdentity(did)
       : this.options.signerIdentity.activeIdentity);
+
+    const finalDoc = await this.setAdditionalProperties(document);
+
     const documentHash = await this.options.dfs.add(
-      'did-document', Buffer.from(JSON.stringify(document), 'utf8'),
+      'did-document',
+      Buffer.from(JSON.stringify(finalDoc), 'utf8'),
     );
 
     const txInfo = await this.options.verifications.signTransaction(
@@ -327,6 +372,7 @@ export class Did extends Logger {
 
     return [txInfo, documentHash];
   }
+
 
   /**
    * Sets service in DID document.
@@ -374,6 +420,93 @@ export class Did extends Logger {
   }
 
   /**
+   * Create a JWT over a DID document
+   *
+   * @param      {didDocument}   DID        The DID document
+   * @param      {string}        proofIssuer     The issuer (key owner) of the proof
+   * @param      {DidProofType}  proofType  The type of algorithm used for generating the JWT
+   */
+  private async createJwtForDid(didDocument: any, proofIssuer: string, proofType: DidProofType):
+  Promise<string> {
+    const signer = didJWT.SimpleSigner(
+      await this.options.accountStore.getPrivateKey(this.options.signerIdentity.underlyingAccount),
+    );
+    const jwt = await didJWT.createJWT(
+      {
+        didDocument,
+      }, {
+        alg: JWTProofMapping[proofType],
+        issuer: proofIssuer,
+        signer,
+      },
+    );
+
+    return jwt;
+  }
+
+
+  /**
+   * Creates a new `DidProof` object for a given DID document, including generating a JWT token over
+   * the whole document.
+   *
+   * @param      {DidDocument}   Did         The DID document to create the proof for.
+   * @param      {DidProofType}  proofType  Specify if you want a proof type different from the
+   *                                       default one.
+   * @returns    {DidProof}                 A proof object containing a JWT.
+   * @throws           If the Decentralized identity and the signer identity differ from each other
+   */
+  private async createProofForDid(didDocument,
+    proofType: DidProofType = DidProofType.EcdsaPublicKeySecp256k1): Promise<DidProof> {
+    const issuerIdentity = (await this.convertDidToIdentity(didDocument.id)).toLocaleLowerCase();
+    const activeIdentity = this.options.signerIdentity.activeIdentity.toLocaleLowerCase();
+    const controllerIdentity = didDocument.controller
+      ? (await this.convertDidToIdentity(didDocument.controller)).toLocaleLowerCase()
+      : '';
+    const account = this.options.signerIdentity.underlyingAccount.toLocaleLowerCase();
+    const signaturePublicKey = (await this.options.signerIdentity.getPublicKey(
+      this.options.signerIdentity.underlyingAccount,
+    )).toLocaleLowerCase();
+
+    let keys;
+    let proofIssuer;
+    if (activeIdentity === issuerIdentity) {
+      keys = didDocument.publicKey;
+      proofIssuer = didDocument.id;
+    } else if (activeIdentity === controllerIdentity) {
+      const controllerDidDoc = await this.getDidDocument(didDocument.controller);
+      keys = controllerDidDoc.publicKey;
+      proofIssuer = didDocument.controller;
+    } else {
+      throw Error('You are not authorized to issue this Did');
+    }
+
+    const key = keys.filter((entry) => {
+      // Fallback for old DIDs still using publicKeyHex
+      if (entry.ethereumAddress) {
+        return entry.ethereumAddress.toLocaleLowerCase() === account;
+      }
+      if (entry.publicKeyHex) {
+        return entry.publicKeyHex.toLocaleLowerCase() === signaturePublicKey;
+      }
+      return false;
+    })[0];
+    if (!key) {
+      throw Error('The signature key of the active account is not associated to its DID document.');
+    }
+
+    const jwt = await this.createJwtForDid(didDocument, proofIssuer, proofType);
+    const proof: DidProof = {
+      type: `${proofType}`,
+      created: new Date(Date.now()).toISOString(),
+      proofPurpose: 'assertionMethod',
+      verificationMethod: key.id,
+      jws: jwt,
+    };
+
+    return proof;
+  }
+
+  /*
    * Returns the standard DID document for deactivated DIDs
    */
   private async getDeactivatedDidDocument(did: string): Promise<any> {
@@ -429,7 +562,8 @@ export class Did extends Logger {
    */
   private async getDidInfix(): Promise<string> {
     if (typeof this.cached.didInfix === 'undefined') {
-      this.cached.didInfix = (await this.getEnvironment()) === 'testcore' ? 'testcore:' : '';
+      this.cached.didInfix = (await this.getEnvironment()).toLocaleLowerCase()
+        === 'testcore' ? 'testcore:' : '';
     }
     return this.cached.didInfix;
   }
@@ -502,6 +636,21 @@ export class Did extends Logger {
     return cleanedResult;
   }
 
+  private async setAdditionalProperties(document: any): Promise<any> {
+    const clone = _.cloneDeep(document);
+    const now = (new Date(Date.now())).toISOString();
+    // Only set 'created' for new did documents
+    if (!document.created) {
+      clone.created = now;
+    }
+
+    clone.updated = now;
+    clone.proof = await this.createProofForDid(clone, DidProofType.EcdsaPublicKeySecp256k1);
+
+    return clone;
+  }
+
+
   /**
    * Validates if a given DID is a valid evan DID and returns its parts.
    *
@@ -515,5 +664,47 @@ export class Did extends Logger {
       throw new Error(`Given did ("${did}") is no valid evan DID`);
     }
     return groups;
+  }
+
+  /**
+   * Validates the JWS of a DID Document proof
+   *
+   * @param      {any}    document  The DID Document
+   * @returns    {Promise<void>}           Resolves when done
+   */
+  private async validateProof(document: any): Promise<void> {
+    // Mock the did-resolver package that did-jwt usually requires
+    const getResolver = (didModule) => ({
+      async resolve(did) {
+        if (did.toLowerCase() === document.id.toLowerCase()) {
+          return document; // Avoid JWT cycling through documents forever
+        }
+        return didModule.getDidDocument(document.controller);
+      },
+    });
+
+    // fails if invalid signature
+    const verifiedSignature = await didJWT.verifyJWT(
+      document.proof.jws,
+      { resolver: getResolver(this) },
+    );
+
+    // fails if signed payload and the DID document differ
+    const payload = {
+      ...verifiedSignature.payload.didDocument,
+    };
+    delete payload.proof;
+    const prooflessDocument = {
+      ...document,
+    };
+    delete prooflessDocument.proof;
+
+    const proofPayloadHash = await this.options.nameResolver.soliditySha3(JSON.stringify(payload));
+    const documentHash = await this.options.nameResolver.soliditySha3(
+      JSON.stringify(prooflessDocument),
+    );
+    if (proofPayloadHash !== documentHash) {
+      throw Error('Invalid proof. Signed payload does not match given document.');
+    }
   }
 }

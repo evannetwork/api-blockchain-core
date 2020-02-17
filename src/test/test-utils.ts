@@ -179,6 +179,7 @@ export class TestUtils {
     await executor.init({ eventHub: await TestUtils.getEventHub(web3) });
 
     return new Did({
+      accountStore: this.getAccountStore(),
       contractLoader: await this.getContractLoader(web3),
       dfs: dfs || (await this.getIpfs()),
       executor,

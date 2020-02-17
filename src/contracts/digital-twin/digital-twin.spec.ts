@@ -21,7 +21,6 @@ import 'mocha';
 import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
 import { Ipfs } from '../../dfs/ipfs';
-import { Executor, SignerInternal } from '../..';
 import { accounts } from '../../test/accounts';
 import { configTestcore as config } from '../../config-testcore';
 import { Container } from './container';
@@ -36,6 +35,7 @@ import {
   DigitalTwinTemplate,
   DigitalTwinVerificationEntry,
 } from './digital-twin';
+import { Executor, SignerInternal } from '../..';
 import {
   nullAddress,
   nullBytes32,

@@ -37,6 +37,7 @@ Parameters
 ----------
 
 #. ``options`` - ``DidOptions``: options for Did constructor.
+    * ``accountStore`` - |source accountStore|_: |source accountStore|_ instance
     * ``contractLoader`` - |source contractLoader|_: |source contractLoader|_ instance
     * ``dfs`` - |source dfsInterface|_: |source dfsInterface|_ instance
     * ``executor`` - |source executor|_: |source executor|_ instance
@@ -163,7 +164,8 @@ getDidDocument
 
   did.getDidDocument(did);
 
-Get DID document for given DID.
+Get DID document for given DID. If the DID has a proof property, `getDidDocument` will attempt to validate the proof
+and throw an error if the proof is invalid.
 
 ----------
 Parameters
@@ -245,6 +247,9 @@ setDidDocument
   did.setDidDocument(did, document);
 
 Store given DID document for given DID.
+If the document misses the property `created`, it will automatically be appended.
+The `updated` property will be updated accordingly.
+A proof over the DID document will be generated automatically and appended to the document.
 
 ----------
 Parameters
@@ -458,6 +463,9 @@ Example
 
 .. required for building markup
 
+.. |source accountStore| replace:: ``AccountStore``
+.. _source accountStore: ../blockchain/account-store.html
+
 .. |source contractLoader| replace:: ``ContractLoader``
 .. _source contractLoader: ../contracts/contract-loader.html
 
@@ -474,13 +482,6 @@ Example
 .. _source logLogInterface: ../common/logger.html#logloginterface
 
 .. |source nameResolver| replace:: ``NameResolver``
-.. _source nameResolver: ../blockchain/name-resolver.html
-
-.. |source signerIdentity| replace:: ``SignerIdentity``
-.. _source signerIdentity: ../blockchain/signer-identity.html
-
-.. |source web3| replace:: ``Web3``
-.. _source web3: https://github.com/ethereum/web3.js/
 .. _source nameResolver: ../blockchain/name-resolver.html
 
 .. |source signerIdentity| replace:: ``SignerIdentity``

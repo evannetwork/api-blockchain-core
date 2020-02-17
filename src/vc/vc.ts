@@ -423,8 +423,8 @@ export class Vc extends Logger {
     const signer = didJWT.SimpleSigner(
       await this.options.accountStore.getPrivateKey(this.options.signerIdentity.underlyingAccount),
     );
-    let jwt = '';
-    await didJWT.createJWT(
+
+    const jwt = await didJWT.createJWT(
       {
         vc,
         exp: vc.validUntil,
@@ -433,7 +433,7 @@ export class Vc extends Logger {
         issuer: vc.issuer.id,
         signer,
       },
-    ).then((response) => { jwt = response; });
+    );
 
     return jwt;
   }
@@ -497,9 +497,10 @@ export class Vc extends Logger {
    *                   the active identity is found.
    */
   private async getPublicKeyUriFromDid(issuerDid: string): Promise<string> {
-    const signaturePublicKey = await this.options.signerIdentity.getPublicKey(
+    const signaturePublicKey = (await this.options.signerIdentity.getPublicKey(
       this.options.signerIdentity.underlyingAccount,
-    );
+    )).toLocaleLowerCase();
+    const account = this.options.signerIdentity.underlyingAccount.toLocaleLowerCase();
     const doc = await this.options.did.getDidDocument(issuerDid);
 
     if (!(doc.authentication || doc.publicKey || doc.publicKey.length === 0)) {
@@ -508,13 +509,19 @@ export class Vc extends Logger {
     }
 
     const key = doc.publicKey.filter(
-      (entry) => entry.ethereumAddress
-        === this.options.signerIdentity.underlyingAccount.toLowerCase()
-        || entry.publicKeyHex === signaturePublicKey,
+      (entry) => {
+        if (entry.ethereumAddress) {
+          return entry.ethereumAddress.toLocaleLowerCase() === account;
+        }
+        if (entry.publicKeyHex) {
+          return entry.publicKeyHex.toLocaleLowerCase() === signaturePublicKey;
+        }
+        return false;
+      },
     )[0];
 
     if (!key) {
-      throw Error('The signature key for the active account is not associated to its DID document. Cannot sign VC.');
+      throw Error('The signature key of the active account is not associated to its DID document. Cannot sign VC.');
     }
 
     return key.id;

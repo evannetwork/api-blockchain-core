@@ -637,6 +637,7 @@ export class Onboarding extends Logger {
     }
 
     const did = new Did({
+      accountStore: runtime.accountStore,
       contractLoader: runtime.contractLoader,
       dfs: runtime.dfs,
       executor: runtime.executor,
