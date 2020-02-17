@@ -96,6 +96,20 @@ describe('DID Resolver', function test() {
     runtimes[1].did = new Did(options1, { registryAddress: registry.options.address });
   });
 
+  describe('when using general did functionality', async () => {
+    it('returns a checksum ethereum address when converting dids to identities', async () => {
+      const identityChecksumCase = '0xc1912fEE45d61C87Cc5EA59DaE31190FFFFf232d';
+      const identityLowerCase = identityChecksumCase.toLowerCase();
+      const didMixed = await runtimes[0].did.convertIdentityToDid(identityChecksumCase);
+      const didLower = await runtimes[0].did.convertIdentityToDid(identityLowerCase);
+      const identityAfter = await runtimes[0].did.convertDidToIdentity(didMixed);
+      const identityLowerCaseAfter = await runtimes[0].did.convertDidToIdentity(didLower);
+
+      expect(identityAfter).to.eq(identityChecksumCase);
+      expect(identityLowerCaseAfter).to.eq(identityChecksumCase);
+    });
+  });
+
   describe('when storing did documents for account identities', async () => {
     it('allows to store a DID document for the own identity', async () => {
       const document = await runtimes[0].did.getDidDocumentTemplate();

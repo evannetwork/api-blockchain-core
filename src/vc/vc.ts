@@ -457,7 +457,7 @@ export class Vc extends Logger {
       throw Error(`Invalid issuer DID: ${vc.issuer.id}`);
     }
 
-    if (this.options.signerIdentity.activeIdentity.toLowerCase() !== issuerIdentity) {
+    if (this.options.signerIdentity.activeIdentity !== issuerIdentity) {
       throw Error('You are not authorized to issue this VC');
     }
 
