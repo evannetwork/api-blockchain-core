@@ -12,6 +12,7 @@
 ### Fixes
 - fix buffer-to-string conversion, try to decode to `utf8`, if this fails, decode it to `binary`
 - add `member-ordering` rule to eslint config
+- fix `container.getListEntry` to not throw an exception on call anymore
 
 ### Deprecations
 

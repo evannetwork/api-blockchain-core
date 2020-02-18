@@ -1563,22 +1563,29 @@ export class Container extends Logger {
    * encryption.
    *
    * @param      {any}       subSchema  schema to check in
-   * @param      {any}       toInspect  value to inspect
+   * @param      {any}       toInspect  value(s) to inspect
    * @param      {Function}  toApply    function, that will be applied to values in `toInspect`
    */
   private async applyIfEncrypted(subSchema: any, toInspect: any, toApply: Function) {
     if (this.isEncryptedFile(subSchema)) {
       // simple entry
       return toApply(toInspect);
-    } if (subSchema.type === 'array' && this.isEncryptedFile(subSchema.items)) {
-      // list/array with entries
-      return Promise.all(toInspect.map((entry) => toApply(entry)));
-    }
-    // check if nested
-    if (subSchema.type === 'array') {
-      return Promise.all(toInspect.map((entry) => this.applyIfEncrypted(
-        subSchema.items, entry, toApply,
-      )));
+    } if (subSchema.type === 'array') {
+      const isArray = Array.isArray(toInspect); // handle both getListEntry and getListEntries
+      if (this.isEncryptedFile(subSchema.items)) {
+        // list/array with entries
+        return isArray
+          ? Promise.all(toInspect.map((entry) => toApply(entry)))
+          : toApply(toInspect);
+      }
+      // check if nested
+      return isArray
+        ? Promise.all(toInspect.map((entry) => this.applyIfEncrypted(
+          subSchema.items, entry, toApply,
+        )))
+        : this.applyIfEncrypted(
+          subSchema.items, toInspect, toApply,
+        );
     } if (subSchema.type === 'object') {
       // check objects subproperties
       const transformed = {};

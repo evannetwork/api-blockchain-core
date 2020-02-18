@@ -346,6 +346,19 @@ describe('Container', function test() {
       expect(await container.getListEntries('testList')).to.deep.eq(randomNumbers);
     });
 
+    it('can set entries and get single entry for properties defined in (custom) template', async () => {
+      const plugin: ContainerPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
+      plugin.template.properties.testList = {
+        dataSchema: { type: 'array', items: { type: 'number' } },
+        permissions: { 0: ['set'] },
+        type: 'list',
+      };
+      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+      const randomNumbers = [...Array(8)].map(() => Math.floor(Math.random() * 1e12));
+      await container.addListEntries('testList', randomNumbers);
+      expect(await container.getListEntry('testList', 0)).to.deep.eq(randomNumbers[0]);
+    });
+
     it('can set list entries if not defined in template (auto adds properties)', async () => {
       const container = await Container.create(runtimes[owner], defaultConfig);
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
@@ -1460,9 +1473,13 @@ describe('Container', function test() {
         { accountId: owner, readWrite: ['testField1', 'testField2'] },
         { accountId: consumer, readWrite: ['testField1'], read: ['testField2'] },
       ];
-      const shareConfigs = await container.getContainerShareConfigs();
+
       const byAccountId = (e1, e2) => (e1.accountId < e2.accountId ? -1 : 1);
-      expect(shareConfigs.sort(byAccountId)).to.deep.eq(expected.sort(byAccountId));
+      const shareConfigs = await (await container.getContainerShareConfigs()).sort(byAccountId);
+      shareConfigs[0].readWrite = shareConfigs[0].readWrite.sort(
+        (prop1, prop2) => (prop1 < prop2 ? -1 : 1),
+      );
+      expect(shareConfigs).to.deep.eq(expected.sort(byAccountId));
     });
   });
 });
