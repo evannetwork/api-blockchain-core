@@ -371,7 +371,7 @@ describe('DigitalTwin', function test() {
         twinIdentity,
       );
       expect(twinIdentityOwnerPromise)
-        .to.be.eventually.rejectedWith('No record found for');
+        .to.be.eventually.rejectedWith('No owner found for');
 
       twinDescriptionHash = await localRuntime.executor.executeContractCall(
         twinContract,
@@ -473,7 +473,7 @@ describe('DigitalTwin', function test() {
         twinIdentity,
       );
       expect(twinIdentityOwnerPromise)
-        .to.be.eventually.rejectedWith('No record found for');
+        .to.be.eventually.rejectedWith('No owner found for');
 
       const twinDescriptionHash = await localRuntime.executor.executeContractCall(
         twinContract,
