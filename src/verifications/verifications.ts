@@ -1289,7 +1289,7 @@ export class Verifications extends Logger {
     }
 
     if (ownerAddress === nullAddress) {
-      throw Error(`No record found for ${identityAddress}. Is this a valid identity address?`);
+      throw Error(`No owner found for ${identityAddress}.`);
     }
 
     return ownerAddress;
