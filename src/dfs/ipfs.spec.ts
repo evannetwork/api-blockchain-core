@@ -94,9 +94,12 @@ describe('IPFS handler', function test() {
 
   it('should be able to get files', async () => {
     const randomContent = Math.random().toString();
+    const randomBufferContent = Buffer.from(randomContent);
     const hash = await ipfs.add('test', Buffer.from(randomContent, 'utf-8'));
     const fileContent = await ipfs.get(hash);
+    const fileBufferContent = await ipfs.get(hash, true) as Buffer;
     expect(fileContent).to.eq(randomContent);
+    expect(fileBufferContent.equals(randomBufferContent)).to.be.true;
   });
 
   it('should cache previous added files', async () => {

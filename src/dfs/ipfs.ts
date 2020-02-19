@@ -184,7 +184,7 @@ export class Ipfs extends Logger implements DfsInterface {
    *
    * @return     data as text
    */
-  public async get(hash: string, returnBuffer = false): Promise<any> {
+  public async get(hash: string, returnBuffer = false): Promise<string | Buffer> {
     const ipfsHash = hash.startsWith('Qm') ? hash : Ipfs.bytes32ToIpfsHash(hash);
 
     // check if the hash equals 0x000000000000000000000000000000000
