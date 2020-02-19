@@ -722,10 +722,10 @@ getListEntries
 
 .. code-block:: typescript
 
-    container.getListEntries(contract, listName, accountId[, dfsStorage, encryptedHashes, count, offset, reverse]);
+    container.getListEntries(listName, count, offset, reverse);
 
 Return list entries from contract.
-Note, that in the current implementation, this function retrieves the entries one at a time and may take a longer time when querying large lists, so be aware of that, when you retrieve lists with many entries.
+Note, that in the current implementation, this function retrieves the entries one at a time and may take a longer time when querying large lists, so be aware of that, when you retrieve lists with many entries. Keep in mind if only the listName is passed it will not retrieve the entire list instead only the first 10 elements in the list.
 
 ----------
 Parameters
@@ -753,21 +753,27 @@ Example
   // Output:
   // 0
 
-  const sampleValue = {
-    foo: 'sample',
-    bar: 123,
-  };
+  const sampleValue = [ 'Hello', 'welcome', 'to', 'evan', 'network' ];
   await container.addListEntries(listName, [sampleValue]);
   console.log(await container.getListEntryCount(listName));
   // Output:
-  // 1
+  // 5
 
   console.dir(await container.getListEntries(listName));
   // Output:
-  // [{
-  //   foo: 'sample',
-  //   bar: 123,
-  // }]
+  // [ 'Hello', 'welcome', 'to', 'evan', 'network' ]
+
+  console.log(await container.getListEntries(listName, 2));
+  //Output:
+  // [ 'Hello', 'welcome' ]
+
+  console.log(await container.getListEntries(listName, 10, 2));
+  //Output
+  // [ 'to', 'evan', 'network' ]
+
+  console.log(await container.getListEntries('testList', 10, 0, true));
+  //Output:
+  // [ 'network', 'evan', 'to', 'welcome', 'Hello' ]
 
 
 
