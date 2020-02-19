@@ -472,7 +472,7 @@ describe('DigitalTwin', function test() {
       const twinIdentityOwnerPromise = localRuntime.verifications.getOwnerAddressForIdentity(
         twinIdentity,
       );
-      expect(twinIdentityOwnerPromise)
+      await expect(twinIdentityOwnerPromise)
         .to.be.eventually.rejectedWith('No owner found for');
 
       const twinDescriptionHash = await localRuntime.executor.executeContractCall(
