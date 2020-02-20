@@ -172,7 +172,7 @@ describe('DID Resolver', function test() {
       const did = await runtimes[0].did.convertIdentityToDid(randomIdentity);
       const identityDidDocP = runtimes[0].did.getDidDocument(did);
       await expect(identityDidDocP).to.be.rejectedWith(
-        new RegExp(`^No record found for ${randomIdentity}\\. Is this a valid identity address\\?$`, 'i'),
+        new RegExp(`^Unable to resolve: Invalid DID ${did}`, 'i'),
       );
     });
 
