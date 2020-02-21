@@ -627,13 +627,17 @@ export class Onboarding extends Logger {
     });
 
     if (runtime.activeAccount !== runtime.activeIdentity) {
+      const updateConfig = {
+        activeIdentity: identity,
+        underlyingAccount: account,
+      };
       runtime.verifications.options.executor.signer.updateConfig({
         verifications: runtime.verifications,
       }, {
-        activeIdentity: identity,
-        underlyingAccount: account,
+        ...updateConfig,
         underlyingSigner,
       });
+      runtime.verifications.updateConfig({ }, updateConfig);
     }
 
     const did = new Did({
