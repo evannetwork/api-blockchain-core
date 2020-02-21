@@ -70,7 +70,7 @@ export interface DidDocumentTemplate {
   }[] | {
     id: string;
     type: string;
-    owner: string;
+    controller: string;
     ethereumAddress: string;
   }[];
   updated?: {
@@ -290,7 +290,7 @@ export class Did extends Logger {
         "publicKey": [{
           "id": "${didAddress}#key-1",
           "type": "Secp256k1VerificationKey2018",
-          "owner": "${didAddress}",
+          "controller": "${didAddress}",
           "ethereumAddress": "${this.options.signerIdentity.underlyingAccount.toLowerCase()}"
         }],
         "authentication": [
@@ -540,7 +540,7 @@ export class Did extends Logger {
         "publicKey": [{
           "id": "${did}#key-1",
           "type": "Secp256k1VerificationKey2018",
-          "owner": "${did}",
+          "controller": "${did}",
           "ethereumAddress": "${controllerIdentity}"
         }],
         "authentication": [
