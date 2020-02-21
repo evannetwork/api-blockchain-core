@@ -332,7 +332,7 @@ Parameters
 ----------
 
 #. ``hash`` - ``string``: ipfs hash (or bytes32 encoded) of the data
-#. ``returnBuffer`` - ``bool``: should the function return the plain buffer, defaults to ``false``
+#. ``returnBuffer`` - ``bool``: if true the method will return a raw buffer holding the data (default false)
 
 -------
 Returns

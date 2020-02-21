@@ -180,9 +180,10 @@ export class Ipfs extends Logger implements DfsInterface {
    * @brief      get data from ipfs by ipfs hash
    *
    * @param      hash  ipfs hash of the data
-   * @param      returnBuffer  should the function return the plain buffer (default false)
+   * @param      returnBuffer  if true the method will return a raw buffer holding
+   *                           the data (default false)
    *
-   * @return     data as text
+   * @return     data as text or raw buffer
    */
   public async get(hash: string, returnBuffer = false): Promise<string | Buffer> {
     const ipfsHash = hash.startsWith('Qm') ? hash : Ipfs.bytes32ToIpfsHash(hash);
