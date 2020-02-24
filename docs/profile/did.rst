@@ -450,7 +450,7 @@ Example
   //     {
   //       "id": "did:evan:testcore:0x126E901F6F408f5E260d95c62E7c73D9B60fd734#key-1",
   //       "type": "Secp256k1VerificationKey2018",
-  //       "owner": "did:evan:testcore:0x126E901F6F408f5E260d95c62E7c73D9B60fd734",
+  //       "controller": "did:evan:testcore:0x126E901F6F408f5E260d95c62E7c73D9B60fd734",
   //       "ethereumAddress": "0x126E901F6F408f5E260d95c62E7c73D9B60fd734"
   //     }
   //   ],
