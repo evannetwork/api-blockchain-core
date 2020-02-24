@@ -1289,7 +1289,7 @@ export class Verifications extends Logger {
     }
 
     if (ownerAddress === nullAddress) {
-      throw Error(`No record found for ${identityAddress}. Is this a valid identity address?`);
+      throw Error(`No owner found for ${identityAddress}.`);
     }
 
     return ownerAddress;
@@ -1648,9 +1648,9 @@ export class Verifications extends Logger {
   }
 
   /**
-   * Sets or creates a verification and a Verfiable credential document;
-   * this requires the issuer to have permissions for the parent
-   * verification (if verification name seen as a path, the parent 'folder').
+   * Sets or creates a verification along with a verifiable credential.
+   * Creating a verification requires the issuer to have permissions for the parent verification
+   *  (the parent directory, if the verification name is seen as a path).
    *
    * @param      {string}           issuer                   issuer of the verification
    * @param      {string}           subject                  subject of the verification and the

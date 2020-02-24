@@ -410,16 +410,18 @@ Example
 
 .. _verifications_setVerificationAndVc:
 
-setVerification
+setVerificationAndVc
 ================================================================================
 
 .. code-block:: typescript
 
-  verifications.setVerificationAndVc(issuer, subject, topic, expirationDate, verificationValue, descriptionDomain, disableSubVerifications);
+  verifications.setVerificationAndVc(issuer, subject, topic, expirationDate, verificationValue, descriptionDomain, disableSubVerifications, isIdentity, uri);
 
-Sets or creates a verification along with a verifiable credential; the verification creation requires the issuer to have permissions for the parent verification (if verification name seen as a path, the parent 'folder').
+Sets or creates a verification along with a verifiable credential.
+Creating a verification requires the issuer to have permissions for the parent verification (the parent directory, if the verification name is seen as a path).
 
-The "verificationValue" field can also be set to a custom JSON object with any data. The verificationValue works as same as in the setVerification function however in this function it is also added to the VC document.
+The `verificationValue` property can also be a custom JSON object with any data.
+It is treated just like in the :ref:`setVerification <verifications_setVerification>` function, except that this function also adds it to the VC document.
 
 ----------
 Parameters
@@ -449,11 +451,15 @@ Example
 
   // accounts[0] issues verification '/company' for accounts[1]
   const verification = verifications.setVerificationAndVc(accounts[0], accounts[1], '/company');
-
-``{ vcId:
-   'vc:evan:testcore:0x9becd31c7e5b6a1fe8ee9e76f1af56bcf84b6718548dbdfd1412f935b515ebe0',
-  verificationId:
-   '0x5373812c3cba3fdee77730a45e7bd05cf52a5f2195abf1f623a9b22d94cea939' };``
+  console.log(verification);
+  /* Output:
+  {
+    vcId:
+      'vc:evan:testcore:0x9becd31c7e5b6a1fe8ee9e76f1af56bcf84b6718548dbdfd1412f935b515ebe0',
+    verificationId:
+      '0x5373812c3cba3fdee77730a45e7bd05cf52a5f2195abf1f623a9b22d94cea939'
+  }
+  */
 
 
 

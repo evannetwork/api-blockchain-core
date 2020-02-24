@@ -529,8 +529,13 @@ export class Did extends Logger {
    */
   private async getDefaultDidDocument(did: string): Promise<any> {
     const identity = await this.convertDidToIdentity(did);
-    const controllerIdentity = await this.options.verifications
-      .getOwnerAddressForIdentity(identity);
+    let controllerIdentity;
+    try {
+      controllerIdentity = await this.options.verifications
+        .getOwnerAddressForIdentity(identity);
+    } catch (e) {
+      throw Error(`Unable to resolve: Invalid DID ${did}`);
+    }
 
     if (identity.length === 42) {
       // Identity is account identity and therefore self-sovereign
