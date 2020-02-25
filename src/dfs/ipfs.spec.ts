@@ -21,6 +21,7 @@ import 'mocha';
 import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
 
+import { IpfsLib } from './ipfs-lib';
 import { Ipfs } from './ipfs';
 import { InMemoryCache } from './in-memory-cache';
 import { TestUtils } from '../test/test-utils';
@@ -108,6 +109,22 @@ describe('IPFS handler', function test() {
     expect(Buffer.from(cacheResponse).toString('utf8')).to.eq(randomContent);
     // remove cache after test
     delete ipfs.cache;
+  });
+
+  it('should not be able to add a file when misconfigured', async () => {
+    ipfs.remoteNode = new IpfsLib({ host: 'ipfs.test.evan.network', port: '600', protocol: 'https' });
+    const randomContent = Math.random().toString();
+    const hash = ipfs.add('test', Buffer.from(randomContent, 'utf-8'));
+    await expect(hash).to.be.rejected;
+  });
+
+  it('should be able to add a file when ipfs port reconfigured to same port', async () => {
+    ipfs.remoteNode = new IpfsLib({ host: 'ipfs.test.evan.network', port: '443', protocol: 'https' });
+    const randomContent = Math.random().toString();
+    const hash = await ipfs.add('test', Buffer.from(randomContent, 'utf-8'));
+    expect(hash).not.to.be.undefined;
+    const fileContent = await ipfs.get(hash);
+    expect(fileContent).to.eq(randomContent);
   });
 
   describe('when dealing with special characters', () => {
