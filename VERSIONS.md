@@ -10,6 +10,7 @@
 - added proof validation to `getDidDocument` (only for documents that actually contain a proof)
 
 ### Fixes
+- fix `credentialStatus.id` uses short hand path for resolver links
 - fix `getListEntries` in the api docs
 - fix buffer-to-string conversion, try to decode to `utf8`, if this fails, decode it to `binary`
 - add `member-ordering` rule to eslint config
