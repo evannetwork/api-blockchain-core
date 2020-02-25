@@ -55,7 +55,7 @@ const configTestcore = {
       accountId: '0x063fB42cCe4CA5448D69b4418cb89E663E71A139',
     },
     didAndVc: {
-      vcRevokationStatusEndpoint: 'https://testcore.evan.network/smart-agents/smart-agent-did-resolver/vc/status/',
+      vcRevokationStatusEndpoint: 'https://testcore.evan.network/vc/',
     },
   },
   alwaysAutoGasLimit: 10,
