@@ -51,6 +51,9 @@ addons:
       - g++-5
 
 before_install:
+  - docker pull evannetwork/testcore-snapshot
+  - git clone https://github.com/evannetwork/testcore-config.git && cd testcore-config
+  - docker run -d -p 8546:8546 -p 8545:8545 -v /home/travis/build/evannetwork/api-blockchain-core/testcore-config/testcore.json:/root/parity/spec.json -u root evannetwork/testcore-snapshot --chain /root/parity/spec.json --jsonrpc-interface all --unsafe-expose
   - export CC="gcc-5" && export CXX="g++-5" && export LINK="gcc-5" && export LINKXX="g++-5"
   - npm install -g npm@latest
   - cd ..
@@ -88,7 +91,7 @@ install:
     fi
     npm i
     node ./scripts/build-contracts.js
-    ganache-cli --allowUnlimitedContractSize --gasLimit 0xE4E1C0 -p 7545 -f https://testcore.evan.network > /dev/null &
+    ganache-cli --allowUnlimitedContractSize --gasLimit 0xE4E1C0 -p 7545 -f http://localhost:8545 > /dev/null &
     cd /home/travis/build/evannetwork/api-blockchain-core
 after_success:
   - bash <(curl -s https://codecov.io/bash) -cF javascript
