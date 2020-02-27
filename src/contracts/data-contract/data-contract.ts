@@ -824,7 +824,7 @@ export class DataContract extends BaseContract {
    * @param hash Reference to the DFS file. Can be either an IPFS or a bytes32 hash.
    */
   public async getDfsContent(hash: string): Promise<Buffer> {
-    return this.options.dfs.get(hash);
+    return this.options.dfs.get(hash) as Promise<Buffer>;
   }
 
   private async validate(description: any, fieldName: string, toCheck: any[]) {
