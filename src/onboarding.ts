@@ -437,6 +437,7 @@ export class Onboarding extends Logger {
     const targetAccount = runtime.activeIdentity !== accountId ? newIdentity : accountId;
     const targetAccountHash = runtime.activeIdentity !== accountId ? identityHash : accountHash;
 
+    // TODO: Use identity encryption key here!
     const dataKey = runtime.keyProvider.keys[accountHash];
 
     profile.ipld.originator = runtime.web3.utils.soliditySha3(targetAccount);
