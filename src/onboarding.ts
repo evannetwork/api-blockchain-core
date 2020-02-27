@@ -364,6 +364,10 @@ export class Onboarding extends Logger {
     recaptchaToken: string,
     network = 'testcore',
   ) {
+    const creationRuntime = {
+      ...runtime,
+      activeIdentity: '0x0000000000000000000000000000000000000000',
+    };
     // check for correct profile data
     if (!profileData || !profileData.accountDetails || !profileData.accountDetails.accountName) {
       throw new Error('No profile data specified or accountDetails missing');
@@ -380,14 +384,14 @@ export class Onboarding extends Logger {
     // build array with allowed fields (may include duplicates)
     Profile.checkCorrectProfileData(profileData, profileData.accountDetails.profileType);
 
-    const { profile } = runtime;
+    const { profile } = creationRuntime;
     // disable pinning while profile files are being created
     profile.ipld.ipfs.disablePin = true;
     // clear hash log
     profile.ipld.hashLog = [];
 
     const pk = `0x${pKey}`;
-    const { signature } = runtime.web3.eth.accounts.sign('Gimme Gimme Gimme!', pk);
+    const { signature } = creationRuntime.web3.eth.accounts.sign('Gimme Gimme Gimme!', pk);
     // request a new profile contract
 
     const requestMode = process.env.TEST_ONBOARDING ? http : https;
@@ -432,24 +436,25 @@ export class Onboarding extends Logger {
       reqProfileReq.end();
     });
     const newIdentity = (requestedProfile as any).identity;
-    const accountHash = runtime.web3.utils.soliditySha3(accountId);
-    const identityHash = runtime.web3.utils.soliditySha3(newIdentity);
-    const targetAccount = runtime.activeIdentity !== accountId ? newIdentity : accountId;
-    const targetAccountHash = runtime.activeIdentity !== accountId ? identityHash : accountHash;
+    const accountHash = creationRuntime.web3.utils.soliditySha3(accountId);
+    const identityHash = creationRuntime.web3.utils.soliditySha3(newIdentity);
+    const targetAccount = creationRuntime.activeIdentity !== accountId ? newIdentity : accountId;
+    const targetAccountHash = creationRuntime.activeIdentity !== accountId ? identityHash
+      : accountHash;
 
     // TODO: Use identity encryption key here!
-    const dataKey = runtime.keyProvider.keys[accountHash];
+    const dataKey = creationRuntime.keyProvider.keys[accountHash];
 
-    profile.ipld.originator = runtime.web3.utils.soliditySha3(targetAccount);
+    profile.ipld.originator = creationRuntime.web3.utils.soliditySha3(targetAccount);
     profile.activeAccount = targetAccount;
     profile.profileOwner = targetAccount;
 
     // eslint-disable-next-line
-    runtime.keyProvider.keys[targetAccountHash] = dataKey;
+    creationRuntime.keyProvider.keys[targetAccountHash] = dataKey;
     // eslint-disable-next-line
-    runtime.keyProvider.keys[runtime.web3.utils.soliditySha3(targetAccountHash, targetAccountHash)] = dataKey;
+    creationRuntime.keyProvider.keys[creationRuntime.web3.utils.soliditySha3(targetAccountHash, targetAccountHash)] = dataKey;
 
-    const dhKeys = runtime.keyExchange.getDiffieHellmanKeys();
+    const dhKeys = creationRuntime.keyExchange.getDiffieHellmanKeys();
     await profile.addContactKey(
       targetAccount, 'dataKey', dhKeys.privateKey.toString('hex'),
     );
@@ -457,37 +462,37 @@ export class Onboarding extends Logger {
     await profile.addPublicKey(dhKeys.publicKey.toString('hex'));
 
     // set initial structure by creating addressbook structure and saving it to ipfs
-    const cryptor = runtime.cryptoProvider.getCryptorByCryptoAlgo('aesEcb');
+    const cryptor = creationRuntime.cryptoProvider.getCryptorByCryptoAlgo('aesEcb');
     const fileHashes: any = {};
 
-    const cryptorAes = runtime.cryptoProvider.getCryptorByCryptoAlgo(
-      runtime.dataContract.options.defaultCryptoAlgo,
+    const cryptorAes = creationRuntime.cryptoProvider.getCryptorByCryptoAlgo(
+      creationRuntime.dataContract.options.defaultCryptoAlgo,
     );
-    const hashCryptor = runtime.cryptoProvider.getCryptorByCryptoAlgo(
-      runtime.dataContract.cryptoAlgorithHashes,
+    const hashCryptor = creationRuntime.cryptoProvider.getCryptorByCryptoAlgo(
+      creationRuntime.dataContract.cryptoAlgorithHashes,
     );
     const [hashKey, blockNr] = await Promise.all([
       hashCryptor.generateKey(),
-      runtime.web3.eth.getBlockNumber(),
+      creationRuntime.web3.eth.getBlockNumber(),
     ]);
 
     // setup sharings for new profile
     const sharings = {};
     const profileKeys = Object.keys(profileData);
     // add hashKey
-    await runtime.sharing.extendSharings(
+    await creationRuntime.sharing.extendSharings(
       sharings, targetAccount, targetAccount, '*', 'hashKey', hashKey,
     );
     // extend sharings for profile data
     const dataContentKeys = await Promise.all(profileKeys.map(() => cryptorAes.generateKey()));
     for (let i = 0; i < profileKeys.length; i += 1) {
-      await runtime.sharing.extendSharings(
+      await creationRuntime.sharing.extendSharings(
         sharings, targetAccount, targetAccount, profileKeys[i], blockNr, dataContentKeys[i],
       );
     }
     // upload sharings
-    const sharingsHash = await runtime.dfs.add(
-      'sharing', Buffer.from(JSON.stringify(sharings), runtime.dataContract.encodingUnencrypted),
+    const sharingsHash = await creationRuntime.dfs.add(
+      'sharing', Buffer.from(JSON.stringify(sharings), creationRuntime.dataContract.encodingUnencrypted),
     );
 
     // used to exclude encrypted hashes from fileHashes.ipfsHashes
@@ -502,10 +507,10 @@ export class Onboarding extends Logger {
       const envelope = {
         private: encrypted.toString('hex'),
         cryptoInfo: cryptorAes.getCryptoInfo(
-          runtime.nameResolver.soliditySha3((requestedProfile as any).contractId),
+          creationRuntime.nameResolver.soliditySha3((requestedProfile as any).contractId),
         ),
       };
-      const ipfsHash = await runtime.dfs.add(key, Buffer.from(JSON.stringify(envelope)));
+      const ipfsHash = await creationRuntime.dfs.add(key, Buffer.from(JSON.stringify(envelope)));
       profile.ipld.hashLog.push(`${ipfsHash.toString('hex')}`);
 
       fileHashes.properties.entries[key] = await cryptor.encrypt(
@@ -549,7 +554,7 @@ export class Onboarding extends Logger {
 
     const data = {
       accountId,
-      identityId: runtime.activeIdentity !== accountId ? newIdentity : undefined,
+      identityId: creationRuntime.activeIdentity !== accountId ? newIdentity : undefined,
       signature,
       profileInfo: fileHashes,
       accessToken: (requestedProfile as any).accessToken,
@@ -558,7 +563,7 @@ export class Onboarding extends Logger {
 
     // TODO if statement can be removed after account/identity switch is done
     if ((requestedProfile as any).identity) {
-      const didTransactionTuple = await this.createOfflineDidTransaction(runtime,
+      const didTransactionTuple = await this.createOfflineDidTransaction(creationRuntime,
         accountId, (requestedProfile as any).identity);
       const didTransaction = didTransactionTuple[0];
       const documentHash = didTransactionTuple[1];
