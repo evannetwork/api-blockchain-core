@@ -112,18 +112,31 @@ describe('IPFS handler', function test() {
   });
 
   it('should not be able to add a file when misconfigured', async () => {
-    ipfs.remoteNode = new IpfsLib({ host: 'ipfs.test.evan.network', port: '600', protocol: 'https' });
+    const localIpfs = await TestUtils.getIpfs();
+    localIpfs.remoteNode = new IpfsLib(
+      { host: 'ipfs.test.evan.network', port: '600', protocol: 'https' },
+    );
     const randomContent = Math.random().toString();
-    const hash = ipfs.add('test', Buffer.from(randomContent, 'utf-8'));
-    await expect(hash).to.be.rejected;
+    const requestPromise = (async () => {
+      const request = localIpfs.add('test', Buffer.from(randomContent, 'utf-8'));
+      await expect(request).to.be.rejectedWith(
+        /^could not add file to ipfs: problem with request/,
+      );
+    })();
+    const timeoutPromise = new Promise((s) => { setTimeout(s, 5_000); });
+    // requeset will either receive a network error or timeout (after 120s)
+    await Promise.race([requestPromise, timeoutPromise]);
   });
 
   it('should be able to add a file when ipfs port reconfigured to same port', async () => {
-    ipfs.remoteNode = new IpfsLib({ host: 'ipfs.test.evan.network', port: '443', protocol: 'https' });
+    const localIpfs = await TestUtils.getIpfs();
+    localIpfs.remoteNode = new IpfsLib(
+      { host: 'ipfs.test.evan.network', port: '443', protocol: 'https' },
+    );
     const randomContent = Math.random().toString();
-    const hash = await ipfs.add('test', Buffer.from(randomContent, 'utf-8'));
+    const hash = await localIpfs.add('test', Buffer.from(randomContent, 'utf-8'));
     expect(hash).not.to.be.undefined;
-    const fileContent = await ipfs.get(hash);
+    const fileContent = await localIpfs.get(hash);
     expect(fileContent).to.eq(randomContent);
   });
 
