@@ -265,7 +265,7 @@ export class Vc extends Logger {
   public async getRevokeVcStatus(vcId: string): Promise<void> {
     const environment = await this.getEnvironment();
     const vcIdHash = vcId.replace(`vc:evan:${environment}:`, '');
-    // `vcId` usually come from a vc document, so non-existing vcs can be considered an edge case,
+    // `vcId` usually comes from a VC document, so non-existing VCs can be considered an edge case,
     // running both requests in parallel to improve performance
     const [revoked] = await Promise.all([
       this.options.executor.executeContractCall(
