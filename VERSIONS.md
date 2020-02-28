@@ -12,6 +12,7 @@
 ### Fixes
 - fix `credentialStatus.id` uses short hand path for resolver links
 - add check for `getRevokeVcStatus` to throw error when non existing VC is passed
+- fix `ipfsLib` now uses the configured port
 - fix `getListEntries` in the api docs
 - fix buffer-to-string conversion, try to decode to `utf8`, if this fails, decode it to `binary`
 - add `member-ordering` rule to eslint config
