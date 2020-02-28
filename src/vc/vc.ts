@@ -21,6 +21,7 @@ import * as didJWT from 'did-jwt';
 import { cloneDeep } from 'lodash';
 
 import {
+  nullAddress,
   nullBytes32,
   getEnvironment,
 } from '../common/utils';
@@ -262,20 +263,28 @@ export class Vc extends Logger {
    * @return     {revokationStatus}  A boolean value. False = not revoked, True = revoked
    */
   public async getRevokeVcStatus(vcId: string): Promise<void> {
-    let revokationStatus;
-    const vcDocument = await this.getVc(vcId);
-    if (!vcDocument) {
-      throw new Error(`Given "${vcId}" is not a valid evan VC`);
-    } else {
-      const environment = await this.getEnvironment();
-      const vcIdHash = vcId.replace(`vc:evan:${environment}:`, '');
-      revokationStatus = await this.options.executor.executeContractCall(
+    const environment = await this.getEnvironment();
+    const vcIdHash = vcId.replace(`vc:evan:${environment}:`, '');
+    // `vcId` usually come from a vc document, so non-existing vcs can be considered an edge case,
+    // running both requests in parallel to improve performance
+    const [revoked] = await Promise.all([
+      this.options.executor.executeContractCall(
         await this.getRegistryContract(),
         'vcRevoke',
         vcIdHash,
-      );
-    }
-    return revokationStatus;
+      ),
+      (async () => {
+        const owned = await this.options.executor.executeContractCall(
+          await this.getRegistryContract(),
+          'vcOwner',
+          vcIdHash,
+        );
+        if (owned === nullAddress) {
+          throw new Error(`Given "${vcId}" is not a valid evan VC`);
+        }
+      })(),
+    ]);
+    return revoked;
   }
 
   /**

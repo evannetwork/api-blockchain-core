@@ -319,7 +319,7 @@ describe('VC Resolver', function () {
       const nonExistingVcId = '0x2a838a6961be98f6a182f375bb9158848ee9760ca97a379939ccdf03fc442a23';
       const vcRevokeStatus = runtime.vc.getRevokeVcStatus(nonExistingVcId);
 
-      await expect(vcRevokeStatus).to.be.rejectedWith(`VC for address ${nonExistingVcId} does not exist`);
+      await expect(vcRevokeStatus).to.be.rejectedWith(`Given "${nonExistingVcId}" is not a valid evan VC`);
     });
 
     it('allows me to get revoke status of an existing VC using the vc api', async () => {
