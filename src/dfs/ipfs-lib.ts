@@ -86,6 +86,7 @@ export class IpfsLib {
       const requestLib: any = this.provider.protocol === 'http' ? http : https;
       const reqOptions: http.RequestOptions = {};
       reqOptions.hostname = this.provider.host;
+      reqOptions.port = this.provider.port;
       reqOptions.path = `${this.provider.base}${opts.uri}`;
       reqOptions.headers = { ...this.provider.headers };
       if (opts.payload) {

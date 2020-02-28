@@ -21,6 +21,7 @@ import 'mocha';
 import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
 
+import { IpfsLib } from './ipfs-lib';
 import { Ipfs } from './ipfs';
 import { InMemoryCache } from './in-memory-cache';
 import { TestUtils } from '../test/test-utils';
@@ -111,6 +112,35 @@ describe('IPFS handler', function test() {
     expect(Buffer.from(cacheResponse).toString('utf8')).to.eq(randomContent);
     // remove cache after test
     delete ipfs.cache;
+  });
+
+  it('should not be able to add a file when misconfigured', async () => {
+    const localIpfs = await TestUtils.getIpfs();
+    localIpfs.remoteNode = new IpfsLib(
+      { host: 'ipfs.test.evan.network', port: '600', protocol: 'https' },
+    );
+    const randomContent = Math.random().toString();
+    const requestPromise = (async () => {
+      const request = localIpfs.add('test', Buffer.from(randomContent, 'utf-8'));
+      await expect(request).to.be.rejectedWith(
+        /^could not add file to ipfs: problem with request/,
+      );
+    })();
+    const timeoutPromise = new Promise((s) => { setTimeout(s, 5_000); });
+    // requeset will either receive a network error or timeout (after 120s)
+    await Promise.race([requestPromise, timeoutPromise]);
+  });
+
+  it('should be able to add a file when ipfs port reconfigured to same port', async () => {
+    const localIpfs = await TestUtils.getIpfs();
+    localIpfs.remoteNode = new IpfsLib(
+      { host: 'ipfs.test.evan.network', port: '443', protocol: 'https' },
+    );
+    const randomContent = Math.random().toString();
+    const hash = await localIpfs.add('test', Buffer.from(randomContent, 'utf-8'));
+    expect(hash).not.to.be.undefined;
+    const fileContent = await localIpfs.get(hash);
+    expect(fileContent).to.eq(randomContent);
   });
 
   describe('when dealing with special characters', () => {
