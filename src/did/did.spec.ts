@@ -381,14 +381,17 @@ describe('DID Resolver', function test() {
       const did = await runtimes[0].did.convertIdentityToDid(twinIdentity);
       const controllerDid = await runtimes[0].did.convertIdentityToDid(runtimes[0].activeIdentity);
       const controllerDidDoc = await runtimes[0].did.getDidDocument(controllerDid);
-      const authKeyIds = controllerDidDoc.publicKey.map((key) => key.id).join(',');
+      const authKeyIds = [];
+      for (const entry of controllerDidDoc.publicKey) {
+        authKeyIds.push(entry.id);
+      }
 
       const expectedDefaultDid = {
         '@context': 'https://w3id.org/did/v1',
         id: did,
         controller: controllerDidDoc.id,
         authentication: [
-          authKeyIds,
+          authKeyIds.join(','),
         ],
       };
       const defaultDidDoc = await runtimes[0].did.getDidDocument(did);
@@ -573,14 +576,17 @@ describe('DID Resolver', function test() {
       const controllerDid = await runtimes[0].did.convertIdentityToDid(ownerIdentity);
       const controllerDidDoc = await runtimes[0].did.getDidDocument(controllerDid);
       const did = await runtimes[0].did.convertIdentityToDid(aliasIdentity);
-      const authKeyIds = controllerDidDoc.publicKey.map((key) => key.id).join(',');
+      const authKeyIds = [];
+      for (const entry of controllerDidDoc.publicKey) {
+        authKeyIds.push(entry.id);
+      }
 
       const expectedDefaultDid = {
         '@context': 'https://w3id.org/did/v1',
         id: did,
         controller: controllerDidDoc.id,
         authentication: [
-          authKeyIds,
+          authKeyIds.join(','),
         ],
       };
 
