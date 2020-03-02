@@ -17,6 +17,8 @@
 - add `member-ordering` rule to eslint config
 - fix `container.getListEntry` to not throw an exception on call anymore
 - replaced deprecated property `owner` in DID publicKey fields with `controller`
+- update verification keys for onboarding, when `useIdentity` is enabled
+- reset `activeIdentity` within `createOfflineProfile`
 
 ### Deprecations
 
