@@ -1463,8 +1463,8 @@ export class Container extends Logger {
       await Throttle.all(accessP);
 
       // /////////////////// check if only remaining property is 'type', cleanup if that's the case
-      const shareConfig = await this.getContainerShareConfigForAccount(accountId);
-      const remainingFields = Array.from(new Set([
+      let shareConfig = await this.getContainerShareConfigForAccount(accountId);
+      let remainingFields = Array.from(new Set([
         ...(shareConfig.read ? shareConfig.read : []),
         ...(shareConfig.readWrite ? shareConfig.readWrite : []),
       ]));
@@ -1479,11 +1479,6 @@ export class Container extends Logger {
 
         // remove read if applicable
         readWrite.push('type');
-
-        // uninvite
-        this.options.dataContract.removeFromContract(
-          null, await this.getContractAddress(), this.config.accountId, accountId,
-        );
       }
 
       // //////////////////////////////////////////////////// ensure encryption keys for properties
@@ -1555,6 +1550,19 @@ export class Container extends Logger {
           }
         });
       });
+
+      // ////////////////////////////////////////////// remove account from member role if required
+      shareConfig = await this.getContainerShareConfigForAccount(accountId);
+      remainingFields = Array.from(new Set([
+        ...(shareConfig.read ? shareConfig.read : []),
+        ...(shareConfig.readWrite ? shareConfig.readWrite : []),
+      ]));
+      if (remainingFields.length === 0) {
+        // uninvite
+        await this.options.dataContract.removeFromContract(
+          null, await this.getContractAddress(), this.config.accountId, accountId,
+        );
+      }
     }));
   }
 

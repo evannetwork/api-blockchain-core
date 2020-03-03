@@ -940,6 +940,8 @@ describe('Container', function test() {
       ((consumerContainer as any).options as ContainerOptions).sharing.clearCache();
       consumerSharing = ((consumerContainer as any).options as ContainerOptions).sharing;
       shareConfig = await container.getContainerShareConfigForAccount(consumer);
+      const members = await runtimes[owner].rightsAndRoles.getMembers((container as any).contract);
+      expect(members['1']).not.to.include(consumer);
       await expect(consumerContainer.getEntry('testField'))
         .to.be.rejectedWith('could not get entry; no hashKey key found');
       expect(shareConfig).not.to.haveOwnProperty('read');
