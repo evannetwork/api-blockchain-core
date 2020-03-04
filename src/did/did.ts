@@ -57,16 +57,16 @@ export interface DidDocument {
   id: string;
   controller?: string;
   authentication: string[];
-  publicKey?: {
+  publicKey?: ({
     id: string;
     type: string;
     publicKeyHex: string;
-  }[] | {
+  } | {
     id: string;
     type: string;
     controller: string;
     ethereumAddress: string;
-  }[];
+  })[];
   updated?: string;
   created?: string;
   proof?: DidProof;
@@ -245,13 +245,13 @@ export class Did extends Logger {
    *
    * @param      {string}  did                   (optional) contract DID
    * @param      {string}  controllerDid         (optional) controller of contracts identity (DID)
-   * @param      {string}  authenticationKey     (optional) authentication key used for contract
+   * @param      {string[]}  authenticationKeys  (optional) array of authentication keys
    * @return     {Promise<DidDocument>}  a DID document template
    */
   public async getDidDocumentTemplate(
-    did?: string, controllerDid?: string, authenticationKey?: string,
+    did?: string, controllerDid?: string, authenticationKeys?: string[],
   ): Promise<DidDocument> {
-    if (did && controllerDid && authenticationKey) {
+    if (did && controllerDid && authenticationKeys) {
       await this.validateDid(did);
       await this.validateDid(controllerDid);
       // use given key to create a contract DID document
@@ -259,11 +259,9 @@ export class Did extends Logger {
         '@context': 'https://w3id.org/did/v1',
         id: did,
         controller: controllerDid,
-        authentication: [
-          authenticationKey,
-        ],
+        authentication: authenticationKeys,
       };
-    } if (!(did || controllerDid || authenticationKey)) {
+    } if (!(did || controllerDid || authenticationKeys)) {
       const identity = this.options.signerIdentity.activeIdentity;
       const didAddress = await this.convertIdentityToDid(identity);
 
@@ -548,14 +546,10 @@ export class Did extends Logger {
     // Identity is contract identity and therefore controlled by another identity
     const controllerDid = await this.convertIdentityToDid(controllerIdentity);
     const controllerDidDoc = await this.getDidDocument(controllerDid);
-    const authKeyIds = [];
-    for (const key of controllerDidDoc.publicKey) {
-      authKeyIds.push(key.id);
-    }
-
+    const authKeyIds = controllerDidDoc.publicKey.map((key) => key.id);
     return this.getDidDocumentTemplate(did,
       controllerDid,
-      authKeyIds.join(','));
+      authKeyIds);
   }
 
   /**

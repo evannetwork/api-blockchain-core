@@ -783,7 +783,7 @@ export class DigitalTwin extends Logger {
     for (const key of publicKeys) {
       authKeyIds.push(key.id);
     }
-    const doc = await this.options.did.getDidDocumentTemplate(twinDid, controllerDid, authKeyIds.join(','));
+    const doc = await this.options.did.getDidDocumentTemplate(twinDid, controllerDid, authKeyIds);
     await this.options.did.setDidDocument(twinDid, doc);
   }
 
