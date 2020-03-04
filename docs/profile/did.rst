@@ -256,7 +256,7 @@ Parameters
 ----------
 
 #. ``did`` - ``string``: DID to store DID document for
-#. ``document`` - ``DidDOcument``: DID document to store, ``getDidDocumentTemplate`` can be used as a starting point for DID documents
+#. ``document`` - ``DidDocument``: DID document to store, ``getDidDocumentTemplate`` can be used as a starting point for DID documents
 
 -------
 Returns
