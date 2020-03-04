@@ -177,7 +177,7 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``DidDOcument``: A DID document. For deactiated DIDs it returns a default DID document containing no authentication material.
+``Promise`` returns ``DidDocument``: A DID document. For deactivated DIDs it returns a default DID document containing no authentication material.
 
 -------
 Example
@@ -256,7 +256,7 @@ Parameters
 ----------
 
 #. ``did`` - ``string``: DID to store DID document for
-#. ``document`` - ``DidDOcument``: DID document to store, ``getDidDocumentTemplate`` can be used as a starting point for DID documents
+#. ``document`` - ``DidDocument``: DID document to store, ``getDidDocumentTemplate`` can be used as a starting point for DID documents
 
 -------
 Returns
