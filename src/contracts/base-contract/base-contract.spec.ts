@@ -26,7 +26,7 @@ import {
   Executor,
 } from '@evan.network/dbcp';
 
-import { accounts } from '../../test/accounts';
+import { accounts, useIdentity } from '../../test/accounts';
 import { BaseContract, ConsumerState, ContractState } from './base-contract';
 import { configTestcore as config } from '../../config-testcore';
 import { Ipfs } from '../../dfs/ipfs';

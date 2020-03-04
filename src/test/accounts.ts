@@ -18,7 +18,8 @@
 */
 import * as Web3 from 'web3';
 
-let useIdentity = false;
+// eslint-disable-next-line import/no-mutable-exports
+let useIdentity = true;
 try {
   useIdentity = JSON.parse(process.env.USE_IDENTITY);
 } catch (_) {
@@ -35,10 +36,12 @@ if (process.env.ACCOUNT_MAP) {
     ...(useIdentity
       // accounts with identity based profiles
       ? {
-        '0x94BfC9A95d6D18775bDd4035631D6706E3d14661':
-          'fcb9c75848b5147f6d1800a200abb0705973cceb374280b22e0132ba061a27c2',
-        '0x5d0B79bB17a23251223443fA0457cdf5AB03558f':
-          '40274623153d131d27a81871af0c438eac2d391388267860a48a6e02a4e35739',
+        '0x01ca0B000c5830F4472dF87cc9D1c3810Bfd0c50':
+          'e75166cfa55946774428d8a7549acadce5ca33d49de8b6015c0bcb0a3328490b',
+        '0x5E5b3C43169bE75Ab6F79621009cD6a045B8788c':
+          '9119021b0629218551ac85e652143374cb41f95fda97cf62e827c2519334caea',
+        '0xE19308Fa5F8d02C74aD01C876Ba457448A255d1F':
+            '6b4100af9a28837dfa86802391bc979ef997c3418f59d2dddf3d8a4828fe2b82',
       }
       // accounts without identity based profiles
       : {
@@ -54,20 +57,22 @@ if (process.env.ACCOUNT_MAP) {
       '70adb5e0424148e2b490776143a6a93662d3f40c3d9597690bdd3472863b7625',
   };
 }
+console.log(localAccountMap);
 const accountMap = localAccountMap;
 const accounts = Object.keys(accountMap);
 
 // set up identities
-let letIdentities;
+const letIdentities = [];
 if (useIdentity) {
-  letIdentities = [
-    '0x3Ff56cE81A229762A50917965aA4BC23C8b3C736',
-    '0xF07bA7B336ebf3b3B5d0761f192DEb55C31BAeE9',
+  letIdentities.push([
+    '0xB5eC0687E24d05Ae0541FfC6699d0a820b98cca6',
+    '0xA033E060C2362E877212ac1534BAdEB0c384136B',
+    '0x775e5A47Ac9ECDc5696F12d2fcEb55306b3e7728',
     '0x00D1267B27C3A80080f9E1B6Ba01DE313b53Ab58',
     '0x0ab4F29ef71E591e209b1386CaDFc5B7CCB5102A',
-  ];
+  ]);
 } else {
-  letIdentities = Object.keys(accountMap);
+  letIdentities.push(Object.keys(accountMap));
 }
 const identities = letIdentities;
 
@@ -99,8 +104,10 @@ const dataKeys = {
 if (useIdentity) {
   dataKeys[sha3(identities[0])] = 'd387345c149bdad709bdb928b89e7037b94f2637b7cbc227fbbcdfa723a6c7ee';
   dataKeys[sha3(identities[1])] = '8e198c1e308cafabaa88926949f9d5aedf793879bb2ea37f427bdb9c29d9ec44';
+  dataKeys[sha3(identities[2])] = '1d5faa13c1bbaafb4a27882b2f101f2e6e703fb4b37ff989c03a27df9aada677';
   dataKeys[sha9(identities[0], identities[0])] = 'd387345c149bdad709bdb928b89e7037b94f2637b7cbc227fbbcdfa723a6c7ee';
   dataKeys[sha9(identities[1], identities[1])] = '8e198c1e308cafabaa88926949f9d5aedf793879bb2ea37f427bdb9c29d9ec44';
+  dataKeys[sha9(identities[2], identities[2])] = '1d5faa13c1bbaafb4a27882b2f101f2e6e703fb4b37ff989c03a27df9aada677';
 }
 
 export {
@@ -108,4 +115,5 @@ export {
   accountMap,
   identities,
   dataKeys,
+  useIdentity,
 };

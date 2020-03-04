@@ -519,6 +519,7 @@ export async function createDefaultRuntime(
         await profile.getContactKey(activeIdentity, 'dataKey'),
       );
     } catch (ex) {
+      console.trace(ex);
       logger.log(
         `fetching keys for ${activeIdentity} failed with "${ex.msg || ex}", `
         + 'removing profile from runtime', 'warning',

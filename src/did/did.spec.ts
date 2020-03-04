@@ -46,6 +46,7 @@ describe('DID Resolver', function test() {
       TestUtils.getRuntime(accounts[1], null, { useIdentity: true }),
       TestUtils.getRuntime(accounts[2], null, { useIdentity: false }),
     ]);
+    console.log(`Identity: ${accounts[0]}`);
     accounts0Identity = await runtimes[0].verifications.getIdentityForAccount(
       runtimes[0].underlyingAccount, true,
     );
