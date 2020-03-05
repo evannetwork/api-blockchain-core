@@ -8,6 +8,7 @@
 - add methods `deactivateDidDocument` and `didIsDeactivated` to check and handle DID deactivation status
 - added additional properties `updated`, `created`, and `proof` to DID documents
 - added proof validation to `getDidDocument` (only for documents that actually contain a proof)
+- export `config` and `runtimeConfig` by `createDefaultRuntime`
 
 ### Fixes
 - fix `credentialStatus.id` uses short hand path for resolver links
@@ -20,7 +21,7 @@
 - replaced deprecated property `owner` in DID publicKey fields with `controller`
 - fix pending contract members after unshare
 - update verification keys for onboarding, when `useIdentity` is enabled
-- reset `activeIdentity` within `createOfflineProfile`
+- reset `activeIdentity` within `createOfflineProfile` when useIdentity is enabled
 
 ### Deprecations
 
