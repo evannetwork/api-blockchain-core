@@ -21,7 +21,7 @@ import 'mocha';
 import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
 import { Ipfs } from '../../dfs/ipfs';
-import { accounts } from '../../test/accounts';
+import { accounts, useIdentity } from '../../test/accounts';
 import { configTestcore as config } from '../../config-testcore';
 import { Container } from './container';
 import { TestUtils } from '../../test/test-utils';
@@ -116,7 +116,6 @@ describe('DigitalTwin', function test() {
   this.timeout(600000);
   let dfs: Ipfs;
   let defaultConfig: DigitalTwinConfig;
-  let executor: Executor;
   const description = {
     name: 'test twin',
     description: 'twin from test run',
@@ -131,28 +130,27 @@ describe('DigitalTwin', function test() {
     version: '0.1.0',
     dbcpVersion: 2,
   };
-  let runtime: DigitalTwinOptions;
+  let twinOptions: DigitalTwinOptions;
+  let runtime: Runtime;
 
   before(async () => {
-    dfs = await TestUtils.getIpfs();
-    const web3 = await TestUtils.getWeb3();
-    executor = await TestUtils.getExecutor(web3);
-    runtime = {
-      contractLoader: await TestUtils.getContractLoader(web3),
-      cryptoProvider: await TestUtils.getCryptoProvider(),
-      dataContract: await TestUtils.getDataContract(web3, dfs),
-      description: await TestUtils.getDescription(web3, dfs),
-      did: await TestUtils.getDid(web3, accounts[0], dfs),
-      executor,
-      nameResolver: await TestUtils.getNameResolver(web3),
-      profile: await TestUtils.getProfile(web3, dfs, null, accounts[0]),
-      rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
-      sharing: await TestUtils.getSharing(web3, dfs),
-      verifications: await TestUtils.getVerifications(web3, dfs),
-      web3,
+    runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
+    twinOptions = {
+      contractLoader: runtime.contractLoader,
+      cryptoProvider: runtime.cryptoProvider,
+      dataContract: runtime.dataContract,
+      description: runtime.description,
+      did: runtime.did,
+      executor: runtime.executor,
+      nameResolver: runtime.nameResolver,
+      profile: runtime.profile,
+      rightsAndRoles: runtime.rightsAndRoles,
+      sharing: runtime.sharing,
+      verifications: runtime.verifications,
+      web3: runtime.web3,
     };
 
-    runtime.executor.eventHub = await TestUtils.getEventHub(web3);
+    runtime.executor.eventHub = runtime.eventHub;
     defaultConfig = {
       accountId: accounts[0],
       containerConfig: {
@@ -162,60 +160,60 @@ describe('DigitalTwin', function test() {
       description,
     };
     // create factory for test
-    const factory = await executor.createContract('DigitalTwinFactory', [], { from: accounts[0], gas: 3e6 });
+    const factory = await runtime.executor.createContract('DigitalTwinFactory', [], { from: accounts[0], gas: 3e6 });
     defaultConfig.factoryAddress = factory.options.address;
   });
 
   describe('working with twins', () => {
     it('can can create new contracts', async () => {
-      const twin = await DigitalTwin.create(runtime, defaultConfig);
+      const twin = await DigitalTwin.create(twinOptions, defaultConfig);
       expect(await twin.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
     });
 
     it('empty description.tags twins should have tag \'evan-digital-twin\' after creation', async () => {
       const customConfig = JSON.parse(JSON.stringify(defaultConfig));
       delete customConfig.description.tags;
-      const twin = await DigitalTwin.create(runtime, customConfig);
+      const twin = await DigitalTwin.create(twinOptions, customConfig);
       const twinDescription = await twin.getDescription();
 
       expect(twinDescription.tags).to.include('evan-digital-twin');
     });
 
     it('loading a twin without the tag \'evan-digital-twin\' should be invalid', async () => {
-      const twin = await DigitalTwin.create(runtime, defaultConfig);
+      const twin = await DigitalTwin.create(twinOptions, defaultConfig);
       const address = await twin.getContractAddress();
       const customDescription = JSON.parse(JSON.stringify(description));
       delete customDescription.tags;
 
       // reset filled tags
       await runtime.description.setDescription(address, { public: customDescription }, accounts[0]);
-      const validity = await DigitalTwin.getValidity(runtime, address);
+      const validity = await DigitalTwin.getValidity(twinOptions, address);
 
       expect(validity.valid).to.be.false;
       expect(validity.error.message).to.include('doesn\'t match the specification');
     });
 
     it('loading a twin with the tag \'evan-digital-twin\' should be valid', async () => {
-      const twin = await DigitalTwin.create(runtime, defaultConfig);
+      const twin = await DigitalTwin.create(twinOptions, defaultConfig);
       const address = await twin.getContractAddress();
-      const validity = await DigitalTwin.getValidity(runtime, address);
+      const validity = await DigitalTwin.getValidity(twinOptions, address);
 
       expect(validity.valid).to.be.true;
       expect(validity.error).to.be.null;
     });
 
     it('can handle twin as favorites within my profile', async () => {
-      const twin = await DigitalTwin.create(runtime, defaultConfig);
+      const twin = await DigitalTwin.create(twinOptions, defaultConfig);
       let favorites;
 
       // check favorite adding
       await twin.addAsFavorite();
-      favorites = await DigitalTwin.getFavorites(runtime);
+      favorites = await DigitalTwin.getFavorites(twinOptions);
       expect(favorites).to.include(await twin.getContractAddress());
 
       // check favorite remove
       await twin.removeFromFavorites();
-      favorites = await DigitalTwin.getFavorites(runtime);
+      favorites = await DigitalTwin.getFavorites(twinOptions);
       expect(favorites).to.not.include(await twin.getContractAddress());
     });
 
@@ -224,7 +222,7 @@ describe('DigitalTwin', function test() {
       const customConfig = JSON.parse(JSON.stringify(defaultConfig));
       delete customConfig.containerConfig;
 
-      const twin = new DigitalTwin(runtime, customConfig);
+      const twin = new DigitalTwin(twinOptions, customConfig);
       expect((twin as any).config.containerConfig.accountId).to.be.eq(defaultConfig.accountId);
     });
 
@@ -233,13 +231,13 @@ describe('DigitalTwin', function test() {
       const customConfig = JSON.parse(JSON.stringify(defaultConfig));
       delete customConfig.description.dbcpVersion;
 
-      const twin = await DigitalTwin.create(runtime, defaultConfig);
+      const twin = await DigitalTwin.create(twinOptions, defaultConfig);
       const newDesc = await twin.getDescription();
       expect(newDesc.dbcpVersion).to.be.eq(2);
     });
 
     it('automatically creates a valid did document upon twin creation', async () => {
-      const twin = await DigitalTwin.create(runtime, defaultConfig);
+      const twin = await DigitalTwin.create(twinOptions, defaultConfig);
       const twinIdentity = (await twin.getDescription()).identity;
       const did = await runtime.did.convertIdentityToDid(twinIdentity);
       const ownerIdentity = await runtime.verifications
@@ -501,7 +499,7 @@ describe('DigitalTwin', function test() {
         ...defaultConfig,
         ...twinTemplate,
       };
-      const twin = await DigitalTwin.create(runtime, configWithTemplate);
+      const twin = await DigitalTwin.create(twinOptions, configWithTemplate);
       expect(await twin.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
 
       // check if containers were created
@@ -549,7 +547,7 @@ describe('DigitalTwin', function test() {
         ...defaultConfig,
         ...twinTemplate,
       };
-      const twin = await DigitalTwin.create(runtime, configWithTemplate);
+      const twin = await DigitalTwin.create(twinOptions, configWithTemplate);
       const template = await twin.exportAsTemplate();
 
       // check exported description
@@ -584,7 +582,7 @@ describe('DigitalTwin', function test() {
         ...defaultConfig,
         ...twinTemplate,
       };
-      const twin = await DigitalTwin.create(runtime, configWithTemplate);
+      const twin = await DigitalTwin.create(twinOptions, configWithTemplate);
       const { plugins: { plugin1, plugin2 } } = await twin.exportAsTemplate(true);
 
       expect(plugin2.template.properties.testlist.value).to.be.eq(undefined);
@@ -597,7 +595,7 @@ describe('DigitalTwin', function test() {
       const brokenTemplate: DigitalTwinTemplate = JSON.parse(JSON.stringify(twinTemplate));
       brokenTemplate.plugins.plugin1.template.properties.dataset1.dataSchema.properties
         .prop1.type = 'text';
-      const createPromise = DigitalTwin.create(runtime, {
+      const createPromise = DigitalTwin.create(twinOptions, {
         ...defaultConfig,
         ...brokenTemplate,
       });
@@ -611,12 +609,12 @@ describe('DigitalTwin', function test() {
   describe('when performing set/get operations', () => {
     describe('when performing basic set/get operations', () => {
       it('can add entries to index', async () => {
-        const twin = await DigitalTwin.create(runtime, defaultConfig);
+        const twin = await DigitalTwin.create(twinOptions, defaultConfig);
         await twin.setEntry('sample', TestUtils.getRandomBytes32(), DigitalTwinEntryType.Hash);
       });
 
       it('can get entries from index', async () => {
-        const twin = await DigitalTwin.create(runtime, defaultConfig);
+        const twin = await DigitalTwin.create(twinOptions, defaultConfig);
         const value = TestUtils.getRandomBytes32();
         await twin.setEntry('sample', value, DigitalTwinEntryType.Hash);
         const result = await twin.getEntry('sample');
@@ -624,7 +622,7 @@ describe('DigitalTwin', function test() {
       });
 
       it('can set and get bytes32 values', async () => {
-        const twin = await DigitalTwin.create(runtime, defaultConfig);
+        const twin = await DigitalTwin.create(twinOptions, defaultConfig);
         const value = TestUtils.getRandomBytes32();
         await twin.setEntry('sample', value, DigitalTwinEntryType.Hash);
         const result = await twin.getEntry('sample');
@@ -633,7 +631,7 @@ describe('DigitalTwin', function test() {
       });
 
       it('can set and get address values', async () => {
-        const twin = await DigitalTwin.create(runtime, defaultConfig);
+        const twin = await DigitalTwin.create(twinOptions, defaultConfig);
         const value = TestUtils.getRandomAddress();
         await twin.setEntry('sample', value, DigitalTwinEntryType.GenericContract);
         const result = await twin.getEntry('sample');
@@ -649,7 +647,7 @@ describe('DigitalTwin', function test() {
             entryType: DigitalTwinEntryType.Hash,
           };
         }
-        const twin = await DigitalTwin.create(runtime, defaultConfig);
+        const twin = await DigitalTwin.create(twinOptions, defaultConfig);
         await twin.setEntries(samples);
         const result = await twin.getEntries();
         expect(Object.keys(result).length).to.eq(Object.keys(samples).length);
@@ -676,7 +674,7 @@ describe('DigitalTwin', function test() {
             entryType: DigitalTwinEntryType.Hash,
           };
         }
-        const twin = await DigitalTwin.create(runtime, defaultConfig);
+        const twin = await DigitalTwin.create(twinOptions, defaultConfig);
         await twin.setEntries(samples);
         return { twin, samples };
       };
@@ -709,8 +707,8 @@ describe('DigitalTwin', function test() {
 
     describe('when working with linked indices', () => {
       it('can link two twins and fetch properties via entry path navigtion', async () => {
-        const car = await DigitalTwin.create(runtime, defaultConfig);
-        const tire = await DigitalTwin.create(runtime, defaultConfig);
+        const car = await DigitalTwin.create(twinOptions, defaultConfig);
+        const tire = await DigitalTwin.create(twinOptions, defaultConfig);
 
         const tireAddress = await tire.getContractAddress();
 
@@ -729,9 +727,9 @@ describe('DigitalTwin', function test() {
       });
 
       it('can link three twins and fetch properties via entry path navigtion', async () => {
-        const car = await DigitalTwin.create(runtime, defaultConfig);
-        const tire = await DigitalTwin.create(runtime, defaultConfig);
-        const screw = await DigitalTwin.create(runtime, defaultConfig);
+        const car = await DigitalTwin.create(twinOptions, defaultConfig);
+        const tire = await DigitalTwin.create(twinOptions, defaultConfig);
+        const screw = await DigitalTwin.create(twinOptions, defaultConfig);
 
         const tireAddress = await tire.getContractAddress();
         const screwAddress = await screw.getContractAddress();
@@ -759,14 +757,14 @@ describe('DigitalTwin', function test() {
 
     describe('when adding containers', () => {
       before(async () => {
-        const factory = await executor.createContract(
+        const factory = await runtime.executor.createContract(
           'ContainerDataContractFactory', [], { from: accounts[0], gas: 6e6 },
         );
         defaultConfig.containerConfig.factoryAddress = factory.options.address;
       });
 
       it('creates new containers automatically', async () => {
-        const twin = await DigitalTwin.create(runtime, defaultConfig);
+        const twin = await DigitalTwin.create(twinOptions, defaultConfig);
         const customPlugin = JSON.parse(JSON.stringify(Container.plugins.metadata));
         customPlugin.template.properties.type = {
           dataSchema: { type: 'string' },
@@ -793,7 +791,7 @@ describe('DigitalTwin', function test() {
 
   describe('when working with verifications', () => {
     it('can set verifications to twin', async () => {
-      const twin = await DigitalTwin.create(runtime, defaultConfig);
+      const twin = await DigitalTwin.create(twinOptions, defaultConfig);
       const verifications: DigitalTwinVerificationEntry[] = [...Array(3)].map(
         (_, i) => ({ topic: `verifcation_${i}` } as DigitalTwinVerificationEntry),
       );
@@ -815,7 +813,7 @@ describe('DigitalTwin', function test() {
   before(async () => {
     // get address for tests
     ens = runtime.contractLoader.loadContract('AbstractENS', config.nameResolver.ensAddress);
-    const domainOwner = await executor.executeContractCall(
+    const domainOwner = await runtime.executor.executeContractCall(
       ens, 'owner', runtime.nameResolver.namehash(ownedDomain),
     );
     if (domainOwner === '0x0000000000000000000000000000000000000000') {
@@ -827,7 +825,7 @@ describe('DigitalTwin', function test() {
     it('can save contracts to ENS', async () => {
       const randomName = Math.floor(Math.random() * 1e12).toString(36);
       const address = `${randomName}.${ownedDomain}`;
-      const twin = await DigitalTwin.create(runtime, { ...defaultConfig, address });
+      const twin = await DigitalTwin.create(twinOptions, { ...defaultConfig, address });
 
       expect(await twin.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
       expect(await twin.getContractAddress()).to.eq(
@@ -838,8 +836,8 @@ describe('DigitalTwin', function test() {
     it('can load indicdes from ENS', async () => {
       const randomName = Math.floor(Math.random() * 1e12).toString(36);
       const address = `${randomName}.${ownedDomain}`;
-      await DigitalTwin.create(runtime, { ...defaultConfig, address });
-      const loadedTwin = new DigitalTwin(runtime, { ...defaultConfig, address });
+      await DigitalTwin.create(twinOptions, { ...defaultConfig, address });
+      const loadedTwin = new DigitalTwin(twinOptions, { ...defaultConfig, address });
 
       expect(await loadedTwin.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
       expect(await loadedTwin.getContractAddress()).to.eq(
@@ -848,7 +846,7 @@ describe('DigitalTwin', function test() {
     });
 
     it('loading an empty ens address should throw an error', async () => {
-      const isValidTwin = await DigitalTwin.getValidity(runtime,
+      const isValidTwin = await DigitalTwin.getValidity(twinOptions,
         'there.s.really.no.twin.evan');
 
       expect(isValidTwin.valid).to.be.false;

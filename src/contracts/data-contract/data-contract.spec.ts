@@ -22,34 +22,23 @@ import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
 
 import {
-  ContractLoader,
-  DfsInterface,
   Envelope,
-  Executor,
-  NameResolver,
 } from '@evan.network/dbcp';
 
-import { accounts } from '../../test/accounts';
+import { accounts, useIdentity } from '../../test/accounts';
 import { ConsumerState, ContractState } from '../base-contract/base-contract';
-import { CryptoProvider } from '../../encryption/crypto-provider';
-import { DataContract } from './data-contract';
-import { Sharing } from '../sharing';
 import { sampleContext, TestUtils } from '../../test/test-utils';
+import { Runtime } from '../../runtime';
 
 use(chaiAsPromised);
 
 
 describe('DataContract', function test() {
   this.timeout(60000);
-  let dc: DataContract;
-  let executor: Executor;
-  let loader: ContractLoader;
   let businessCenterDomain;
-  let sharing: Sharing;
-  let dfs: DfsInterface;
-  let web3;
-  let cryptoProvider: CryptoProvider;
-  let nameResolver: NameResolver;
+  let identity1: string;
+  let identity2: string;
+  let runtimes: Runtime[];
 
   const sampleValues = [
     '0x0000000000000000000000000000000000000000000000000000000000001234',
@@ -69,27 +58,13 @@ describe('DataContract', function test() {
   };
 
   before(async () => {
-    web3 = TestUtils.getWeb3();
-    nameResolver = await TestUtils.getNameResolver(web3);
-    executor = await TestUtils.getExecutor(web3);
-    executor.eventHub = await TestUtils.getEventHub(web3);
-    loader = await TestUtils.getContractLoader(web3);
-    dfs = await TestUtils.getIpfs();
-    sharing = await TestUtils.getSharing(web3, dfs);
-    cryptoProvider = TestUtils.getCryptoProvider();
-    sampleDescription.cryptoInfo = cryptoProvider
-      .getCryptorByCryptoAlgo('aes').getCryptoInfo(nameResolver.soliditySha3(accounts[0]));
-    dc = new DataContract({
-      cryptoProvider,
-      dfs,
-      executor,
-      loader,
-      log: TestUtils.getLogger(),
-      nameResolver,
-      sharing,
-      web3: TestUtils.getWeb3(),
-      description: await TestUtils.getDescription(web3, dfs),
-    });
+    runtimes = await Promise.all(
+      accounts.slice(0, 2).map((account) => TestUtils.getRuntime(account, null, { useIdentity })),
+    );
+    identity1 = runtimes[0].activeIdentity;
+    identity2 = runtimes[1].activeIdentity;
+    sampleDescription.cryptoInfo = runtimes[0].cryptoProvider
+      .getCryptorByCryptoAlgo('aes').getCryptoInfo(runtimes[0].nameResolver.soliditySha3(identity1));
     businessCenterDomain = null;
   });
 
@@ -98,20 +73,20 @@ describe('DataContract', function test() {
     if (schema) {
       description = JSON.parse(JSON.stringify(sampleDescription));
       description.public.dataSchema = schema;
-      description.cryptoInfo = cryptoProvider
-        .getCryptorByCryptoAlgo('aes').getCryptoInfo(nameResolver.soliditySha3(accounts[0]));
+      description.cryptoInfo = runtimes[0].cryptoProvider
+        .getCryptorByCryptoAlgo('aes').getCryptoInfo(runtimes[0].nameResolver.soliditySha3(identity1));
     }
-    const contract = await dc.create(
-      'testdatacontract', accounts[0], businessCenterDomain, description,
+    const contract = await runtimes[0].dataContract.create(
+      'testdatacontract', identity1, businessCenterDomain, description,
     );
-    await dc.inviteToContract(
-      businessCenterDomain, contract.options.address, accounts[0], accounts[1],
+    await runtimes[0].dataContract.inviteToContract(
+      businessCenterDomain, contract.options.address, identity1, identity2,
     );
     if (addSharing) {
-      const blockNr = await web3.eth.getBlockNumber();
-      const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', blockNr);
-      await sharing.addSharing(
-        contract.options.address, accounts[0], accounts[1], '*', blockNr, contentKey,
+      const blockNr = await runtimes[0].web3.eth.getBlockNumber();
+      const contentKey = await runtimes[0].sharing.getKey(contract.options.address, identity1, '*', blockNr);
+      await runtimes[0].sharing.addSharing(
+        contract.options.address, identity1, identity2, '*', blockNr, contentKey,
       );
     }
     return contract;
@@ -123,26 +98,26 @@ describe('DataContract', function test() {
       describe('that can only be set by the owner', async () => {
         it('allows the owner to add and get entries', async () => {
           const contract = await createContract(storeInDfs);
-          await dc.setEntry(
+          await runtimes[0].dataContract.setEntry(
             contract,
             'entry_settable_by_owner',
             sampleValues[0],
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           );
-          const retrieved = await dc.getEntry(
-            contract, 'entry_settable_by_owner', accounts[0], storeInDfs, encryptHashes,
+          const retrieved = await runtimes[0].dataContract.getEntry(
+            contract, 'entry_settable_by_owner', identity1, storeInDfs, encryptHashes,
           );
           expect(retrieved).to.eq(sampleValues[0]);
         });
         it('does not allow the member to add and get entries', async () => {
           const contract = await createContract(storeInDfs);
-          const promise = dc.setEntry(
+          const promise = runtimes[0].dataContract.setEntry(
             contract,
             'entry_settable_by_owner',
             sampleValues[0],
-            accounts[1],
+            identity2,
             storeInDfs,
             encryptHashes,
           );
@@ -150,77 +125,89 @@ describe('DataContract', function test() {
         });
         it('can retrieve a schema from its description', async () => {
           const contract = await createContract(storeInDfs);
-          await dc.setEntry(
+          await runtimes[0].dataContract.setEntry(
             contract,
             'entry_settable_by_owner',
             sampleValues[0],
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           );
         });
         it('can use different crypto algorithms for encryption', async () => {
           const contract = await createContract(storeInDfs);
-          await dc.setEntry(
+          await runtimes[0].dataContract.setEntry(
             contract,
             'entry_settable_by_owner',
             sampleValues[0],
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           );
-          const encryptedHash = await executor.executeContractCall(
-            contract, 'getEntry', nameResolver.sha3('entry_settable_by_owner'),
+          const encryptedHash = await runtimes[0].executor.executeContractCall(
+            contract, 'getEntry', runtimes[0].nameResolver.sha3('entry_settable_by_owner'),
           );
           if (!storeInDfs) {
             expect(encryptedHash).to.eq(sampleValues[0]);
           } else {
-            const unencryptedHash = await dc.decryptHash(encryptedHash, contract, accounts[0]);
-            const envelope = JSON.parse((await dfs.get(unencryptedHash)).toString());
+            const unencryptedHash = await runtimes[0].dataContract.decryptHash(
+              encryptedHash,
+              contract,
+              identity1,
+            );
+            const envelope = JSON.parse((await runtimes[0].dfs.get(unencryptedHash)).toString());
             expect(envelope.cryptoInfo.algorithm).to.eq('aes-256-cbc');
             const data = Buffer.from(envelope.private, 'hex').toString('utf-8');
             expect(data).to.not.eq(sampleValues[0]);
           }
 
-          await dc.setEntry(
+          await runtimes[0].dataContract.setEntry(
             contract,
             'entry_settable_by_owner',
             sampleValues[0],
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
             'aes',
           );
-          const hashAes = await executor.executeContractCall(
-            contract, 'getEntry', nameResolver.sha3('entry_settable_by_owner'),
+          const hashAes = await runtimes[0].executor.executeContractCall(
+            contract, 'getEntry', runtimes[0].nameResolver.sha3('entry_settable_by_owner'),
           );
           if (!storeInDfs) {
             expect(hashAes).to.eq(sampleValues[0]);
           } else {
-            const unencryptedHash = await dc.decryptHash(hashAes, contract, accounts[0]);
-            const envelope = JSON.parse((await dfs.get(unencryptedHash)).toString());
+            const unencryptedHash = await runtimes[0].dataContract.decryptHash(
+              hashAes,
+              contract,
+              identity1,
+            );
+            const envelope = JSON.parse((await runtimes[0].dfs.get(unencryptedHash)).toString());
             expect(envelope.cryptoInfo.algorithm).to.eq('aes-256-cbc');
             const data = Buffer.from(envelope.private, 'hex').toString('utf-8');
             expect(data).to.not.eq(sampleValues[0]);
           }
 
-          await dc.setEntry(
+          await runtimes[0].dataContract.setEntry(
             contract,
             'entry_settable_by_owner',
             sampleValues[0],
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
             'unencrypted',
           );
-          const hashRaw = await executor.executeContractCall(
-            contract, 'getEntry', nameResolver.sha3('entry_settable_by_owner'),
+          const hashRaw = await runtimes[0].executor.executeContractCall(
+            contract, 'getEntry', runtimes[0].nameResolver.sha3('entry_settable_by_owner'),
           );
           if (!storeInDfs) {
             expect(hashRaw).to.eq(sampleValues[0]);
           } else {
-            const unencryptedHash = await dc.decryptHash(hashRaw, contract, accounts[0]);
-            const envelope = JSON.parse((await dfs.get(unencryptedHash)).toString());
+            const unencryptedHash = await runtimes[0].dataContract.decryptHash(
+              hashRaw,
+              contract,
+              identity1,
+            );
+            const envelope = JSON.parse((await runtimes[0].dfs.get(unencryptedHash)).toString());
             expect(envelope.cryptoInfo.algorithm).to.eq('unencrypted');
             const data = JSON.parse(Buffer.from(envelope.private, 'hex').toString('utf-8'));
             expect(data).to.eq(sampleValues[0]);
@@ -228,36 +215,41 @@ describe('DataContract', function test() {
         });
         it('allows content to be shared via contexts', async () => {
           // create contract, set value
-          const contract = await dc.create('testdatacontract', accounts[0]);
-          await dc.setEntry(
+          const contract = await runtimes[0].dataContract.create('testdatacontract', identity1);
+          await runtimes[0].dataContract.setEntry(
             contract,
             'entry_settable_by_owner',
             sampleValues[0],
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           );
 
           // account 1 is invited, but has no sharing
-          await dc.inviteToContract(null, contract.options.address, accounts[0], accounts[1]);
+          await runtimes[0].dataContract.inviteToContract(
+            null,
+            contract.options.address,
+            identity1,
+            identity2,
+          );
 
           // get key to share
-          const blockNr = await web3.eth.getBlockNumber();
-          const contentKey = await sharing.getKey(
-            contract.options.address, accounts[0], '*', blockNr,
+          const blockNr = await runtimes[0].web3.eth.getBlockNumber();
+          const contentKey = await runtimes[0].sharing.getKey(
+            contract.options.address, identity1, '*', blockNr,
           );
 
           // add context based sharing key
-          await sharing.addSharing(
+          await runtimes[0].sharing.addSharing(
             contract.options.address,
-            accounts[0],
+            identity1,
             sampleContext,
             '*',
             0,
             contentKey,
             sampleContext,
           );
-          const retrieved = await dc.getEntry(
+          const retrieved = await runtimes[0].dataContract.getEntry(
             contract, 'entry_settable_by_owner', sampleContext, storeInDfs, encryptHashes,
           );
           expect(retrieved).to.eq(sampleValues[0]);
@@ -266,31 +258,31 @@ describe('DataContract', function test() {
       describe('that can be set by owner and member', async () => {
         it('allows the owner to add and get entries', async () => {
           const contract = await createContract(storeInDfs);
-          await dc.setEntry(
+          await runtimes[0].dataContract.setEntry(
             contract,
             'entry_settable_by_member',
             sampleValues[0],
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           );
-          const retrieved = await dc.getEntry(
-            contract, 'entry_settable_by_member', accounts[0], storeInDfs, encryptHashes,
+          const retrieved = await runtimes[0].dataContract.getEntry(
+            contract, 'entry_settable_by_member', identity1, storeInDfs, encryptHashes,
           );
           expect(retrieved).to.eq(sampleValues[0]);
         });
         it('allows the member to add and get entries', async () => {
           const contract = await createContract(storeInDfs);
-          await dc.setEntry(
+          await runtimes[0].dataContract.setEntry(
             contract,
             'entry_settable_by_member',
             sampleValues[0],
-            accounts[1],
+            identity2,
             storeInDfs,
             encryptHashes,
           );
-          const retrieved = await dc.getEntry(
-            contract, 'entry_settable_by_member', accounts[1], storeInDfs, encryptHashes,
+          const retrieved = await runtimes[0].dataContract.getEntry(
+            contract, 'entry_settable_by_member', identity2, storeInDfs, encryptHashes,
           );
           expect(retrieved).to.eq(sampleValues[0]);
         });
@@ -300,16 +292,16 @@ describe('DataContract', function test() {
       describe('that allows only the owner to add items', async () => {
         it('allows the owner to add and get entries', async () => {
           const contract = await createContract(storeInDfs);
-          await dc.addListEntries(
+          await runtimes[0].dataContract.addListEntries(
             contract,
             'list_settable_by_owner',
             sampleValues,
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           );
-          const retrieved = await dc.getListEntries(
-            contract, 'list_settable_by_owner', accounts[0], storeInDfs, encryptHashes,
+          const retrieved = await runtimes[0].dataContract.getListEntries(
+            contract, 'list_settable_by_owner', identity1, storeInDfs, encryptHashes,
           );
           for (let i = 0; i < sampleValues.length; i += 1) {
             expect(retrieved[i]).to.eq(sampleValues[i]);
@@ -317,11 +309,11 @@ describe('DataContract', function test() {
         });
         it('does not allow the member to add entries', async () => {
           const contract = await createContract(storeInDfs);
-          const promise = dc.addListEntries(
+          const promise = runtimes[0].dataContract.addListEntries(
             contract,
             'list_settable_by_owner',
             sampleValues,
-            accounts[1],
+            identity2,
             storeInDfs,
             encryptHashes,
           );
@@ -329,18 +321,18 @@ describe('DataContract', function test() {
         });
         it('allows to retrieve the items with an item limit', async () => {
           const contract = await createContract(storeInDfs);
-          await dc.addListEntries(
+          await runtimes[0].dataContract.addListEntries(
             contract,
             'list_settable_by_owner',
             sampleValues,
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           );
-          const retrieved = await dc.getListEntries(
+          const retrieved = await runtimes[0].dataContract.getListEntries(
             contract,
             'list_settable_by_owner',
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
             2,
@@ -352,16 +344,16 @@ describe('DataContract', function test() {
         });
         it('allows to retrieve the items with an offset', async () => {
           const contract = await createContract(storeInDfs);
-          await dc.addListEntries(
+          await runtimes[0].dataContract.addListEntries(
             contract,
             'list_settable_by_owner',
             sampleValues,
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           );
-          const retrieved = await dc.getListEntries(
-            contract, 'list_settable_by_owner', accounts[0], storeInDfs, encryptHashes, 10, 2,
+          const retrieved = await runtimes[0].dataContract.getListEntries(
+            contract, 'list_settable_by_owner', identity1, storeInDfs, encryptHashes, 10, 2,
           );
           expect(retrieved.length).to.eq(sampleValues.length - 2);
           for (let i = 0; i < retrieved.length; i += 1) {
@@ -370,18 +362,18 @@ describe('DataContract', function test() {
         });
         it('allows to retrieve the items in reverse order', async () => {
           const contract = await createContract(storeInDfs);
-          await dc.addListEntries(
+          await runtimes[0].dataContract.addListEntries(
             contract,
             'list_settable_by_owner',
             sampleValues,
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           );
-          const retrieved = await dc.getListEntries(
+          const retrieved = await runtimes[0].dataContract.getListEntries(
             contract,
             'list_settable_by_owner',
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
             10,
@@ -395,18 +387,18 @@ describe('DataContract', function test() {
         });
         it('allows to retrieve the items with a combination of paging arguments', async () => {
           const contract = await createContract(storeInDfs);
-          await dc.addListEntries(
+          await runtimes[0].dataContract.addListEntries(
             contract,
             'list_settable_by_owner',
             sampleValues,
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           );
-          const retrieved = await dc.getListEntries(
+          const retrieved = await runtimes[0].dataContract.getListEntries(
             contract,
             'list_settable_by_owner',
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
             2,
@@ -422,18 +414,18 @@ describe('DataContract', function test() {
       describe('that allows owner and member to add items', async () => {
         it('allows the owner to add and get entries', async () => {
           const contract = await createContract(storeInDfs);
-          await dc.addListEntries(
+          await runtimes[0].dataContract.addListEntries(
             contract,
             'list_settable_by_member',
             sampleValues,
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           );
-          const retrieved = await dc.getListEntries(
+          const retrieved = await runtimes[0].dataContract.getListEntries(
             contract,
             'list_settable_by_member',
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           );
@@ -443,18 +435,18 @@ describe('DataContract', function test() {
         });
         it('does allow the member to add entries', async () => {
           const contract = await createContract(storeInDfs);
-          await dc.addListEntries(
+          await runtimes[0].dataContract.addListEntries(
             contract,
             'list_settable_by_member',
             sampleValues,
-            accounts[1],
+            identity2,
             storeInDfs,
             encryptHashes,
           );
-          const retrieved = await dc.getListEntries(
+          const retrieved = await runtimes[0].dataContract.getListEntries(
             contract,
             'list_settable_by_member',
-            accounts[1],
+            identity1,
             storeInDfs,
             encryptHashes,
           );
@@ -466,23 +458,23 @@ describe('DataContract', function test() {
       describe('allows the owner to remove list entries', async () => {
         it('allows the owner to remove list entries', async () => {
           const contract = await createContract(storeInDfs);
-          await dc.addListEntries(
+          await runtimes[0].dataContract.addListEntries(
             contract,
             'list_removable_by_owner',
             sampleValues,
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           );
-          let retrieved = await dc.getListEntries(
-            contract, 'list_removable_by_owner', accounts[0], storeInDfs, encryptHashes,
+          let retrieved = await runtimes[0].dataContract.getListEntries(
+            contract, 'list_removable_by_owner', identity1, storeInDfs, encryptHashes,
           );
           for (let i = 0; i < sampleValues.length; i += 1) {
             expect(retrieved[i]).to.eq(sampleValues[i]);
           }
-          await dc.removeListEntry(contract, 'list_removable_by_owner', 2, accounts[0]);
-          retrieved = await dc.getListEntries(
-            contract, 'list_removable_by_owner', accounts[0], storeInDfs, encryptHashes,
+          await runtimes[0].dataContract.removeListEntry(contract, 'list_removable_by_owner', 2, identity1);
+          retrieved = await runtimes[0].dataContract.getListEntries(
+            contract, 'list_removable_by_owner', identity1, storeInDfs, encryptHashes,
           );
           // handle array values like the datacontract
           const modifiedSampleValues = sampleValues.slice(0);
@@ -493,21 +485,21 @@ describe('DataContract', function test() {
         });
         it('does not allow the member to remove list entries', async () => {
           const contract = await createContract(storeInDfs);
-          await dc.addListEntries(
+          await runtimes[0].dataContract.addListEntries(
             contract,
             'list_removable_by_owner',
             sampleValues,
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           );
-          const retrieved = await dc.getListEntries(
-            contract, 'list_removable_by_owner', accounts[0], storeInDfs, encryptHashes,
+          const retrieved = await runtimes[0].dataContract.getListEntries(
+            contract, 'list_removable_by_owner', identity1, storeInDfs, encryptHashes,
           );
           for (let i = 0; i < sampleValues.length; i += 1) {
             expect(retrieved[i]).to.eq(sampleValues[i]);
           }
-          const promise = dc.removeListEntry(contract, 'list_removable_by_owner', 2, accounts[1]);
+          const promise = runtimes[0].dataContract.removeListEntry(contract, 'list_removable_by_owner', 2, identity2);
           await expect(promise).to.be.rejected;
         });
       });
@@ -533,8 +525,8 @@ describe('DataContract', function test() {
             foo: 'sample',
             bar: 123,
           }];
-          const promise = dc.addListEntries(
-            contract, 'list_settable_by_member', values, accounts[0], storeInDfs, encryptHashes,
+          const promise = runtimes[0].dataContract.addListEntries(
+            contract, 'list_settable_by_member', values, identity1, storeInDfs, encryptHashes,
           );
           await expect(promise).to.be.fulfilled;
         });
@@ -545,8 +537,8 @@ describe('DataContract', function test() {
             bar: 'totally not a number',
             barz: 123,
           }];
-          const promise = dc.addListEntries(
-            contract, 'list_settable_by_member', values, accounts[0], storeInDfs, encryptHashes,
+          const promise = runtimes[0].dataContract.addListEntries(
+            contract, 'list_settable_by_member', values, identity1, storeInDfs, encryptHashes,
           );
           if (!storeInDfs) {
             await expect(promise).to.be.fulfilled;
@@ -560,8 +552,8 @@ describe('DataContract', function test() {
             foo: 'sample',
             bar: '123',
           }];
-          const promise = dc.addListEntries(
-            contract, 'list_settable_by_member', values, accounts[0], storeInDfs, encryptHashes,
+          const promise = runtimes[0].dataContract.addListEntries(
+            contract, 'list_settable_by_member', values, identity1, storeInDfs, encryptHashes,
           );
           if (!storeInDfs) {
             await expect(promise).to.be.fulfilled;
@@ -576,8 +568,8 @@ describe('DataContract', function test() {
             bar: 123,
             barz: 123,
           }];
-          const promise = dc.addListEntries(
-            contract, 'list_settable_by_member', values, accounts[0], storeInDfs, encryptHashes,
+          const promise = runtimes[0].dataContract.addListEntries(
+            contract, 'list_settable_by_member', values, identity1, storeInDfs, encryptHashes,
           );
           if (!storeInDfs) {
             await expect(promise).to.be.fulfilled;
@@ -591,24 +583,24 @@ describe('DataContract', function test() {
             foo: 'sample',
             barz: 123,
           }];
-          const promise = dc.addListEntries(
-            contract, 'list_settable_by_member', values, accounts[0], storeInDfs, encryptHashes,
+          const promise = runtimes[0].dataContract.addListEntries(
+            contract, 'list_settable_by_member', values, identity1, storeInDfs, encryptHashes,
           );
           await expect(promise).to.be.fulfilled;
         });
         it('allows setting entries matching the field schema', async () => {
           const contract = await createContract(!storeInDfs, testSchema);
           const value = !storeInDfs ? sampleValues[0] : 123;
-          const promise = dc.setEntry(
-            contract, 'entry_settable_by_member', value, accounts[0], storeInDfs, encryptHashes,
+          const promise = runtimes[0].dataContract.setEntry(
+            contract, 'entry_settable_by_member', value, identity1, storeInDfs, encryptHashes,
           );
           await expect(promise).to.be.fulfilled;
         });
         it('forbids setting entries not matching the field schema', async () => {
           const contract = await createContract(!storeInDfs, testSchema);
           const value = !storeInDfs ? sampleValues[0] : 'totally not an integer';
-          const promise = dc.setEntry(
-            contract, 'entry_settable_by_member', value, accounts[0], storeInDfs, encryptHashes,
+          const promise = runtimes[0].dataContract.setEntry(
+            contract, 'entry_settable_by_member', value, identity1, storeInDfs, encryptHashes,
           );
           if (!storeInDfs) {
             await expect(promise).to.be.fulfilled;
@@ -623,8 +615,8 @@ describe('DataContract', function test() {
             foo: 'sample',
             bar: 123,
           }];
-          const promise = dc.addListEntries(
-            contract, 'list_settable_by_member', values, accounts[0], storeInDfs, encryptHashes,
+          const promise = runtimes[0].dataContract.addListEntries(
+            contract, 'list_settable_by_member', values, identity1, storeInDfs, encryptHashes,
           );
           await expect(promise).to.be.fulfilled;
         });
@@ -648,8 +640,8 @@ describe('DataContract', function test() {
             foo: 'sample',
             bar: 123,
           }];
-          const promise = dc.addListEntries(
-            contract, 'list_settable_by_member', values, accounts[0], storeInDfs, encryptHashes,
+          const promise = runtimes[0].dataContract.addListEntries(
+            contract, 'list_settable_by_member', values, identity1, storeInDfs, encryptHashes,
           );
           await expect(promise).to.be.fulfilled;
         });
@@ -657,22 +649,22 @@ describe('DataContract', function test() {
       describe('when working with multiple lists at a time', async () => {
         it('allows to add entries to multiple lists', async () => {
           const contract = await createContract(storeInDfs);
-          await dc.addListEntries(
+          await runtimes[0].dataContract.addListEntries(
             contract,
             ['list_settable_by_owner', 'list_settable_by_member'],
             sampleValues,
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           );
-          let retrieved = await dc.getListEntries(
-            contract, 'list_settable_by_owner', accounts[0], storeInDfs, encryptHashes,
+          let retrieved = await runtimes[0].dataContract.getListEntries(
+            contract, 'list_settable_by_owner', identity1, storeInDfs, encryptHashes,
           );
           for (let i = 0; i < sampleValues.length; i += 1) {
             expect(retrieved[i]).to.eq(sampleValues[i]);
           }
-          retrieved = await dc.getListEntries(
-            contract, 'list_settable_by_member', accounts[0], storeInDfs, encryptHashes,
+          retrieved = await runtimes[0].dataContract.getListEntries(
+            contract, 'list_settable_by_member', identity1, storeInDfs, encryptHashes,
           );
           for (let i = 0; i < sampleValues.length; i += 1) {
             expect(retrieved[i]).to.eq(sampleValues[i]);
@@ -682,11 +674,11 @@ describe('DataContract', function test() {
           + 'if not permitted to access one of them',
         async () => {
           const contract = await createContract(storeInDfs);
-          const promise = dc.addListEntries(
+          const promise = runtimes[0].dataContract.addListEntries(
             contract,
             ['list_settable_by_owner', 'list_settable_by_member'],
             sampleValues,
-            accounts[1],
+            identity2,
             storeInDfs,
             encryptHashes,
           );
@@ -694,47 +686,47 @@ describe('DataContract', function test() {
         });
         it('allows to move an entry from one list to another', async () => {
           const contract = await createContract(storeInDfs);
-          await dc.addListEntries(
+          await runtimes[0].dataContract.addListEntries(
             contract,
             ['list_removable_by_owner'],
-            sampleValues, accounts[0],
+            sampleValues, identity1,
             storeInDfs,
             encryptHashes,
           );
-          expect(await dc.getListEntryCount(
+          expect(await runtimes[0].dataContract.getListEntryCount(
             contract, 'list_removable_by_owner',
           )).to.eq(sampleValues.length);
-          expect(await dc.getListEntryCount(contract, 'list_settable_by_member')).to.eq(0);
-          expect(await dc.getListEntry(
+          expect(await runtimes[0].dataContract.getListEntryCount(contract, 'list_settable_by_member')).to.eq(0);
+          expect(await runtimes[0].dataContract.getListEntry(
             contract,
             'list_removable_by_owner',
             1,
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           )).to.eq(sampleValues[1]);
           // move item
-          await dc.moveListEntry(
-            contract, 'list_removable_by_owner', 1, ['list_settable_by_member'], accounts[0],
+          await runtimes[0].dataContract.moveListEntry(
+            contract, 'list_removable_by_owner', 1, ['list_settable_by_member'], identity1,
           );
-          expect(await dc.getListEntryCount(contract, 'list_removable_by_owner'))
+          expect(await runtimes[0].dataContract.getListEntryCount(contract, 'list_removable_by_owner'))
             .to.eq(sampleValues.length - 1);
-          expect(await dc.getListEntryCount(contract, 'list_settable_by_member')).to.eq(1);
+          expect(await runtimes[0].dataContract.getListEntryCount(contract, 'list_settable_by_member')).to.eq(1);
           // former last elements should have been moved to removed position
-          expect(await dc.getListEntry(
+          expect(await runtimes[0].dataContract.getListEntry(
             contract,
             'list_removable_by_owner',
             1,
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           )).to.eq(sampleValues[sampleValues.length - 1]);
           // new entry should have been added
-          expect(await dc.getListEntry(
+          expect(await runtimes[0].dataContract.getListEntry(
             contract,
             'list_settable_by_member',
             0,
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           )).to.eq(sampleValues[1]);
@@ -747,66 +739,66 @@ describe('DataContract', function test() {
       describe('that can only be set by the owner', async () => {
         it('allows the owner to add and get entries', async () => {
           const contract = await createContract(storeInDfs);
-          await dc.setMappingValue(
+          await runtimes[0].dataContract.setMappingValue(
             contract,
             'mapping_settable_by_owner',
             sampleMappingKeys[0],
             sampleValues[0],
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           );
-          await dc.setMappingValue(
+          await runtimes[0].dataContract.setMappingValue(
             contract,
             'mapping_settable_by_owner',
             sampleMappingKeys[1],
             sampleValues[1],
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           );
-          await dc.setMappingValue(
+          await runtimes[0].dataContract.setMappingValue(
             contract,
             'mapping_settable_by_owner',
             sampleMappingKeys[2],
             sampleValues[2],
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           );
-          expect(await dc.getMappingValue(
+          expect(await runtimes[0].dataContract.getMappingValue(
             contract,
             'mapping_settable_by_owner',
             sampleMappingKeys[0],
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           )).to.eq(sampleValues[0]);
-          expect(await dc.getMappingValue(
+          expect(await runtimes[0].dataContract.getMappingValue(
             contract,
             'mapping_settable_by_owner',
             sampleMappingKeys[1],
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           )).to.eq(sampleValues[1]);
-          expect(await dc.getMappingValue(
+          expect(await runtimes[0].dataContract.getMappingValue(
             contract,
             'mapping_settable_by_owner',
             sampleMappingKeys[2],
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           )).to.eq(sampleValues[2]);
         });
         it('does not allow the member to add and get entries', async () => {
           const contract = await createContract(storeInDfs);
-          const promise = dc.setMappingValue(
+          const promise = runtimes[0].dataContract.setMappingValue(
             contract,
             'mapping_settable_by_owner',
             sampleMappingKeys[0],
             sampleValues[0],
-            accounts[1],
+            identity2,
             storeInDfs,
             encryptHashes,
           );
@@ -816,108 +808,108 @@ describe('DataContract', function test() {
       describe('that can be set by owner and member', async () => {
         it('allows the owner to add and get entries', async () => {
           const contract = await createContract(storeInDfs);
-          await dc.setMappingValue(
+          await runtimes[0].dataContract.setMappingValue(
             contract,
             'mapping_settable_by_member',
             sampleMappingKeys[0],
             sampleValues[0],
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           );
-          await dc.setMappingValue(
+          await runtimes[0].dataContract.setMappingValue(
             contract,
             'mapping_settable_by_member',
             sampleMappingKeys[1],
             sampleValues[1],
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           );
-          await dc.setMappingValue(
+          await runtimes[0].dataContract.setMappingValue(
             contract,
             'mapping_settable_by_member',
             sampleMappingKeys[2],
             sampleValues[2],
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           );
-          expect(await dc.getMappingValue(
+          expect(await runtimes[0].dataContract.getMappingValue(
             contract,
             'mapping_settable_by_member',
             sampleMappingKeys[0],
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           )).to.eq(sampleValues[0]);
-          expect(await dc.getMappingValue(
+          expect(await runtimes[0].dataContract.getMappingValue(
             contract,
             'mapping_settable_by_member',
             sampleMappingKeys[1],
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           )).to.eq(sampleValues[1]);
-          expect(await dc.getMappingValue(
+          expect(await runtimes[0].dataContract.getMappingValue(
             contract,
             'mapping_settable_by_member',
             sampleMappingKeys[2],
-            accounts[0],
+            identity1,
             storeInDfs,
             encryptHashes,
           )).to.eq(sampleValues[2]);
         });
         it('allows the member to add and get entries', async () => {
           const contract = await createContract(storeInDfs);
-          await dc.setMappingValue(
+          await runtimes[0].dataContract.setMappingValue(
             contract,
             'mapping_settable_by_member',
             sampleMappingKeys[0],
             sampleValues[0],
-            accounts[1],
+            identity2,
             storeInDfs,
             encryptHashes,
           );
-          await dc.setMappingValue(
+          await runtimes[0].dataContract.setMappingValue(
             contract,
             'mapping_settable_by_member',
             sampleMappingKeys[1],
             sampleValues[1],
-            accounts[1],
+            identity2,
             storeInDfs,
             encryptHashes,
           );
-          await dc.setMappingValue(
+          await runtimes[0].dataContract.setMappingValue(
             contract,
             'mapping_settable_by_member',
             sampleMappingKeys[2],
             sampleValues[2],
-            accounts[1],
+            identity2,
             storeInDfs,
             encryptHashes,
           );
-          expect(await dc.getMappingValue(
+          expect(await runtimes[0].dataContract.getMappingValue(
             contract,
             'mapping_settable_by_member',
             sampleMappingKeys[0],
-            accounts[1],
+            identity2,
             storeInDfs,
             encryptHashes,
           )).to.eq(sampleValues[0]);
-          expect(await dc.getMappingValue(
+          expect(await runtimes[0].dataContract.getMappingValue(
             contract,
             'mapping_settable_by_member',
             sampleMappingKeys[1],
-            accounts[1],
+            identity2,
             storeInDfs,
             encryptHashes,
           )).to.eq(sampleValues[1]);
-          expect(await dc.getMappingValue(
+          expect(await runtimes[0].dataContract.getMappingValue(
             contract,
             'mapping_settable_by_member',
             sampleMappingKeys[2],
-            accounts[1],
+            identity2,
             storeInDfs,
             encryptHashes,
           )).to.eq(sampleValues[2]);
@@ -934,69 +926,69 @@ describe('DataContract', function test() {
     runTestSubset(false);
     it('allows the item creator to decrypt values', async () => {
       const contract = await createContract(true);
-      await dc.setEntry(contract, 'entry_settable_by_owner', sampleValues[0], accounts[0]);
-      const retrieved = await dc.getEntry(contract, 'entry_settable_by_owner', accounts[0]);
+      await runtimes[0].dataContract.setEntry(contract, 'entry_settable_by_owner', sampleValues[0], identity1);
+      const retrieved = await runtimes[0].dataContract.getEntry(contract, 'entry_settable_by_owner', identity1);
       expect(retrieved).to.eq(sampleValues[0]);
     });
     it('allows an invited user to decrypt values', async () => {
       const contract = await createContract(true);
-      await dc.setEntry(contract, 'entry_settable_by_owner', sampleValues[0], accounts[0]);
-      const retrieved = await dc.getEntry(contract, 'entry_settable_by_owner', accounts[1]);
+      await runtimes[0].dataContract.setEntry(contract, 'entry_settable_by_owner', sampleValues[0], identity1);
+      const retrieved = await runtimes[0].dataContract.getEntry(contract, 'entry_settable_by_owner', identity2);
       expect(retrieved).to.eq(sampleValues[0]);
     });
     it('does not allow an uninvited user to decrypt values', async () => {
       const contract = await createContract(true);
-      await dc.setEntry(contract, 'entry_settable_by_owner', sampleValues[0], accounts[0]);
-      const promise = dc.getEntry(contract, 'entry_settable_by_owner', accounts[2]);
+      await runtimes[0].dataContract.setEntry(contract, 'entry_settable_by_owner', sampleValues[0], identity1);
+      const promise = runtimes[0].dataContract.getEntry(contract, 'entry_settable_by_owner', accounts[2]);
       await expect(promise).to.be.rejected;
     });
   });
   describe('when working with raw values', async () => {
     runTestSubset(true);
     it('can store dfs data unencrypted and another account can read this unencrypted data', async () => {
-      const contract = await dc.create('testdatacontract', accounts[0], businessCenterDomain);
-      await dc.inviteToContract(
-        businessCenterDomain, contract.options.address, accounts[0], accounts[1],
+      const contract = await runtimes[0].dataContract.create('testdatacontract', identity1, businessCenterDomain);
+      await runtimes[0].dataContract.inviteToContract(
+        businessCenterDomain, contract.options.address, identity1, identity2,
       );
-      await dc.setEntry(
+      await runtimes[0].dataContract.setEntry(
         contract,
         'entry_settable_by_owner',
         sampleValues[0],
-        accounts[0],
+        identity1,
         true,
         false,
         'unencrypted',
       );
-      dc.clearSharingCache();
-      await expect(dc.getEntry(
+      runtimes[0].dataContract.clearSharingCache();
+      await expect(runtimes[0].dataContract.getEntry(
         contract,
         'entry_settable_by_owner',
-        accounts[1],
+        identity2,
         true,
         false,
       )).to.eventually.eq(sampleValues[0]);
     });
     it('can invite accounts and let them write data to a contract without sharing keys', async () => {
-      const contract = await dc.create('testdatacontract', accounts[0], businessCenterDomain);
-      await dc.inviteToContract(
-        businessCenterDomain, contract.options.address, accounts[0], accounts[1],
+      const contract = await runtimes[0].dataContract.create('testdatacontract', identity1, businessCenterDomain);
+      await runtimes[0].dataContract.inviteToContract(
+        businessCenterDomain, contract.options.address, identity1, identity2,
       );
-      await TestUtils.nextBlock(executor, accounts[0]);
-      dc.clearSharingCache();
+      await TestUtils.nextBlock(runtimes[0].executor, identity1);
+      runtimes[0].dataContract.clearSharingCache();
 
-      await expect(dc.setEntry(
+      await expect(runtimes[0].dataContract.setEntry(
         contract,
         'entry_settable_by_member',
         sampleValues[0],
-        accounts[1],
+        identity2,
         true,
         false,
         'unencrypted',
       )).not.to.be.rejected;
-      await expect(dc.getEntry(
+      await expect(runtimes[0].dataContract.getEntry(
         contract,
         'entry_settable_by_member',
-        accounts[0],
+        identity1,
         true,
         false,
       )).to.eventually.eq(sampleValues[0]);
@@ -1007,18 +999,30 @@ describe('DataContract', function test() {
       const contract = await createContract(true);
       // contract is created and then set to Draft during creation logic,
       // and updating from Draf to to PendingApproval is allowed
-      await dc.changeContractState(contract, accounts[0], ContractState.PendingApproval);
+      await runtimes[0].dataContract.changeContractState(
+        contract,
+        identity1,
+        ContractState.PendingApproval,
+      );
     });
     it('does not allow to change the state with not a configured transition', async () => {
       const contract = await createContract(true);
-      const promise = dc.changeContractState(contract, accounts[0], ContractState.Approved);
+      const promise = runtimes[0].dataContract.changeContractState(
+        contract,
+        identity1,
+        ContractState.Approved,
+      );
       await expect(promise).to.be.rejected;
     });
     it('does not allow to change the state '
       + 'with a user without contract state update permission',
     async () => {
       const contract = await createContract(true);
-      const promise = dc.changeContractState(contract, accounts[1], ContractState.PendingApproval);
+      const promise = runtimes[0].dataContract.changeContractState(
+        contract,
+        identity2,
+        ContractState.PendingApproval,
+      );
       await expect(promise).to.be.rejected;
     });
   });
@@ -1026,13 +1030,18 @@ describe('DataContract', function test() {
     it('allows to change the member state with a configured transition', async () => {
       const contract = await createContract(true);
       // owners current state is 'Draft', so going to 'Active' is allowed
-      await dc.changeConsumerState(contract, accounts[0], accounts[0], ConsumerState.Active);
+      await runtimes[0].dataContract.changeConsumerState(
+        contract,
+        identity1,
+        identity1,
+        ConsumerState.Active,
+      );
     });
     it('does not allow to change the member state with not a configured transition', async () => {
       const contract = await createContract(true);
       // owners current state is 'Draft', so going to 'Terminated' is not allowed
-      const promise = dc.changeConsumerState(
-        contract, accounts[0], accounts[0], ConsumerState.Terminated,
+      const promise = runtimes[0].dataContract.changeConsumerState(
+        contract, identity1, identity1, ConsumerState.Terminated,
       );
       await expect(promise).to.be.rejected;
     });
@@ -1041,13 +1050,18 @@ describe('DataContract', function test() {
     it('allows to change the member state with a configured transition', async () => {
       const contract = await createContract(true);
       // members current state is 'Draft', owner can set its state to 'Terminated'
-      await dc.changeConsumerState(contract, accounts[0], accounts[1], ConsumerState.Terminated);
+      await runtimes[0].dataContract.changeConsumerState(
+        contract,
+        identity1,
+        identity2,
+        ConsumerState.Terminated,
+      );
     });
     it('does not allow to change the member state with not a configured transition', async () => {
       const contract = await createContract(true);
       // members current state is 'Draft', owner can set its state 'Active'
-      const promise = dc.changeConsumerState(
-        contract, accounts[0], accounts[1], ConsumerState.Active,
+      const promise = runtimes[0].dataContract.changeConsumerState(
+        contract, identity1, identity2, ConsumerState.Active,
       );
       await expect(promise).to.be.rejected;
     });

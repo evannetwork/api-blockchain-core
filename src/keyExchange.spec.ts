@@ -50,10 +50,10 @@ describe('KeyExchange class', function test() {
         (account) => TestUtils.getRuntime(account, null, { useIdentity }),
       ),
     );
-    ([{
+    [{
       ipld,
       web3,
-    }] = runtimes);
+    }] = runtimes;
 
     profile = runtimes[0].profile;
     profile2 = runtimes[1].profile;
