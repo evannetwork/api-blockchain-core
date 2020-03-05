@@ -778,8 +778,8 @@ export class DigitalTwin extends Logger {
 
     // Get the first authentication key of the controller, which is either their own public key
     // or their respective controller's authentication key
-    const authKeyIds = (await this.options.did.getDidDocument(controllerDid))
-      .publicKey.map((key) => key.id).join(',');
+    const { publicKey } = await this.options.did.getDidDocument(controllerDid);
+    const authKeyIds = publicKey.map((key) => key.id);
     const doc = await this.options.did.getDidDocumentTemplate(twinDid, controllerDid, authKeyIds);
     await this.options.did.setDidDocument(twinDid, doc);
   }

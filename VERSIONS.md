@@ -9,6 +9,7 @@
 - added additional properties `updated`, `created`, and `proof` to DID documents
 - added proof validation to `getDidDocument` (only for documents that actually contain a proof)
 - export `config` and `runtimeConfig` by `createDefaultRuntime`
+- introduced interfaces for did documents `getDidDocument`, `setDidDocument`, and `setDidDocumentOffline`
 
 ### Fixes
 - fix `credentialStatus.id` uses short hand path for resolver links
