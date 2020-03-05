@@ -531,7 +531,7 @@ export class Did extends Logger {
       // Identity is account identity and therefore self-sovereign
       return {
         '@context': 'https://w3id.org/did/v1',
-        id: `${did}`,
+        id: did,
         publicKey: [{
           id: `${did}#key-1`,
           type: 'Secp256k1VerificationKey2018',
