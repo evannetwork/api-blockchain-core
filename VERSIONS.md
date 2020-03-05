@@ -1,7 +1,14 @@
 # api-blockchain-core
 
 ## Next Version
+### Features
 
+### Fixes
+
+### Deprecations
+
+
+## Version 2.18.0
 ### Features
 - add methods `deactivateDidDocument` and `didIsDeactivated` to check and handle DID deactivation status
 - improve performance of `shareProperties`, `unshareProperties`, `setContainerShareConfigs` and related operations in `Container`
@@ -23,8 +30,6 @@
 - fix pending contract members after unshare
 - update verification keys for onboarding, when `useIdentity` is enabled
 - reset `activeIdentity` within `createOfflineProfile` when useIdentity is enabled
-
-### Deprecations
 
 
 ## Version 2.17.0
