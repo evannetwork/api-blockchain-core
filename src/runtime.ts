@@ -67,6 +67,7 @@ export interface Runtime {
   activeAccount?: string;
   activeIdentity?: string;
   baseContract?: BaseContract;
+  config?: any;
   contractLoader?: ContractLoader;
   contracts?: any;
   cryptoProvider?: CryptoProvider;
@@ -88,6 +89,7 @@ export interface Runtime {
   payments?: Payments;
   profile?: Profile;
   rightsAndRoles?: RightsAndRoles;
+  runtimeConfig?: any;
   serviceContract?: ServiceContract;
   sharing?: Sharing;
   signer?: SignerInterface;
@@ -484,6 +486,7 @@ export async function createDefaultRuntime(
   let vc: Vc;
   if (runtimeConfig.useIdentity) {
     did = new Did({
+      accountStore,
       contractLoader,
       dfs,
       executor,
@@ -564,6 +567,7 @@ export async function createDefaultRuntime(
     accountStore,
     activeAccount,
     baseContract,
+    config,
     contractLoader,
     contracts,
     cryptoProvider,
@@ -584,6 +588,7 @@ export async function createDefaultRuntime(
     payments,
     profile,
     rightsAndRoles,
+    runtimeConfig,
     serviceContract,
     sharing,
     signer,

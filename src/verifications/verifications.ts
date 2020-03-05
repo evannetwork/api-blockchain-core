@@ -319,7 +319,7 @@ export class Verifications extends Logger {
 
   public contracts: any = { };
 
-  public encodingEnvelope = 'binary';
+  public encodingEnvelope = 'utf8';
 
   /** cache all the ens owners */
   public ensOwners: any = { };
@@ -703,33 +703,104 @@ export class Verifications extends Logger {
   }
 
   /**
-   * Executes a pre-signed verification transaction with given account.
-   * This account will be the origin of the transaction and not of the verification.
-   * Second argument is generated with ``signSetVerificationTransaction``.
+   * run given data (serialized contract transaction (tx)) with given users identity
    *
-   * @param      {string}                       accountId  account, that submits the transaction
-   * @param      {VerificationsDelegationInfo}  txInfo     information with verification tx data
-   * @return     {Promise<string>}  id of new verification
+   * @param      {string}        accountId        account with whose identity the given tx is
+   *                                              executed
+   * @param      {string}        data             serialized function data
+   * @param      {any}           eventInfo        (optional) object with properties: 'eventName' and
+   *                                              'contract' (web3 contract instance, that triggers
+   *                                              event)
+   * @param      {Function}      getEventResults  (optional) function with arguments event and
+   *                                              eventArgs, that returns result of
+   *                                              `executeAndHandleEventResult` call
+   * @return     {Promise<any>}  if `eventInfo` and `getEventResults`, result of `getEventResults`,
+   *                             otherwise void
    */
-  public async executeVerification(
+  // eslint-disable-next-line consistent-return
+  public async executeAndHandleEventResult(
     accountId: string,
-    txInfo: VerificationsDelegationInfo,
+    data: string,
+    eventInfo?: any,
+    getEventResults?: Function,
+    sourceIdentity?: string,
+    value = 0,
+    to?: string,
+    signedTransactionInfo?: string,
   ): Promise<any> {
-    return this.executeTransaction(
-      accountId,
-      txInfo,
-      {
-        event: {
-          target: 'VerificationHolderLibrary',
-          targetAddress: txInfo.targetIdentity,
-          eventName: 'VerificationAdded',
-          contract: this.options.contractLoader.loadContract(
-            'VerificationHolderLibrary', txInfo.targetIdentity,
-          ),
-        },
-        getEventResult: (_, args) => args.verificationId,
+    // get users identity
+    const userIdentity = sourceIdentity
+      ? this.options.contractLoader.loadContract('VerificationHolder', sourceIdentity)
+      : await this.getIdentityForAccount(accountId);
+
+    // prepare success + result event handling
+    const options = {
+      event: { eventName: 'Approved', target: 'KeyHolderLibrary' },
+      from: accountId,
+      getEventResult: (event, eventArgs) => [eventArgs.executionId, event.blockNumber],
+      value,
+    };
+
+    // run tx
+    const { executor } = this.options;
+    const [executionId, blockNumber] = await (executor.executeContractTransaction as any)(...[
+      userIdentity,
+      signedTransactionInfo ? 'executeDelegated' : 'execute',
+      options,
+      to || this.contracts.registry.options.address,
+      value,
+      data,
+    ].concat(signedTransactionInfo ? [signedTransactionInfo] : []));
+
+    // fetch result from event
+    // load user identity as a library, to retrieve library events from users identity
+    const keyHolderLibrary = this.options.contractLoader.loadContract(
+      'KeyHolderLibrary', userIdentity.options.address,
+    );
+    const [executed, failed] = await Promise.all([
+      keyHolderLibrary.getPastEvents(
+        'Executed', { fromBlock: blockNumber, toBlock: blockNumber },
+      ),
+      keyHolderLibrary.getPastEvents(
+        'ExecutionFailed', { fromBlock: blockNumber, toBlock: blockNumber },
+      ),
+    ]);
+    // flatten and filter events on execution id from identity tx
+    const filtered = [...executed, ...failed].filter(
+      (event) => {
+        if (event.returnValues && event.returnValues.executionId) {
+          // check if executionId is a BigNumber object
+          if (event.returnValues.executionId.eq) {
+            return event.returnValues.executionId.eq(executionId);
+          }
+          // otherwise check normal equality
+          return event.returnValues.executionId === executionId;
+        }
+        return false;
       },
     );
+    if (filtered.length && filtered[0].event === 'Executed') {
+      // if execution was successful
+      if (eventInfo) {
+        // if original options had an event property for retrieving event results
+        let targetIdentityEvents = await eventInfo.contract.getPastEvents(
+          eventInfo.eventName, { fromBlock: blockNumber, toBlock: blockNumber },
+        );
+        targetIdentityEvents = targetIdentityEvents.filter(
+          (event) => event.transactionHash === filtered[0].transactionHash,
+        );
+        if (targetIdentityEvents.length) {
+          return getEventResults(targetIdentityEvents[0], targetIdentityEvents[0].returnValues);
+        }
+      }
+    } else if (filtered.length && filtered[0].event === 'ExecutionFailed') {
+      const values = filtered[0].returnValues;
+      throw new Error('executeOnIdentity failed; ExecutionFailed event was triggered: '
+        + `executionId: "${values.executionId}", to: "${values.to}", value: "${values.value}"`);
+    } else {
+      throw new Error('executeOnIdentity failed; subject type was \'account\', '
+        + 'but no proper identity tx status event could be retrieved');
+    }
   }
 
   /**
@@ -776,33 +847,33 @@ export class Verifications extends Logger {
   }
 
   /**
-   * Gets an identity's owner's address. This can be either an account or an identity address.
+   * Executes a pre-signed verification transaction with given account.
+   * This account will be the origin of the transaction and not of the verification.
+   * Second argument is generated with ``signSetVerificationTransaction``.
    *
-   * @param {string} identityAddress The identity address to fetch the owner for.
-   * @returns {string} The address of the owner.
+   * @param      {string}                       accountId  account, that submits the transaction
+   * @param      {VerificationsDelegationInfo}  txInfo     information with verification tx data
+   * @return     {Promise<string>}  id of new verification
    */
-  public async getOwnerAddressForIdentity(identityAddress: string): Promise<string> {
-    await this.ensureStorage();
-    let ownerAddress;
-    if (identityAddress.length === 42) { // 20 bytes address + '0x' prefix
-      ownerAddress = await this.options.executor.executeContractCall(
-        this.contracts.storage,
-        'owners',
-        identityAddress,
-      );
-    } else if (identityAddress.length === 66) { // 32 bytes address + '0x' prefix
-      ownerAddress = await this.options.executor.executeContractCall(
-        this.contracts.registry,
-        'getOwner',
-        identityAddress,
-      );
-    }
-
-    if (ownerAddress === nullAddress) {
-      throw Error(`No record found for ${identityAddress}. Is this a valid identity address?`);
-    }
-
-    return ownerAddress;
+  public async executeVerification(
+    accountId: string,
+    txInfo: VerificationsDelegationInfo,
+  ): Promise<any> {
+    return this.executeTransaction(
+      accountId,
+      txInfo,
+      {
+        event: {
+          target: 'VerificationHolderLibrary',
+          targetAddress: txInfo.targetIdentity,
+          eventName: 'VerificationAdded',
+          contract: this.options.contractLoader.loadContract(
+            'VerificationHolderLibrary', txInfo.targetIdentity,
+          ),
+        },
+        getEventResult: (_, args) => args.verificationId,
+      },
+    );
   }
 
   /**
@@ -1195,6 +1266,36 @@ export class Verifications extends Logger {
   }
 
   /**
+   * Gets an identity's owner's address. This can be either an account or an identity address.
+   *
+   * @param {string} identityAddress The identity address to fetch the owner for.
+   * @returns {string} The address of the owner.
+   */
+  public async getOwnerAddressForIdentity(identityAddress: string): Promise<string> {
+    await this.ensureStorage();
+    let ownerAddress;
+    if (identityAddress.length === 42) { // 20 bytes address + '0x' prefix
+      ownerAddress = await this.options.executor.executeContractCall(
+        this.contracts.storage,
+        'owners',
+        identityAddress,
+      );
+    } else if (identityAddress.length === 66) { // 32 bytes address + '0x' prefix
+      ownerAddress = await this.options.executor.executeContractCall(
+        this.contracts.registry,
+        'getOwner',
+        identityAddress,
+      );
+    }
+
+    if (ownerAddress === nullAddress) {
+      throw Error(`No owner found for ${identityAddress}.`);
+    }
+
+    return ownerAddress;
+  }
+
+  /**
     * Builds required data for a transaction from an identity (offchain) and returns data, that can
     * be used to submit it later on. Return value can be passed to ``executeTransaction``.
     * Transaction information is not signed and therefore can only be submitted by an appropriate
@@ -1462,9 +1563,94 @@ export class Verifications extends Logger {
   }
 
   /**
-   * Sets or creates a verification and a Verfiable credential document;
-   * this requires the issuer to have permissions for the parent
+   * Sets or creates a verification; this requires the issuer to have permissions for the parent
    * verification (if verification name seen as a path, the parent 'folder').
+   *
+   * @param      {string}           issuer                   issuer of the verification
+   * @param      {string}           subject                  subject of the verification and the
+   *                                                         owner of the verification node
+   * @param      {string}           topic                    name of the verification (full path)
+   * @param      {number}           expirationDate           expiration date, for the verification,
+   *                                                         defaults to `0` (≈does not expire)
+   * @param      {any}              verificationValue        json object which will be stored in the
+   *                                                         verification
+   * @param      {string}           descriptionDomain        domain of the verification, this is a
+   *                                                         subdomain under 'verifications.evan',
+   *                                                         so passing 'example' will link
+   *                                                         verifications description to
+   *                                                         'example.verifications.evan'
+   * @param      {boolean}          disableSubVerifications  if true, verifications created under
+   *                                                         this path are invalid
+   * @param      {boolean}          isIdentity               if true, the subject is already a
+   *                                                         identity
+   * @param      {string}           uri                      when given this uri will be stored on
+   *                                                         the new verification
+   * @return     {Promise<string>}  verificationId
+   */
+  public async setVerification(
+    issuer: string,
+    subject: string,
+    topic: string,
+    expirationDate = 0,
+    verificationValue?: any,
+    descriptionDomain?: string,
+    disableSubVerifications = false,
+    isIdentity = false,
+    uri = '',
+  ): Promise<string> {
+    await this.ensureStorage();
+
+    const {
+      targetIdentity,
+      subjectType,
+      uint256VerificationName,
+      sourceIdentity,
+      signature,
+      verificationData,
+      verificationDataUrl,
+      ensFullNodeHash,
+    } = await this.getSetVerificationData(
+      issuer,
+      subject,
+      topic,
+      verificationValue,
+      descriptionDomain,
+      isIdentity,
+      uri,
+    );
+
+    this.deleteFromVerificationCache(subject, topic);
+
+    // add the verification to the target identity
+    return this.executeOnIdentity(
+      targetIdentity,
+      true,
+      'addVerificationWithMetadata',
+      {
+        from: issuer,
+        event: {
+          target: subjectType === 'contract'
+            ? 'VerificationsRegistryLibrary' : 'VerificationHolderLibrary',
+          eventName: 'VerificationAdded',
+        },
+        getEventResult: (_, args) => args.verificationId,
+      },
+      uint256VerificationName,
+      '1',
+      sourceIdentity,
+      signature,
+      verificationData,
+      verificationDataUrl,
+      expirationDate,
+      ensFullNodeHash,
+      disableSubVerifications,
+    );
+  }
+
+  /**
+   * Sets or creates a verification along with a verifiable credential.
+   * Creating a verification requires the issuer to have permissions for the parent verification
+   *  (the parent directory, if the verification name is seen as a path).
    *
    * @param      {string}           issuer                   issuer of the verification
    * @param      {string}           subject                  subject of the verification and the
@@ -1552,91 +1738,6 @@ export class Verifications extends Logger {
   }
 
   /**
-   * Sets or creates a verification; this requires the issuer to have permissions for the parent
-   * verification (if verification name seen as a path, the parent 'folder').
-   *
-   * @param      {string}           issuer                   issuer of the verification
-   * @param      {string}           subject                  subject of the verification and the
-   *                                                         owner of the verification node
-   * @param      {string}           topic                    name of the verification (full path)
-   * @param      {number}           expirationDate           expiration date, for the verification,
-   *                                                         defaults to `0` (≈does not expire)
-   * @param      {any}              verificationValue        json object which will be stored in the
-   *                                                         verification
-   * @param      {string}           descriptionDomain        domain of the verification, this is a
-   *                                                         subdomain under 'verifications.evan',
-   *                                                         so passing 'example' will link
-   *                                                         verifications description to
-   *                                                         'example.verifications.evan'
-   * @param      {boolean}          disableSubVerifications  if true, verifications created under
-   *                                                         this path are invalid
-   * @param      {boolean}          isIdentity               if true, the subject is already a
-   *                                                         identity
-   * @param      {string}           uri                      when given this uri will be stored on
-   *                                                         the new verification
-   * @return     {Promise<string>}  verificationId
-   */
-  public async setVerification(
-    issuer: string,
-    subject: string,
-    topic: string,
-    expirationDate = 0,
-    verificationValue?: any,
-    descriptionDomain?: string,
-    disableSubVerifications = false,
-    isIdentity = false,
-    uri = '',
-  ): Promise<string> {
-    await this.ensureStorage();
-
-    const {
-      targetIdentity,
-      subjectType,
-      uint256VerificationName,
-      sourceIdentity,
-      signature,
-      verificationData,
-      verificationDataUrl,
-      ensFullNodeHash,
-    } = await this.getSetVerificationData(
-      issuer,
-      subject,
-      topic,
-      verificationValue,
-      descriptionDomain,
-      isIdentity,
-      uri,
-    );
-
-    this.deleteFromVerificationCache(subject, topic);
-
-    // add the verification to the target identity
-    return this.executeOnIdentity(
-      targetIdentity,
-      true,
-      'addVerificationWithMetadata',
-      {
-        from: issuer,
-        event: {
-          target: subjectType === 'contract'
-            ? 'VerificationsRegistryLibrary' : 'VerificationHolderLibrary',
-          eventName: 'VerificationAdded',
-        },
-        getEventResult: (_, args) => args.verificationId,
-      },
-      uint256VerificationName,
-      '1',
-      sourceIdentity,
-      signature,
-      verificationData,
-      verificationDataUrl,
-      expirationDate,
-      ensFullNodeHash,
-      disableSubVerifications,
-    );
-  }
-
-  /**
    * set description for a verification under a domain owned by given account
    *
    * @param      {string}  accountId    accountId, that performs the description update
@@ -1660,56 +1761,6 @@ export class Verifications extends Logger {
 
     // clear cache for verifications using this description ens address
     this.deleteFromVerificationCache('*', topic);
-  }
-
-  /**
-   * Signs a transaction from an identity (offchain) and returns data, that can be used to submit it
-   * later on. Return value can be passed to ``executeTransaction``.
-   *
-   * Note that, when creating multiple signed transactions, the ``nonce`` argument **has to be
-   * specified and incremented between calls**, as the nonce is included in transaction data and
-   * restricts the order of transactions, that can be made.
-   *
-   * @param      {any}     contract      target contract of transaction or ``null`` if just sending
-   *                                     funds
-   * @param      {string}  functionName  function for transaction or ``null`` if just sending funds
-   * @param      {any}     options       options for transaction, supports from, to, nonce, input,
-   *                                     value
-   * @param      {any[]}   args          arguments for function transaction
-   * @return     {VerificationsDelegationInfo}  prepared transaction for ``executeTransaction``
-   */
-  public async signTransaction(
-    contract: any = null,
-    functionName: string = null,
-    options: any,
-    ...args
-  ): Promise<VerificationsDelegationInfo> {
-    const {
-      sourceIdentity,
-      to,
-      value,
-      input,
-      nonce,
-    } = await this.getTransactionInfo(contract, functionName, options, ...args);
-
-    // note that issuer is given for signing, as this ACCOUNT is used to sign the message
-    // try to sign with underlying account for active identity, as they are related
-    // otherwise try to use given account
-    const signedTransactionInfo = await this.signPackedHash(
-      options.from === this.config.activeIdentity
-        ? this.config.underlyingAccount
-        : options.from,
-      [sourceIdentity, nonce, to, value, input],
-    );
-
-    return {
-      sourceIdentity,
-      to,
-      value,
-      input,
-      signedTransactionInfo,
-      nonce,
-    };
   }
 
   /**
@@ -1803,6 +1854,56 @@ export class Verifications extends Logger {
       input: txInfo.input,
       signedTransactionInfo: txInfo.signedTransactionInfo,
       nonce: txInfo.nonce,
+    };
+  }
+
+  /**
+   * Signs a transaction from an identity (offchain) and returns data, that can be used to submit it
+   * later on. Return value can be passed to ``executeTransaction``.
+   *
+   * Note that, when creating multiple signed transactions, the ``nonce`` argument **has to be
+   * specified and incremented between calls**, as the nonce is included in transaction data and
+   * restricts the order of transactions, that can be made.
+   *
+   * @param      {any}     contract      target contract of transaction or ``null`` if just sending
+   *                                     funds
+   * @param      {string}  functionName  function for transaction or ``null`` if just sending funds
+   * @param      {any}     options       options for transaction, supports from, to, nonce, input,
+   *                                     value
+   * @param      {any[]}   args          arguments for function transaction
+   * @return     {VerificationsDelegationInfo}  prepared transaction for ``executeTransaction``
+   */
+  public async signTransaction(
+    contract: any = null,
+    functionName: string = null,
+    options: any,
+    ...args
+  ): Promise<VerificationsDelegationInfo> {
+    const {
+      sourceIdentity,
+      to,
+      value,
+      input,
+      nonce,
+    } = await this.getTransactionInfo(contract, functionName, options, ...args);
+
+    // note that issuer is given for signing, as this ACCOUNT is used to sign the message
+    // try to sign with underlying account for active identity, as they are related
+    // otherwise try to use given account
+    const signedTransactionInfo = await this.signPackedHash(
+      options.from === this.config.activeIdentity
+        ? this.config.underlyingAccount
+        : options.from,
+      [sourceIdentity, nonce, to, value, input],
+    );
+
+    return {
+      sourceIdentity,
+      to,
+      value,
+      input,
+      signedTransactionInfo,
+      nonce,
     };
   }
 
@@ -2062,107 +2163,6 @@ export class Verifications extends Logger {
         this.contracts.registry = this.options.contractLoader.loadContract('VerificationsRegistry',
           contractIdentityStorage);
       }
-    }
-  }
-
-  /**
-   * run given data (serialized contract transaction (tx)) with given users identity
-   *
-   * @param      {string}        accountId        account with whose identity the given tx is
-   *                                              executed
-   * @param      {string}        data             serialized function data
-   * @param      {any}           eventInfo        (optional) object with properties: 'eventName' and
-   *                                              'contract' (web3 contract instance, that triggers
-   *                                              event)
-   * @param      {Function}      getEventResults  (optional) function with arguments event and
-   *                                              eventArgs, that returns result of
-   *                                              `executeAndHandleEventResult` call
-   * @return     {Promise<any>}  if `eventInfo` and `getEventResults`, result of `getEventResults`,
-   *                             otherwise void
-   */
-  // eslint-disable-next-line consistent-return
-  public async executeAndHandleEventResult(
-    accountId: string,
-    data: string,
-    eventInfo?: any,
-    getEventResults?: Function,
-    sourceIdentity?: string,
-    value = 0,
-    to?: string,
-    signedTransactionInfo?: string,
-  ): Promise<any> {
-    // get users identity
-    const userIdentity = sourceIdentity
-      ? this.options.contractLoader.loadContract('VerificationHolder', sourceIdentity)
-      : await this.getIdentityForAccount(accountId);
-
-    // prepare success + result event handling
-    const options = {
-      event: { eventName: 'Approved', target: 'KeyHolderLibrary' },
-      from: accountId,
-      getEventResult: (event, eventArgs) => [eventArgs.executionId, event.blockNumber],
-      value,
-    };
-
-    // run tx
-    const { executor } = this.options;
-    const [executionId, blockNumber] = await (executor.executeContractTransaction as any)(...[
-      userIdentity,
-      signedTransactionInfo ? 'executeDelegated' : 'execute',
-      options,
-      to || this.contracts.registry.options.address,
-      value,
-      data,
-    ].concat(signedTransactionInfo ? [signedTransactionInfo] : []));
-
-    // fetch result from event
-    // load user identity as a library, to retrieve library events from users identity
-    const keyHolderLibrary = this.options.contractLoader.loadContract(
-      'KeyHolderLibrary', userIdentity.options.address,
-    );
-    const [executed, failed] = await Promise.all([
-      keyHolderLibrary.getPastEvents(
-        'Executed', { fromBlock: blockNumber, toBlock: blockNumber },
-      ),
-      keyHolderLibrary.getPastEvents(
-        'ExecutionFailed', { fromBlock: blockNumber, toBlock: blockNumber },
-      ),
-    ]);
-    // flatten and filter events on execution id from identity tx
-    const filtered = [...executed, ...failed].filter(
-      (event) => {
-        if (event.returnValues && event.returnValues.executionId) {
-          // check if executionId is a BigNumber object
-          if (event.returnValues.executionId.eq) {
-            return event.returnValues.executionId.eq(executionId);
-          }
-          // otherwise check normal equality
-          return event.returnValues.executionId === executionId;
-        }
-        return false;
-      },
-    );
-    if (filtered.length && filtered[0].event === 'Executed') {
-      // if execution was successful
-      if (eventInfo) {
-        // if original options had an event property for retrieving event results
-        let targetIdentityEvents = await eventInfo.contract.getPastEvents(
-          eventInfo.eventName, { fromBlock: blockNumber, toBlock: blockNumber },
-        );
-        targetIdentityEvents = targetIdentityEvents.filter(
-          (event) => event.transactionHash === filtered[0].transactionHash,
-        );
-        if (targetIdentityEvents.length) {
-          return getEventResults(targetIdentityEvents[0], targetIdentityEvents[0].returnValues);
-        }
-      }
-    } else if (filtered.length && filtered[0].event === 'ExecutionFailed') {
-      const values = filtered[0].returnValues;
-      throw new Error('executeOnIdentity failed; ExecutionFailed event was triggered: '
-        + `executionId: "${values.executionId}", to: "${values.to}", value: "${values.value}"`);
-    } else {
-      throw new Error('executeOnIdentity failed; subject type was \'account\', '
-        + 'but no proper identity tx status event could be retrieved');
     }
   }
 

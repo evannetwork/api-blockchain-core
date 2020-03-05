@@ -147,6 +147,25 @@ export class DigitalTwin extends Logger {
   private mutexes: { [id: string]: Mutex };
 
   /**
+   * Create new DigitalTwin instance. This will not create a smart contract contract but is used
+   * to load existing containers. To create a new contract, use the static ``create`` function.
+   *
+   * @param      {DigitalTwinOptions}  options  runtime-like object with required modules
+   * @param      {DigitalTwinConfig}   config   digital twin related config
+   */
+  public constructor(options: DigitalTwinOptions, config: DigitalTwinConfig) {
+    super(options as LoggerOptions);
+    this.config = config;
+    // fallback to twin accountId, if containerConfig is specified
+    this.config.containerConfig = {
+      accountId: this.config.accountId,
+      ...this.config.containerConfig,
+    };
+    this.options = options;
+    this.mutexes = {};
+  }
+
+  /**
    * Create digital twin contract.
    *
    * @param      {DigitalTwinOptions}  options  twin runtime options
@@ -341,25 +360,6 @@ export class DigitalTwin extends Logger {
   }
 
   /**
-   * Create new DigitalTwin instance. This will not create a smart contract contract but is used
-   * to load existing containers. To create a new contract, use the static ``create`` function.
-   *
-   * @param      {DigitalTwinOptions}  options  runtime-like object with required modules
-   * @param      {DigitalTwinConfig}   config   digital twin related config
-   */
-  public constructor(options: DigitalTwinOptions, config: DigitalTwinConfig) {
-    super(options as LoggerOptions);
-    this.config = config;
-    // fallback to twin accountId, if containerConfig is specified
-    this.config.containerConfig = {
-      accountId: this.config.accountId,
-      ...this.config.containerConfig,
-    };
-    this.options = options;
-    this.mutexes = {};
-  }
-
-  /**
    * Add the digital twin with given address to profile.
    */
   public async addAsFavorite() {
@@ -470,8 +470,11 @@ export class DigitalTwin extends Logger {
     await this.deactivateEntries();
 
     // Unset did
-    const twinDid = await this.options.did.convertIdentityToDid(description.identity);
-    await this.options.did.removeDidDocument(twinDid);
+    // Handle accounts with missing DIDs for migration
+    if (this.options.did) {
+      const twinDid = await this.options.did.convertIdentityToDid(description.identity);
+      await this.options.did.deactivateDidDocument(twinDid);
+    }
 
     // Deactivate identity
     if (this.options.verifications.contracts.registry) {
@@ -683,19 +686,6 @@ export class DigitalTwin extends Logger {
   }
 
   /**
-   * Removes entry from index contract
-   * @param name Name of entry
-   */
-  private async removeEntry(name: string): Promise<void> {
-    await this.options.executor.executeContractTransaction(
-      this.contract,
-      'removeEntry',
-      { from: this.config.accountId },
-      name,
-    );
-  }
-
-  /**
    * Write given description to digital twins DBCP.
    *
    * @param      {any}  description  description to set (`public` part)
@@ -768,6 +758,19 @@ export class DigitalTwin extends Logger {
     );
   }
 
+  /**
+   * Removes entry from index contract
+   * @param name Name of entry
+   */
+  private async removeEntry(name: string): Promise<void> {
+    await this.options.executor.executeContractTransaction(
+      this.contract,
+      'removeEntry',
+      { from: this.config.accountId },
+      name,
+    );
+  }
+
   private async createAndStoreDidDocument(twinIdentityId: string, controllerId: string):
   Promise<void> {
     const twinDid = await this.options.did.convertIdentityToDid(twinIdentityId);
@@ -775,8 +778,8 @@ export class DigitalTwin extends Logger {
 
     // Get the first authentication key of the controller, which is either their own public key
     // or their respective controller's authentication key
-    const authKeyIds = (await this.options.did.getDidDocument(controllerDid))
-      .publicKey.map((key) => key.id).join(',');
+    const { publicKey } = await this.options.did.getDidDocument(controllerDid);
+    const authKeyIds = publicKey.map((key) => key.id);
     const doc = await this.options.did.getDidDocumentTemplate(twinDid, controllerDid, authKeyIds);
     await this.options.did.setDidDocument(twinDid, doc);
   }
@@ -856,7 +859,7 @@ export class DigitalTwin extends Logger {
   private async getContainerEntryHashes(containerContract: any, descriptionHash: string):
   Promise<string[]> {
     const description = JSON.parse(
-      (await this.options.dataContract.getDfsContent(descriptionHash)).toString('binary'),
+      (await this.options.dataContract.getDfsContent(descriptionHash)).toString('utf8'),
     );
     // Collect entry hashes
     const encryptedHashes = [];

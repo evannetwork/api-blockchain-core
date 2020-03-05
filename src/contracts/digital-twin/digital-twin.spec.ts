@@ -20,12 +20,7 @@
 import 'mocha';
 import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
-import {
-  Executor,
-  SignerInternal,
-} from '@evan.network/dbcp';
 import { Ipfs } from '../../dfs/ipfs';
-
 import { accounts } from '../../test/accounts';
 import { configTestcore as config } from '../../config-testcore';
 import { Container } from './container';
@@ -40,6 +35,7 @@ import {
   DigitalTwinTemplate,
   DigitalTwinVerificationEntry,
 } from './digital-twin';
+import { Executor, SignerInternal } from '../..';
 import {
   nullAddress,
   nullBytes32,
@@ -255,9 +251,9 @@ describe('DigitalTwin', function test() {
 
       expect(ownerDidDocument).not.to.be.null;
       expect(promise).not.to.be.rejected;
-      expect(promise).to.eventually.have.property('id').that.equals(did);
-      expect(promise).to.eventually.have.property('controller').that.equals(ownerDid);
-      expect(promise).to.eventually.have.property('authentication').that.include(ownerDidDocument.authentication[0]);
+      await expect(promise).to.eventually.have.property('id').that.equals(did);
+      await expect(promise).to.eventually.have.property('controller').that.equals(ownerDid);
+      await expect(promise).to.eventually.have.property('authentication').that.include(ownerDidDocument.authentication[0]);
     });
 
     it.skip('can deactivate a created twin (also checks for hashes, unskip this as soon as'
@@ -374,8 +370,8 @@ describe('DigitalTwin', function test() {
       const twinIdentityOwnerPromise = localRuntime.verifications.getOwnerAddressForIdentity(
         twinIdentity,
       );
-      expect(twinIdentityOwnerPromise)
-        .to.be.eventually.rejectedWith('No record found for');
+      await expect(twinIdentityOwnerPromise)
+        .to.be.eventually.rejectedWith('No owner found for');
 
       twinDescriptionHash = await localRuntime.executor.executeContractCall(
         twinContract,
@@ -386,21 +382,14 @@ describe('DigitalTwin', function test() {
       expect(twinAuthority).to.equal(nullAddress);
       expect(twinDescriptionHash).to.equal(nullBytes32);
 
-      // Check if did registry points to 0x0
-      // Directly access the registry to be independent of DID api implementation
+      // Check if did has been deactivated
       const did = await TestUtils.getDid(
         localRuntime.web3,
         localRuntime.activeAccount,
         localRuntime.dfs,
       );
-      const didContract = await (did as any).getRegistryContract();
-      const didDocumentHash = await runtime.executor.executeContractCall(
-        didContract,
-        'didDocuments',
-        (did as any).padIdentity(twinIdentity),
-      );
-
-      expect(didDocumentHash).to.eq(nullBytes32);
+      const twinDid = await did.convertIdentityToDid(twinIdentity);
+      await expect(did.didIsDeactivated(twinDid)).to.eventually.be.true;
 
       // Check if all pinned hashes have been unpinned
       const pinnedHashesAfterDeactivation = await getPinnedFileHashes();
@@ -483,8 +472,8 @@ describe('DigitalTwin', function test() {
       const twinIdentityOwnerPromise = localRuntime.verifications.getOwnerAddressForIdentity(
         twinIdentity,
       );
-      expect(twinIdentityOwnerPromise)
-        .to.be.eventually.rejectedWith('No record found for');
+      await expect(twinIdentityOwnerPromise)
+        .to.be.eventually.rejectedWith('No owner found for');
 
       const twinDescriptionHash = await localRuntime.executor.executeContractCall(
         twinContract,
@@ -495,21 +484,14 @@ describe('DigitalTwin', function test() {
       expect(twinAuthority).to.equal(nullAddress);
       expect(twinDescriptionHash).to.equal(nullBytes32);
 
-      // Check if did registry points to 0x0
-      // Directly access the registry to be independent of DID api implementation
+      // Check if did has been deactivated
       const did = await TestUtils.getDid(
         localRuntime.web3,
         localRuntime.activeAccount,
         localRuntime.dfs,
       );
-      const didContract = await (did as any).getRegistryContract();
-      const didDocumentHash = await runtime.executor.executeContractCall(
-        didContract,
-        'didDocuments',
-        (did as any).padIdentity(twinIdentity),
-      );
-
-      expect(didDocumentHash).to.eq(nullBytes32);
+      const twinDid = await did.convertIdentityToDid(twinIdentity);
+      await expect(did.didIsDeactivated(twinDid)).to.eventually.be.true;
     });
   });
 

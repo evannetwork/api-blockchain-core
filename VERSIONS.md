@@ -8,6 +8,30 @@
 ### Deprecations
 
 
+## Version 2.18.0
+### Features
+- add methods `deactivateDidDocument` and `didIsDeactivated` to check and handle DID deactivation status
+- improve performance of `shareProperties`, `unshareProperties`, `setContainerShareConfigs` and related operations in `Container`
+- add methods `deactivateDidDocument` and `didIsDeactivated` to check and handle DID deactivation status
+- added additional properties `updated`, `created`, and `proof` to DID documents
+- added proof validation to `getDidDocument` (only for documents that actually contain a proof)
+- export `config` and `runtimeConfig` by `createDefaultRuntime`
+- introduced interfaces for did documents `getDidDocument`, `setDidDocument`, and `setDidDocumentOffline`
+
+### Fixes
+- fix `credentialStatus.id` uses short hand path for resolver links
+- add check for `getRevokeVcStatus` to throw error when non existing VC is passed
+- fix `ipfsLib` now uses the configured port
+- fix `getListEntries` in the api docs
+- fix buffer-to-string conversion, try to decode to `utf8`, if this fails, decode it to `binary`
+- add `member-ordering` rule to eslint config
+- fix `container.getListEntry` to not throw an exception on call anymore
+- replaced deprecated property `owner` in DID publicKey fields with `controller`
+- fix pending contract members after unshare
+- update verification keys for onboarding, when `useIdentity` is enabled
+- reset `activeIdentity` within `createOfflineProfile` when useIdentity is enabled
+
+
 ## Version 2.17.0
 ### Features
 - add support for identity based accounts to `KeyExchange`, `Sharing` and `Profile` modules

@@ -21,6 +21,7 @@ import * as didJWT from 'did-jwt';
 import { cloneDeep } from 'lodash';
 
 import {
+  nullAddress,
   nullBytes32,
   getEnvironment,
 } from '../common/utils';
@@ -264,13 +265,26 @@ export class Vc extends Logger {
   public async getRevokeVcStatus(vcId: string): Promise<void> {
     const environment = await this.getEnvironment();
     const vcIdHash = vcId.replace(`vc:evan:${environment}:`, '');
-    const revokationStatus = await this.options.executor.executeContractCall(
-      await this.getRegistryContract(),
-      'vcRevoke',
-      vcIdHash,
-    );
-
-    return revokationStatus;
+    // `vcId` usually comes from a VC document, so non-existing VCs can be considered an edge case,
+    // running both requests in parallel to improve performance
+    const [revoked] = await Promise.all([
+      this.options.executor.executeContractCall(
+        await this.getRegistryContract(),
+        'vcRevoke',
+        vcIdHash,
+      ),
+      (async () => {
+        const owned = await this.options.executor.executeContractCall(
+          await this.getRegistryContract(),
+          'vcOwner',
+          vcIdHash,
+        );
+        if (owned === nullAddress) {
+          throw new Error(`Given "${vcId}" is not a valid evan VC`);
+        }
+      })(),
+    ]);
+    return revoked;
   }
 
   /**
@@ -423,8 +437,8 @@ export class Vc extends Logger {
     const signer = didJWT.SimpleSigner(
       await this.options.accountStore.getPrivateKey(this.options.signerIdentity.underlyingAccount),
     );
-    let jwt = '';
-    await didJWT.createJWT(
+
+    const jwt = await didJWT.createJWT(
       {
         vc,
         exp: vc.validUntil,
@@ -433,7 +447,7 @@ export class Vc extends Logger {
         issuer: vc.issuer.id,
         signer,
       },
-    ).then((response) => { jwt = response; });
+    );
 
     return jwt;
   }
@@ -457,7 +471,7 @@ export class Vc extends Logger {
       throw Error(`Invalid issuer DID: ${vc.issuer.id}`);
     }
 
-    if (this.options.signerIdentity.activeIdentity.toLowerCase() !== issuerIdentity) {
+    if (this.options.signerIdentity.activeIdentity !== issuerIdentity) {
       throw Error('You are not authorized to issue this VC');
     }
 
@@ -497,9 +511,6 @@ export class Vc extends Logger {
    *                   the active identity is found.
    */
   private async getPublicKeyUriFromDid(issuerDid: string): Promise<string> {
-    const signaturePublicKey = await this.options.signerIdentity.getPublicKey(
-      this.options.signerIdentity.underlyingAccount,
-    );
     const doc = await this.options.did.getDidDocument(issuerDid);
 
     if (!(doc.authentication || doc.publicKey || doc.publicKey.length === 0)) {
@@ -507,17 +518,24 @@ export class Vc extends Logger {
         + 'does not provide authentication material. Cannot sign VC.');
     }
 
-    const key = doc.publicKey.filter(
-      (entry) => entry.ethereumAddress
-        === this.options.signerIdentity.underlyingAccount.toLowerCase()
-        || entry.publicKeyHex === signaturePublicKey,
-    )[0];
-
-    if (!key) {
-      throw Error('The signature key for the active account is not associated to its DID document. Cannot sign VC.');
+    let keyId;
+    const signaturePublicKey = (await this.options.signerIdentity.getPublicKey(
+      this.options.signerIdentity.underlyingAccount,
+    )).toLocaleLowerCase();
+    const account = this.options.signerIdentity.underlyingAccount.toLocaleLowerCase();
+    for (const entry of doc.publicKey) {
+      if (('ethereumAddress' in entry && entry.ethereumAddress.toLocaleLowerCase() === account)
+      || ('publicKeyHex' in entry && entry.publicKeyHex.toLocaleLowerCase() === signaturePublicKey)) {
+        keyId = entry.id;
+        break;
+      }
     }
 
-    return key.id;
+    if (!keyId) {
+      throw Error('The signature key of the active account is not associated to its DID document. Cannot sign VC.');
+    }
+
+    return keyId;
   }
 
   /**

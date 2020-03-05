@@ -37,6 +37,7 @@ Parameters
 ----------
 
 #. ``options`` - ``DidOptions``: options for Did constructor.
+    * ``accountStore`` - |source accountStore|_: |source accountStore|_ instance
     * ``contractLoader`` - |source contractLoader|_: |source contractLoader|_ instance
     * ``dfs`` - |source dfsInterface|_: |source dfsInterface|_ instance
     * ``executor`` - |source executor|_: |source executor|_ instance
@@ -78,29 +79,28 @@ Example
 = Working with DID documents =
 ==============================
 
-.. _did_setDidDocument:
+.. _did_deactivateDidDocument:
 
-setDidDocument
+deactivateDidDocument
 ================================================================================
 
 .. code-block:: typescript
 
-  did.setDidDocument(did, document);
+  did.deactivateDidDocument(didToDeactivate);
 
-Store given DID document for given DID.
+Unlinks the current DID document from the given DID
 
 ----------
 Parameters
 ----------
 
-#. ``did`` - ``string``: DID to store DID document for
-#. ``document`` - ``any``: DID document to store, ``getDidDocumentTemplate`` can be used as a starting point for DID documents
+#. ``did`` - ``string``: DID to unlink the DID document from
 
 -------
 Returns
 -------
 
-``Promise`` returns ``void``: resolved when done
+``Promise`` returns ``void``: Resolves when done
 
 -------
 Example
@@ -108,14 +108,52 @@ Example
 
 .. code-block:: typescript
 
-  const identity = await runtime.verifications.getIdentityForAccount(accountsId, true);
-  const did = await runtime.did.convertIdentityToDid(identity);
-  const document = await runtime.did.getDidDocumentTemplate();
-  await runtime.did.setDidDocument(did, document);
-
+    const twinIdentity = '0x1234512345123451234512345123451234512345';
+    const twinDid = await runtime.did.convertIdentityToDid(twinIdentity);
+    await runtime.did.deactivateDidDocument(twinDid);
 
 
 --------------------------------------------------------------------------------
+
+
+.. _did_didIsDeactivated:
+
+didIsDeactivated
+================================================================================
+
+.. code-block:: typescript
+
+  did.didIsDeactivated(didToCheck);
+
+Gets the deactivation status of a DID.
+
+----------
+Parameters
+----------
+
+#. ``did`` - ``string``: DID to check
+
+-------
+Returns
+-------
+
+``Promise`` returns ``boolean``: True if the DID has been deactivated
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+    const twinIdentity = '0x1234512345123451234512345123451234512345';
+    const twinDid = await runtime.did.convertIdentityToDid(twinIdentity);
+    await runtime.did.deactivateDidDocument(twinDid);
+    console.log(await runtime.did.didIsDeactivated(twinDid));
+    // Output: true
+
+
+--------------------------------------------------------------------------------
+
 
 .. _did_getDidDocument:
 
@@ -124,9 +162,10 @@ getDidDocument
 
 .. code-block:: typescript
 
-  did.getDidDocument([did]);
+  did.getDidDocument(myDid);
 
-Get DID document for given DID.
+Get DID document for given DID. If the DID has a proof property, `getDidDocument` will attempt to validate the proof
+and throw an error if the proof is invalid.
 
 ----------
 Parameters
@@ -138,7 +177,7 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``any``: a DID document that MAY resemble `DidDocumentTemplate` format
+``Promise`` returns ``DidDocument``: A DID document. For deactivated DIDs it returns a default DID document containing no authentication material.
 
 -------
 Example
@@ -153,6 +192,88 @@ Example
   const retrieved = await runtime.did.getDidDocument(did);
 
 
+--------------------------------------------------------------------------------
+
+.. _did_getService:
+
+getService
+================================================================================
+
+.. code-block:: typescript
+
+  did.getService(myDid);
+
+Get the services from a DID document.
+
+----------
+Parameters
+----------
+
+#. ``did`` - ``string``: DID to fetch DID service for.
+
+-------
+Returns
+-------
+
+``Promise`` returns ``DidServiceEntry[]``: Array of services.
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const document = await runtime.did.getDidDocumentTemplate();
+  const identity = await runtime.verifications.getIdentityForAccount(account, true);
+  const did = await runtime.did.convertIdentityToDid(identity);
+  await runtime.did.setDidDocument(did, document);
+  const service = {
+    id: `${did}#randomService`,
+    type: `randomService-${random}`,
+    serviceEndpoint: `https://openid.example.com/${random}`,
+  };
+  await runtime.did.setService(did, service);
+  const retrieved = await runtime.did.getService(did);
+
+--------------------------------------------------------------------------------
+
+.. _did_setDidDocument:
+
+setDidDocument
+================================================================================
+
+.. code-block:: typescript
+
+  did.setDidDocument(myDid, document);
+
+Store given DID document for given DID.
+If the document misses the property `created`, it will automatically be appended.
+The `updated` property will be updated accordingly.
+A proof over the DID document will be generated automatically and appended to the document.
+
+----------
+Parameters
+----------
+
+#. ``did`` - ``string``: DID to store DID document for
+#. ``document`` - ``DidDocument``: DID document to store, ``getDidDocumentTemplate`` can be used as a starting point for DID documents
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  const identity = await runtime.verifications.getIdentityForAccount(accountsId, true);
+  const did = await runtime.did.convertIdentityToDid(identity);
+  const document = await runtime.did.getDidDocumentTemplate();
+  await runtime.did.setDidDocument(did, document);
 
 --------------------------------------------------------------------------------
 
@@ -163,16 +284,16 @@ setService
 
 .. code-block:: typescript
 
-  did.setService(service[, did]);
+  did.setService(myDid, service);
 
-Sets service in DID document.
+Sets service in DID document. Overrides old services, so make sure to include current service if you only want to add a service.
 
 ----------
 Parameters
 ----------
 
 #. ``did`` - ``string``: DID name to set service for
-#. ``service`` - ``DidServiceEntry[] | DidServiceEntry``: service to set
+#. ``service`` - ``DidServiceEntry[] | DidServiceEntry``: service or array of services to set
 
 -------
 Returns
@@ -190,57 +311,12 @@ Example
   const identity = await runtime.verifications.getIdentityForAccount(account, true);
   const did = await runtime.did.convertIdentityToDid(identity);
   await runtime.did.setDidDocument(did, document);
-  const service = [{
+  const service = {
     id: `${did}#randomService`,
     type: `randomService-${random}`,
     serviceEndpoint: `https://openid.example.com/${random}`,
-  }];
+  };
   await runtime.did.setService(did, service);
-
-
-
---------------------------------------------------------------------------------
-
-.. _did_getService:
-
-getService
-================================================================================
-
-.. code-block:: typescript
-
-  did.getService([did]);
-
-Get service from DID document.
-
-----------
-Parameters
-----------
-
-#. ``did`` - ``string``: DID to fetch DID service for.
-
--------
-Returns
--------
-
-``Promise`` returns ``DidServiceEntry[] | DidServiceEntry``: service
-
--------
-Example
--------
-
-.. code-block:: typescript
-
-  const document = await runtime.did.getDidDocumentTemplate();
-  const identity = await runtime.verifications.getIdentityForAccount(account, true);
-  const did = await runtime.did.convertIdentityToDid(identity);
-  await runtime.did.setDidDocument(did, document);
-  const service = [{
-    id: `${did}#randomService`,
-    type: `randomService-${random}`,
-    serviceEndpoint: `https://openid.example.com/${random}`,
-  }];
-  await runtime.did.setService(did, service);
-  const retrieved = await runtime.did.getService(did);
 
 
 
@@ -256,7 +332,7 @@ convertDidToIdentity
 
 .. code-block:: typescript
 
-  did.convertDidToIdentity(did);
+  did.convertDidToIdentity(didToConvert);
 
 Converts given DID to a evan.network identity.
 
@@ -295,7 +371,7 @@ convertIdentityToDid
 
 .. code-block:: typescript
 
-  did.convertIdentityToDid(identity);
+  did.convertIdentityToDid(identityToConvert);
 
 Converts given evan.network identity hash to DID.
 
@@ -324,7 +400,6 @@ Example
   // did:evan:testcore:0x000000000000000000000000000000000000001234
 
 
-
 --------------------------------------------------------------------------------
 
 .. _did_getDidDocumentTemplate:
@@ -334,7 +409,7 @@ getDidDocumentTemplate
 
 .. code-block:: typescript
 
-  did.getDidDocumentTemplate([]);
+  did.getDidDocumentTemplate();
 
 Gets a DID document for currently configured account/identity pair. Notice, that this document may a
 complete DID document for currently configured active identity, a part of it or not matching it at
@@ -375,7 +450,7 @@ Example
   //     {
   //       "id": "did:evan:testcore:0x126E901F6F408f5E260d95c62E7c73D9B60fd734#key-1",
   //       "type": "Secp256k1VerificationKey2018",
-  //       "owner": "did:evan:testcore:0x126E901F6F408f5E260d95c62E7c73D9B60fd734",
+  //       "controller": "did:evan:testcore:0x126E901F6F408f5E260d95c62E7c73D9B60fd734",
   //       "ethereumAddress": "0x126E901F6F408f5E260d95c62E7c73D9B60fd734"
   //     }
   //   ],
@@ -387,6 +462,9 @@ Example
 
 
 .. required for building markup
+
+.. |source accountStore| replace:: ``AccountStore``
+.. _source accountStore: ../blockchain/account-store.html
 
 .. |source contractLoader| replace:: ``ContractLoader``
 .. _source contractLoader: ../contracts/contract-loader.html

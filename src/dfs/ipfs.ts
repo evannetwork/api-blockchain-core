@@ -70,6 +70,22 @@ export class Ipfs extends Logger implements DfsInterface {
 
   public runtime: Runtime;
 
+  public constructor(options) {
+    super(options);
+    this.disablePin = options.disablePin || false;
+    if (options.cache) {
+      this.cache = options.cache;
+    }
+    if (options.remoteNode) {
+      this.remoteNode = options.remoteNode;
+    } else if (options.dfsConfig) {
+      this.dfsConfig = options.dfsConfig;
+      this.remoteNode = new IpfsLib(options.dfsConfig);
+    } else {
+      this.log('No IPFS config of ipfs remotenode are given', 'error');
+    }
+  }
+
   /**
    * convert IPFS hash to bytes 32 see
    * https://www.reddit.com/r/ethdev/comments/6lbmhy/a_practical_guide_to_cheap_ipfs_hash_storage_in
@@ -100,22 +116,6 @@ export class Ipfs extends Logger implements DfsInterface {
     const bytes = Buffer.from(`1220${remove0x}`, 'hex');
     const hash = bs58.encode(bytes);
     return hash;
-  }
-
-  public constructor(options) {
-    super(options);
-    this.disablePin = options.disablePin || false;
-    if (options.cache) {
-      this.cache = options.cache;
-    }
-    if (options.remoteNode) {
-      this.remoteNode = options.remoteNode;
-    } else if (options.dfsConfig) {
-      this.dfsConfig = options.dfsConfig;
-      this.remoteNode = new IpfsLib(options.dfsConfig);
-    } else {
-      this.log('No IPFS config of ipfs remotenode are given', 'error');
-    }
   }
 
   /**
@@ -180,11 +180,12 @@ export class Ipfs extends Logger implements DfsInterface {
    * @brief      get data from ipfs by ipfs hash
    *
    * @param      hash  ipfs hash of the data
-   * @param      returnBuffer  should the function return the plain buffer (default false)
+   * @param      returnBuffer  if true the method will return a raw buffer holding
+   *                           the data (default false)
    *
-   * @return     data as text
+   * @return     data as text or raw buffer
    */
-  public async get(hash: string, returnBuffer = false): Promise<any> {
+  public async get(hash: string, returnBuffer = false): Promise<string | Buffer> {
     const ipfsHash = hash.startsWith('Qm') ? hash : Ipfs.bytes32ToIpfsHash(hash);
 
     // check if the hash equals 0x000000000000000000000000000000000
@@ -200,7 +201,7 @@ export class Ipfs extends Logger implements DfsInterface {
         if (returnBuffer) {
           return Buffer.from(buffer);
         }
-        return Buffer.from(buffer).toString('binary');
+        return this.decodeBuffer(Buffer.from(buffer));
       }
     }
     let wait;
@@ -215,7 +216,7 @@ export class Ipfs extends Logger implements DfsInterface {
     const getRemoteHash = this.remoteNode.files.cat(ipfsHash)
       .then((buffer: any) => {
         const fileBuffer = buffer;
-        const ret = fileBuffer.toString('binary');
+        const ret = this.decodeBuffer(buffer);
         if (this.cache) {
           this.cache.add(ipfsHash, fileBuffer);
         }
@@ -297,5 +298,18 @@ export class Ipfs extends Logger implements DfsInterface {
         delete this.remoteNode.provider.headers.authorization;
       }, 60 * 1000);
     }
+  }
+
+  /**
+   * Tries to decode given Buffer to UTF-8, if this leads to invalid characters, decode to Latin-1.
+   *
+   * @param      {Buffer}  buffer  buffer to decrypt, may be UTF-8 or Latin-1 encoded.
+   * @return     {string}  decoded string
+   */
+  private decodeBuffer(buffer: Buffer): string {
+    const decodedToUtf8 = buffer.toString('utf8');
+    return decodedToUtf8.indexOf('�') === -1
+      ? decodedToUtf8
+      : buffer.toString('binary');
   }
 }

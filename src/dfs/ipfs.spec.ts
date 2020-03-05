@@ -21,6 +21,7 @@ import 'mocha';
 import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
 
+import { IpfsLib } from './ipfs-lib';
 import { Ipfs } from './ipfs';
 import { InMemoryCache } from './in-memory-cache';
 import { TestUtils } from '../test/test-utils';
@@ -74,15 +75,6 @@ describe('IPFS handler', function test() {
       + 'entries found in redis');
   });
 
-  it('should be able to add a file with special characters', async () => {
-    const content = 'öäüßÖÄÜ';
-    const encoding = 'binary';
-    const hash = await ipfs.add('test', Buffer.from(content, encoding));
-    expect(hash).not.to.be.undefined;
-    const fileContent = await ipfs.get(hash);
-    expect(fileContent.toString(encoding)).to.eq(content);
-  });
-
   it('should be able to add multiple files', async () => {
     const randomContents = [
       Math.random().toString(),
@@ -103,9 +95,12 @@ describe('IPFS handler', function test() {
 
   it('should be able to get files', async () => {
     const randomContent = Math.random().toString();
+    const randomBufferContent = Buffer.from(randomContent);
     const hash = await ipfs.add('test', Buffer.from(randomContent, 'utf-8'));
     const fileContent = await ipfs.get(hash);
+    const fileBufferContent = await ipfs.get(hash, true) as Buffer;
     expect(fileContent).to.eq(randomContent);
+    expect(fileBufferContent.equals(randomBufferContent)).to.be.true;
   });
 
   it('should cache previous added files', async () => {
@@ -114,8 +109,77 @@ describe('IPFS handler', function test() {
     const randomContent = Math.random().toString();
     const hash = await ipfs.add('test', Buffer.from(randomContent, 'utf-8'));
     const cacheResponse = await ipfs.cache.get(Ipfs.bytes32ToIpfsHash(hash));
-    expect(Buffer.from(cacheResponse).toString('binary')).to.eq(randomContent);
+    expect(Buffer.from(cacheResponse).toString('utf8')).to.eq(randomContent);
     // remove cache after test
     delete ipfs.cache;
+  });
+
+  it('should not be able to add a file when misconfigured', async () => {
+    const localIpfs = await TestUtils.getIpfs();
+    localIpfs.remoteNode = new IpfsLib(
+      { host: 'ipfs.test.evan.network', port: '600', protocol: 'https' },
+    );
+    const randomContent = Math.random().toString();
+    const requestPromise = (async () => {
+      const request = localIpfs.add('test', Buffer.from(randomContent, 'utf-8'));
+      await expect(request).to.be.rejectedWith(
+        /^could not add file to ipfs: problem with request/,
+      );
+    })();
+    const timeoutPromise = new Promise((s) => { setTimeout(s, 5_000); });
+    // requeset will either receive a network error or timeout (after 120s)
+    await Promise.race([requestPromise, timeoutPromise]);
+  });
+
+  it('should be able to add a file when ipfs port reconfigured to same port', async () => {
+    const localIpfs = await TestUtils.getIpfs();
+    localIpfs.remoteNode = new IpfsLib(
+      { host: 'ipfs.test.evan.network', port: '443', protocol: 'https' },
+    );
+    const randomContent = Math.random().toString();
+    const hash = await localIpfs.add('test', Buffer.from(randomContent, 'utf-8'));
+    expect(hash).not.to.be.undefined;
+    const fileContent = await localIpfs.get(hash);
+    expect(fileContent).to.eq(randomContent);
+  });
+
+  describe('when dealing with special characters', () => {
+    it('should be able to add a file with umlauts, that have been encoded as binary', async () => {
+      const content = 'öäüßÖÄÜ';
+      const encoding = 'binary';
+      const hash = await ipfs.add('test', Buffer.from(content, encoding));
+      expect(hash).not.to.be.undefined;
+      const fileContent = await ipfs.get(hash);
+      expect(fileContent.toString(encoding)).to.eq(content);
+    });
+
+    it('should be able to add a file with umlauts, that have been encoded as utf8', async () => {
+      const content = 'öäüßÖÄÜ';
+      const encoding = 'utf8';
+      const hash = await ipfs.add('test', Buffer.from(content, encoding));
+      expect(hash).not.to.be.undefined;
+      const fileContent = await ipfs.get(hash);
+      expect(fileContent.toString(encoding)).to.eq(content);
+    });
+
+    it('should not be able to add a file with extended unicodes (properly), that have been encoded as binary', async () => {
+      const content = '🌂';
+      const encoding = 'binary';
+      const broken = Buffer.from('🌂', encoding).toString(encoding);
+      expect(broken).to.not.eq(content); // Buffer.from binary breaks characters
+      const hash = await ipfs.add('test', Buffer.from(content, encoding));
+      expect(hash).not.to.be.undefined;
+      const fileContent = await ipfs.get(hash);
+      expect(fileContent.toString(encoding)).to.eq(broken);
+    });
+
+    it('should be able to add a file with extended unicodes, that have been encoded as utf8', async () => {
+      const content = '🌂';
+      const encoding = 'utf8';
+      const hash = await ipfs.add('test', Buffer.from(content, encoding));
+      expect(hash).not.to.be.undefined;
+      const fileContent = await ipfs.get(hash);
+      expect(fileContent.toString(encoding)).to.eq(content);
+    });
   });
 });
