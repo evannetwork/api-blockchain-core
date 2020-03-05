@@ -26,7 +26,9 @@ import {
   NameResolver,
 } from '@evan.network/dbcp';
 
-import { accountMap, accounts, identities } from '../test/accounts';
+import {
+  accountMap, accounts, identities, useIdentity,
+} from '../test/accounts';
 
 import { configTestcore as config } from '../config-testcore';
 import { Runtime, createDefaultRuntime } from '../runtime';
@@ -35,13 +37,6 @@ import { Profile } from './profile';
 import { TestUtils } from '../test/test-utils';
 
 use(chaiAsPromised);
-let useIdentity = false;
-try {
-  useIdentity = JSON.parse(process.env.USE_IDENTITY);
-} catch (_) {
-  // silently continue
-}
-
 describe('Profile helper', function test() {
   this.timeout(600000);
   let ensName;

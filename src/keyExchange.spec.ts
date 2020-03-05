@@ -46,8 +46,8 @@ describe('KeyExchange class', function test() {
 
   before(async () => {
     runtimes = await Promise.all(
-      accounts.slice(2, 3).map(
-        (account) => TestUtils.getRuntime(account, null, { useIdentity: false }),
+      accounts.slice(0, 2).map(
+        (account) => TestUtils.getRuntime(account, null, { useIdentity }),
       ),
     );
     ([{
@@ -56,17 +56,16 @@ describe('KeyExchange class', function test() {
     }] = runtimes);
 
     profile = runtimes[0].profile;
-    // profile2 = runtimes[1].profile;
-    // await profile.loadForAccount();
-    // process.exit(1)
-    // await profile2.loadForAccount();
+    profile2 = runtimes[1].profile;
+    await profile.loadForAccount();
+    await profile2.loadForAccount();
     mailbox = runtimes[0].mailbox;
     mailbox2 = runtimes[1].mailbox;
     keyExchange1 = runtimes[0].keyExchange;
     keyExchange2 = runtimes[1].keyExchange;
   });
 
-  it.only('', async () => {
+  it.skip('', async () => {
     const runtime = runtimes[0];
     const hashCryptor = runtime.cryptoProvider.getCryptorByCryptoAlgo(
       (runtime.dataContract as any).cryptoAlgorithHashes,

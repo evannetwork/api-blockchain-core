@@ -33,6 +33,7 @@ import { Ipfs } from '../../dfs/ipfs';
 import { Ipld } from '../../dfs/ipld';
 import { Profile } from '../../profile/profile';
 import { TestUtils } from '../../test/test-utils';
+import { Runtime } from '../../runtime';
 
 
 use(chaiAsPromised);
@@ -43,33 +44,30 @@ describe('BaseContract', function test() {
   let executor: Executor;
   let ipfs: Ipfs;
   let ipld: Ipld;
-  let loader: ContractLoader;
+  let contractLoader: ContractLoader;
   let businessCenterDomain;
   let eventHub: EventHub;
   let nameResolver;
   let profile: Profile;
+  let runtime: Runtime;
   let web3;
 
   before(async () => {
     web3 = TestUtils.getWeb3();
-    nameResolver = await TestUtils.getNameResolver(web3);
-    executor = await TestUtils.getExecutor(web3);
-    eventHub = await TestUtils.getEventHub(web3);
+    runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
+    ({
+      nameResolver, executor, eventHub, contractLoader, profile,
+    } = runtime);
     executor.eventHub = eventHub;
-    loader = await TestUtils.getContractLoader(web3);
     baseContract = new BaseContract({
       executor,
-      loader,
+      loader: contractLoader,
       log: TestUtils.getLogger(),
       nameResolver,
     });
     businessCenterDomain = nameResolver.getDomainName(config.nameResolver.domains.businessCenter);
     const businessCenterAddress = await nameResolver.getAddress(businessCenterDomain);
-    const businessCenter = await loader.loadContract('BusinessCenter', businessCenterAddress);
-    ipfs = await TestUtils.getIpfs();
-    ipld = await TestUtils.getIpld(ipfs);
-    ipld.originator = nameResolver.soliditySha3(accounts[1]);
-    profile = await TestUtils.getProfile(web3, ipfs);
+    const businessCenter = await contractLoader.loadContract('BusinessCenter', businessCenterAddress);
     await profile.loadForAccount();
     // await profile.setContactKnownState(accounts[0], true);
     if (!await executor.executeContractCall(businessCenter, 'isMember', accounts[0], { from: accounts[0] })) {
@@ -107,7 +105,7 @@ describe('BaseContract', function test() {
       accounts[0],
       businessCenterDomain,
     );
-    const contract = loader.loadContract('BaseContractInterface', contractId);
+    const contract = contractLoader.loadContract('BaseContractInterface', contractId);
     let isMember = await executor.executeContractCall(contract, 'isConsumer', accounts[1]);
     expect(isMember).to.be.false;
     await baseContract.inviteToContract(
@@ -126,7 +124,7 @@ describe('BaseContract', function test() {
       accounts[0],
       businessCenterDomain,
     );
-    const contract = loader.loadContract('BaseContractInterface', contractId);
+    const contract = contractLoader.loadContract('BaseContractInterface', contractId);
     let isMember = await executor.executeContractCall(contract, 'isConsumer', accounts[1]);
     expect(isMember).to.be.false;
     await baseContract.inviteToContract(
@@ -190,7 +188,7 @@ describe('BaseContract', function test() {
       accounts[0],
       businessCenterDomain,
     );
-    const contract = loader.loadContract('BaseContractInterface', contractId);
+    const contract = contractLoader.loadContract('BaseContractInterface', contractId);
     const isMember = await executor.executeContractCall(contract, 'isConsumer', accounts[1]);
     expect(isMember).to.be.false;
     await profile.setContactKnownState(accounts[0], false);
@@ -278,7 +276,7 @@ describe('BaseContract', function test() {
         accounts[0],
         null,
       );
-      const contract = loader.loadContract('BaseContractInterface', contractId);
+      const contract = contractLoader.loadContract('BaseContractInterface', contractId);
       let isMember = await executor.executeContractCall(contract, 'isConsumer', accounts[1]);
       expect(isMember).to.be.false;
       await baseContract.inviteToContract(
@@ -297,7 +295,7 @@ describe('BaseContract', function test() {
         accounts[0],
         null,
       );
-      const contract = loader.loadContract('BaseContractInterface', contractId);
+      const contract = contractLoader.loadContract('BaseContractInterface', contractId);
       let isMember = await executor.executeContractCall(contract, 'isConsumer', accounts[1]);
       expect(isMember).to.be.false;
       await baseContract.inviteToContract(
