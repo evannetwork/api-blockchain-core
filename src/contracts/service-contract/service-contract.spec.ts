@@ -28,7 +28,7 @@ import {
   NameResolver,
 } from '@evan.network/dbcp';
 
-import { accounts } from '../../test/accounts';
+import { accounts, useIdentity } from '../../test/accounts';
 import { Ipfs } from '../../dfs/ipfs';
 import { ServiceContract } from './service-contract';
 import { configTestcore as config } from '../../config-testcore';
