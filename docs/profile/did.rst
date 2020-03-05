@@ -227,11 +227,11 @@ Example
   const identity = await runtime.verifications.getIdentityForAccount(account, true);
   const did = await runtime.did.convertIdentityToDid(identity);
   await runtime.did.setDidDocument(did, document);
-  const service = [{
+  const service = {
     id: `${did}#randomService`,
     type: `randomService-${random}`,
     serviceEndpoint: `https://openid.example.com/${random}`,
-  }];
+  };
   await runtime.did.setService(did, service);
   const retrieved = await runtime.did.getService(did);
 
@@ -293,7 +293,7 @@ Parameters
 ----------
 
 #. ``did`` - ``string``: DID name to set service for
-#. ``service`` - ``DidServiceEntry[]``: array of services to set
+#. ``service`` - ``DidServiceEntry[] | DidServiceEntry``: service or array of services to set
 
 -------
 Returns
@@ -311,11 +311,11 @@ Example
   const identity = await runtime.verifications.getIdentityForAccount(account, true);
   const did = await runtime.did.convertIdentityToDid(identity);
   await runtime.did.setDidDocument(did, document);
-  const service = [{
+  const service = {
     id: `${did}#randomService`,
     type: `randomService-${random}`,
     serviceEndpoint: `https://openid.example.com/${random}`,
-  }];
+  };
   await runtime.did.setService(did, service);
 
 

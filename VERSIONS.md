@@ -8,6 +8,7 @@
 - add methods `deactivateDidDocument` and `didIsDeactivated` to check and handle DID deactivation status
 - added additional properties `updated`, `created`, and `proof` to DID documents
 - added proof validation to `getDidDocument` (only for documents that actually contain a proof)
+- introduced interfaces for did documents `getDidDocument`, `setDidDocument`, and `setDidDocumentOffline`
 
 ### Fixes
 - fix `getListEntries` in the api docs

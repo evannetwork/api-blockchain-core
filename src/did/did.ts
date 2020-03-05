@@ -286,7 +286,7 @@ export class Did extends Logger {
    * Get service from DID document.
    *
    * @param      {string}  did     DID name to get service for
-   * @return     {Promise<DidServiceEntry[]>}  service
+   * @return     {Promise<DidServiceEntry[]>}  services
    */
   public async getService(did: string): Promise<DidServiceEntry[]> {
     return (await this.getDidDocument(did)).service;
