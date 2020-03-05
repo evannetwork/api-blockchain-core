@@ -50,52 +50,36 @@ export interface DidConfig {
 }
 
 /**
- * template for a new DID document, can be used as a starting point for building own documents
+ * DID document structure
  */
-export interface DidDocumentTemplate {
+export interface DidDocument {
   '@context': string;
   id: string;
   controller?: string;
-  authentication: {
-    type: string;
-    publicKey: string;
-  } | {
-    type: string;
-    publicKey: string;
-  }[];
-  publicKey?: {
+  authentication: string[];
+  publicKey?: ({
     id: string;
     type: string;
     publicKeyHex: string;
-  }[] | {
+  } | {
     id: string;
     type: string;
     controller: string;
     ethereumAddress: string;
-  }[];
-  updated?: {
-    time: string;
-  };
-  created?: {
-    time: string;
-  };
+  })[];
+  updated?: string;
+  created?: string;
   proof?: DidProof;
-  service?: {
-    id: string;
-    type: string;
-    serviceEndpoint: string;
-  }[];
+  service?: DidServiceEntry[];
 }
 
 /**
  * interface for services in DIDs
  */
 export interface DidServiceEntry {
-  [id: string]: any;
-  type: any;
-  serviceEndpoint: any;
-  '@context'?: any;
-  id?: any;
+  id: string;
+  type: string;
+  serviceEndpoint: string;
 }
 
 /**
@@ -216,11 +200,11 @@ export class Did extends Logger {
    * Get DID document for given DID.
    *
    * @param      {string}  did     DID to fetch DID document for
-   * @return     {Promise<any>}    a DID document that MAY resemble `DidDocumentTemplate` format.
+   * @return     {Promise<DidDocument>}    a DID document.
    *                               For deactiated DIDs it returns a default DID document containing
    *                               no authentication material.
    */
-  public async getDidDocument(did: string): Promise<any> {
+  public async getDidDocument(did: string): Promise<DidDocument> {
     let result = null;
     if (await this.didIsDeactivated(did)) {
       return this.getDeactivatedDidDocument(did);
@@ -242,7 +226,6 @@ export class Did extends Logger {
       return this.getDefaultDidDocument(did);
     }
     result = JSON.parse(await this.options.dfs.get(documentHash) as any);
-    result = await this.removePublicKeyTypeArray(result);
 
     if (result.proof) {
       await this.validateProof(result);
@@ -262,41 +245,39 @@ export class Did extends Logger {
    *
    * @param      {string}  did                   (optional) contract DID
    * @param      {string}  controllerDid         (optional) controller of contracts identity (DID)
-   * @param      {string}  authenticationKey     (optional) authentication key used for contract
-   * @return     {Promise<DidDocumentTemplate>}  a DID document template
+   * @param      {string[]}  authenticationKeys  (optional) array of authentication keys
+   * @return     {Promise<DidDocument>}  a DID document template
    */
   public async getDidDocumentTemplate(
-    did?: string, controllerDid?: string, authenticationKey?: string,
-  ): Promise<DidDocumentTemplate> {
-    if (did && controllerDid && authenticationKey) {
+    did?: string, controllerDid?: string, authenticationKeys?: string[],
+  ): Promise<DidDocument> {
+    if (did && controllerDid && authenticationKeys) {
       await this.validateDid(did);
       await this.validateDid(controllerDid);
       // use given key to create a contract DID document
-      return JSON.parse(`{
-        "@context": "https://w3id.org/did/v1",
-        "id": "${did}",
-        "controller": "${controllerDid}",
-        "authentication": [
-          "${authenticationKey}"
-        ]
-      }`);
-    } if (!(did || controllerDid || authenticationKey)) {
+      return {
+        '@context': 'https://w3id.org/did/v1',
+        id: did,
+        controller: controllerDid,
+        authentication: authenticationKeys,
+      };
+    } if (!(did || controllerDid || authenticationKeys)) {
       const identity = this.options.signerIdentity.activeIdentity;
       const didAddress = await this.convertIdentityToDid(identity);
 
-      return JSON.parse(`{
-        "@context": "https://w3id.org/did/v1",
-        "id": "${didAddress}",
-        "publicKey": [{
-          "id": "${didAddress}#key-1",
-          "type": "Secp256k1VerificationKey2018",
-          "controller": "${didAddress}",
-          "ethereumAddress": "${this.options.signerIdentity.underlyingAccount.toLowerCase()}"
+      return {
+        '@context': 'https://w3id.org/did/v1',
+        id: didAddress,
+        publicKey: [{
+          id: `${didAddress}#key-1`,
+          type: 'Secp256k1VerificationKey2018',
+          controller: `${didAddress}`,
+          ethereumAddress: `${this.options.signerIdentity.underlyingAccount.toLowerCase()}`,
         }],
-        "authentication": [
-          "${didAddress}#key-1"
-        ]
-      }`);
+        authentication: [
+          `${didAddress}#key-1`,
+        ],
+      };
     }
     throw new Error('invalid config for template document');
   }
@@ -305,9 +286,9 @@ export class Did extends Logger {
    * Get service from DID document.
    *
    * @param      {string}  did     DID name to get service for
-   * @return     {Promise<DidServiceEntry[] | DidServiceEntry>}  service
+   * @return     {Promise<DidServiceEntry[]>}  services
    */
-  public async getService(did: string): Promise<DidServiceEntry[] | DidServiceEntry> {
+  public async getService(did: string): Promise<DidServiceEntry[]> {
     return (await this.getDidDocument(did)).service;
   }
 
@@ -315,12 +296,12 @@ export class Did extends Logger {
    * Store given DID document for given DID.
    *
    * @param      {string}  did       DID to store DID document for
-   * @param      {any}     document  DID document to store
+   * @param      {DidDocument}     document  DID document to store
    * @param      {VerificationDelegationInfo} txInfo Optional. If given, the transaction
    *                                 is executed on behalf of the tx signer.
    * @return     {Promise<void>}  resolved when done
    */
-  public async setDidDocument(did: string, document: any): Promise<void> {
+  public async setDidDocument(did: string, document: DidDocument): Promise<void> {
     if (await this.didIsDeactivated(did)) {
       throw Error('Cannot set document for deactivated DID');
     }
@@ -352,7 +333,7 @@ export class Did extends Logger {
    * @param document Document to store
    * @returns Tuple of the signed transaction and the document's ipfs hash
    */
-  public async setDidDocumentOffline(did: string, document: any):
+  public async setDidDocumentOffline(did: string, document: DidDocument):
   Promise<[VerificationsDelegationInfo, string]> {
     const identity = this.padIdentity(did
       ? await this.convertDidToIdentity(did)
@@ -378,17 +359,25 @@ export class Did extends Logger {
 
 
   /**
-   * Sets service in DID document.
+   * Sets service in DID document. Overrides the old service property.
    *
    * @param      {string}                               did      DID name to set service for
-   * @param      {DidServiceEntry[] | DidServiceEntry}  service  service to set
+   * @param      {DidServiceEntry[] | DidServiceEntry}  service  service(s) to set
    * @return     {Promise<void>}  resolved when done
    */
   public async setService(
     did: string,
     service: DidServiceEntry[] | DidServiceEntry,
   ): Promise<void> {
-    await this.setDidDocument(did, { ...(await this.getDidDocument(did)), service });
+    if (service instanceof Array) {
+      await this.setDidDocument(did, { ...(await this.getDidDocument(did)), service });
+    } else {
+      const serviceToSet: DidServiceEntry[] = [service];
+      await this.setDidDocument(did, {
+        ...(await this.getDidDocument(did)),
+        service: serviceToSet,
+      });
+    }
   }
 
   /**
@@ -425,12 +414,13 @@ export class Did extends Logger {
   /**
    * Create a JWT over a DID document
    *
-   * @param      {didDocument}   DID        The DID document
+   * @param      {DidDocument}   DID        The DID document
    * @param      {string}        proofIssuer     The issuer (key owner) of the proof
    * @param      {DidProofType}  proofType  The type of algorithm used for generating the JWT
    */
-  private async createJwtForDid(didDocument: any, proofIssuer: string, proofType: DidProofType):
-  Promise<string> {
+  private async createJwtForDid(didDocument: DidDocument, proofIssuer: string,
+    proofType: DidProofType):
+    Promise<string> {
     const signer = didJWT.SimpleSigner(
       await this.options.accountStore.getPrivateKey(this.options.signerIdentity.underlyingAccount),
     );
@@ -512,14 +502,14 @@ export class Did extends Logger {
   /*
    * Returns the standard DID document for deactivated DIDs
    */
-  private async getDeactivatedDidDocument(did: string): Promise<any> {
-    return JSON.parse(`{
-      "@context": "https://w3id.org/did/v1",
-      "id": "${did}",
-      "publicKey": [],
-      "authentication": [],
-      "services": []
-    }`);
+  private async getDeactivatedDidDocument(did: string): Promise<DidDocument> {
+    return {
+      '@context': 'https://w3id.org/did/v1',
+      id: did,
+      publicKey: [],
+      authentication: [],
+      service: [],
+    };
   }
 
   /**
@@ -527,7 +517,7 @@ export class Did extends Logger {
    * @param did DID to fetch a document for.
    * @returns Resolves to a DID document.
    */
-  private async getDefaultDidDocument(did: string): Promise<any> {
+  private async getDefaultDidDocument(did: string): Promise<DidDocument> {
     const identity = await this.convertDidToIdentity(did);
     let controllerIdentity;
     try {
@@ -539,25 +529,24 @@ export class Did extends Logger {
 
     if (identity.length === 42) {
       // Identity is account identity and therefore self-sovereign
-      return JSON.parse(`{
-        "@context": "https://w3id.org/did/v1",
-        "id": "${did}",
-        "publicKey": [{
-          "id": "${did}#key-1",
-          "type": "Secp256k1VerificationKey2018",
-          "controller": "${did}",
-          "ethereumAddress": "${controllerIdentity}"
+      return {
+        '@context': 'https://w3id.org/did/v1',
+        id: did,
+        publicKey: [{
+          id: `${did}#key-1`,
+          type: 'Secp256k1VerificationKey2018',
+          controller: `${did}`,
+          ethereumAddress: `${controllerIdentity}`,
         }],
-        "authentication": [
-          "${did}#key-1"
-        ]
-      }`);
+        authentication: [
+          `${did}#key-1`,
+        ],
+      };
     }
     // Identity is contract identity and therefore controlled by another identity
     const controllerDid = await this.convertIdentityToDid(controllerIdentity);
     const controllerDidDoc = await this.getDidDocument(controllerDid);
-    const authKeyIds = controllerDidDoc.publicKey.map((key) => key.id).join(',');
-
+    const authKeyIds = controllerDidDoc.publicKey.map((key) => key.id);
     return this.getDidDocumentTemplate(did,
       controllerDid,
       authKeyIds);
@@ -622,29 +611,7 @@ export class Did extends Logger {
       : identity;
   }
 
-  /**
-   * Method to ensure no public key array types are written into a retrieved did document. This is
-   * just a legacy method because we still have various faulty DID documents stored that have an
-   * array as the publicKey.type property.
-   *
-   * @param      {any}  result  The cleaned and valid DID document
-   */
-  private async removePublicKeyTypeArray(result: any): Promise<any> {
-    // TODO: Method can be deleted as soon as there is a real DID validation in place
-    const cleanedResult = result;
-    let keyTypes = [];
-
-    for (const pos in result.publicKey) {
-      // Discard ERC725ManagementKey type entry
-      if (result.publicKey[pos].type instanceof Array) {
-        keyTypes = result.publicKey[pos].type.filter((type) => !type.startsWith('ERC725'));
-        [cleanedResult.publicKey[pos].type] = keyTypes;
-      }
-    }
-    return cleanedResult;
-  }
-
-  private async setAdditionalProperties(document: any): Promise<any> {
+  private async setAdditionalProperties(document: DidDocument): Promise<DidDocument> {
     const clone = _.cloneDeep(document);
     const now = (new Date(Date.now())).toISOString();
     // Only set 'created' for new did documents
@@ -677,10 +644,10 @@ export class Did extends Logger {
   /**
    * Validates the JWS of a DID Document proof
    *
-   * @param      {any}    document  The DID Document
+   * @param      {DidDocument}    document  The DID Document
    * @returns    {Promise<void>}           Resolves when done
    */
-  private async validateProof(document: any): Promise<void> {
+  private async validateProof(document: DidDocument): Promise<void> {
     // Mock the did-resolver package that did-jwt usually requires
     const getResolver = (didModule) => ({
       async resolve(did) {
