@@ -546,7 +546,7 @@ export class Did extends Logger {
           "id": "${did}#key-1",
           "type": "Secp256k1VerificationKey2018",
           "controller": "${did}",
-          "ethereumAddress": "${controllerIdentity}"
+          "ethereumAddress": "${controllerIdentity.toLowerCase()}"
         }],
         "authentication": [
           "${did}#key-1"
