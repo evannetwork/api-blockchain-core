@@ -36,11 +36,7 @@ describe('Business Center', function test() {
   let identity1: string;
   let identity2: string;
   let runtimes: Runtime[];
-  let web3;
 
-  before(() => {
-    web3 = TestUtils.getWeb3();
-  });
 
   /**
    * create new busines center

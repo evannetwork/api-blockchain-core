@@ -161,6 +161,7 @@ export class Wallet extends Logger {
     }
     const factory = this.options.contractLoader.loadContract('MultiSigWalletFactory', factoryAddress);
     // create contract via factory
+    console.log('Creating contract');
     const contractId = await this.options.executor.executeContractTransaction(
       factory,
       'createContract', {
@@ -174,6 +175,7 @@ export class Wallet extends Logger {
       confirmations,
     );
     // add description
+    console.log('Setting description!');
     await this.options.description.setDescriptionToContract(
       contractId, this.defaultDescription, accountId,
     );

@@ -57,7 +57,6 @@ if (process.env.ACCOUNT_MAP) {
       '70adb5e0424148e2b490776143a6a93662d3f40c3d9597690bdd3472863b7625',
   };
 }
-console.log(localAccountMap);
 const accountMap = localAccountMap;
 const accounts = Object.keys(accountMap);
 

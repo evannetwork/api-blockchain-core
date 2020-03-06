@@ -26,7 +26,7 @@ import {
   Executor,
 } from '@evan.network/dbcp';
 
-import { accounts } from '../test/accounts';
+import { accounts, useIdentity } from '../test/accounts';
 import { TestUtils } from '../test/test-utils';
 import { Wallet } from './wallet';
 
@@ -41,9 +41,10 @@ describe('Wallet handler', function test() {
   let web3: any;
 
   before(async () => {
+    const runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
     web3 = TestUtils.getWeb3();
     dfs = await TestUtils.getIpfs();
-    wallet = await TestUtils.getWallet(web3, dfs);
+    wallet = await TestUtils.getWallet(runtime);
     executor = await TestUtils.getExecutor(web3);
   });
 

@@ -20,27 +20,25 @@
 import 'mocha';
 import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
-import {
-  ContractLoader,
-  EventHub,
-  Executor,
-} from '@evan.network/dbcp';
-
+import { ContractLoader } from '@evan.network/dbcp';
 import { accounts, useIdentity } from '../../test/accounts';
-import { ConsumerState, ContractState } from './base-contract';
+import { ConsumerState, ContractState, BaseContract } from './base-contract';
 import { configTestcore as config } from '../../config-testcore';
-import { Ipfs } from '../../dfs/ipfs';
-import { Ipld } from '../../dfs/ipld';
 import { TestUtils } from '../../test/test-utils';
 import { Runtime } from '../../runtime';
+import { Executor } from '../..';
 
 
 use(chaiAsPromised);
 
-describe('runtimes[0].baseContract', function test() {
+describe('baseContract', function test() {
   this.timeout(60000);
-  let identity1; let identity2; let
-    identity3: string;
+  let baseContract: BaseContract;
+  let contractLoader: ContractLoader;
+  let executor: Executor;
+  let identity0: string;
+  let identity1: string;
+  let identity2: string;
   let businessCenterDomain;
   let runtimes: Runtime[];
 
@@ -50,16 +48,19 @@ describe('runtimes[0].baseContract', function test() {
         (account) => TestUtils.getRuntime(account, null, { useIdentity }),
       ),
     );
-    identity1 = runtimes[0].activeIdentity;
-    identity2 = runtimes[1].activeIdentity;
-    identity3 = runtimes[2].activeIdentity;
+    identity0 = runtimes[0].activeIdentity;
+    identity1 = runtimes[1].activeIdentity;
+    identity2 = runtimes[2].activeIdentity;
+    await runtimes[0].profile.loadForAccount();
+    executor = runtimes[0].executor;
+    baseContract = runtimes[0].baseContract;
+    contractLoader = runtimes[0].contractLoader;
+
     businessCenterDomain = runtimes[0].nameResolver.getDomainName(
       config.nameResolver.domains.businessCenter,
     );
     const businessCenterAddress = await runtimes[0].nameResolver.getAddress(businessCenterDomain);
-    const businessCenter = await runtimes[0].contractLoader.loadContract('BusinessCenter', businessCenterAddress);
-    await runtimes[0].profile.loadForAccount();
-    // await profile.setContactKnownState(identity1, true);
+    const businessCenter = await contractLoader.loadContract('BusinessCenter', businessCenterAddress);
     for (const runtime of runtimes) {
       const isMember = await runtime.executor.executeContractCall(
         businessCenter,
@@ -78,241 +79,241 @@ describe('runtimes[0].baseContract', function test() {
   });
 
   it('can be created', async () => {
-    const contractId = await runtimes[0].baseContract.createUninitialized(
+    const contractId = await baseContract.createUninitialized(
       'testdatacontract',
-      identity1,
+      identity0,
       businessCenterDomain,
     );
     expect(contractId).not.to.be.undefined;
   });
 
   it('can not be created', async () => {
-    const contractPromise = runtimes[0].baseContract.createUninitialized(
+    const contractPromise = baseContract.createUninitialized(
       'testdatacontract',
-      identity1,
+      identity0,
       'testdatacontract.factory.testbc.evan',
     );
     expect(contractPromise).to.be.rejected;
   });
 
   it('can have new members invited to it by the owner', async () => {
-    const contractId = await runtimes[0].baseContract.createUninitialized(
+    const contractId = await baseContract.createUninitialized(
       'testdatacontract',
-      identity1,
+      identity0,
       businessCenterDomain,
     );
-    const contract = runtimes[0].contractLoader.loadContract('BaseContractInterface', contractId);
-    let isMember = await runtimes[0].executor.executeContractCall(contract, 'isConsumer', identity2);
+    const contract = contractLoader.loadContract('BaseContractInterface', contractId);
+    let isMember = await executor.executeContractCall(contract, 'isConsumer', identity1);
     expect(isMember).to.be.false;
-    await runtimes[0].baseContract.inviteToContract(
+    await baseContract.inviteToContract(
       businessCenterDomain,
       contractId,
+      identity0,
       identity1,
-      identity2,
     );
-    isMember = await runtimes[0].executor.executeContractCall(contract, 'isConsumer', identity2);
+    isMember = await executor.executeContractCall(contract, 'isConsumer', identity1);
     expect(isMember).to.be.true;
   });
 
   it('can remove invited members to it by the owner', async () => {
-    const contractId = await runtimes[0].baseContract.createUninitialized(
+    const contractId = await baseContract.createUninitialized(
       'testdatacontract',
-      identity1,
+      identity0,
       businessCenterDomain,
     );
-    const contract = runtimes[0].contractLoader.loadContract('BaseContractInterface', contractId);
-    let isMember = await runtimes[0].executor.executeContractCall(contract, 'isConsumer', identity2);
+    const contract = contractLoader.loadContract('BaseContractInterface', contractId);
+    let isMember = await executor.executeContractCall(contract, 'isConsumer', identity1);
     expect(isMember).to.be.false;
-    await runtimes[0].baseContract.inviteToContract(
+    await baseContract.inviteToContract(
       businessCenterDomain,
       contractId,
+      identity0,
       identity1,
-      identity2,
     );
-    isMember = await runtimes[0].executor.executeContractCall(contract, 'isConsumer', identity2);
+    isMember = await executor.executeContractCall(contract, 'isConsumer', identity1);
     expect(isMember).to.be.true;
-    await runtimes[0].baseContract.removeFromContract(
+    await baseContract.removeFromContract(
       businessCenterDomain,
       contractId,
+      identity0,
       identity1,
-      identity2,
     );
-    isMember = await runtimes[0].executor.executeContractCall(contract, 'isConsumer', identity2);
+    isMember = await executor.executeContractCall(contract, 'isConsumer', identity1);
     expect(isMember).to.be.false;
   });
 
   it('cannot have new members invited to it by members that are not the owner ', async () => {
-    const contractId = await runtimes[0].baseContract.createUninitialized(
+    const contractId = await baseContract.createUninitialized(
       'testdatacontract',
-      identity1,
+      identity0,
       businessCenterDomain,
     );
-    await runtimes[0].baseContract.inviteToContract(
+    await baseContract.inviteToContract(
+      businessCenterDomain,
+      contractId,
+      identity0,
+      identity1,
+    );
+    const promise = baseContract.inviteToContract(
       businessCenterDomain,
       contractId,
       identity1,
       identity2,
-    );
-    const promise = runtimes[0].baseContract.inviteToContract(
-      businessCenterDomain,
-      contractId,
-      identity2,
-      identity3,
     );
     await expect(promise).to.be.rejected;
   });
 
   it('cannot have new members invited to it by users that are not in the contract ', async () => {
-    const contractId = await runtimes[0].baseContract.createUninitialized(
+    const contractId = await baseContract.createUninitialized(
       'testdatacontract',
-      identity1,
+      identity0,
       businessCenterDomain,
     );
-    const promise = runtimes[0].baseContract.inviteToContract(
+    const promise = baseContract.inviteToContract(
       businessCenterDomain,
       contractId,
+      identity1,
       identity2,
-      identity3,
     );
     await expect(promise).to.be.rejected;
   });
 
   // intendend skip, tested but currently not activated
   it.skip('cannot have members invited, when the invitee doesn\'t know / ignores inviter', async () => {
-    const contractId = await runtimes[0].baseContract.createUninitialized(
+    const contractId = await baseContract.createUninitialized(
       'testdatacontract',
-      identity1,
+      identity0,
       businessCenterDomain,
     );
-    const contract = runtimes[0].contractLoader.loadContract('BaseContractInterface', contractId);
-    const isMember = await runtimes[0].executor.executeContractCall(contract, 'isConsumer', identity2);
+    const contract = contractLoader.loadContract('BaseContractInterface', contractId);
+    const isMember = await executor.executeContractCall(contract, 'isConsumer', identity1);
     expect(isMember).to.be.false;
-    await runtimes[0].profile.setContactKnownState(identity1, false);
-    const invitePromise = runtimes[0].baseContract.inviteToContract(
+    await runtimes[0].profile.setContactKnownState(identity0, false);
+    const invitePromise = baseContract.inviteToContract(
       businessCenterDomain,
       contractId,
+      identity0,
       identity1,
-      identity2,
     );
     await expect(invitePromise).to.be.rejected;
-    await runtimes[0].profile.setContactKnownState(identity1, true);
+    await runtimes[0].profile.setContactKnownState(identity0, true);
   });
 
   it('can have its state set by the owner', async () => {
-    const contractId = await runtimes[0].baseContract.createUninitialized(
+    const contractId = await baseContract.createUninitialized(
       'testdatacontract',
-      identity1,
+      identity0,
       businessCenterDomain,
     );
-    await runtimes[0].baseContract.changeContractState(
+    await baseContract.changeContractState(
       contractId,
-      identity1,
+      identity0,
       ContractState.PendingApproval,
     );
   });
 
   it('cannot have its state set by members that are not the owner', async () => {
-    const contractId = await runtimes[0].baseContract.createUninitialized(
+    const contractId = await baseContract.createUninitialized(
       'testdatacontract',
-      identity1,
+      identity0,
       businessCenterDomain,
     );
-    await runtimes[0].baseContract.inviteToContract(
+    await baseContract.inviteToContract(
       businessCenterDomain,
       contractId,
+      identity0,
       identity1,
-      identity2,
     );
-    const promise = runtimes[0].baseContract.changeContractState(
+    const promise = baseContract.changeContractState(
       contractId,
-      identity2,
+      identity1,
       ContractState.PendingApproval,
     );
     await expect(promise).to.be.rejected;
   });
 
   it('cannot have its state set by users that are not in the contract', async () => {
-    const contractId = await runtimes[0].baseContract.createUninitialized(
+    const contractId = await baseContract.createUninitialized(
       'testdatacontract',
-      identity1,
+      identity0,
       businessCenterDomain,
     );
-    const promise = runtimes[0].baseContract.changeContractState(contractId, identity2, 1);
+    const promise = baseContract.changeContractState(contractId, identity1, 1);
     await expect(promise).to.be.rejected;
   });
 
   it('can have the owner set its own state', async () => {
-    const contractId = await runtimes[0].baseContract.createUninitialized(
+    const contractId = await baseContract.createUninitialized(
       'testdatacontract',
-      identity1,
+      identity0,
       businessCenterDomain,
     );
-    await runtimes[0].baseContract.changeConsumerState(
+    await baseContract.changeConsumerState(
       contractId,
-      identity1,
-      identity1,
+      identity0,
+      identity0,
       ConsumerState.Active,
     );
   });
 
   describe('when used without a business center', () => {
     it('can be created', async () => {
-      const contractId = await runtimes[0].baseContract.createUninitialized(
+      const contractId = await baseContract.createUninitialized(
         'testdatacontract',
-        identity1,
+        identity0,
         null,
       );
-      await runtimes[0].baseContract.changeConsumerState(
+      await baseContract.changeConsumerState(
         contractId,
-        identity1,
-        identity1,
+        identity0,
+        identity0,
         ConsumerState.Active,
       );
     });
 
     it('can have new members invited to it by the owner', async () => {
-      const contractId = await runtimes[0].baseContract.createUninitialized(
+      const contractId = await baseContract.createUninitialized(
         'testdatacontract',
-        identity1,
+        identity0,
         null,
       );
-      const contract = runtimes[0].contractLoader.loadContract('BaseContractInterface', contractId);
-      let isMember = await runtimes[0].executor.executeContractCall(contract, 'isConsumer', identity2);
+      const contract = contractLoader.loadContract('BaseContractInterface', contractId);
+      let isMember = await executor.executeContractCall(contract, 'isConsumer', identity1);
       expect(isMember).to.be.false;
-      await runtimes[0].baseContract.inviteToContract(
+      await baseContract.inviteToContract(
         null,
         contractId,
+        identity0,
         identity1,
-        identity2,
       );
-      isMember = await runtimes[0].executor.executeContractCall(contract, 'isConsumer', identity2);
+      isMember = await executor.executeContractCall(contract, 'isConsumer', identity1);
       expect(isMember).to.be.true;
     });
 
     it('can remove invited members to it by the owner', async () => {
-      const contractId = await runtimes[0].baseContract.createUninitialized(
+      const contractId = await baseContract.createUninitialized(
         'testdatacontract',
-        identity1,
+        identity0,
         null,
       );
-      const contract = runtimes[0].contractLoader.loadContract('BaseContractInterface', contractId);
-      let isMember = await runtimes[0].executor.executeContractCall(contract, 'isConsumer', identity2);
+      const contract = contractLoader.loadContract('BaseContractInterface', contractId);
+      let isMember = await executor.executeContractCall(contract, 'isConsumer', identity1);
       expect(isMember).to.be.false;
-      await runtimes[0].baseContract.inviteToContract(
+      await baseContract.inviteToContract(
         null,
         contractId,
+        identity0,
         identity1,
-        identity2,
       );
-      isMember = await runtimes[0].executor.executeContractCall(contract, 'isConsumer', identity2);
+      isMember = await executor.executeContractCall(contract, 'isConsumer', identity1);
       expect(isMember).to.be.true;
-      await runtimes[0].baseContract.removeFromContract(
+      await baseContract.removeFromContract(
         null,
         contractId,
+        identity0,
         identity1,
-        identity2,
       );
-      isMember = await runtimes[0].executor.executeContractCall(contract, 'isConsumer', identity2);
+      isMember = await executor.executeContractCall(contract, 'isConsumer', identity1);
       expect(isMember).to.be.false;
     });
 
@@ -321,9 +322,9 @@ describe('runtimes[0].baseContract', function test() {
       // eslint-disable-next-line
       return new Promise(async (resolve, reject) => {
         try {
-          const contractId = await runtimes[0].baseContract.createUninitialized(
+          const contractId = await baseContract.createUninitialized(
             'testdatacontract',
-            identity1,
+            identity0,
             null,
           );
           // reject on timeout
@@ -342,11 +343,11 @@ describe('runtimes[0].baseContract', function test() {
             () => {
               resolved = true; resolve();
             });
-          await runtimes[0].baseContract.inviteToContract(
+          await baseContract.inviteToContract(
             null,
             contractId,
+            identity0,
             identity1,
-            identity2,
           );
         } catch (ex) {
           reject(ex);

@@ -24,6 +24,7 @@ import { SignerInternal } from '@evan.network/dbcp';
 
 import { ExecutorAgent } from './executor-agent';
 import { TestUtils } from '../test/test-utils';
+import { accounts, useIdentity } from '../test/accounts';
 
 
 const agentUser = '0x24Ac71311c9F9a6148944a921551686291aF5BC8';
@@ -43,22 +44,13 @@ describe.skip('Executor handler', function test() {
   let executor: ExecutorAgent;
 
   before(async () => {
-    web3 = TestUtils.getWeb3();
-    const accountStore = TestUtils.getAccountStore();
-    contractLoader = await TestUtils.getContractLoader(web3);
-    const signer = new SignerInternal({
-      accountStore,
-      contractLoader,
-      config: {},
-      web3,
-    });
+    const runtime = await TestUtils.getRuntime(accounts[0], null, useIdentity);
+    contractLoader = runtime.contractLoader;
     executor = new ExecutorAgent({
       config: {},
-      contractLoader,
-      signer,
-      web3,
+      ...(runtime as any),
     });
-    password = web3.utils.soliditySha3('fluffy cat is fluffy');
+    password = runtime.web3.utils.soliditySha3('fluffy cat is fluffy');
   });
 
   it('should be able to call a contract method', async () => {

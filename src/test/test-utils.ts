@@ -153,10 +153,12 @@ export class TestUtils {
     web3,
     dfsParam?: DfsInterface,
     requestedKeys?: string[],
+    useIdentity = false,
+    accountId?: string,
   ): Promise<Description> {
-    const executor = await this.getExecutor(web3);
+    const executor = await this.getExecutor(web3, false, useIdentity, accountId);
     const contractLoader = await this.getContractLoader(web3);
-    const dfs = dfsParam || await this.getIpfs();
+    const dfs = dfsParam || await this.getIpfs(useIdentity);
     const nameResolver = await this.getNameResolver(web3);
     const cryptoProvider = this.getCryptoProvider();
     return new Description({
@@ -213,71 +215,67 @@ export class TestUtils {
     });
   }
 
-  public static async getExecutor(web3: any, isReadonly = false): Promise<Executor> {
+  public static async getExecutor(
+    web3: any,
+    isReadonly = false,
+    useIdentity = false,
+    accountId?: string,
+  ): Promise<Executor> {
     if (isReadonly) {
       return new Executor({});
     }
-    const contracts = await this.getContracts();
-    const contractLoader = new ContractLoader({
-      contracts,
-      web3,
-    });
-    const accountStore = this.getAccountStore();
-    const signer = new SignerInternal({
-      accountStore,
-      contractLoader,
-      config: {},
-      web3,
-    });
+
+    let signer;
+    if (useIdentity) {
+      console.log('Using mah identity!');
+      signer = await this.getSignerIdentity(web3, accountId);
+    } else {
+      signer = await this.getSignerInternal(web3);
+    }
     const executor = new Executor({ config, signer, web3 });
     await executor.init({});
 
     return executor;
   }
 
-  public static async getExecutorWallet(web3, wallet, accountId): Promise<ExecutorWallet> {
+  public static async getExecutorWallet(web3, wallet, runtime: Runtime):
+  Promise<ExecutorWallet> {
     const contracts = await this.getContracts();
     const contractLoader = new ContractLoader({
       contracts,
       web3,
     });
-    const accountStore = this.getAccountStore();
-    const signer = new SignerInternal({
-      accountStore,
+    const executor = new ExecutorWallet({
+      accountId: runtime.activeAccount,
+      config,
       contractLoader,
-      config: {},
+      signer: runtime.signer,
+      wallet,
       web3,
     });
-    const executor = new ExecutorWallet({
-      accountId, config, contractLoader, signer, wallet, web3,
-    });
     await executor.init({});
+    executor.eventHub = runtime.eventHub;
 
     return executor;
   }
 
-  public static async getIpfs(): Promise<Ipfs> {
-    const contracts = await this.getContracts();
-    const accountStore = this.getAccountStore();
-    const contractLoader = new ContractLoader({
-      contracts,
-      web3: this.getWeb3(),
-    });
-    const signer = new SignerInternal({
-      accountStore,
-      contractLoader,
-      config: {},
-      web3: this.getWeb3(),
-    });
+  public static async getIpfs(useIdentity = false): Promise<Ipfs> {
+    let signer;
+    const web3 = this.getWeb3();
+    if (useIdentity) {
+      signer = await this.getSignerIdentity(web3);
+    } else {
+      signer = await this.getSignerInternal(web3);
+    }
     const ipfs = new Ipfs({
       dfsConfig: { host: 'ipfs.test.evan.network', port: '443', protocol: 'https' },
       disablePin: true,
     });
     ipfs.setRuntime({
-      activeAccount: accounts[0],
+      activeIdentity: identities[0],
       signer,
-      underlyingAccount: identities[0],
-      web3: this.getWeb3(),
+      underlyingAccount: accounts[0],
+      web3,
     });
     return ipfs;
   }
@@ -410,7 +408,7 @@ export class TestUtils {
     }
     return createDefaultRuntime(
       await TestUtils.getWeb3(),
-      await TestUtils.getIpfs(),
+      await TestUtils.getIpfs((customConfig as any).useIdentity),
       {
         accountMap: { [accountId]: accountMap[accountId] },
         keyConfig: keys,
@@ -454,6 +452,21 @@ export class TestUtils {
     });
   }
 
+  public static async getSignerInternal(web3: any) {
+    const contracts = await this.getContracts();
+    const contractLoader = new ContractLoader({
+      contracts,
+      web3,
+    });
+    const accountStore = this.getAccountStore();
+    return new SignerInternal({
+      accountStore,
+      contractLoader,
+      config: {},
+      web3,
+    });
+  }
+
   public static async getSignerIdentity(
     web3: any,
     accountId = accounts[0],
@@ -463,14 +476,8 @@ export class TestUtils {
       contracts,
       web3,
     });
-    const accountStore = TestUtils.getAccountStore();
     const verifications = await TestUtils.getVerifications(web3, await TestUtils.getIpfs());
-    const underlyingSigner = new SignerInternal({
-      accountStore,
-      contractLoader,
-      config: {},
-      web3,
-    });
+    const underlyingSigner = await this.getSignerInternal(web3);
     return new SignerIdentity(
       {
         contractLoader,
@@ -514,16 +521,11 @@ export class TestUtils {
     });
   }
 
-  public static async getWallet(web3, dfsParam?: DfsInterface): Promise<Wallet> {
-    const dfs = dfsParam || await TestUtils.getIpfs();
-    const executor = await TestUtils.getExecutor(web3);
-    executor.eventHub = await TestUtils.getEventHub(web3);
+  public static async getWallet(
+    runtime: Runtime,
+  ): Promise<Wallet> {
     return new Wallet({
-      contractLoader: await TestUtils.getContractLoader(web3),
-      description: await TestUtils.getDescription(web3, dfs),
-      eventHub: executor.eventHub,
-      executor,
-      nameResolver: await TestUtils.getNameResolver(web3),
+      ...(runtime as any),
     });
   }
 
