@@ -227,7 +227,6 @@ export class TestUtils {
 
     let signer;
     if (useIdentity) {
-      console.log('Using mah identity!');
       signer = await this.getSignerIdentity(web3, accountId);
     } else {
       signer = await this.getSignerInternal(web3);

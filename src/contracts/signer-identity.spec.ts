@@ -30,7 +30,7 @@ import {
   SignerInternal,
 } from '@evan.network/dbcp';
 
-import { accounts } from '../test/accounts';
+import { accounts, useIdentity } from '../test/accounts';
 import { TestUtils } from '../test/test-utils';
 import {
   CryptoProvider,
@@ -41,6 +41,7 @@ import {
   Profile,
   SignerIdentity,
   Verifications,
+  Runtime,
 } from '../index';
 
 
@@ -49,94 +50,72 @@ use(chaiAsPromised);
 describe('signer-identity (identity based signer)', function test() {
   this.timeout(300000);
 
-  let contractLoader: ContractLoader;
-  let dfs: DfsInterface;
-  let executor: Executor;
-  let signer: SignerIdentity;
+  let runtimes: Runtime[];
+  let identity0: string;
+  let account0: string;
+  let account1: string;
+  let account2: string;
   let web3: any;
 
   before(async () => {
     web3 = TestUtils.getWeb3();
-
-    const contracts = await TestUtils.getContracts();
-    contractLoader = new ContractLoader({
-      contracts,
-      web3,
-    });
-    const accountStore = TestUtils.getAccountStore();
-    const verifications = await TestUtils.getVerifications(web3, await TestUtils.getIpfs());
-    const underlyingSigner = new SignerInternal({
-      accountStore,
-      contractLoader,
-      config: {},
-      web3,
-    });
-    signer = new SignerIdentity(
-      {
-        contractLoader,
-        verifications,
-        web3,
-      },
-      {
-        activeIdentity: await verifications.getIdentityForAccount(accounts[3], true),
-        underlyingAccount: accounts[3],
-        underlyingSigner,
-      },
-    );
-    executor = new Executor(
-      { config: { alwaysAutoGasLimit: 1.1 }, signer, web3 },
-    );
-    await executor.init({ eventHub: await TestUtils.getEventHub(web3) });
+    runtimes = await Promise.all(accounts.slice(0, 3).map(
+      (account) => TestUtils.getRuntime(account, null, { useIdentity }),
+    ));
+    identity0 = runtimes[0].activeIdentity;
+    account0 = runtimes[0].activeAccount;
+    account1 = runtimes[1].activeAccount;
+    account2 = runtimes[2].activeAccount;
   });
 
   describe('when making transaction with underlying accountId', () => {
     it('can create a new contract', async () => {
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
-      const contract = await executor.createContract(
-        'TestContract', [randomString], { from: signer.underlyingAccount, gas: 1e6 },
+      const contract = await runtimes[0].executor.createContract(
+        'TestContract', [randomString], { from: account0, gas: 1e6 },
       );
-      expect(await executor.executeContractCall(contract, 'data')).to.eq(randomString);
+      expect(await runtimes[0].executor.executeContractCall(contract, 'data')).to.eq(randomString);
     });
 
     it('can create expensive contracts', async () => {
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
-      const contractPromise = executor.createContract(
-        'HugeContract', [randomString], { from: signer.underlyingAccount, gas: 12e6 },
+      const contractPromise = runtimes[0].executor.createContract(
+        'HugeContract', [randomString], { from: account0, gas: 12e6 },
       );
       await expect(contractPromise).not.to.be.rejected;
-      expect(await executor.executeContractCall(await contractPromise, 'data')).to.eq(randomString);
+      expect(await runtimes[0].executor.executeContractCall(await contractPromise, 'data')).to.eq(randomString);
     });
 
     it('can make transactions on contracts', async () => {
-      const contract = await executor.createContract(
-        'TestContract', [''], { from: signer.underlyingAccount, gas: 1e6 },
+      const contract = await runtimes[0].executor.createContract(
+        'TestContract', [''], { from: account0, gas: 1e7 },
       );
 
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
-      await executor.executeContractTransaction(
-        contract, 'setData', { from: signer.underlyingAccount }, randomString,
+      await runtimes[0].executor.executeContractTransaction(
+        contract, 'setData', { from: account0 }, randomString,
       );
-      expect(await executor.executeContractCall(contract, 'data')).to.eq(randomString);
+      expect(await runtimes[0].executor.executeContractCall(contract, 'data')).to.eq(randomString);
     });
 
     it('can send funds', async () => {
       const amountToSend = Math.floor(Math.random() * 1e3);
-      const balanceBefore = new BigNumber(await web3.eth.getBalance(accounts[1]));
-      await executor.executeSend(
+      const balanceBefore = new BigNumber(await web3.eth.getBalance(account1));
+      await runtimes[0].executor.executeSend(
         {
-          from: signer.underlyingAccount, to: accounts[1], gas: 10e6, value: amountToSend,
+          from: account0, to: account1, gas: 10e6, value: amountToSend,
         },
       );
-      const balanceAfter = new BigNumber(await web3.eth.getBalance(accounts[1]));
+      const balanceAfter = new BigNumber(await web3.eth.getBalance(account1));
       const diff = balanceAfter.minus(balanceBefore);
       expect(diff.eq(new BigNumber(amountToSend))).to.be.true;
     });
 
     it('can sign messages', async () => {
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
-      const signed = await signer.signMessage(signer.underlyingAccount, randomString);
+      const signed = await runtimes[0].signer.signMessage(account0, randomString);
       const recovered = web3.eth.accounts.recover(randomString, signed);
-      expect(recovered).to.eq(signer.underlyingAccount);
+      expect(recovered).to.eq(account0);
     });
   });
 
@@ -144,55 +123,55 @@ describe('signer-identity (identity based signer)', function test() {
     describe('when performing transactions on contract', () => {
       it('can create a new contract', async () => {
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
-        const contract = await executor.createContract(
-          'TestContract', [randomString], { from: signer.activeIdentity, gas: 1e6 },
+        const contract = await runtimes[0].executor.createContract(
+          'TestContract', [randomString], { from: identity0, gas: 1e6 },
         );
-        expect(await executor.executeContractCall(contract, 'data')).to.eq(randomString);
+        expect(await runtimes[0].executor.executeContractCall(contract, 'data')).to.eq(randomString);
       });
 
       it('can create expensive contracts', async () => {
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
-        const contractPromise = executor.createContract(
-          'HugeContract', [randomString], { from: signer.activeIdentity, gas: 1e6 },
+        const contractPromise = runtimes[0].executor.createContract(
+          'HugeContract', [randomString], { from: identity0, gas: 1e7 },
         );
         await expect(contractPromise).not.to.be.rejected;
-        expect(await executor.executeContractCall(await contractPromise, 'data')).to.eq(randomString);
+        expect(await runtimes[0].executor.executeContractCall(await contractPromise, 'data')).to.eq(randomString);
       });
 
       it('can make transactions on contracts', async () => {
-        const contract = await executor.createContract(
-          'TestContract', [''], { from: signer.activeIdentity, gas: 1e6 },
+        const contract = await runtimes[0].executor.createContract(
+          'TestContract', [''], { from: identity0, gas: 1e7 },
         );
 
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
-        await executor.executeContractTransaction(
-          contract, 'setData', { from: signer.activeIdentity }, randomString,
+        await runtimes[0].executor.executeContractTransaction(
+          contract, 'setData', { from: identity0 }, randomString,
         );
-        expect(await executor.executeContractCall(contract, 'data')).to.eq(randomString);
+        expect(await runtimes[0].executor.executeContractCall(contract, 'data')).to.eq(randomString);
       });
 
       it('can make transactions on multiple contracts', async () => {
         const runOneTest = async () => {
-          const contract = await executor.createContract(
-            'TestContract', [''], { from: signer.activeIdentity, gas: 1e6 },
+          const contract = await runtimes[0].executor.createContract(
+            'TestContract', [''], { from: identity0, gas: 1e6 },
           );
           const randomString = Math.floor(Math.random() * 1e12).toString(36);
-          await executor.executeContractTransaction(
-            contract, 'setData', { from: signer.activeIdentity }, randomString,
+          await runtimes[0].executor.executeContractTransaction(
+            contract, 'setData', { from: identity0 }, randomString,
           );
-          expect(await executor.executeContractCall(contract, 'data')).to.eq(randomString);
+          expect(await runtimes[0].executor.executeContractCall(contract, 'data')).to.eq(randomString);
         };
         await Promise.all([...Array(10)].map(() => runOneTest()));
       });
 
       it('can execute multiple transactions in parallel', async () => {
         const runOneTest = async () => {
-          const contract = await executor.createContract(
-            'TestContract', [''], { from: signer.activeIdentity, gas: 1e6 },
+          const contract = await runtimes[0].executor.createContract(
+            'TestContract', [''], { from: identity0, gas: 1e6 },
           );
           const randomString = Math.floor(Math.random() * 1e12).toString(36);
-          await executor.executeContractTransaction(
-            contract, 'setData', { from: signer.activeIdentity }, randomString,
+          await runtimes[0].executor.executeContractTransaction(
+            contract, 'setData', { from: identity0 }, randomString,
           );
         };
         await Promise.all([...Array(10)].map(() => runOneTest()));
@@ -200,8 +179,8 @@ describe('signer-identity (identity based signer)', function test() {
 
       it('can create multiple contracts in parallel', async () => {
         const runOneTest = async () => {
-          const contract = await executor.createContract(
-            'TestContract', [''], { from: signer.activeIdentity, gas: 1e6 },
+          const contract = await runtimes[0].executor.createContract(
+            'TestContract', [''], { from: identity0, gas: 1e6 },
           );
           expect(contract).to.be.an('Object');
           return contract;
@@ -213,16 +192,16 @@ describe('signer-identity (identity based signer)', function test() {
 
     describe('when handling events', () => {
       it('can handle events in contract transactions', async () => {
-        const contract = await executor.createContract(
-          'TestContractEvent', [''], { from: signer.activeIdentity, gas: 1e6 },
+        const contract = await runtimes[0].executor.createContract(
+          'TestContractEvent', [''], { from: identity0, gas: 1e6 },
         );
 
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
-        const eventValue = await executor.executeContractTransaction(
+        const eventValue = await runtimes[0].executor.executeContractTransaction(
           contract,
           'fireStringEvent',
           {
-            from: signer.activeIdentity,
+            from: identity0,
             event: {
               target: 'TestContractEvent',
               eventName: 'StringEvent',
@@ -236,16 +215,16 @@ describe('signer-identity (identity based signer)', function test() {
 
       it('can handle events in parallel transactions', async () => {
         const runOneTest = async () => {
-          const contract = await executor.createContract(
-            'TestContractEvent', [''], { from: signer.activeIdentity, gas: 1e6 },
+          const contract = await runtimes[0].executor.createContract(
+            'TestContractEvent', [''], { from: identity0, gas: 1e6 },
           );
 
           const randomString = Math.floor(Math.random() * 1e12).toString(36);
-          const eventValue = await executor.executeContractTransaction(
+          const eventValue = await runtimes[0].executor.executeContractTransaction(
             contract,
             'fireStringEvent',
             {
-              from: signer.activeIdentity,
+              from: identity0,
               event: {
                 target: 'TestContractEvent',
                 eventName: 'StringEvent',
@@ -264,74 +243,74 @@ describe('signer-identity (identity based signer)', function test() {
     describe('when sending funds', () => {
       it('can send funds', async () => {
         const amountToSend = Math.floor(Math.random() * 1e3);
-        const balanceBefore = new BigNumber(await web3.eth.getBalance(accounts[1]));
-        await executor.executeSend(
+        const balanceBefore = new BigNumber(await web3.eth.getBalance(account1));
+        await runtimes[0].executor.executeSend(
           {
-            from: signer.activeIdentity, to: accounts[1], gas: 100e3, value: amountToSend,
+            from: identity0, to: account1, gas: 100e3, value: amountToSend,
           },
         );
-        const balanceAfter = new BigNumber(await web3.eth.getBalance(accounts[1]));
+        const balanceAfter = new BigNumber(await web3.eth.getBalance(account1));
         const diff = balanceAfter.minus(balanceBefore);
         expect(diff.eq(new BigNumber(amountToSend))).to.be.true;
       });
 
       it('can get the gas price', async () => {
-        const gasPrice = await signer.getGasPrice();
+        const gasPrice = await runtimes[0].signer.getGasPrice();
         expect(gasPrice).to.be.string;
       });
 
       it('should reject transfer and balance of identity should remain same', async () => {
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
-        const contract = await executor.createContract(
-          'TestContract', [randomString], { from: signer.activeIdentity, gas: 1e6 },
+        const contract = await runtimes[0].executor.createContract(
+          'TestContract', [randomString], { from: identity0, gas: 1e6 },
         );
         expect(contract).to.be.a('Object');
 
         const amountToSend = Math.floor(Math.random() * 1e3);
-        const balanceBefore = new BigNumber(await web3.eth.getBalance(signer.activeIdentity));
-        await expect(executor.executeSend({
-          from: signer.activeIdentity,
+        const balanceBefore = new BigNumber(await web3.eth.getBalance(identity0));
+        await expect(runtimes[0].executor.executeSend({
+          from: identity0,
           to: contract.options.address,
           gas: 100e3,
           value: amountToSend,
         })).to.rejected;
 
-        const balanceAfter = new BigNumber(await web3.eth.getBalance(signer.activeIdentity));
+        const balanceAfter = new BigNumber(await web3.eth.getBalance(identity0));
         expect(balanceAfter.eq(balanceBefore)).to.be.true;
       });
 
       it('should reject transfer and funds should deduct transfer fee in underlaying account',
         async () => {
           const randomString = Math.floor(Math.random() * 1e12).toString(36);
-          const contract = await executor.createContract(
-            'TestContract', [randomString], { from: signer.activeIdentity, gas: 1e6 },
+          const contract = await runtimes[0].executor.createContract(
+            'TestContract', [randomString], { from: identity0, gas: 1e6 },
           );
           expect(contract).to.be.a('Object');
 
           const amountToSend = Math.floor(Math.random() * 1e3);
 
-          const balanceBefore = new BigNumber(await web3.eth.getBalance(signer.underlyingAccount));
+          const balanceBefore = new BigNumber(await web3.eth.getBalance(account0));
 
-          await expect(executor.executeSend({
-            from: signer.activeIdentity,
+          await expect(runtimes[0].executor.executeSend({
+            from: identity0,
             to: contract.options.address,
             gas: 100e3,
             value: amountToSend,
           })).to.be.rejected;
 
-          const balanceAfter = new BigNumber(await web3.eth.getBalance(signer.underlyingAccount));
+          const balanceAfter = new BigNumber(await web3.eth.getBalance(account0));
           expect(balanceAfter.lt(balanceBefore)).to.be.true;
         });
 
       it('should transfer funds to contract', async () => {
         const amountToSend = Math.floor(Math.random() * 1e3);
-        const contract = await executor.createContract(
-          'TestContract', [], { from: signer.activeIdentity, gas: 1e6 },
+        const contract = await runtimes[0].executor.createContract(
+          'TestContract', [], { from: identity0, gas: 1e6 },
         );
         expect(contract).to.be.a('Object');
         const balanceBefore = new BigNumber(await web3.eth.getBalance(contract.options.address));
-        await executor.executeContractTransaction(
-          contract, 'chargeFunds', { from: signer.activeIdentity, value: amountToSend },
+        await runtimes[0].executor.executeContractTransaction(
+          contract, 'chargeFunds', { from: identity0, value: amountToSend },
         );
         const balanceAfter = new BigNumber(await web3.eth.getBalance(contract.options.address));
         const diff = balanceAfter.minus(balanceBefore);
@@ -341,15 +320,15 @@ describe('signer-identity (identity based signer)', function test() {
 
       it('should reject fund transfer to contract without a fallback function', async () => {
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
-        const contract = await executor.createContract(
-          'TestContract', [randomString], { from: signer.activeIdentity, gas: 1e6 },
+        const contract = await runtimes[0].executor.createContract(
+          'TestContract', [randomString], { from: identity0, gas: 1e6 },
         );
         expect(contract).to.be.a('Object');
 
         const amountToSend = Math.floor(Math.random() * 1e3);
         const balanceBefore = new BigNumber(await web3.eth.getBalance(contract.options.address));
-        await expect(executor.executeSend({
-          from: signer.activeIdentity,
+        await expect(runtimes[0].executor.executeSend({
+          from: identity0,
           to: contract.options.address,
           gas: 100e3,
           value: amountToSend,
@@ -362,14 +341,14 @@ describe('signer-identity (identity based signer)', function test() {
       it('should perform fund transfer to contract with a fallback function, e.g. identities',
         async () => {
           const amountToSend = Math.floor(Math.random() * 1e3);
-          const balanceBefore = new BigNumber(await web3.eth.getBalance(signer.activeIdentity));
-          await executor.executeSend({
-            from: signer.underlyingAccount,
-            to: signer.activeIdentity,
+          const balanceBefore = new BigNumber(await web3.eth.getBalance(identity0));
+          await runtimes[0].executor.executeSend({
+            from: account0,
+            to: identity0,
             gas: 100e3,
             value: amountToSend,
           });
-          const balanceAfter = new BigNumber(await web3.eth.getBalance(signer.activeIdentity));
+          const balanceAfter = new BigNumber(await web3.eth.getBalance(identity0));
           const diff = balanceAfter.minus(balanceBefore);
           expect(diff.eq(new BigNumber(amountToSend))).to.be.true;
         });
@@ -377,21 +356,21 @@ describe('signer-identity (identity based signer)', function test() {
       it('should reject fund transfer to new contract and funds should stay with identity ',
         async () => {
           const randomString = Math.floor(Math.random() * 1e12).toString(36);
-          const contract = await executor.createContract(
-            'TestContract', [randomString], { from: signer.activeIdentity, gas: 1e6 },
+          const contract = await runtimes[0].executor.createContract(
+            'TestContract', [randomString], { from: identity0, gas: 1e6 },
           );
           expect(contract).to.be.a('Object');
 
           const amountToSend = Math.floor(Math.random() * 1e3);
-          const balanceBefore = new BigNumber(await web3.eth.getBalance(signer.activeIdentity));
-          await expect(executor.executeSend({
-            from: signer.activeIdentity,
+          const balanceBefore = new BigNumber(await web3.eth.getBalance(identity0));
+          await expect(runtimes[0].executor.executeSend({
+            from: identity0,
             to: contract.options.address,
             gas: 100e3,
             value: amountToSend,
           })).to.be.rejected;
 
-          const balanceAfter = new BigNumber(await web3.eth.getBalance(signer.activeIdentity));
+          const balanceAfter = new BigNumber(await web3.eth.getBalance(identity0));
           expect(balanceAfter.eq(balanceBefore)).to.be.true;
         });
     });
@@ -399,7 +378,7 @@ describe('signer-identity (identity based signer)', function test() {
     describe('when signing messages', () => {
       it('cannot sign messages', async () => {
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
-        const signPromise = signer.signMessage(signer.activeIdentity, randomString);
+        const signPromise = runtimes[0].signer.signMessage(identity0, randomString);
         await expect(signPromise)
           .to.be.rejectedWith(
             'signing messages with identities is only supported for \'underlyingAccount\'',
@@ -411,42 +390,42 @@ describe('signer-identity (identity based signer)', function test() {
   describe('when trying to make transactions with an unrelated accountId', () => {
     it('cannnot create a new contract', async () => {
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
-      const promise = executor.createContract(
-        'TestContract', [randomString], { from: accounts[2], gas: 1e6 },
+      const promise = runtimes[0].executor.createContract(
+        'TestContract', [randomString], { from: account2, gas: 1e6 },
       );
       await expect(promise)
-        .to.be.rejectedWith(`given accountId ${accounts[2]} `
+        .to.be.rejectedWith(`given accountId ${account2} `
           + 'is neither configured as underlying accountId or active identity');
     });
 
     it('cannnot make transactions on contracts', async () => {
-      const contract = await executor.createContract(
-        'TestContract', [''], { from: signer.underlyingAccount, gas: 1e6 },
+      const contract = await runtimes[0].executor.createContract(
+        'TestContract', [''], { from: account0, gas: 1e6 },
       );
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
-      const promise = executor.executeContractTransaction(
-        contract, 'setData', { from: accounts[2] }, randomString,
+      const promise = runtimes[0].executor.executeContractTransaction(
+        contract, 'setData', { from: account2 }, randomString,
       );
       await expect(promise)
-        .to.be.rejectedWith(`given accountId ${accounts[2]} `
+        .to.be.rejectedWith(`given accountId ${account2} `
           + 'is neither configured as underlying accountId or active identity');
     });
 
     it('cannnot send funds', async () => {
       const amountToSend = Math.floor(Math.random() * 1e3);
-      const promise = executor.executeSend(
+      const promise = runtimes[0].executor.executeSend(
         {
-          from: accounts[2], to: accounts[1], gas: 10e6, value: amountToSend,
+          from: account2, to: account1, gas: 10e6, value: amountToSend,
         },
       );
       await expect(promise)
-        .to.be.rejectedWith(`given accountId ${accounts[2]} `
+        .to.be.rejectedWith(`given accountId ${account2} `
           + 'is neither configured as underlying accountId or active identity');
     });
 
     it('cannnot sign messages', async () => {
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
-      const promise = signer.signMessage(accounts[2], randomString);
+      const promise = runtimes[0].signer.signMessage(account2, randomString);
       await expect(promise)
         .to.be.rejectedWith('signing messages with identities is only supported for '
           + '\'underlyingAccount\'');
@@ -455,58 +434,17 @@ describe('signer-identity (identity based signer)', function test() {
 
   describe('when dealing with encryption for identity based accounts', async () => {
     let cryptoProvider: CryptoProvider;
-    let identityAddress: string;
-    let keyProvider: KeyProvider;
     let nameResolver: NameResolver;
     let profile: Profile;
     let verifications: Verifications;
 
     before(async () => {
-      web3 = await TestUtils.getWeb3();
-      nameResolver = await TestUtils.getNameResolver(web3);
-      dfs = await TestUtils.getIpfs();
-      verifications = await TestUtils.getVerifications(web3, dfs);
-      cryptoProvider = TestUtils.getCryptoProvider(dfs);
-
-      identityAddress = await verifications.getIdentityForAccount(accounts[3], true);
-
-      const sha9Key = nameResolver.soliditySha3(
-        ...(await Promise.all(
-          [identityAddress, identityAddress].map(
-            (accountId) => nameResolver.soliditySha3(accountId),
-          ),
-        )),
-      );
-      keyProvider = await TestUtils.getKeyProvider();
-      (keyProvider as any).keys[sha9Key] = '483257531bc9456ea783e44d325f8a384a4b89da81dac00e589409431692f218';
-      (keyProvider as any).keys[nameResolver.soliditySha3(identityAddress)] = '483257531bc9456ea783e44d325f8a384a4b89da81dac00e589409431692f218';
-      const ipld = new Ipld({
-        ipfs: dfs as Ipfs,
-        keyProvider,
-        cryptoProvider,
-        defaultCryptoAlgo: 'aes',
-        originator: nameResolver.soliditySha3(accounts[3]),
-        nameResolver,
-      });
-
-      // create profile instance, that is bound to identity
-      const dataContract = await TestUtils.getDataContract(web3, dfs);
-      (dataContract as any).options.executor = executor;
-      executor.eventHub = await TestUtils.getEventHub(web3);
-      profile = new Profile({
-        accountId: identityAddress,
-        contractLoader,
-        cryptoProvider,
-        dataContract,
-        defaultCryptoAlgo: 'aes',
-        dfs,
-        description: await TestUtils.getDescription(web3),
-        executor,
-        ipld,
-        nameResolver,
-        rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
-        sharing: await TestUtils.getSharing(web3),
-      });
+      const { dataContract } = runtimes[0];
+      (dataContract as any).options.executor = runtimes[0].executor;
+      profile = runtimes[0].profile;
+      nameResolver = runtimes[0].nameResolver;
+      verifications = runtimes[0].verifications;
+      cryptoProvider = runtimes[0].cryptoProvider;
 
       // keep code here as long as identity based profiles cannot be created in a more easy way...
       // console.log('sharing')
@@ -514,11 +452,11 @@ describe('signer-identity (identity based signer)', function test() {
       // const address = await nameResolver.getAddress(ensName);
       // const indexContract =
       //   contractLoader.loadContract('ProfileIndexInterface', address);
-      // const profileContractAddress = await executor.executeContractCall(
-      //   indexContract, 'getProfile', identityAddress, { from: accounts[3], });
+      // const profileContractAddress = await runtimes[0].executor.executeContractCall(
+      //   indexContract, 'getProfile', identityAddress, { from: account0, });
       // const profileDataContract = await contractLoader.loadContract(
       //   'DataContract', profileContractAddress);
-      // const sharingsHash = await executor.executeContractCall(profileDataContract, 'sharing');
+      // const sharingsHash = await runtimes[0].executor.executeContractCall(profileDataContract, 'sharing');
       // console.dir(sharingsHash);
       // const sharingData = await dfs.get(sharingsHash);
       // console.log(require('util').inspect(sharingData, { colors: true, depth: 16 }));
@@ -527,8 +465,8 @@ describe('signer-identity (identity based signer)', function test() {
       // eslint-disable-next-line
       // const updatedSharingHash = await dfs.add('sharing', Buffer.from(updatedSharingData, 'utf8'));
       // console.log('/sharing')
-      // await executor.executeContractTransaction(
-      //   profileDataContract, 'setSharing', { from: signer.activeIdentity }, updatedSharingHash);
+      // await runtimes[0].executor.executeContractTransaction(
+      //   profileDataContract, 'setSharing', { from: identity0 }, updatedSharingHash);
     });
 
     it('should be able to encrypt and decrypt data', async () => {
@@ -540,7 +478,7 @@ describe('signer-identity (identity based signer)', function test() {
       // build edge key for data shared between identity[0] and identity[1]
       const keyContext = nameResolver.soliditySha3(
         ...(await Promise.all(
-          [accounts[3], accounts[1]].map(
+          [account0, account1].map(
             (accountId) => verifications.getIdentityForAccount(accountId, true),
           ),
         )
@@ -580,7 +518,7 @@ describe('signer-identity (identity based signer)', function test() {
       // build edge key for data shared between identity[0] and identity[1]
       const keyContext = nameResolver.soliditySha3(
         ...(await Promise.all(
-          [accounts[3], accounts[1]].map(
+          [account0, account1].map(
             (accountId) => verifications.getIdentityForAccount(accountId, true),
           ),
         )
@@ -597,8 +535,8 @@ describe('signer-identity (identity based signer)', function test() {
       const encryptKey = await cryptor.generateKey();
 
       // store key in profile
-      const contactIdentity = await verifications.getIdentityForAccount(accounts[1], true);
-      // profile.activeAccount = accounts[3];
+      const contactIdentity = await verifications.getIdentityForAccount(account1, true);
+      // profile.activeAccount = account0;
       await profile.loadForAccount(profile.treeLabels.addressBook);
       await profile.addContactKey(contactIdentity, 'commKey', encryptKey);
       // profile.activeAccount = identityAddress;
@@ -626,7 +564,7 @@ describe('signer-identity (identity based signer)', function test() {
       const encryptKey = await cryptor.generateKey();
 
       // store key in profile
-      const contactIdentity = await verifications.getIdentityForAccount(accounts[1], true);
+      const contactIdentity = await verifications.getIdentityForAccount(account1, true);
       await profile.loadForAccount(profile.treeLabels.addressBook);
       await profile.addContactKey(contactIdentity, 'commKey', encryptKey);
       await profile.storeForAccount(profile.treeLabels.addressBook);
@@ -642,8 +580,8 @@ describe('signer-identity (identity based signer)', function test() {
       const random = Math.random();
       const getTestMail = () => ({
         content: {
-          from: signer.activeIdentity,
-          to: signer.activeIdentity,
+          from: identity0,
+          to: identity0,
           title: 'talking to myself',
           body: `hi, me. I like random numbers, for example ${random}`,
           attachments: [
@@ -655,18 +593,8 @@ describe('signer-identity (identity based signer)', function test() {
         },
       });
       const startTime = Date.now();
-      const mailbox: Mailbox = new Mailbox({
-        contractLoader,
-        cryptoProvider,
-        defaultCryptoAlgo: 'aes',
-        executor,
-        ipfs: dfs as Ipfs,
-        keyProvider,
-        mailboxOwner: signer.activeIdentity,
-        nameResolver,
-      });
-      await mailbox.sendMail(getTestMail(), signer.activeIdentity, signer.activeIdentity);
-      const result = await mailbox.getMails(1, 0);
+      await runtimes[0].mailbox.sendMail(getTestMail(), identity0, identity0);
+      const result = await runtimes[0].mailbox.getMails(1, 0);
       const keys = Object.keys(result.mails);
       expect(keys.length).to.eq(1);
       expect(result.mails[keys[0]].content.sent).to.be.ok;
