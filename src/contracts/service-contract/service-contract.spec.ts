@@ -20,19 +20,12 @@
 import 'mocha';
 import { expect, use } from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
-
-import {
-  ContractLoader,
-  Executor,
-  KeyProvider,
-  NameResolver,
-} from '@evan.network/dbcp';
-
 import { accounts, useIdentity } from '../../test/accounts';
 import { Ipfs } from '../../dfs/ipfs';
 import { ServiceContract } from './service-contract';
 import { configTestcore as config } from '../../config-testcore';
 import { TestUtils } from '../../test/test-utils';
+import { Runtime } from '../../runtime';
 
 use(chaiAsPromised);
 
@@ -42,11 +35,12 @@ describe('ServiceContract', function test() {
   let sc0: ServiceContract;
   let sc1: ServiceContract;
   let sc2: ServiceContract;
-  let executor: Executor;
-  let loader: ContractLoader;
   let businessCenterDomain;
-  let ipfs: Ipfs;
-  let nameResolver: NameResolver;
+  let dfs: Ipfs;
+  let runtimes: Runtime[];
+  let identity0: string;
+  let identity1: string;
+  let identity2: string;
   let sharing;
   let web3;
   const sampleService1 = {
@@ -161,7 +155,7 @@ describe('ServiceContract', function test() {
   };
   const sampleCall = {
     metadata: {
-      author: accounts[0],
+      author: identity0,
     },
     payload: {
       callName: 'sampleCall',
@@ -176,7 +170,7 @@ describe('ServiceContract', function test() {
   };
   const sampleAnswer = {
     metadata: {
-      author: accounts[2],
+      author: identity2,
     },
     payload: {
       possibleAmount: 1,
@@ -187,176 +181,130 @@ describe('ServiceContract', function test() {
   };
 
   before(async () => {
-    web3 = TestUtils.getWeb3();
-    nameResolver = await TestUtils.getNameResolver(web3);
-    executor = await TestUtils.getExecutor(web3);
-    executor.eventHub = await TestUtils.getEventHub(web3);
-    loader = await TestUtils.getContractLoader(web3);
-    ipfs = await TestUtils.getIpfs();
-    const defaultKeys = TestUtils.getKeys();
-    const keys0 = {};
-    const requiredKeys0 = [
-      // own 'self' key
-      web3.utils.soliditySha3(accounts[0]),
-      // own edge key
-      web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
-        [web3.utils.soliditySha3(accounts[0]), web3.utils.soliditySha3(accounts[0])].sort()),
-      // key with account 0
-      web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
-        [web3.utils.soliditySha3(accounts[0]), web3.utils.soliditySha3(accounts[2])].sort()),
-    ];
-    requiredKeys0.forEach((key) => { keys0[key] = defaultKeys[key]; });
-    // sc = await TestUtils.getServiceContract(web3, ipfs);
+    runtimes = await Promise.all(
+      accounts.slice(0, 3).map((account) => TestUtils.getRuntime(account, null, { useIdentity })),
+    );
+    dfs = runtimes[0].dfs as Ipfs;
+    identity0 = runtimes[0].activeIdentity;
+    identity1 = runtimes[1].activeIdentity;
+    identity2 = runtimes[2].activeIdentity;
     sc0 = new ServiceContract({
-      cryptoProvider: TestUtils.getCryptoProvider(),
-      dfs: ipfs,
-      executor,
-      keyProvider: new KeyProvider({ keys: keys0 }),
-      loader,
-      nameResolver,
-      sharing: await TestUtils.getSharing(web3, ipfs),
-      web3,
+      loader: runtimes[0].contractLoader,
+      ...(runtimes[0] as any),
     });
-    const keys1 = {};
-    const requiredKeys1 = [
-      // own 'self' key
-      web3.utils.soliditySha3(accounts[1]),
-      // own edge key
-      web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
-        [web3.utils.soliditySha3(accounts[1]), web3.utils.soliditySha3(accounts[1])].sort()),
-    ];
-    requiredKeys1.forEach((key) => { keys1[key] = defaultKeys[key]; });
-    sc1 = new ServiceContract({
-      cryptoProvider: TestUtils.getCryptoProvider(),
-      dfs: ipfs,
-      executor,
-      keyProvider: new KeyProvider({ keys: keys1 }),
-      loader,
-      nameResolver,
-      sharing: await TestUtils.getSharing(web3, ipfs),
-      web3,
-    });
-    const keys2 = {};
-    const requiredKeys2 = [
-      // own 'self' key
-      web3.utils.soliditySha3(accounts[2]),
-      // own edge key
-      web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
-        [web3.utils.soliditySha3(accounts[2]), web3.utils.soliditySha3(accounts[2])].sort()),
-      // key with account 0
-      web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
-        [web3.utils.soliditySha3(accounts[0]), web3.utils.soliditySha3(accounts[2])].sort()),
-    ];
-    requiredKeys2.forEach((key) => { keys2[key] = defaultKeys[key]; });
-    sc2 = new ServiceContract({
-      cryptoProvider: TestUtils.getCryptoProvider(),
-      dfs: ipfs,
-      executor,
-      keyProvider: new KeyProvider({ keys: keys2 }),
-      loader,
-      nameResolver,
-      sharing: await TestUtils.getSharing(web3, ipfs),
-      web3,
-    });
-    businessCenterDomain = nameResolver.getDomainName(config.nameResolver.domains.businessCenter);
-    sharing = await TestUtils.getSharing(web3, ipfs);
 
-    const businessCenterAddress = await nameResolver.getAddress(businessCenterDomain);
-    const businessCenter = await loader.loadContract('BusinessCenter', businessCenterAddress);
-    if (!await executor.executeContractCall(
-      businessCenter, 'isMember', accounts[0], { from: accounts[0] },
+    sc1 = new ServiceContract({
+      loader: runtimes[1].contractLoader,
+      ...(runtimes[1] as any),
+    });
+    sc2 = new ServiceContract({
+      loader: runtimes[2].contractLoader,
+      ...(runtimes[2] as any),
+    });
+    businessCenterDomain = runtimes[0].nameResolver.getDomainName(
+      config.nameResolver.domains.businessCenter,
+    );
+    sharing = runtimes[0].sharing;
+
+    const businessCenterAddress = await runtimes[0].nameResolver.getAddress(businessCenterDomain);
+    const businessCenter = await runtimes[0].contractLoader.loadContract(
+      'BusinessCenter',
+      businessCenterAddress,
+    );
+    if (!await runtimes[0].executor.executeContractCall(
+      businessCenter, 'isMember', identity0, { from: identity0 },
     )
     ) {
-      await executor.executeContractTransaction(
-        businessCenter, 'join', { from: accounts[0], autoGas: 1.1 },
+      await runtimes[0].executor.executeContractTransaction(
+        businessCenter, 'join', { from: identity0, autoGas: 1.1 },
       );
     }
-    if (!await executor.executeContractCall(
-      businessCenter, 'isMember', accounts[1], { from: accounts[1] },
+    if (!await runtimes[1].executor.executeContractCall(
+      businessCenter, 'isMember', identity1, { from: identity1 },
     )
     ) {
-      await executor.executeContractTransaction(
-        businessCenter, 'join', { from: accounts[1], autoGas: 1.1 },
+      await runtimes[1].executor.executeContractTransaction(
+        businessCenter, 'join', { from: identity1, autoGas: 1.1 },
       );
     }
-    if (!await executor.executeContractCall(
-      businessCenter, 'isMember', accounts[2], { from: accounts[2] },
+    if (!await runtimes[2].executor.executeContractCall(
+      businessCenter, 'isMember', identity2, { from: identity2 },
     )
     ) {
-      await executor.executeContractTransaction(
-        businessCenter, 'join', { from: accounts[2], autoGas: 1.1 },
+      await runtimes[2].executor.executeContractTransaction(
+        businessCenter, 'join', { from: identity2, autoGas: 1.1 },
       );
     }
   });
 
   it('can be created', async () => {
-    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+    const contract = await sc0.create(identity0, businessCenterDomain, sampleService1);
     expect(contract).to.be.ok;
   });
 
   it('can store a service', async () => {
-    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
-    const service = await sc0.getService(contract, accounts[0]);
+    const contract = await sc0.create(identity0, businessCenterDomain, sampleService1);
+    const service = await sc0.getService(contract, identity0);
     expect(service).to.deep.eq(sampleService1);
   });
 
   it('can update a service', async () => {
-    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
-    await sc0.setService(contract, accounts[0], sampleService2, businessCenterDomain);
-    const service = await sc0.getService(contract, accounts[0]);
+    const contract = await sc0.create(identity0, businessCenterDomain, sampleService1);
+    await sc0.setService(contract, identity0, sampleService2, businessCenterDomain);
+    const service = await sc0.getService(contract, identity0);
     expect(service).to.deep.eq(sampleService2);
   });
 
   it('can send a service message', async () => {
-    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
-    const callId = await sc0.sendCall(contract, accounts[0], sampleCall);
-    const call = await sc0.getCall(contract, accounts[0], callId);
+    const contract = await sc0.create(identity0, businessCenterDomain, sampleService1);
+    const callId = await sc0.sendCall(contract, identity0, sampleCall);
+    const call = await sc0.getCall(contract, identity0, callId);
     expect(call.data).to.deep.eq(sampleCall);
   });
 
   it('cannot send a service message, that doesn\'t match the definition', async () => {
-    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+    const contract = await sc0.create(identity0, businessCenterDomain, sampleService1);
     const brokenCall = JSON.parse(JSON.stringify(sampleCall));
     brokenCall.payload.someBogus = 123;
-    const sendCallPromise = sc0.sendCall(contract, accounts[0], brokenCall);
+    const sendCallPromise = sc0.sendCall(contract, identity0, brokenCall);
     await expect(sendCallPromise).to.be.rejected;
   });
 
   it('can send an answer to a service message', async () => {
-    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+    const contract = await sc0.create(identity0, businessCenterDomain, sampleService1);
     await sc0.inviteToContract(
-      businessCenterDomain, contract.options.address, accounts[0], accounts[2],
+      businessCenterDomain, contract.options.address, identity0, identity2,
     );
-    const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', 0);
+    const contentKey = await sharing.getKey(contract.options.address, identity0, '*', 0);
     await sharing.addSharing(
-      contract.options.address, accounts[0], accounts[2], '*', 0, contentKey,
+      contract.options.address, identity0, identity2, '*', 0, contentKey,
     );
     const callId = await sc0.sendCall(
-      contract, accounts[0], sampleCall, [accounts[2]],
+      contract, identity0, sampleCall, [identity2],
     );
-    const call = await sc2.getCall(contract, accounts[0], callId);
+    const call = await sc2.getCall(contract, identity0, callId);
     const answerId = await sc2.sendAnswer(
-      contract, accounts[2], sampleAnswer, callId, call.data.metadata.author,
+      contract, identity2, sampleAnswer, callId, call.data.metadata.author,
     );
-    const answer = await sc2.getAnswer(contract, accounts[2], callId, answerId);
+    const answer = await sc2.getAnswer(contract, identity2, callId, answerId);
     expect(answer.data).to.deep.eq(sampleAnswer);
   });
 
   it('cannot send an answer to a service message, that doesn\'t match the definition', async () => {
-    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+    const contract = await sc0.create(identity0, businessCenterDomain, sampleService1);
     await sc0.inviteToContract(
-      businessCenterDomain, contract.options.address, accounts[0], accounts[2],
+      businessCenterDomain, contract.options.address, identity0, identity2,
     );
-    const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', 0);
+    const contentKey = await sharing.getKey(contract.options.address, identity0, '*', 0);
     await sharing.addSharing(
-      contract.options.address, accounts[0], accounts[2], '*', 0, contentKey,
+      contract.options.address, identity0, identity2, '*', 0, contentKey,
     );
-    const callId = await sc0.sendCall(contract, accounts[0], sampleCall, [accounts[2]]);
-    const call = await sc2.getCall(contract, accounts[0], callId);
+    const callId = await sc0.sendCall(contract, identity0, sampleCall, [identity2]);
+    const call = await sc2.getCall(contract, identity0, callId);
     const brokenAnswer = JSON.parse(JSON.stringify(sampleAnswer));
     brokenAnswer.payload.someBogus = 123;
     const sendAnswerPromise = sc2.sendAnswer(
-      contract, accounts[2], brokenAnswer, callId, call.data.metadata.author,
+      contract, identity2, brokenAnswer, callId, call.data.metadata.author,
     );
     await expect(sendAnswerPromise).to.be.rejected;
   });
@@ -367,13 +315,13 @@ describe('ServiceContract', function test() {
       currentSample.payload.note += rand;
       return currentSample;
     });
-    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+    const contract = await sc0.create(identity0, businessCenterDomain, sampleService1);
     for (const currentSample of sampleCalls) {
-      await sc0.sendCall(contract, accounts[0], currentSample);
+      await sc0.sendCall(contract, identity0, currentSample);
     }
-    expect((await sc0.getCall(contract, accounts[0], 0)).data).to.deep.eq(sampleCalls[0]);
-    expect((await sc0.getCall(contract, accounts[0], 1)).data).to.deep.eq(sampleCalls[1]);
-    expect((await sc0.getCall(contract, accounts[0], 2)).data).to.deep.eq(sampleCalls[2]);
+    expect((await sc0.getCall(contract, identity0, 0)).data).to.deep.eq(sampleCalls[0]);
+    expect((await sc0.getCall(contract, identity0, 1)).data).to.deep.eq(sampleCalls[1]);
+    expect((await sc0.getCall(contract, identity0, 2)).data).to.deep.eq(sampleCalls[2]);
   });
 
   it('allows to retrieve the call owner', async () => {
@@ -382,79 +330,79 @@ describe('ServiceContract', function test() {
       currentSample.payload.note += rand;
       return currentSample;
     });
-    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+    const contract = await sc0.create(identity0, businessCenterDomain, sampleService1);
     for (const currentSample of sampleCalls) {
-      await sc0.sendCall(contract, accounts[0], currentSample);
+      await sc0.sendCall(contract, identity0, currentSample);
     }
-    await sc0.sendCall(contract, accounts[1], sampleCalls[0]);
-    expect(await sc0.getCallOwner(contract, 0)).to.deep.eq(accounts[0]);
-    expect(await sc0.getCallOwner(contract, 1)).to.deep.eq(accounts[0]);
-    expect(await sc0.getCallOwner(contract, 2)).to.deep.eq(accounts[0]);
-    expect(await sc0.getCallOwner(contract, 3)).to.deep.eq(accounts[1]);
+    await sc0.sendCall(contract, identity1, sampleCalls[0]);
+    expect(await sc0.getCallOwner(contract, 0)).to.deep.eq(identity0);
+    expect(await sc0.getCallOwner(contract, 1)).to.deep.eq(identity0);
+    expect(await sc0.getCallOwner(contract, 2)).to.deep.eq(identity0);
+    expect(await sc0.getCallOwner(contract, 3)).to.deep.eq(identity1);
   });
 
   it('does not allow calls to be read by every contract member without extending the sharing',
     async () => {
       const blockNr = await web3.eth.getBlockNumber();
-      const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+      const contract = await sc0.create(identity0, businessCenterDomain, sampleService1);
       await sc0.inviteToContract(
-        businessCenterDomain, contract.options.address, accounts[0], accounts[2],
+        businessCenterDomain, contract.options.address, identity0, identity2,
       );
-      const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', blockNr);
+      const contentKey = await sharing.getKey(contract.options.address, identity0, '*', blockNr);
       await sharing.addSharing(
-        contract.options.address, accounts[0], accounts[2], '*', blockNr, contentKey,
+        contract.options.address, identity0, identity2, '*', blockNr, contentKey,
       );
-      const callId = await sc0.sendCall(contract, accounts[0], sampleCall);
-      const call = await sc2.getCall(contract, accounts[2], callId);
+      const callId = await sc0.sendCall(contract, identity0, sampleCall);
+      const call = await sc2.getCall(contract, identity2, callId);
       expect(call.data).to.be.undefined;
     });
 
   it('allows calls to be read, when added to a calls sharing', async () => {
     const blockNr = await web3.eth.getBlockNumber();
-    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+    const contract = await sc0.create(identity0, businessCenterDomain, sampleService1);
     await sc0.inviteToContract(
-      businessCenterDomain, contract.options.address, accounts[0], accounts[2],
+      businessCenterDomain, contract.options.address, identity0, identity2,
     );
-    const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', blockNr);
+    const contentKey = await sharing.getKey(contract.options.address, identity0, '*', blockNr);
     await sharing.addSharing(
-      contract.options.address, accounts[0], accounts[2], '*', blockNr, contentKey,
+      contract.options.address, identity0, identity2, '*', blockNr, contentKey,
     );
-    const callId = await sc0.sendCall(contract, accounts[0], sampleCall);
-    await sc0.addToCallSharing(contract, accounts[0], callId, [accounts[2]]);
-    const call = await sc2.getCall(contract, accounts[2], 0);
+    const callId = await sc0.sendCall(contract, identity0, sampleCall);
+    await sc0.addToCallSharing(contract, identity0, callId, [identity2]);
+    const call = await sc2.getCall(contract, identity2, 0);
     expect(call.data).to.deep.eq(sampleCall);
   });
 
   it('does not allow answers to be read by other members than the original caller', async () => {
-    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
-    const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', 0);
+    const contract = await sc0.create(identity0, businessCenterDomain, sampleService1);
+    const contentKey = await sharing.getKey(contract.options.address, identity0, '*', 0);
     await sc0.inviteToContract(
-      businessCenterDomain, contract.options.address, accounts[0], accounts[1],
+      businessCenterDomain, contract.options.address, identity0, identity1,
     );
     await sharing.addSharing(
-      contract.options.address, accounts[0], accounts[1], '*', 0, contentKey,
+      contract.options.address, identity0, identity1, '*', 0, contentKey,
     );
     await sc0.inviteToContract(
-      businessCenterDomain, contract.options.address, accounts[0], accounts[2],
+      businessCenterDomain, contract.options.address, identity0, identity2,
     );
     await sharing.addSharing(
-      contract.options.address, accounts[0], accounts[2], '*', 0, contentKey,
+      contract.options.address, identity0, identity2, '*', 0, contentKey,
     );
-    await sc0.sendCall(contract, accounts[0], sampleCall, [accounts[2]]);
-    const call = await sc2.getCall(contract, accounts[0], 0);
-    await sc2.sendAnswer(contract, accounts[2], sampleAnswer, 0, call.data.metadata.author);
+    await sc0.sendCall(contract, identity0, sampleCall, [identity2]);
+    const call = await sc2.getCall(contract, identity0, 0);
+    await sc2.sendAnswer(contract, identity2, sampleAnswer, 0, call.data.metadata.author);
 
     // create second service contract helper with fewer keys
     const limitedKeyProvider = TestUtils.getKeyProvider([
-      nameResolver.soliditySha3(
+      runtimes[0].nameResolver.soliditySha3(
         ...[
-          nameResolver.soliditySha3(accounts[0]),
-          nameResolver.soliditySha3(accounts[1]),
+          runtimes[0].nameResolver.soliditySha3(identity0),
+          runtimes[0].nameResolver.soliditySha3(identity1),
         ].sort(),
       ),
     ]);
-    const limitedSc = await TestUtils.getServiceContract(web3, ipfs, limitedKeyProvider);
-    const answer = await limitedSc.getAnswer(contract, accounts[1], 0, 0);
+    const limitedSc = await TestUtils.getServiceContract(web3, dfs, limitedKeyProvider);
+    const answer = await limitedSc.getAnswer(contract, identity1, 0, 0);
     await expect(answer.data).to.be.undefined;
   });
 
@@ -464,9 +412,9 @@ describe('ServiceContract', function test() {
       currentSample.payload.note += rand;
       return currentSample;
     });
-    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+    const contract = await sc0.create(identity0, businessCenterDomain, sampleService1);
     for (const currentSample of sampleCalls) {
-      await sc0.sendCall(contract, accounts[0], currentSample);
+      await sc0.sendCall(contract, identity0, currentSample);
     }
     expect(await sc0.getCallCount(contract)).to.eq(sampleCalls.length);
   });
@@ -477,18 +425,18 @@ describe('ServiceContract', function test() {
       currentSample.payload.note += rand;
       return currentSample;
     });
-    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+    const contract = await sc0.create(identity0, businessCenterDomain, sampleService1);
     await sc0.inviteToContract(
-      businessCenterDomain, contract.options.address, accounts[0], accounts[2],
+      businessCenterDomain, contract.options.address, identity0, identity2,
     );
-    const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', 0);
+    const contentKey = await sharing.getKey(contract.options.address, identity0, '*', 0);
     await sharing.addSharing(
-      contract.options.address, accounts[0], accounts[2], '*', 0, contentKey,
+      contract.options.address, identity0, identity2, '*', 0, contentKey,
     );
-    await sc0.sendCall(contract, accounts[0], sampleCall, [accounts[2]]);
-    const call = await sc2.getCall(contract, accounts[2], 0);
+    await sc0.sendCall(contract, identity0, sampleCall, [identity2]);
+    const call = await sc2.getCall(contract, identity2, 0);
     for (const currentSample of sampleAnswers) {
-      await sc2.sendAnswer(contract, accounts[2], currentSample, 0, call.data.metadata.author);
+      await sc2.sendAnswer(contract, identity2, currentSample, 0, call.data.metadata.author);
     }
     const answerCount = await sc0.getAnswerCount(contract, 0);
     expect(answerCount).to.eq(sampleAnswers.length);
@@ -500,20 +448,20 @@ describe('ServiceContract', function test() {
       currentSample.payload.note += rand;
       return currentSample;
     });
-    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+    const contract = await sc0.create(identity0, businessCenterDomain, sampleService1);
     await sc0.inviteToContract(
-      businessCenterDomain, contract.options.address, accounts[0], accounts[2],
+      businessCenterDomain, contract.options.address, identity0, identity2,
     );
-    const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', 0);
+    const contentKey = await sharing.getKey(contract.options.address, identity0, '*', 0);
     await sharing.addSharing(
-      contract.options.address, accounts[0], accounts[2], '*', 0, contentKey,
+      contract.options.address, identity0, identity2, '*', 0, contentKey,
     );
-    await sc0.sendCall(contract, accounts[0], sampleCall, [accounts[2]]);
-    const call = await sc2.getCall(contract, accounts[0], 0);
+    await sc0.sendCall(contract, identity0, sampleCall, [identity2]);
+    const call = await sc2.getCall(contract, identity0, 0);
     for (const currentSample of sampleAnswers) {
-      await sc2.sendAnswer(contract, accounts[2], currentSample, 0, call.data.metadata.author);
+      await sc2.sendAnswer(contract, identity2, currentSample, 0, call.data.metadata.author);
     }
-    const answers = await sc0.getAnswers(contract, accounts[0], 0);
+    const answers = await sc0.getAnswers(contract, identity0, 0);
     expect(Object.keys(answers).length).to.eq(3);
     Object.keys(answers).reverse().forEach((answerId, i) => {
       expect(answers[answerId].data).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i]);
@@ -521,56 +469,56 @@ describe('ServiceContract', function test() {
   });
 
   it('can create answers and read and answer them with another user', async () => {
-    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+    const contract = await sc0.create(identity0, businessCenterDomain, sampleService1);
     await sc0.inviteToContract(
-      businessCenterDomain, contract.options.address, accounts[0], accounts[2],
+      businessCenterDomain, contract.options.address, identity0, identity2,
     );
-    const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', 0);
+    const contentKey = await sharing.getKey(contract.options.address, identity0, '*', 0);
     await sharing.addSharing(
-      contract.options.address, accounts[0], accounts[2], '*', 0, contentKey,
+      contract.options.address, identity0, identity2, '*', 0, contentKey,
     );
-    const callId = await sc0.sendCall(contract, accounts[0], sampleCall, [accounts[2]]);
+    const callId = await sc0.sendCall(contract, identity0, sampleCall, [identity2]);
 
     // retrieve call with other account, create answer
-    const call = await sc2.getCall(contract, accounts[2], callId);
+    const call = await sc2.getCall(contract, identity2, callId);
     expect(call.data).to.deep.eq(sampleCall);
     const answerId = await sc2.sendAnswer(
-      contract, accounts[2], sampleAnswer, callId, call.data.metadata.author,
+      contract, identity2, sampleAnswer, callId, call.data.metadata.author,
     );
 
     // retrieve answer with first account
-    const answer = await sc2.getAnswer(contract, accounts[0], callId, answerId);
+    const answer = await sc2.getAnswer(contract, identity0, callId, answerId);
     expect(answer.data).to.deep.eq(sampleAnswer);
   });
 
   it('can create answers and gets only basic answer information if unable to decrypt', async () => {
-    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+    const contract = await sc0.create(identity0, businessCenterDomain, sampleService1);
     await sc0.inviteToContract(
-      businessCenterDomain, contract.options.address, accounts[0], accounts[2],
+      businessCenterDomain, contract.options.address, identity0, identity2,
     );
-    const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', 0);
+    const contentKey = await sharing.getKey(contract.options.address, identity0, '*', 0);
     await sharing.addSharing(
-      contract.options.address, accounts[0], accounts[2], '*', 0, contentKey,
+      contract.options.address, identity0, identity2, '*', 0, contentKey,
     );
-    const callId = await sc0.sendCall(contract, accounts[0], sampleCall, [accounts[2]]);
+    const callId = await sc0.sendCall(contract, identity0, sampleCall, [identity2]);
 
     // retrieve call with other account, create answer
-    const call = await sc2.getCall(contract, accounts[2], callId);
+    const call = await sc2.getCall(contract, identity2, callId);
     expect(call.data).to.deep.eq(sampleCall);
     const answerId = await sc2.sendAnswer(
-      contract, accounts[2], sampleAnswer, callId, call.data.metadata.author,
+      contract, identity2, sampleAnswer, callId, call.data.metadata.author,
     );
 
     // retrieve answer with first account
-    const answer0 = await sc0.getAnswer(contract, accounts[0], callId, answerId);
+    const answer0 = await sc0.getAnswer(contract, identity0, callId, answerId);
     expect(answer0.data).to.deep.eq(sampleAnswer);
-    const answers0 = await sc0.getAnswers(contract, accounts[2], callId);
+    const answers0 = await sc0.getAnswers(contract, identity2, callId);
     expect(answers0[answerId].data).to.deep.eq(sampleAnswer);
 
     // retrieve answer with random account
-    const answer1 = await sc1.getAnswer(contract, accounts[2], callId, answerId);
+    const answer1 = await sc1.getAnswer(contract, identity2, callId, answerId);
     expect(answer1.data).to.deep.eq(null);
-    const answers1 = await sc1.getAnswers(contract, accounts[2], callId);
+    const answers1 = await sc1.getAnswers(contract, identity2, callId);
     expect(answers1[answerId].data).to.deep.eq(null);
   });
 
@@ -600,25 +548,25 @@ describe('ServiceContract', function test() {
       //  'ServiceContractInterface', '0x665339F534618a84B917C0Fc54700F690FC54A4A');
 
       // if creating new contract
-      contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+      contract = await sc0.create(identity0, businessCenterDomain, sampleService1);
       await sc0.inviteToContract(
-        businessCenterDomain, contract.options.address, accounts[0], accounts[2],
+        businessCenterDomain, contract.options.address, identity0, identity2,
       );
-      const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', 0);
+      const contentKey = await sharing.getKey(contract.options.address, identity0, '*', 0);
       await sharing.addSharing(
-        contract.options.address, accounts[0], accounts[2], '*', 0, contentKey,
+        contract.options.address, identity0, identity2, '*', 0, contentKey,
       );
       for (const currentSample of sampleCalls) {
-        await sc0.sendCall(contract, accounts[0], currentSample, [accounts[2]]);
+        await sc0.sendCall(contract, identity0, currentSample, [identity2]);
       }
       for (const answer of sampleAnswers) {
-        await sc2.sendAnswer(contract, accounts[2], answer, anweredCallId, accounts[0]);
+        await sc2.sendAnswer(contract, identity2, answer, anweredCallId, identity0);
       }
     });
 
     describe('when retrieving calls', () => {
       it('can retrieve calls', async () => {
-        const calls = await sc0.getCalls(contract, accounts[0]);
+        const calls = await sc0.getCalls(contract, identity0);
         expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length, 10));
         Object.keys(calls).forEach((callId, i) => {
           expect(calls[callId].data).to.deep.eq(sampleCalls[i]);
@@ -627,7 +575,7 @@ describe('ServiceContract', function test() {
 
       it('can retrieve calls with a limited page size', async () => {
         const count = 2;
-        const calls = await sc0.getCalls(contract, accounts[0], count);
+        const calls = await sc0.getCalls(contract, identity0, count);
         expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length, count));
         Object.keys(calls).forEach((callId, i) => {
           expect(calls[callId].data).to.deep.eq(sampleCalls[i]);
@@ -636,7 +584,7 @@ describe('ServiceContract', function test() {
 
       it('can retrieve calls with offset that results in a in a full page', async () => {
         const offset = 7;
-        const calls = await sc0.getCalls(contract, accounts[0], 10, offset);
+        const calls = await sc0.getCalls(contract, identity0, 10, offset);
         expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length - offset, 10));
         Object.keys(calls).forEach((callId, i) => {
           expect(calls[callId].data).to.deep.eq(sampleCalls[i + offset]);
@@ -645,7 +593,7 @@ describe('ServiceContract', function test() {
 
       it('can retrieve calls with offset that doesn\'t result not full page', async () => {
         const offset = 17;
-        const calls = await sc0.getCalls(contract, accounts[0], 10, offset);
+        const calls = await sc0.getCalls(contract, identity0, 10, offset);
         expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length - offset, 10));
         Object.keys(calls).forEach((callId, i) => {
           expect(calls[callId].data).to.deep.eq(sampleCalls[i + offset]);
@@ -655,7 +603,7 @@ describe('ServiceContract', function test() {
       it('can retrieve calls with limited page size and offset', async () => {
         const count = 2;
         const offset = 17;
-        const calls = await sc0.getCalls(contract, accounts[0], 2, offset);
+        const calls = await sc0.getCalls(contract, identity0, 2, offset);
         expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length - offset, count));
         Object.keys(calls).forEach((callId, i) => {
           expect(calls[callId].data).to.deep.eq(sampleCalls[i + offset]);
@@ -663,7 +611,7 @@ describe('ServiceContract', function test() {
       });
 
       it('can retrieve calls in reverse order', async () => {
-        const calls = await sc0.getCalls(contract, accounts[0], 10, 0, true);
+        const calls = await sc0.getCalls(contract, identity0, 10, 0, true);
         expect(Object.keys(calls).length).to.eq(10);
         Object.keys(calls).reverse().forEach((callId, i) => {
           expect(calls[callId].data).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i]);
@@ -672,7 +620,7 @@ describe('ServiceContract', function test() {
 
       it('can retrieve calls in reverse order with a limited page size', async () => {
         const count = 2;
-        const calls = await sc0.getCalls(contract, accounts[0], count, 0, true);
+        const calls = await sc0.getCalls(contract, identity0, count, 0, true);
         expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length, count));
         Object.keys(calls).reverse().forEach((callId, i) => {
           expect(calls[callId].data).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i]);
@@ -681,7 +629,7 @@ describe('ServiceContract', function test() {
 
       it('can retrieve calls in reverse order with offset that results in a full page', async () => {
         const offset = 7;
-        const calls = await sc0.getCalls(contract, accounts[0], 10, offset, true);
+        const calls = await sc0.getCalls(contract, identity0, 10, offset, true);
         expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length - offset, 10));
         Object.keys(calls).reverse().forEach((callId, i) => {
           expect(calls[callId].data).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i - offset]);
@@ -691,7 +639,7 @@ describe('ServiceContract', function test() {
       it('can retrieve calls in reverse order with offset that doesn\'t result not full page',
         async () => {
           const offset = 17;
-          const calls = await sc0.getCalls(contract, accounts[0], 10, offset, true);
+          const calls = await sc0.getCalls(contract, identity0, 10, offset, true);
           expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length - offset, 10));
           Object.keys(calls).reverse().forEach((callId, i) => {
             expect(calls[callId].data).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i - offset]);
@@ -701,7 +649,7 @@ describe('ServiceContract', function test() {
       it('can retrieve calls in reverse order with limited page size and offset', async () => {
         const count = 2;
         const offset = 17;
-        const calls = await sc0.getCalls(contract, accounts[0], 2, offset, true);
+        const calls = await sc0.getCalls(contract, identity0, 2, offset, true);
         expect(Object.keys(calls).length).to.eq(Math.min(sampleCalls.length - offset, count));
         Object.keys(calls).reverse().forEach((callId, i) => {
           expect(calls[callId].data).to.deep.eq(sampleCalls[sampleCalls.length - 1 - i - offset]);
@@ -711,7 +659,7 @@ describe('ServiceContract', function test() {
 
     describe('when retrieving answers', () => {
       it('can retrieve answers', async () => {
-        const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId);
+        const answers = await sc0.getAnswers(contract, identity0, anweredCallId);
         expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length, 10));
         Object.keys(answers).forEach((answerId, i) => {
           expect(answers[answerId].data).to.deep.eq(sampleAnswers[i]);
@@ -720,7 +668,7 @@ describe('ServiceContract', function test() {
 
       it('can retrieve answers with a limited page size', async () => {
         const count = 2;
-        const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, count);
+        const answers = await sc0.getAnswers(contract, identity0, anweredCallId, count);
         expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length, count));
         Object.keys(answers).forEach((answerId, i) => {
           expect(answers[answerId].data).to.deep.eq(sampleAnswers[i]);
@@ -729,7 +677,7 @@ describe('ServiceContract', function test() {
 
       it('can retrieve answers with offset that results in a in a full page', async () => {
         const offset = 7;
-        const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, 10, offset);
+        const answers = await sc0.getAnswers(contract, identity0, anweredCallId, 10, offset);
         expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length - offset, 10));
         Object.keys(answers).forEach((answerId, i) => {
           expect(answers[answerId].data).to.deep.eq(sampleAnswers[i + offset]);
@@ -738,7 +686,7 @@ describe('ServiceContract', function test() {
 
       it('can retrieve answers with offset that doesn\'t result not full page', async () => {
         const offset = 17;
-        const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, 10, offset);
+        const answers = await sc0.getAnswers(contract, identity0, anweredCallId, 10, offset);
         expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length - offset, 10));
         Object.keys(answers).forEach((answerId, i) => {
           expect(answers[answerId].data).to.deep.eq(sampleAnswers[i + offset]);
@@ -748,7 +696,7 @@ describe('ServiceContract', function test() {
       it('can retrieve answers with limited page size and offset', async () => {
         const count = 2;
         const offset = 17;
-        const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, 2, offset);
+        const answers = await sc0.getAnswers(contract, identity0, anweredCallId, 2, offset);
         expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length - offset, count));
         Object.keys(answers).forEach((answerId, i) => {
           expect(answers[answerId].data).to.deep.eq(sampleAnswers[i + offset]);
@@ -756,7 +704,7 @@ describe('ServiceContract', function test() {
       });
 
       it('can retrieve answers in reverse order', async () => {
-        const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, 10, 0, true);
+        const answers = await sc0.getAnswers(contract, identity0, anweredCallId, 10, 0, true);
         expect(Object.keys(answers).length).to.eq(10);
         Object.keys(answers).reverse().forEach((answerId, i) => {
           expect(answers[answerId].data).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i]);
@@ -765,7 +713,7 @@ describe('ServiceContract', function test() {
 
       it('can retrieve answers in reverse order with a limited page size', async () => {
         const count = 2;
-        const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, count, 0, true);
+        const answers = await sc0.getAnswers(contract, identity0, anweredCallId, count, 0, true);
         expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length, count));
         Object.keys(answers).reverse().forEach((answerId, i) => {
           expect(answers[answerId].data).to.deep.eq(sampleAnswers[sampleAnswers.length - 1 - i]);
@@ -776,7 +724,7 @@ describe('ServiceContract', function test() {
         async () => {
           const offset = 7;
           const answers = await sc0.getAnswers(
-            contract, accounts[0], anweredCallId, 10, offset, true,
+            contract, identity0, anweredCallId, 10, offset, true,
           );
           expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length - offset, 10));
           Object.keys(answers).reverse().forEach((answerId, i) => {
@@ -790,7 +738,7 @@ describe('ServiceContract', function test() {
         async () => {
           const offset = 17;
           const answers = await sc0.getAnswers(
-            contract, accounts[0], anweredCallId, 10, offset, true,
+            contract, identity0, anweredCallId, 10, offset, true,
           );
           expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length - offset, 10));
           Object.keys(answers).reverse().forEach((answerId, i) => {
@@ -803,7 +751,7 @@ describe('ServiceContract', function test() {
       it('can retrieve answers in reverse with limited page size and offset', async () => {
         const count = 2;
         const offset = 17;
-        const answers = await sc0.getAnswers(contract, accounts[0], anweredCallId, 2, offset, true);
+        const answers = await sc0.getAnswers(contract, identity0, anweredCallId, 2, offset, true);
         expect(Object.keys(answers).length).to.eq(Math.min(sampleAnswers.length - offset, count));
         Object.keys(answers).reverse().forEach((answerId, i) => {
           expect(answers[answerId].data).to.deep.eq(
@@ -816,7 +764,7 @@ describe('ServiceContract', function test() {
 
   it('can send and read service message with nested encryption', async () => {
     // create call with a custom property, that contains cryptoInfo and private
-    const contract = await sc0.create(accounts[0], businessCenterDomain, sampleService1);
+    const contract = await sc0.create(identity0, businessCenterDomain, sampleService1);
     const callForNesting = JSON.parse(JSON.stringify(sampleCall));
 
     // get cryptor for annotating encryption of properties
@@ -841,7 +789,7 @@ describe('ServiceContract', function test() {
       ),
     };
     // send it as usual (to-encrypt properties are encrypted automatically); invite participant
-    const callId = await sc0.sendCall(contract, accounts[0], callForNesting, [accounts[2]]);
+    const callId = await sc0.sendCall(contract, identity0, callForNesting, [identity2]);
 
     // fetch with creator
     const fullyDecrypedCall = JSON.parse(JSON.stringify(callForNesting));
@@ -851,11 +799,11 @@ describe('ServiceContract', function test() {
     };
     fullyDecrypedCall.payload.privateData = secretPayload;
     fullyDecrypedCall.metadata.privateData = secretMetadata;
-    let call = (await sc0.getCall(contract, accounts[0], callId)).data;
+    let call = (await sc0.getCall(contract, identity0, callId)).data;
     expect(call).to.deep.eq(fullyDecrypedCall);
 
     // fetch with participant
-    call = (await await sc2.getCall(contract, accounts[2], callId)).data;
+    call = (await await sc2.getCall(contract, identity2, callId)).data;
     // participant can read 'outer' properties
     expect(call.metadata.author).to.eq(callForNesting.metadata.author);
     expect(call.payload.callName).to.eq(callForNesting.payload.callName);
@@ -873,11 +821,11 @@ describe('ServiceContract', function test() {
 
     // add sharing for participent
     await sc0.addToCallSharing(
-      contract, accounts[0], callId, [accounts[2]], null, null, 'privateData',
+      contract, identity0, callId, [identity2], null, null, 'privateData',
     );
     // fetch again
     sc2.options.sharing.clearCache();
-    call = (await sc2.getCall(contract, accounts[2], callId)).data;
+    call = (await sc2.getCall(contract, identity2, callId)).data;
     expect(call).to.deep.eq(fullyDecrypedCall);
   });
 });

@@ -238,12 +238,12 @@ export class TestUtils {
     return executor;
   }
 
-  public static async getExecutorWallet(web3, wallet, runtime: Runtime):
+  public static async getExecutorWallet(wallet, runtime: Runtime):
   Promise<ExecutorWallet> {
     const contracts = await this.getContracts();
     const contractLoader = new ContractLoader({
       contracts,
-      web3,
+      web3: runtime.web3,
     });
     const executor = new ExecutorWallet({
       accountId: runtime.activeAccount,
@@ -251,7 +251,7 @@ export class TestUtils {
       contractLoader,
       signer: runtime.signer,
       wallet,
-      web3,
+      web3: runtime.web3,
     });
     await executor.init({});
     executor.eventHub = runtime.eventHub;

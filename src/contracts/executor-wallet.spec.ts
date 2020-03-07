@@ -64,12 +64,10 @@ describe('Signer Wallet', function test() {
     nameResolver = runtimes[0].nameResolver;
     executor.eventHub = runtimes[0].eventHub;
     executorWallet0 = await TestUtils.getExecutorWallet(
-      web3,
       wallet0,
       runtimes[0],
     );
     executorWallet1 = await TestUtils.getExecutorWallet(
-      web3,
       wallet1,
       runtimes[1],
     );

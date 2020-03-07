@@ -114,7 +114,6 @@ async function getPinnedFileHashes(): Promise<string[]> {
 
 describe('DigitalTwin', function test() {
   this.timeout(600000);
-  let dfs: Ipfs;
   let defaultConfig: DigitalTwinConfig;
   const description = {
     name: 'test twin',
@@ -136,21 +135,9 @@ describe('DigitalTwin', function test() {
   before(async () => {
     runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
     twinOptions = {
-      contractLoader: runtime.contractLoader,
-      cryptoProvider: runtime.cryptoProvider,
-      dataContract: runtime.dataContract,
-      description: runtime.description,
-      did: runtime.did,
-      executor: runtime.executor,
-      nameResolver: runtime.nameResolver,
-      profile: runtime.profile,
-      rightsAndRoles: runtime.rightsAndRoles,
-      sharing: runtime.sharing,
-      verifications: runtime.verifications,
-      web3: runtime.web3,
+      ...(runtime as any),
     };
 
-    runtime.executor.eventHub = runtime.eventHub;
     defaultConfig = {
       accountId: accounts[0],
       containerConfig: {

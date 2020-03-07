@@ -21,96 +21,107 @@ import 'mocha';
 import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
 
-import { accounts } from '../test/accounts';
+import { accounts, useIdentity } from '../test/accounts';
 import { configTestcore as config } from '../config-testcore';
 import { DataContract } from './data-contract/data-contract';
 import { RightsAndRoles, ModificationType, PropertyType } from './rights-and-roles';
 import { TestUtils } from '../test/test-utils';
+import { Runtime } from '../runtime';
 
 use(chaiAsPromised);
 
 
 describe('Rights and Roles handler', function test() {
   this.timeout(300000);
-  let executor;
-  let rar: RightsAndRoles;
+  let rar0: RightsAndRoles;
+  let rar1: RightsAndRoles;
   let businessCenterDomain;
   let businessCenter;
-  let ipfs;
+  let identity0: string;
+  let identity1: string;
+  let identity2: string;
   let web3;
-  let dc: DataContract;
+  let dc0: DataContract;
+  let dc1: DataContract;
   let sharing;
+  let runtimes: Runtime[];
 
   before(async () => {
-    ipfs = await TestUtils.getIpfs();
+    runtimes = await Promise.all(
+      accounts.slice(0, 3).map((account) => TestUtils.getRuntime(account, null, { useIdentity })),
+    );
+    identity0 = runtimes[0].activeIdentity;
+    identity1 = runtimes[1].activeIdentity;
+    identity2 = runtimes[2].activeIdentity;
     web3 = TestUtils.getWeb3();
-    executor = await TestUtils.getExecutor(web3);
-    rar = await TestUtils.getRightsAndRoles(web3);
-    const loader = await TestUtils.getContractLoader(web3);
-    const nameResolver = await TestUtils.getNameResolver(web3);
-    businessCenterDomain = nameResolver.getDomainName(config.nameResolver.domains.businessCenter);
-    const businessCenterAddress = await nameResolver.getAddress(businessCenterDomain);
-    businessCenter = await loader.loadContract('BusinessCenter', businessCenterAddress);
-    if (!await executor.executeContractCall(
-      businessCenter, 'isMember', accounts[0], { from: accounts[0] },
+    rar0 = runtimes[0].rightsAndRoles;
+    rar1 = runtimes[1].rightsAndRoles;
+    businessCenterDomain = runtimes[0].nameResolver.getDomainName(
+      config.nameResolver.domains.businessCenter,
+    );
+    const businessCenterAddress = await runtimes[0].nameResolver.getAddress(businessCenterDomain);
+    businessCenter = await runtimes[0].contractLoader.loadContract('BusinessCenter', businessCenterAddress);
+    if (!await runtimes[0].executor.executeContractCall(
+      businessCenter, 'isMember', identity0, { from: identity0 },
     )
     ) {
-      await executor.executeContractTransaction(
-        businessCenter, 'join', { from: accounts[0], autoGas: 1.1 },
+      await runtimes[0].executor.executeContractTransaction(
+        businessCenter, 'join', { from: identity0, autoGas: 1.1 },
       );
     }
-    if (!await executor.executeContractCall(
-      businessCenter, 'isMember', accounts[1], { from: accounts[1] },
+    if (!await runtimes[1].executor.executeContractCall(
+      businessCenter, 'isMember', identity1, { from: identity1 },
     )
     ) {
-      await executor.executeContractTransaction(
-        businessCenter, 'join', { from: accounts[1], autoGas: 1.1 },
+      await runtimes[1].executor.executeContractTransaction(
+        businessCenter, 'join', { from: identity1, autoGas: 1.1 },
       );
     }
-    if (!await executor.executeContractCall(
-      businessCenter, 'isMember', accounts[2], { from: accounts[2] },
+    if (!await runtimes[2].executor.executeContractCall(
+      businessCenter, 'isMember', identity2, { from: identity2 },
     )
     ) {
-      await executor.executeContractTransaction(
-        businessCenter, 'join', { from: accounts[2], autoGas: 1.1 },
+      await runtimes[2].executor.executeContractTransaction(
+        businessCenter, 'join', { from: identity2, autoGas: 1.1 },
       );
     }
-    dc = await TestUtils.getDataContract(web3, ipfs);
-    sharing = await TestUtils.getSharing(web3, ipfs);
+    dc0 = runtimes[0].dataContract;
+    dc1 = runtimes[1].dataContract;
+    sharing = runtimes[0].sharing;
   });
 
   it('should be able to retrieve all members', async () => {
-    const contract = await dc.create('testdatacontract', accounts[0], businessCenterDomain);
-    await dc.inviteToContract(
-      businessCenterDomain, contract.options.address, accounts[0], accounts[1],
+    const contract = await dc0.create('testdatacontract', identity0, businessCenterDomain);
+    await dc0.inviteToContract(
+      businessCenterDomain, contract.options.address, identity0, identity1,
     );
-    await dc.inviteToContract(
-      businessCenterDomain, contract.options.address, accounts[0], accounts[2],
+    await dc0.inviteToContract(
+      businessCenterDomain, contract.options.address, identity0, identity2,
     );
-    const contractParticipants = await rar.getMembers(contract);
+    const contractParticipants = await rar0.getMembers(contract);
     const members = contractParticipants[1];
     expect(members.length).to.eq(3);
-    expect(members[0]).to.eq(accounts[0]);
-    expect(members[1]).to.eq(accounts[1]);
-    expect(members[2]).to.eq(accounts[2]);
+    expect(members[0]).to.eq(identity0);
+    expect(members[1]).to.eq(identity1);
+    expect(members[2]).to.eq(identity2);
   });
 
   it('should be able to retrieve more than 10 members per role', async () => {
-    const contract = await dc.create('testdatacontract', accounts[0], null);
+    const contract = await dc0.create('testdatacontract', identity0, null);
     const invitees = [...Array(31)].map(() => TestUtils.getRandomAddress());
-    await Promise.all(invitees.map((invitee) => dc.inviteToContract(
+    await Promise.all(invitees.map((invitee) => dc0.inviteToContract(
       null,
       contract.options.address,
-      accounts[0],
+      identity0,
       invitee,
     )));
-    const contractParticipants = await rar.getMembers(contract);
+    const contractParticipants = await rar0.getMembers(contract);
     const membersResult = contractParticipants[1].sort();
-    expect(membersResult).to.deep.eq([accounts[0], ...invitees].sort());
+    expect(membersResult).to.deep.eq([identity0, ...invitees].sort());
   });
 
   it('should be able to retrieve members from a business center', async () => {
-    const bcMembers = await rar.getMembers(businessCenter);
+    const bcMembers = await rar0.getMembers(businessCenter);
     expect(Object.keys(bcMembers).length).to.eq(5);
   });
 
@@ -124,92 +135,92 @@ describe('Rights and Roles handler', function test() {
     async function createSampleContract(): Promise<any> {
       const blockNr = await web3.eth.getBlockNumber();
       // create sample contract, invite second user, add sharing for this user
-      const contract = await dc.create('testdatacontract', accounts[0], businessCenterDomain);
-      await dc.inviteToContract(
-        businessCenterDomain, contract.options.address, accounts[0], accounts[1],
+      const contract = await dc0.create('testdatacontract', identity0, businessCenterDomain);
+      await dc0.inviteToContract(
+        businessCenterDomain, contract.options.address, identity0, identity1,
       );
-      const contentKey = await sharing.getKey(contract.options.address, accounts[0], '*', blockNr);
+      const contentKey = await sharing.getKey(contract.options.address, identity0, '*', blockNr);
       await sharing.addSharing(
-        contract.options.address, accounts[0], accounts[1], '*', blockNr, contentKey,
+        contract.options.address, identity0, identity1, '*', blockNr, contentKey,
       );
       return contract;
     }
 
     it('should be able to grant operation permissions to an existing contract', async () => {
       const contract = await createSampleContract();
-      await expect(dc.addListEntries(
-        contract, 'new_entry', [samples[0]], accounts[1],
+      await expect(dc1.addListEntries(
+        contract, 'new_entry', [samples[0]], identity1,
       )).to.be.rejected;
-      await rar.setOperationPermission(
+      await rar0.setOperationPermission(
         contract,
-        accounts[0],
+        identity0,
         memberRole,
         'new_entry',
         PropertyType.ListEntry,
         ModificationType.Set,
         true,
       );
-      await expect(dc.addListEntries(
-        contract, 'new_entry', [samples[0]], accounts[1],
+      await expect(dc1.addListEntries(
+        contract, 'new_entry', [samples[0]], identity1,
       )).to.be.fulfilled;
     });
 
     it('should be able to revoke operation permissions to an existing contract', async () => {
       const contract = await createSampleContract();
-      await expect(dc.addListEntries(
-        contract, 'list_settable_by_member', [samples[0]], accounts[1],
+      await expect(dc1.addListEntries(
+        contract, 'list_settable_by_member', [samples[0]], identity1,
       )).to.be.fulfilled;
-      await rar.setOperationPermission(
+      await rar0.setOperationPermission(
         contract,
-        accounts[0],
+        identity0,
         memberRole,
         'list_settable_by_member',
         PropertyType.ListEntry,
         ModificationType.Set,
         false,
       );
-      await expect(dc.addListEntries(
-        contract, 'list_settable_by_member', [samples[0]], accounts[1],
+      await expect(dc1.addListEntries(
+        contract, 'list_settable_by_member', [samples[0]], identity1,
       )).to.be.rejected;
     });
 
     it('should be able to grant function permissions to an existing contract', async () => {
       const contract = await createSampleContract();
-      await dc.addListEntries(contract, 'list_settable_by_member', [samples[0]], accounts[1]);
-      await dc.addListEntries(contract, 'list_settable_by_member', [samples[1]], accounts[1]);
-      await dc.addListEntries(contract, 'list_settable_by_member', [samples[2]], accounts[1]);
-      await expect(dc.removeListEntry(
-        contract, 'list_settable_by_member', 2, accounts[1],
+      await dc1.addListEntries(contract, 'list_settable_by_member', [samples[0]], identity1);
+      await dc1.addListEntries(contract, 'list_settable_by_member', [samples[1]], identity1);
+      await dc1.addListEntries(contract, 'list_settable_by_member', [samples[2]], identity1);
+      await expect(dc1.removeListEntry(
+        contract, 'list_settable_by_member', 2, identity1,
       )).to.be.rejected;
 
-      await rar.setFunctionPermission(
-        contract, accounts[0], memberRole, 'removeListEntry(bytes32,uint256)', true,
+      await rar0.setFunctionPermission(
+        contract, identity0, memberRole, 'removeListEntry(bytes32,uint256)', true,
       );
-      await rar.setOperationPermission(
+      await rar0.setOperationPermission(
         contract,
-        accounts[0],
+        identity0,
         memberRole,
         'list_settable_by_member',
         PropertyType.ListEntry,
         ModificationType.Remove,
         true,
       );
-      await expect(dc.removeListEntry(
-        contract, 'list_settable_by_member', 2, accounts[1],
+      await expect(dc1.removeListEntry(
+        contract, 'list_settable_by_member', 2, identity1,
       )).to.be.fulfilled;
     });
 
     it('should be able to revoke function permissions to an existing contract', async () => {
       const contract = await createSampleContract();
-      await expect(dc.addListEntries(
-        contract, 'list_settable_by_member', [samples[0]], accounts[1],
+      await expect(dc1.addListEntries(
+        contract, 'list_settable_by_member', [samples[0]], identity1,
       )).to.be.fulfilled;
 
-      await rar.setFunctionPermission(
-        contract, accounts[0], memberRole, 'addListEntries(bytes32[],bytes32[])', false,
+      await rar0.setFunctionPermission(
+        contract, identity0, memberRole, 'addListEntries(bytes32[],bytes32[])', false,
       );
-      await expect(dc.addListEntries(
-        contract, 'list_settable_by_member', [samples[1]], accounts[1],
+      await expect(dc1.addListEntries(
+        contract, 'list_settable_by_member', [samples[1]], identity1,
       )).to.be.rejected;
     });
 
@@ -217,40 +228,40 @@ describe('Rights and Roles handler', function test() {
     it('should be able to transfer ownership multiple times from an existing contract', async () => {
       const contract = await createSampleContract();
 
-      let contractParticipants = await rar.getMembers(contract);
+      let contractParticipants = await rar0.getMembers(contract);
       let owners = contractParticipants[0];
       expect(owners.length).to.eq(1);
-      expect(owners[0]).to.eq(accounts[0]);
+      expect(owners[0]).to.eq(identity0);
 
-      await rar.addAccountToRole(contract, accounts[0], accounts[1], 0);
-      await rar.transferOwnership(contract, accounts[1], accounts[1]);
-      await rar.removeAccountFromRole(contract, accounts[1], accounts[0], 0);
+      await rar0.addAccountToRole(contract, identity0, identity1, 0);
+      await rar1.transferOwnership(contract, identity1, identity1);
+      await rar1.removeAccountFromRole(contract, identity1, identity0, 0);
 
-      contractParticipants = await rar.getMembers(contract);
+      contractParticipants = await rar0.getMembers(contract);
       // eslint-disable-next-line
       owners = contractParticipants[0];
       expect(owners.length).to.eq(1);
-      expect(owners[0]).to.eq(accounts[1]);
+      expect(owners[0]).to.eq(identity1);
 
-      await rar.addAccountToRole(contract, accounts[1], accounts[0], 0);
-      await rar.transferOwnership(contract, accounts[0], accounts[0]);
-      await rar.removeAccountFromRole(contract, accounts[0], accounts[1], 0);
+      await rar1.addAccountToRole(contract, identity1, identity0, 0);
+      await rar0.transferOwnership(contract, identity0, identity0);
+      await rar0.removeAccountFromRole(contract, identity0, identity1, 0);
 
-      contractParticipants = await rar.getMembers(contract);
+      contractParticipants = await rar0.getMembers(contract);
 
       owners = contractParticipants['0'];
       expect(owners.length).to.eq(1);
-      expect(owners[0]).to.eq(accounts[0]);
+      expect(owners[0]).to.eq(identity0);
 
-      await rar.addAccountToRole(contract, accounts[0], accounts[1], 0);
-      await rar.transferOwnership(contract, accounts[1], accounts[1]);
-      await rar.removeAccountFromRole(contract, accounts[1], accounts[0], 0);
+      await rar0.addAccountToRole(contract, identity0, identity1, 0);
+      await rar1.transferOwnership(contract, identity1, identity1);
+      await rar1.removeAccountFromRole(contract, identity1, identity0, 0);
 
-      contractParticipants = await rar.getMembers(contract);
+      contractParticipants = await rar0.getMembers(contract);
       // eslint-disable-next-line
       owners = contractParticipants[0];
       expect(owners.length).to.eq(1);
-      expect(owners[0]).to.eq(accounts[1]);
+      expect(owners[0]).to.eq(identity1);
     });
   });
 });
