@@ -28,7 +28,6 @@ import { Profile } from './profile/profile';
 import { Runtime } from './index';
 import { TestUtils } from './test/test-utils';
 import { accounts, useIdentity } from './test/accounts';
-import user from './profile/types/user';
 
 use(chaiAsPromised);
 
@@ -63,47 +62,6 @@ describe('KeyExchange class', function test() {
     mailbox2 = runtimes[1].mailbox;
     keyExchange1 = runtimes[0].keyExchange;
     keyExchange2 = runtimes[1].keyExchange;
-  });
-
-  it.skip('', async () => {
-    const runtime = runtimes[0];
-    const hashCryptor = runtime.cryptoProvider.getCryptorByCryptoAlgo(
-      (runtime.dataContract as any).cryptoAlgorithHashes,
-    );
-    const hashKey = await hashCryptor.generateKey();
-    const sharings = {};
-    // add hashKey
-    await runtime.sharing.extendSharings(
-      sharings, '0x775e5A47Ac9ECDc5696F12d2fcEb55306b3e7728', '0x775e5A47Ac9ECDc5696F12d2fcEb55306b3e7728', '*', 'hashKey', hashKey,
-    );
-    // upload sharings
-    const sharingsHash = await runtime.dfs.add(
-      'sharing', Buffer.from(JSON.stringify(sharings), (runtime.dataContract as any).encodingUnencrypted),
-    );
-    const ensName = runtime.nameResolver.getDomainName(runtime.nameResolver.config.domains.profile);
-    const address = await runtime.nameResolver.getAddress(ensName);
-    const indexContract = runtime.nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
-    const profileContractAddress = await runtime.executor.executeContractCall(
-      indexContract, 'getProfile', '0x775e5A47Ac9ECDc5696F12d2fcEb55306b3e7728', { from: runtime.activeAccount },
-    );
-    const profileContract = runtime.contractLoader.loadContract('DataContract', profileContractAddress);
-    runtime.executor.executeContractTransaction(
-      profileContract,
-      'setSharing',
-      { from: runtime.activeAccount, autoGas: 1.1 },
-      sharingsHash,
-    );
-    // const ensName = runtime.nameResolver.getDomainName(runtime.nameResolver
-    // .config.domains.profile);
-    // const address = await runtime.nameResolver.getAddress(ensName);
-    // const indexContract = runtime.nameResolver.contractLoader.loadContract(
-    // 'ProfileIndexInterface', address);
-    // console.log(`Active identity: ${runtime.activeIdentity}`);
-    // await runtime.executor.executeContractTransaction(
-    //   indexContract, 'setMyProfile', { from: runtime.activeIdentity },
-    // '0xE8481674fb1C0Fb92069887c6b6a242EAD3EB192',
-    // );
-    console.log('Profile linked');
   });
 
   it('should be able to send an invitation mail and store new commKey', async () => {

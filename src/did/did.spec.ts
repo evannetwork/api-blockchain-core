@@ -44,16 +44,13 @@ describe('DID Resolver', function test() {
     runtimes = await Promise.all([
       TestUtils.getRuntime(accounts[0], null, { useIdentity: true }),
       TestUtils.getRuntime(accounts[1], null, { useIdentity: true }),
-      TestUtils.getRuntime(accounts[2], null, { useIdentity: false }),
+      TestUtils.getRuntime(accounts[2], null, { useIdentity: true }),
     ]);
-    console.log(`Identity: ${accounts[0]}`);
-    accounts0Identity = await runtimes[0].verifications.getIdentityForAccount(
-      runtimes[0].underlyingAccount, true,
-    );
+    accounts0Identity = await runtimes[0].activeIdentity;
     accounts0Did = await runtimes[0].did.convertIdentityToDid(accounts0Identity);
     // create new registry and update runtimes 0 and 1
     const registry = await runtimes[2].executor.createContract(
-      'DidRegistry', [], { from: accounts[2], gas: 1_000_000 },
+      'DidRegistry', [], { from: runtimes[2].activeIdentity, gas: 1_000_000 },
     );
     const options0 = (({
       accountStore,
@@ -265,13 +262,10 @@ describe('DID Resolver', function test() {
     });
 
     it('can retrieve a contract identities DID document', async () => {
-      const accountRuntime = await TestUtils.getRuntime(
-        runtimes[0].underlyingAccount, null, { useIdentity: true },
-      );
       const twin = await DigitalTwin.create(
-        accountRuntime as DigitalTwinOptions,
+        runtimes[0] as DigitalTwinOptions,
         {
-          accountId: accountRuntime.activeAccount,
+          accountId: runtimes[0].activeAccount,
           containerConfig: null,
           description: twinDescription,
         },
@@ -332,20 +326,17 @@ describe('DID Resolver', function test() {
     });
 
     it('does not allow to store a DID document for the identity of a contract I do not own', async () => {
-      const accountRuntime = await TestUtils.getRuntime(
-        runtimes[0].underlyingAccount, null, { useIdentity: true },
-      );
-
       const twin = await DigitalTwin.create(
-        accountRuntime as DigitalTwinOptions,
+        runtimes[0] as DigitalTwinOptions,
         {
-          accountId: accountRuntime.activeAccount,
+          accountId: runtimes[0].activeAccount,
           containerConfig: null,
           description: twinDescription,
         },
       );
       const twinIdentity = await runtimes[0].verifications.getIdentityForAccount(
-        await twin.getContractAddress(), true,
+        await twin.getContractAddress(),
+        true,
       );
 
       const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);

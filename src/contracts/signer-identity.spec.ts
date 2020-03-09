@@ -22,24 +22,15 @@ import * as BigNumber from 'bignumber.js';
 import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
 import {
-  ContractLoader,
   CryptoInfo,
-  DfsInterface,
-  Executor,
-  KeyProvider,
-  SignerInternal,
 } from '@evan.network/dbcp';
 
 import { accounts, useIdentity } from '../test/accounts';
 import { TestUtils } from '../test/test-utils';
 import {
   CryptoProvider,
-  Ipfs,
-  Ipld,
-  Mailbox,
   NameResolver,
   Profile,
-  SignerIdentity,
   Verifications,
   Runtime,
 } from '../index';
@@ -456,7 +447,10 @@ describe('signer-identity (identity based signer)', function test() {
       //   indexContract, 'getProfile', identityAddress, { from: account0, });
       // const profileDataContract = await contractLoader.loadContract(
       //   'DataContract', profileContractAddress);
-      // const sharingsHash = await runtimes[0].executor.executeContractCall(profileDataContract, 'sharing');
+      // const sharingsHash = await runtimes[0].executor.executeContractCall(
+      // profileDataContract,
+      // 'sharing'
+      // );
       // console.dir(sharingsHash);
       // const sharingData = await dfs.get(sharingsHash);
       // console.log(require('util').inspect(sharingData, { colors: true, depth: 16 }));

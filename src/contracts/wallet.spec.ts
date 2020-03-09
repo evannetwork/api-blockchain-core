@@ -22,7 +22,6 @@ import { expect, use } from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
 
 import {
-  DfsInterface,
   Executor,
 } from '@evan.network/dbcp';
 
@@ -35,17 +34,16 @@ use(chaiAsPromised);
 
 describe('Wallet handler', function test() {
   this.timeout(60000);
-  let dfs: DfsInterface;
   let executor: Executor;
+  let identity0: string;
   let wallet: Wallet;
   let web3: any;
 
   before(async () => {
     const runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
-    web3 = TestUtils.getWeb3();
-    dfs = await TestUtils.getIpfs();
+    ({ executor, web3 } = runtime);
+    identity0 = runtime.activeIdentity;
     wallet = await TestUtils.getWallet(runtime);
-    executor = await TestUtils.getExecutor(web3);
   });
 
   function runTests(walletType, createWallet) {
@@ -58,7 +56,7 @@ describe('Wallet handler', function test() {
         const walletContract = await executor.createContract(
           walletType,
           [[accounts[0]], 1],
-          { from: accounts[0], gas: 2000000 },
+          { from: identity0, gas: 2000000 },
         );
         wallet.load(walletContract.options.address, walletType);
       } else {
@@ -71,12 +69,12 @@ describe('Wallet handler', function test() {
         await createWallet(accounts[0], accounts[0], [accounts[0], accounts[1]]);
 
         // create test contract and hand over to wallet
-        const testContract = await executor.createContract('Owned', [], { from: accounts[0], gas: 200000 });
+        const testContract = await executor.createContract('Owned', [], { from: identity0, gas: 200000 });
         expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[0]);
-        await executor.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[0] }, wallet.walletAddress);
+        await executor.executeContractTransaction(testContract, 'transferOwnership', { from: identity0 }, wallet.walletAddress);
         expect(await executor.executeContractCall(testContract, 'owner')).to.eq(wallet.walletAddress);
 
-        await wallet.submitTransaction(testContract, 'transferOwnership', { from: accounts[0] }, accounts[1]);
+        await wallet.submitTransaction(testContract, 'transferOwnership', { from: identity0 }, accounts[1]);
         expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[1]);
 
         await executor.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[1] }, wallet.walletAddress);
@@ -89,9 +87,9 @@ describe('Wallet handler', function test() {
         await createWallet(accounts[0], accounts[0], [accounts[0]]);
 
         // create test contract and hand over to wallet
-        const testContract = await executor.createContract('Owned', [], { from: accounts[0], gas: 200000 });
+        const testContract = await executor.createContract('Owned', [], { from: identity0, gas: 200000 });
         expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[0]);
-        await executor.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[0] }, wallet.walletAddress);
+        await executor.executeContractTransaction(testContract, 'transferOwnership', { from: identity0 }, wallet.walletAddress);
         expect(await executor.executeContractCall(testContract, 'owner')).to.eq(wallet.walletAddress);
 
         const promise = wallet.submitTransaction(testContract, 'transferOwnership', { from: accounts[1] }, accounts[1]);
@@ -102,12 +100,12 @@ describe('Wallet handler', function test() {
     describe('when submitting transactions on wallets for multiple accounts', () => {
       async function createContract() {
         const contract = await executor.createContract(
-          'Owned', [], { from: accounts[0], gas: 200000 },
+          'Owned', [], { from: identity0, gas: 200000 },
         );
         await executor.executeContractTransaction(
           contract,
           'transferOwnership',
-          { from: accounts[0] },
+          { from: identity0 },
           wallet.walletAddress,
         );
         return contract;
@@ -122,7 +120,7 @@ describe('Wallet handler', function test() {
         const testContract = await createContract();
         // test with account1
         await expect(wallet.submitTransaction(
-          testContract, 'transferOwnership', { from: accounts[0] }, accounts[1],
+          testContract, 'transferOwnership', { from: identity0 }, accounts[1],
         )).not.to.be.rejected;
         // test with account2
         await expect(wallet.submitTransaction(
@@ -133,7 +131,7 @@ describe('Wallet handler', function test() {
       it('returns txinfo upon submitting a tx and missing confirmations', async () => {
         const testContract = await createContract();
         const txInfo = await wallet.submitTransaction(
-          testContract, 'transferOwnership', { from: accounts[0] }, accounts[1],
+          testContract, 'transferOwnership', { from: identity0 }, accounts[1],
         );
         expect(txInfo).to.be.ok;
         expect(txInfo.result).to.be.ok;
@@ -148,7 +146,7 @@ describe('Wallet handler', function test() {
       it('executes tx when submitting the final confirmation', async () => {
         const testContract = await createContract();
         const txInfo = await wallet.submitTransaction(
-          testContract, 'transferOwnership', { from: accounts[0] }, accounts[1],
+          testContract, 'transferOwnership', { from: identity0 }, accounts[1],
         );
 
         // still owned by wallet
@@ -168,7 +166,7 @@ describe('Wallet handler', function test() {
         const { walletAddress } = wallet;
         const valueToSend = Math.floor(Math.random() * 10000);
         const executeSendP = executor.executeSend(
-          { from: accounts[0], to: walletAddress, value: valueToSend },
+          { from: identity0, to: walletAddress, value: valueToSend },
         );
         await expect(executeSendP).not.to.be.rejected;
         expect(await web3.eth.getBalance(walletAddress)).to.eq(valueToSend.toString());
@@ -179,15 +177,15 @@ describe('Wallet handler', function test() {
         const { walletAddress } = wallet;
 
         const valueToSend = Math.floor(Math.random() * 10000);
-        await executor.executeSend({ from: accounts[0], to: walletAddress, value: valueToSend });
+        await executor.executeSend({ from: identity0, to: walletAddress, value: valueToSend });
         expect(await web3.eth.getBalance(walletAddress)).to.eq(valueToSend.toString());
 
         const testContract = await executor.createContract(
-          'TestContract', ['test'], { from: accounts[0], gas: 1000000 },
+          'TestContract', ['test'], { from: identity0, gas: 1000000 },
         );
         expect(await web3.eth.getBalance(testContract.options.address)).to.eq('0');
 
-        await wallet.submitTransaction(testContract, 'chargeFunds', { from: accounts[0], value: valueToSend });
+        await wallet.submitTransaction(testContract, 'chargeFunds', { from: identity0, value: valueToSend });
         expect(await web3.eth.getBalance(testContract.options.address))
           .to.eq(valueToSend.toString());
         expect(await web3.eth.getBalance(walletAddress)).to.eq('0');
@@ -198,15 +196,15 @@ describe('Wallet handler', function test() {
         const { walletAddress } = wallet;
 
         const valueToSend = Math.floor(Math.random() * 10000);
-        await executor.executeSend({ from: accounts[0], to: walletAddress, value: valueToSend });
+        await executor.executeSend({ from: identity0, to: walletAddress, value: valueToSend });
         expect(await web3.eth.getBalance(walletAddress)).to.eq(valueToSend.toString());
 
         const testContract = await executor.createContract(
-          'TestContract', ['test'], { from: accounts[0], gas: 1000000 },
+          'TestContract', ['test'], { from: identity0, gas: 1000000 },
         );
         expect(await web3.eth.getBalance(testContract.options.address)).to.eq('0');
 
-        const txInfo = await wallet.submitTransaction(testContract, 'chargeFunds', { from: accounts[0], value: valueToSend });
+        const txInfo = await wallet.submitTransaction(testContract, 'chargeFunds', { from: identity0, value: valueToSend });
         expect(await web3.eth.getBalance(testContract.options.address)).to.eq('0');
         expect(await web3.eth.getBalance(walletAddress)).to.eq(valueToSend.toString());
 
@@ -275,7 +273,7 @@ describe('Wallet handler', function test() {
       const walletContract = await executor.createContract(
         'MultiSigWalletSG',
         [participants, typeof confirmations !== 'undefined' ? confirmations : 1],
-        { from: executingAccount, gas: 2000000 },
+        { from: identity0, gas: 2000000 },
       );
       wallet.load(walletContract.options.address, 'MultiSigWalletSG');
     }
@@ -298,7 +296,7 @@ describe('Wallet handler', function test() {
         await expect(promise).to.be.rejected;
       });
 
-      it('can remove members, when in wallet', async () => {
+      it.only('can remove members, when in wallet', async () => {
         await createWallet(accounts[0], accounts[0], [accounts[0], accounts[1]]);
         expect(await wallet.getOwners()).to.deep.eq([accounts[0], accounts[1]]);
         await wallet.removeOwner(accounts[1], accounts[0]);

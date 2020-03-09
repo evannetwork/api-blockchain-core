@@ -20,7 +20,6 @@
 import 'mocha';
 import { expect, use } from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
-import { SignerInternal } from '@evan.network/dbcp';
 
 import { ExecutorAgent } from './executor-agent';
 import { TestUtils } from '../test/test-utils';
@@ -35,7 +34,6 @@ const randomAccount = `0x${Math.floor(Math.random() * 255 * 255 * 255).toString(
 let contract;
 let contractLoader;
 let password;
-let web3;
 
 use(chaiAsPromised);
 

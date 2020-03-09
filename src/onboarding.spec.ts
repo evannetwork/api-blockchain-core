@@ -22,12 +22,11 @@ import { expect, use } from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
 
 
-import { accounts } from './test/accounts';
+import { accounts, useIdentity } from './test/accounts';
 import { configTestcore as config } from './config-testcore';
-import { KeyExchange } from './keyExchange';
 import { Onboarding } from './onboarding';
-import { Mailbox } from './mailbox';
 import { TestUtils } from './test/test-utils';
+import { Runtime } from './runtime';
 
 import express = require('express');
 import bodyParser = require('body-parser');
@@ -37,56 +36,21 @@ use(chaiAsPromised);
 
 describe('Onboarding helper', function test() {
   this.timeout(600000);
-  let ipfs;
-  let mailbox: Mailbox;
   let onboarding: Onboarding;
+  let runtime: Runtime;
   let web3;
-  let profile;
 
   before(async () => {
-    web3 = TestUtils.getWeb3();
-    ipfs = await TestUtils.getIpfs();
-    const keyProvider = await TestUtils.getKeyProvider();
-    const ipld = await TestUtils.getIpld(ipfs, keyProvider);
-    profile = await TestUtils.getProfile(web3, ipfs, ipld);
-    await profile.loadForAccount();
-    keyProvider.init(profile);
-    [keyProvider.currentAccount] = accounts;
-
-    mailbox = new Mailbox({
-      mailboxOwner: accounts[0],
-      nameResolver: await TestUtils.getNameResolver(web3),
-      ipfs,
-      contractLoader: await TestUtils.getContractLoader(web3),
-      cryptoProvider: TestUtils.getCryptoProvider(),
-      keyProvider,
-      defaultCryptoAlgo: 'aes',
-    });
-    const executor = await TestUtils.getExecutor(web3);
-    onboarding = new Onboarding({
-      mailbox,
-      smartAgentId: config.smartAgents.onboarding.accountId,
-      executor,
-    });
-
-    const keyExchangeOptions = {
-      mailbox,
-      cryptoProvider: TestUtils.getCryptoProvider(),
-      defaultCryptoAlgo: 'aes',
-      account: accounts[0],
-      keyProvider: TestUtils.getKeyProvider(),
-    };
-    const keyExchange = new KeyExchange(keyExchangeOptions);
-
-    const commKey = await keyExchange.generateCommKey();
-    await profile.addContactKey(config.smartAgents.onboarding.accountId, 'commKey', commKey);
+    runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
+    ({ web3 } = runtime);
+    const commKey = await runtime.keyExchange.generateCommKey();
+    await runtime.profile.addContactKey(config.smartAgents.onboarding.accountId, 'commKey', commKey);
   });
 
   it('should NOT create a new profile directly onchain if profile data is incorrect', async () => {
-    const originRuntime = await TestUtils.getRuntime(accounts[0]);
     const password = 'Test1234';
     const mnemonicNew = Onboarding.createMnemonic();
-    const profilePromise = Onboarding.createNewProfile(originRuntime, mnemonicNew, password, {
+    const profilePromise = Onboarding.createNewProfile(runtime, mnemonicNew, password, {
       accountDetails: {
         profileType: 'dumb dumb',
         accountName: 'test account',
@@ -102,24 +66,22 @@ describe('Onboarding helper', function test() {
   });
 
   it('should check if an account has enough amount of eves to create new profile', async () => {
-    const originRuntime = await TestUtils.getRuntime(accounts[0]);
-    const balance = await web3.eth.getBalance(originRuntime.activeAccount);
+    const balance = await web3.eth.getBalance(runtime.activeAccount);
     const minimumAmount = web3.utils.toWei('1.0097');
 
     expect(Number(balance)).to.be.gt(Number(minimumAmount));
   });
 
   it('should be able to create new profile if enough funds are available', async () => {
-    const originRuntime = await TestUtils.getRuntime(accounts[0]);
     const password = 'Test1234';
     const mnemonicNew = Onboarding.createMnemonic();
     const runtimeConfig: any = await Onboarding.generateRuntimeConfig(mnemonicNew, password, web3);
-    const balance = await web3.eth.getBalance(originRuntime.activeAccount);
+    const balance = await web3.eth.getBalance(runtime.activeAccount);
     const minimumAmount = web3.utils.toWei('1.0097');
 
     expect(Number(balance)).to.be.gt(Number(minimumAmount));
 
-    const newProfile = await Onboarding.createNewProfile(originRuntime, mnemonicNew, password, {
+    const newProfile = await Onboarding.createNewProfile(runtime, mnemonicNew, password, {
       accountDetails: {
         profileType: 'company',
         accountName: 'test account',
@@ -130,12 +92,11 @@ describe('Onboarding helper', function test() {
   });
 
   it('should create a new profile from a different account', async () => {
-    const originRuntime = await TestUtils.getRuntime(accounts[0]);
     const password = 'Test1234';
     const mnemonicNew = Onboarding.createMnemonic();
     const runtimeConfig: any = await Onboarding.generateRuntimeConfig(mnemonicNew, password, web3);
 
-    const newProfile = await Onboarding.createNewProfile(originRuntime, mnemonicNew, password, {
+    const newProfile = await Onboarding.createNewProfile(runtime, mnemonicNew, password, {
       accountDetails: {
         profileType: 'company',
         accountName: 'test account',
@@ -156,11 +117,10 @@ describe('Onboarding helper', function test() {
   });
 
   it('should be able to create an offline profile', async () => {
-    const accountToUse = accounts[0];
-    const originRuntime = await TestUtils.getRuntime(accountToUse, null, { useIdentity: true });
-    const identity = await originRuntime.verifications.getIdentityForAccount(accountToUse, true);
+    const accountToUse = runtime.underlyingAccount;
+    const identity = await runtime.verifications.getIdentityForAccount(accountToUse, true);
     const port = 42069;
-    const pKey = await TestUtils.getAccountStore().getPrivateKey(accounts[0]);
+    const pKey = await runtime.accountStore.getPrivateKey(accounts[0]);
     const accessToken = 'randomToken';
     const contractId = '0x1234random';
 
@@ -173,7 +133,7 @@ describe('Onboarding helper', function test() {
         try {
           expect(req.body).to.have.property('accountId').that.equals(accountToUse);
           expect(req.body).to.have.property('signature');
-          expect(originRuntime.web3.eth.accounts.recover(
+          expect(runtime.web3.eth.accounts.recover(
             'Gimme Gimme Gimme!', req.body.signature,
           )).to.equal(accountToUse);
           res.send({
@@ -196,7 +156,7 @@ describe('Onboarding helper', function test() {
           expect(req.body).to.have.property('contractId').that.equals(contractId);
           expect(req.body).to.have.nested.property('didTransaction.sourceIdentity').that.equals(identity);
           expect(req.body).to.have.property('signature');
-          expect(originRuntime.web3.eth.accounts.recover(
+          expect(runtime.web3.eth.accounts.recover(
             'Gimme Gimme Gimme!', req.body.signature,
           )).to.equal(accountToUse);
           res.send({});
@@ -210,7 +170,7 @@ describe('Onboarding helper', function test() {
 
       // Client side -- Initiate onboarding
       Onboarding.createOfflineProfile(
-        originRuntime,
+        runtime,
         {
           accountDetails: {
             accountName: 'Test',

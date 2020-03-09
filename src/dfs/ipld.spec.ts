@@ -20,9 +20,11 @@
 import 'mocha';
 import { expect } from 'chai';
 
+import { Ipfs } from '@evan.network/dbcp';
 import { CryptoProvider } from '../encryption/crypto-provider';
 import { Ipld } from './ipld';
 import { TestUtils } from '../test/test-utils';
+import { accounts, useIdentity } from '../test/accounts';
 
 
 describe('IPLD handler', function test() {
@@ -34,8 +36,9 @@ describe('IPLD handler', function test() {
 
   before(async () => {
     // create new ipld handler on ipfs node
-    ipfs = await TestUtils.getIpfs();
-    cryptoProvider = TestUtils.getCryptoProvider();
+    const runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
+    ipfs = runtime.dfs as Ipfs;
+    cryptoProvider = runtime.cryptoProvider;
   });
 
   beforeEach(async () => {

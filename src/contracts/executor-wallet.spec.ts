@@ -22,7 +22,6 @@ import { expect, use } from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
 import {
   ContractLoader,
-  DfsInterface,
   Executor,
   NameResolver,
 } from '@evan.network/dbcp';
@@ -30,7 +29,6 @@ import { accounts, useIdentity } from '../test/accounts';
 import { ExecutorWallet } from './executor-wallet';
 import { TestUtils } from '../test/test-utils';
 import { Wallet } from './wallet';
-import { Runtime } from '../runtime';
 
 use(chaiAsPromised);
 
@@ -46,10 +44,8 @@ describe('Signer Wallet', function test() {
   let nameResolver: NameResolver;
   let wallet0: Wallet;
   let wallet1: Wallet;
-  let web3: any;
 
   before(async () => {
-    web3 = TestUtils.getWeb3();
     const runtimes = await Promise.all(
       accounts.slice(0, 2).map((account) => TestUtils.getRuntime(account, null, { useIdentity })),
     );

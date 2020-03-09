@@ -279,22 +279,19 @@ export class TestUtils {
     return ipfs;
   }
 
-  public static async getIpld(_ipfs?: Ipfs, _keyProvider?: KeyProvider): Promise<Ipld> {
-    const ipfs = _ipfs || await this.getIpfs();
-    const nameResolver = await this.getNameResolver(await this.getWeb3());
+  public static async getIpld(runtime: Runtime, _ipfs?: Ipfs, _keyProvider?: KeyProvider):
+  Promise<Ipld> {
+    const ipfs = _ipfs || runtime.dfs as Ipfs;
     return new Promise<Ipld>((resolve) => {
       // crypto provider
-      const cryptoProvider = this.getCryptoProvider();
       // key provider
-      const keyProvider = _keyProvider || (new KeyProvider({ keys: dataKeys }));
-
+      const keyProvider = _keyProvider || runtime.keyProvider;
       resolve(new Ipld({
         ipfs,
-        keyProvider,
-        cryptoProvider,
         defaultCryptoAlgo: 'aes',
-        originator: nameResolver.soliditySha3(identities[0]),
-        nameResolver,
+        originator: runtime.nameResolver.soliditySha3(runtime.activeIdentity),
+        keyProvider,
+        ...(runtime as any),
       }));
     });
   }
@@ -355,24 +352,13 @@ export class TestUtils {
     return payments;
   }
 
-  public static async getProfile(web3, ipfs?, ipld?, accountId?): Promise<Profile> {
-    const executor = await TestUtils.getExecutor(web3);
-    const dfs = ipfs || await TestUtils.getIpfs();
-    executor.eventHub = await TestUtils.getEventHub(web3);
-
+  public static async getProfile(runtime: Runtime, ipfs?, ipld?, accountId?): Promise<Profile> {
     const profile = new Profile({
-      accountId: accountId || identities[0],
-      contractLoader: await TestUtils.getContractLoader(web3),
-      cryptoProvider: await TestUtils.getCryptoProvider(),
-      dataContract: await TestUtils.getDataContract(web3, dfs),
+      accountId: accountId || runtime.activeIdentity,
       defaultCryptoAlgo: 'aes',
-      dfs,
-      description: await TestUtils.getDescription(web3),
-      executor,
-      ipld: ipld || await TestUtils.getIpld(dfs),
-      nameResolver: await TestUtils.getNameResolver(web3),
-      rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
-      sharing: await TestUtils.getSharing(web3),
+      dfs: ipfs || runtime.dfs as Ipfs,
+      ipld: ipld || runtime.ipld,
+      ...(runtime as any),
     });
 
     return profile;

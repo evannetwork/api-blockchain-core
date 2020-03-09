@@ -21,73 +21,66 @@ import 'mocha';
 import { expect } from 'chai';
 
 import { TestUtils } from '../test/test-utils';
-import { accounts, accountMap } from '../test/accounts';
+import { accounts, useIdentity } from '../test/accounts';
 import { configTestcore as config } from '../config-testcore';
 import {
   BusinessCenterProfile,
   Ipld,
   KeyProvider,
-  NameResolver,
+  Runtime,
 } from '../index';
 
 
 describe('BusinessCenterProfile helper', function test() {
   this.timeout(600000);
-  let ipld: Ipld;
-  let nameResolver: NameResolver;
   let businessCenterDomain;
-  let web3;
+  let runtime: Runtime;
   const sampleProfile = {
     alias: 'fnord',
     contact: 'fnord@contoso.com',
   };
 
   before(async () => {
-    web3 = TestUtils.getWeb3();
-    ipld = await TestUtils.getIpld();
+    runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
 
-    nameResolver = await TestUtils.getNameResolver(web3);
-    businessCenterDomain = nameResolver.getDomainName(config.nameResolver.domains.businessCenter);
-    nameResolver = await TestUtils.getNameResolver(web3);
-    const loader = await TestUtils.getContractLoader(web3);
-    const bcAddress = await nameResolver.getAddress(businessCenterDomain);
-    const businessCenter = loader.loadContract('BusinessCenter', bcAddress);
-    const executor = await TestUtils.getExecutor(web3);
-    const isMember = await executor.executeContractCall(
-      businessCenter, 'isMember', accounts[0], { from: accounts[0], gas: 3000000 },
+    businessCenterDomain = runtime.nameResolver.getDomainName(
+      config.nameResolver.domains.businessCenter,
+    );
+    const bcAddress = await runtime.nameResolver.getAddress(businessCenterDomain);
+    const businessCenter = runtime.contractLoader.loadContract('BusinessCenter', bcAddress);
+    const isMember = await runtime.executor.executeContractCall(
+      businessCenter, 'isMember', runtime.activeIdentity,
     );
     if (!isMember) {
-      await executor.executeContractTransaction(
-        businessCenter, 'join', { from: accounts[0], autoGas: 1.1 },
+      await runtime.executor.executeContractTransaction(
+        businessCenter, 'join', { from: runtime.activeIdentity, autoGas: 1.1 },
       );
     }
   });
 
   it('should be able to set and load a profile for a given user in a business center', async () => {
     // use own key for test
-    // eslint-disable-next-line
-    (ipld.keyProvider as KeyProvider).keys[nameResolver.soliditySha3(businessCenterDomain)] = (ipld.keyProvider as KeyProvider).keys[nameResolver.soliditySha3(accounts[0])];
+    const businessCenterKey = runtime.nameResolver.soliditySha3(businessCenterDomain);
+    const identityKey = runtime.nameResolver.soliditySha3(runtime.activeIdentity);
+    const keyProvider = runtime.ipld.keyProvider as KeyProvider;
+    keyProvider.keys[businessCenterKey] = keyProvider.keys[identityKey];
     // create profile
     const profile = new BusinessCenterProfile({
-      ipld,
-      nameResolver,
       defaultCryptoAlgo: 'aes',
       bcAddress: businessCenterDomain,
-      cryptoProvider: TestUtils.getCryptoProvider(),
+      ...(runtime as any),
     });
     await profile.setContactCard(JSON.parse(JSON.stringify(sampleProfile)));
 
     // store
-    const from = Object.keys(accountMap)[0];
+    const from = runtime.activeIdentity;
     await profile.storeForBusinessCenter(businessCenterDomain, from);
 
     // load
     const newProfile = new BusinessCenterProfile({
-      ipld,
-      nameResolver,
       defaultCryptoAlgo: 'aes',
       bcAddress: businessCenterDomain,
-      cryptoProvider: TestUtils.getCryptoProvider(),
+      ...(runtime as any),
     });
     await newProfile.loadForBusinessCenter(businessCenterDomain, from);
 

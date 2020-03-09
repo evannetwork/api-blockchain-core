@@ -27,7 +27,7 @@ import {
 } from '@evan.network/dbcp';
 
 import {
-  accountMap, accounts, identities, useIdentity,
+  accounts, identities, useIdentity,
 } from '../test/accounts';
 
 import { configTestcore as config } from '../config-testcore';
@@ -40,12 +40,9 @@ use(chaiAsPromised);
 describe('Profile helper', function test() {
   this.timeout(600000);
   let ensName;
-  let ipfs;
-  let ipld;
   let nameResolver: NameResolver;
   let profile: Profile;
   let runtime: Runtime;
-  let web3;
   const sampleDesc = {
     title: 'sampleTest',
     description: 'desc',
@@ -60,10 +57,8 @@ describe('Profile helper', function test() {
   };
 
   before(async () => {
-    web3 = TestUtils.getWeb3();
-    ipfs = await TestUtils.getIpfs();
     runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
-    ({ ipld, nameResolver, profile } = runtime);
+    ({ nameResolver, profile } = runtime);
     ensName = nameResolver.getDomainName(config.nameResolver.domains.profile);
   });
 
@@ -119,7 +114,7 @@ describe('Profile helper', function test() {
     expect(ipldIpfsHash).not.to.be.undefined;
 
     // load it to new profile instance
-    const loadedProfile = await TestUtils.getProfile(web3, ipfs, ipld, identities[0]);
+    const loadedProfile = await TestUtils.getProfile(runtime);
     await loadedProfile.loadFromIpld(profile.treeLabels.addressBook, ipldIpfsHash);
 
     // test contacts
@@ -141,7 +136,7 @@ describe('Profile helper', function test() {
     const address = await nameResolver.getAddress(ensName);
     const contract = nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
     const valueToSet = '0x0000000000000000000000000000000000000004';
-    const from = Object.keys(accountMap)[0];
+    const from = runtime.activeIdentity;
     const hash = await nameResolver.executor.executeContractCall(contract, 'getProfile', from, { from });
     await nameResolver.executor.executeContractTransaction(
       contract,
@@ -177,10 +172,7 @@ describe('Profile helper', function test() {
     await profile.storeForAccount(profile.treeLabels.addressBook);
 
     // load
-    const {
-      profile: newProfile,
-    } = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
-
+    const newProfile = runtime.profile;
     // test contacts
     expect(await newProfile.getContactKey(identities[0], 'context a')).to.eq('key 0x01_a');
     expect(await newProfile.getContactKey(identities[1], 'context a')).to.eq('key 0x02_a');
@@ -194,7 +186,12 @@ describe('Profile helper', function test() {
   it('allow to check if a profile exists', async () => {
     expect(await profile.exists()).to.be.true;
 
-    const profile2 = await TestUtils.getProfile(web3, ipfs, ipld, '0x000000000000000000000000000000000000beef');
+    const profile2 = await TestUtils.getProfile(
+      runtime,
+      null,
+      null,
+      '0x000000000000000000000000000000000000beef',
+    );
     expect(await profile2.exists()).to.be.false;
   });
 
@@ -212,7 +209,7 @@ describe('Profile helper', function test() {
 
   (useIdentity ? it.skip : it)('should read a public part of a profile (e.g. public key)', async () => {
     const initRuntime = await TestUtils.getRuntime(identities[0]);
-    initRuntime.profile = await TestUtils.getProfile(web3, ipfs, ipld, identities[0]);
+    initRuntime.profile = await TestUtils.getProfile(runtime);
     await Onboarding.createProfile(initRuntime, {
       accountDetails: {
         profileType: 'company',
@@ -221,11 +218,11 @@ describe('Profile helper', function test() {
     });
 
     // simulate a different account with a different keyStore
-    const originalKeyStore = ipld.keyProvider;
+    const originalKeyStore = runtime.ipld.keyProvider;
     const modifiedKeyStore = TestUtils.getKeyProvider(['mailboxKeyExchange']);
-    ipld.keyProvider = modifiedKeyStore;
+    runtime.ipld.keyProvider = modifiedKeyStore;
     // load
-    const newProfile = await TestUtils.getProfile(web3, ipfs, ipld, identities[0]);
+    const newProfile = await TestUtils.getProfile(runtime);
 
     const pubKey = await newProfile.getPublicKey();
     expect(pubKey).to.be.ok;
@@ -234,7 +231,7 @@ describe('Profile helper', function test() {
     expect(bookmarks).to.deep.eq({});
 
     // set original key provider back
-    ipld.keyProvider = originalKeyStore;
+    runtime.ipld.keyProvider = originalKeyStore;
   });
 
   it.skip('should be able to set a contact as known', async () => {
