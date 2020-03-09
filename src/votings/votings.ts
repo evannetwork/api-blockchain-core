@@ -246,7 +246,7 @@ export class Votings extends Logger {
     accountId: string,
     proposalOptions: ProposalOptions,
   ): Promise<string> {
-    this.log(`creating proposal in congress "${contract.options.address}" `
+    this.log(`creating proposal in congress "${contract.options.address || contract}" `
       + `with account ${accountId}`, 'info');
     const options = { ...defaultProposalOptions, ...proposalOptions };
     return this.options.executor.executeContractTransaction(

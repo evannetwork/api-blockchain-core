@@ -296,7 +296,7 @@ describe('Wallet handler', function test() {
         await expect(promise).to.be.rejected;
       });
 
-      it.only('can remove members, when in wallet', async () => {
+      it('can remove members, when in wallet', async () => {
         await createWallet(accounts[0], accounts[0], [accounts[0], accounts[1]]);
         expect(await wallet.getOwners()).to.deep.eq([accounts[0], accounts[1]]);
         await wallet.removeOwner(accounts[1], accounts[0]);

@@ -76,7 +76,7 @@ async function getRuntimeWithEnabledPinning(defaultRuntime: Runtime): Promise<Ru
     did: await TestUtils.getDid(web3, accounts[0], dfs),
     executor: defaultRuntime.executor,
     nameResolver: defaultRuntime.nameResolver,
-    profile: await TestUtils.getProfile(web3, dfs, null, accounts[0]),
+    profile: await TestUtils.getProfile(defaultRuntime, dfs, null, accounts[0]),
     rightsAndRoles: defaultRuntime.rightsAndRoles,
     sharing: await TestUtils.getSharing(web3, dfs),
     verifications: await TestUtils.getVerifications(web3, dfs),
@@ -147,12 +147,12 @@ describe('DigitalTwin', function test() {
       description,
     };
     // create factory for test
-    const factory = await runtime.executor.createContract('DigitalTwinFactory', [], { from: accounts[0], gas: 3e6 });
+    const factory = await runtime.executor.createContract('DigitalTwinFactory', [], { from: runtime.activeIdentity, gas: 3e6 });
     defaultConfig.factoryAddress = factory.options.address;
   });
 
   describe('working with twins', () => {
-    it('can can create new contracts', async () => {
+    it.only('can can create new contracts', async () => {
       const twin = await DigitalTwin.create(twinOptions, defaultConfig);
       expect(await twin.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
     });
