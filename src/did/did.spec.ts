@@ -233,9 +233,10 @@ describe('DID Resolver', function test() {
       savedDidDocument = await runtimes[0].did.getDidDocument(accounts0Did);
       const getResolver = () => ({
         async resolve() {
-          return savedDidDocument;
+          return document as any;
         },
       });
+
       const verifiedSignature = await didJWT.verifyJWT(
         savedDidDocument.proof.jws,
         { resolver: getResolver() },
@@ -282,7 +283,7 @@ describe('DID Resolver', function test() {
       );
       const controllerDidDocument = await runtimes[0].did.getDidDocument(accounts0Did);
       const document = await runtimes[0].did.getDidDocumentTemplate(
-        twinDid, controllerDid, controllerDidDocument.authentication[0],
+        twinDid, controllerDid, [controllerDidDocument.authentication[0]],
       );
       const promise = runtimes[0].did.setDidDocument(twinDid, document);
       await expect(promise).not.to.be.rejected;
@@ -310,7 +311,7 @@ describe('DID Resolver', function test() {
       );
       const controllerDidDocument = await runtimes[0].did.getDidDocument(accounts0Did);
       const document = await runtimes[0].did.getDidDocumentTemplate(
-        twinDid, controllerDid, controllerDidDocument.authentication[0],
+        twinDid, controllerDid, [controllerDidDocument.authentication[0]],
       );
       await runtimes[0].did.setDidDocument(twinDid, document);
       const retrieved = await runtimes[0].did.getDidDocument(twinDid);
@@ -343,7 +344,7 @@ describe('DID Resolver', function test() {
       );
       const controllerDidDocument = await runtimes[0].did.getDidDocument(accounts0Did);
       const document = await runtimes[0].did.getDidDocumentTemplate(
-        twinDid, controllerDid, controllerDidDocument.authentication[0],
+        twinDid, controllerDid, [controllerDidDocument.authentication[0]],
       );
       await runtimes[0].did.setDidDocument(twinDid, document);
 
@@ -379,7 +380,7 @@ describe('DID Resolver', function test() {
       );
       const controllerDidDocument = await runtimes[0].did.getDidDocument(accounts0Did);
       const document = await runtimes[0].did.getDidDocumentTemplate(
-        twinDid, controllerDid, controllerDidDocument.authentication[0],
+        twinDid, controllerDid, [controllerDidDocument.authentication[0]],
       );
       const runtime1 = runtimes[1];
       const promise = runtime1.did.setDidDocument(twinDid, document);
@@ -406,15 +407,13 @@ describe('DID Resolver', function test() {
       const did = await runtimes[0].did.convertIdentityToDid(twinIdentity);
       const controllerDid = await runtimes[0].did.convertIdentityToDid(runtimes[0].activeIdentity);
       const controllerDidDoc = await runtimes[0].did.getDidDocument(controllerDid);
-      const authKeyIds = controllerDidDoc.publicKey.map((key) => key.id).join(',');
+      const authKeyIds = controllerDidDoc.publicKey.map((key) => key.id);
 
       const expectedDefaultDid = {
         '@context': 'https://w3id.org/did/v1',
         id: did,
         controller: controllerDidDoc.id,
-        authentication: [
-          authKeyIds,
-        ],
+        authentication: authKeyIds,
       };
       const defaultDidDoc = await runtimes[0].did.getDidDocument(did);
       await expect(defaultDidDoc).to.deep.eq(expectedDefaultDid);
@@ -537,7 +536,7 @@ describe('DID Resolver', function test() {
       );
       const controllerDidDocument = await runtimes[0].did.getDidDocument(accounts0Did);
       const document = await runtimes[0].did.getDidDocumentTemplate(
-        did, controllerDid, controllerDidDocument.authentication[0],
+        did, controllerDid, [controllerDidDocument.authentication[0]],
       );
       const promise = runtimes[0].did.setDidDocument(did, document);
 
@@ -556,7 +555,7 @@ describe('DID Resolver', function test() {
       );
       const controllerDidDocument = await runtimes[0].did.getDidDocument(accounts0Did);
       const document = await runtimes[0].did.getDidDocumentTemplate(
-        did, controllerDid, controllerDidDocument.authentication[0],
+        did, controllerDid, [controllerDidDocument.authentication[0]],
       );
       const promise = runtimes[0].did.setDidDocument(did, document);
 
@@ -575,7 +574,7 @@ describe('DID Resolver', function test() {
       );
       const controllerDidDocument = await runtimes[0].did.getDidDocument(accounts0Did);
       const documentTemplate = await runtimes[0].did.getDidDocumentTemplate(
-        did, controllerDid, controllerDidDocument.authentication[0],
+        did, controllerDid, [controllerDidDocument.authentication[0]],
       );
       await runtimes[0].did.setDidDocument(did, documentTemplate);
       const actualDocument = await runtimes[0].did.getDidDocument(did);
@@ -598,15 +597,13 @@ describe('DID Resolver', function test() {
       const controllerDid = await runtimes[0].did.convertIdentityToDid(ownerIdentity);
       const controllerDidDoc = await runtimes[0].did.getDidDocument(controllerDid);
       const did = await runtimes[0].did.convertIdentityToDid(aliasIdentity);
-      const authKeyIds = controllerDidDoc.publicKey.map((key) => key.id).join(',');
+      const authKeyIds = controllerDidDoc.publicKey.map((key) => key.id);
 
       const expectedDefaultDid = {
         '@context': 'https://w3id.org/did/v1',
         id: did,
         controller: controllerDidDoc.id,
-        authentication: [
-          authKeyIds,
-        ],
+        authentication: authKeyIds,
       };
 
       const aliasIdentityDid = await runtimes[0].did.getDidDocument(did);

@@ -1,13 +1,25 @@
 # api-blockchain-core
 
 ## Next Version
+### Features
+- A DID document's `@context` and `controller` properties can now also be arrays
 
+### Fixes
+- Fixed bug where a new DID document proof would incorporate the old proof and thus would make the document increasingly larger
+- Fixed bug for default DID documents that had a checksum case `ethereumAddress` property which made the proof validating mechanism fail
+
+### Deprecations
+
+
+## Version 2.18.0
 ### Features
 - add methods `deactivateDidDocument` and `didIsDeactivated` to check and handle DID deactivation status
 - improve performance of `shareProperties`, `unshareProperties`, `setContainerShareConfigs` and related operations in `Container`
 - add methods `deactivateDidDocument` and `didIsDeactivated` to check and handle DID deactivation status
 - added additional properties `updated`, `created`, and `proof` to DID documents
 - added proof validation to `getDidDocument` (only for documents that actually contain a proof)
+- export `config` and `runtimeConfig` by `createDefaultRuntime`
+- introduced interfaces for did documents `getDidDocument`, `setDidDocument`, and `setDidDocumentOffline`
 
 ### Fixes
 - fix `credentialStatus.id` uses short hand path for resolver links
@@ -20,9 +32,7 @@
 - replaced deprecated property `owner` in DID publicKey fields with `controller`
 - fix pending contract members after unshare
 - update verification keys for onboarding, when `useIdentity` is enabled
-- reset `activeIdentity` within `createOfflineProfile`
-
-### Deprecations
+- reset `activeIdentity` within `createOfflineProfile` when useIdentity is enabled
 
 
 ## Version 2.17.0
