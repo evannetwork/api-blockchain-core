@@ -258,7 +258,7 @@ describe('signer-identity (identity based signer)', function test() {
         expect(contract).to.be.a('Object');
 
         const amountToSend = Math.floor(Math.random() * 1e3);
-        const balanceBefore = new BigNumber(await web3.eth.getBalance(identity0));
+        const balanceBefore = new BigNumber(await web3.eth.getBalance(account0));
         await expect(runtimes[0].executor.executeSend({
           from: identity0,
           to: contract.options.address,
@@ -266,7 +266,7 @@ describe('signer-identity (identity based signer)', function test() {
           value: amountToSend,
         })).to.rejected;
 
-        const balanceAfter = new BigNumber(await web3.eth.getBalance(identity0));
+        const balanceAfter = new BigNumber(await web3.eth.getBalance(account0));
         expect(balanceAfter.eq(balanceBefore)).to.be.true;
       });
 
@@ -332,14 +332,14 @@ describe('signer-identity (identity based signer)', function test() {
       it('should perform fund transfer to contract with a fallback function, e.g. identities',
         async () => {
           const amountToSend = Math.floor(Math.random() * 1e3);
-          const balanceBefore = new BigNumber(await web3.eth.getBalance(identity0));
+          const balanceBefore = new BigNumber(await web3.eth.getBalance(account0));
           await runtimes[0].executor.executeSend({
             from: account0,
             to: identity0,
             gas: 100e3,
             value: amountToSend,
           });
-          const balanceAfter = new BigNumber(await web3.eth.getBalance(identity0));
+          const balanceAfter = new BigNumber(await web3.eth.getBalance(account0));
           const diff = balanceAfter.minus(balanceBefore);
           expect(diff.eq(new BigNumber(amountToSend))).to.be.true;
         });
@@ -353,7 +353,7 @@ describe('signer-identity (identity based signer)', function test() {
           expect(contract).to.be.a('Object');
 
           const amountToSend = Math.floor(Math.random() * 1e3);
-          const balanceBefore = new BigNumber(await web3.eth.getBalance(identity0));
+          const balanceBefore = new BigNumber(await web3.eth.getBalance(account0));
           await expect(runtimes[0].executor.executeSend({
             from: identity0,
             to: contract.options.address,
@@ -361,25 +361,14 @@ describe('signer-identity (identity based signer)', function test() {
             value: amountToSend,
           })).to.be.rejected;
 
-          const balanceAfter = new BigNumber(await web3.eth.getBalance(identity0));
+          const balanceAfter = new BigNumber(await web3.eth.getBalance(account0));
           expect(balanceAfter.eq(balanceBefore)).to.be.true;
         });
-    });
-
-    describe('when signing messages', () => {
-      it('cannot sign messages', async () => {
-        const randomString = Math.floor(Math.random() * 1e12).toString(36);
-        const signPromise = runtimes[0].signer.signMessage(identity0, randomString);
-        await expect(signPromise)
-          .to.be.rejectedWith(
-            'signing messages with identities is only supported for \'underlyingAccount\'',
-          );
-      });
     });
   });
 
   describe('when trying to make transactions with an unrelated accountId', () => {
-    it('cannnot create a new contract', async () => {
+    it('cannot create a new contract', async () => {
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       const promise = runtimes[0].executor.createContract(
         'TestContract', [randomString], { from: account2, gas: 1e6 },
@@ -552,12 +541,12 @@ describe('signer-identity (identity based signer)', function test() {
       expect(decryptedObject).to.deep.eq(sampleData);
     });
 
-    it('should be to store data in an identity', async () => {
+    (useIdentity ? it : it.skip)('should be to store data in an identity', async () => {
       // generate with custom logic, e.g. with the aes cryptor
       const cryptor = cryptoProvider.getCryptorByCryptoAlgo('aes');
       const encryptKey = await cryptor.generateKey();
 
-      // store key in profile
+      // store key in
       const contactIdentity = await verifications.getIdentityForAccount(account1, true);
       await profile.loadForAccount(profile.treeLabels.addressBook);
       await profile.addContactKey(contactIdentity, 'commKey', encryptKey);
