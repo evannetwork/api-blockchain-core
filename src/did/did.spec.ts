@@ -225,7 +225,7 @@ describe('DID Resolver', function test() {
       await expect(runtimes[0].did.getDidDocument(accounts0Did)).to.be.rejectedWith('Invalid proof');
     });
 
-    it.only('does not sign the proof of a signed document', async () => {
+    it('does not sign the proof of a signed document', async () => {
       const document = await runtimes[0].did.getDidDocumentTemplate();
       await runtimes[0].did.setDidDocument(accounts0Did, document);
       let savedDidDocument = await runtimes[0].did.getDidDocument(accounts0Did);
