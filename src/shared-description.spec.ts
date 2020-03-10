@@ -34,7 +34,6 @@ import { configTestcore as config } from './config-testcore';
 import { CryptoProvider } from './encryption/crypto-provider';
 import { DataContract } from './contracts/data-contract/data-contract';
 import { Description } from './shared-description';
-import { Sharing } from './contracts/sharing';
 import { TestUtils } from './test/test-utils';
 import { Runtime } from './runtime';
 

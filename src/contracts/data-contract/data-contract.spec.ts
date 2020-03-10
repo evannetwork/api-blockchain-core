@@ -114,7 +114,7 @@ describe('DataContract', function test() {
         });
         it('does not allow the member to add and get entries', async () => {
           const contract = await createContract(storeInDfs);
-          const promise = dataContract.setEntry(
+          const promise = runtimes[1].dataContract.setEntry(
             contract,
             'entry_settable_by_owner',
             sampleValues[0],
@@ -274,7 +274,7 @@ describe('DataContract', function test() {
         });
         it('allows the member to add and get entries', async () => {
           const contract = await createContract(storeInDfs);
-          await dataContract.setEntry(
+          await runtimes[1].dataContract.setEntry(
             contract,
             'entry_settable_by_member',
             sampleValues[0],
@@ -282,7 +282,7 @@ describe('DataContract', function test() {
             storeInDfs,
             encryptHashes,
           );
-          const retrieved = await dataContract.getEntry(
+          const retrieved = await runtimes[1].dataContract.getEntry(
             contract, 'entry_settable_by_member', identity1, storeInDfs, encryptHashes,
           );
           expect(retrieved).to.eq(sampleValues[0]);
@@ -436,7 +436,7 @@ describe('DataContract', function test() {
         });
         it('does allow the member to add entries', async () => {
           const contract = await createContract(storeInDfs);
-          await dataContract.addListEntries(
+          await runtimes[1].dataContract.addListEntries(
             contract,
             'list_settable_by_member',
             sampleValues,
@@ -863,7 +863,7 @@ describe('DataContract', function test() {
         });
         it('allows the member to add and get entries', async () => {
           const contract = await createContract(storeInDfs);
-          await dataContract.setMappingValue(
+          await runtimes[1].dataContract.setMappingValue(
             contract,
             'mapping_settable_by_member',
             sampleMappingKeys[0],
@@ -872,7 +872,7 @@ describe('DataContract', function test() {
             storeInDfs,
             encryptHashes,
           );
-          await dataContract.setMappingValue(
+          await runtimes[1].dataContract.setMappingValue(
             contract,
             'mapping_settable_by_member',
             sampleMappingKeys[1],
@@ -881,7 +881,7 @@ describe('DataContract', function test() {
             storeInDfs,
             encryptHashes,
           );
-          await dataContract.setMappingValue(
+          await runtimes[1].dataContract.setMappingValue(
             contract,
             'mapping_settable_by_member',
             sampleMappingKeys[2],
@@ -890,7 +890,7 @@ describe('DataContract', function test() {
             storeInDfs,
             encryptHashes,
           );
-          expect(await dataContract.getMappingValue(
+          expect(await runtimes[1].dataContract.getMappingValue(
             contract,
             'mapping_settable_by_member',
             sampleMappingKeys[0],
@@ -898,7 +898,7 @@ describe('DataContract', function test() {
             storeInDfs,
             encryptHashes,
           )).to.eq(sampleValues[0]);
-          expect(await dataContract.getMappingValue(
+          expect(await runtimes[1].dataContract.getMappingValue(
             contract,
             'mapping_settable_by_member',
             sampleMappingKeys[1],
@@ -906,7 +906,7 @@ describe('DataContract', function test() {
             storeInDfs,
             encryptHashes,
           )).to.eq(sampleValues[1]);
-          expect(await dataContract.getMappingValue(
+          expect(await runtimes[1].dataContract.getMappingValue(
             contract,
             'mapping_settable_by_member',
             sampleMappingKeys[2],
@@ -977,7 +977,7 @@ describe('DataContract', function test() {
       await TestUtils.nextBlock(runtimes[0].executor, identity0);
       dataContract.clearSharingCache();
 
-      await expect(dataContract.setEntry(
+      await expect(runtimes[1].dataContract.setEntry(
         contract,
         'entry_settable_by_member',
         sampleValues[0],

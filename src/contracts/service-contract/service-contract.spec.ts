@@ -205,6 +205,7 @@ describe('ServiceContract', function test() {
       config.nameResolver.domains.businessCenter,
     );
     sharing = runtimes[0].sharing;
+    web3 = runtimes[0].web3;
 
     const businessCenterAddress = await runtimes[0].nameResolver.getAddress(businessCenterDomain);
     const businessCenter = await runtimes[0].contractLoader.loadContract(
@@ -212,7 +213,7 @@ describe('ServiceContract', function test() {
       businessCenterAddress,
     );
     if (!await runtimes[0].executor.executeContractCall(
-      businessCenter, 'isMember', identity0, { from: identity0 },
+      businessCenter, 'isMember', identity0,
     )
     ) {
       await runtimes[0].executor.executeContractTransaction(
@@ -220,7 +221,7 @@ describe('ServiceContract', function test() {
       );
     }
     if (!await runtimes[1].executor.executeContractCall(
-      businessCenter, 'isMember', identity1, { from: identity1 },
+      businessCenter, 'isMember', identity1,
     )
     ) {
       await runtimes[1].executor.executeContractTransaction(
@@ -228,7 +229,7 @@ describe('ServiceContract', function test() {
       );
     }
     if (!await runtimes[2].executor.executeContractCall(
-      businessCenter, 'isMember', identity2, { from: identity2 },
+      businessCenter, 'isMember', identity2,
     )
     ) {
       await runtimes[2].executor.executeContractTransaction(

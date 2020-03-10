@@ -223,7 +223,7 @@ describe('DigitalTwin', function test() {
       expect(newDesc.dbcpVersion).to.be.eq(2);
     });
 
-    it('automatically creates a valid did document upon twin creation', async () => {
+    (runtime.did ? it : it.skip)('automatically creates a valid did document upon twin creation', async () => {
       const twin = await DigitalTwin.create(twinOptions, defaultConfig);
       const twinIdentity = (await twin.getDescription()).identity;
       const did = await runtime.did.convertIdentityToDid(twinIdentity);
