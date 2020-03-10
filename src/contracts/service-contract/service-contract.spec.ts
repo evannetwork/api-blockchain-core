@@ -20,12 +20,14 @@
 import 'mocha';
 import { expect, use } from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
-import { accounts, useIdentity } from '../../test/accounts';
+import { accounts, useIdentity, identities } from '../../test/accounts';
 import { Ipfs } from '../../dfs/ipfs';
 import { ServiceContract } from './service-contract';
 import { configTestcore as config } from '../../config-testcore';
 import { TestUtils } from '../../test/test-utils';
 import { Runtime } from '../../runtime';
+
+const [identity0, identity1, identity2] = identities;
 
 use(chaiAsPromised);
 
@@ -38,9 +40,6 @@ describe('ServiceContract', function test() {
   let businessCenterDomain;
   let dfs: Ipfs;
   let runtimes: Runtime[];
-  let identity0: string;
-  let identity1: string;
-  let identity2: string;
   let sharing;
   let web3;
   const sampleService1 = {
@@ -185,9 +184,6 @@ describe('ServiceContract', function test() {
       accounts.slice(0, 3).map((account) => TestUtils.getRuntime(account, null, { useIdentity })),
     );
     dfs = runtimes[0].dfs as Ipfs;
-    identity0 = runtimes[0].activeIdentity;
-    identity1 = runtimes[1].activeIdentity;
-    identity2 = runtimes[2].activeIdentity;
     sc0 = new ServiceContract({
       loader: runtimes[0].contractLoader,
       ...(runtimes[0] as any),
@@ -335,7 +331,7 @@ describe('ServiceContract', function test() {
     for (const currentSample of sampleCalls) {
       await sc0.sendCall(contract, identity0, currentSample);
     }
-    await sc0.sendCall(contract, identity1, sampleCalls[0]);
+    await sc1.sendCall(contract, identity1, sampleCalls[0]);
     expect(await sc0.getCallOwner(contract, 0)).to.deep.eq(identity0);
     expect(await sc0.getCallOwner(contract, 1)).to.deep.eq(identity0);
     expect(await sc0.getCallOwner(contract, 2)).to.deep.eq(identity0);
@@ -513,13 +509,13 @@ describe('ServiceContract', function test() {
     // retrieve answer with first account
     const answer0 = await sc0.getAnswer(contract, identity0, callId, answerId);
     expect(answer0.data).to.deep.eq(sampleAnswer);
-    const answers0 = await sc0.getAnswers(contract, identity2, callId);
+    const answers0 = await sc0.getAnswers(contract, identity0, callId);
     expect(answers0[answerId].data).to.deep.eq(sampleAnswer);
 
     // retrieve answer with random account
-    const answer1 = await sc1.getAnswer(contract, identity2, callId, answerId);
+    const answer1 = await sc2.getAnswer(contract, identity2, callId, answerId);
     expect(answer1.data).to.deep.eq(null);
-    const answers1 = await sc1.getAnswers(contract, identity2, callId);
+    const answers1 = await sc2.getAnswers(contract, identity2, callId);
     expect(answers1[answerId].data).to.deep.eq(null);
   });
 
