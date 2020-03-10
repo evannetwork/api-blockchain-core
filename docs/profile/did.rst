@@ -86,7 +86,7 @@ deactivateDidDocument
 
 .. code-block:: typescript
 
-  did.deactivateDidDocument(did);
+  did.deactivateDidDocument(didToDeactivate);
 
 Unlinks the current DID document from the given DID
 
@@ -123,7 +123,7 @@ didIsDeactivated
 
 .. code-block:: typescript
 
-  did.didIsDeactivated(did);
+  did.didIsDeactivated(didToCheck);
 
 Gets the deactivation status of a DID.
 
@@ -162,7 +162,7 @@ getDidDocument
 
 .. code-block:: typescript
 
-  did.getDidDocument(did);
+  did.getDidDocument(myDid);
 
 Get DID document for given DID. If the DID has a proof property, `getDidDocument` will attempt to validate the proof
 and throw an error if the proof is invalid.
@@ -177,7 +177,7 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``any``: a DID document that MAY resemble `DidDocumentTemplate` format
+``Promise`` returns ``DidDocument``: A DID document. For deactivated DIDs it returns a default DID document containing no authentication material.
 
 -------
 Example
@@ -201,7 +201,7 @@ getService
 
 .. code-block:: typescript
 
-  did.getService(did);
+  did.getService(myDid);
 
 Get the services from a DID document.
 
@@ -215,7 +215,7 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``DidServiceEntry[] | DidServiceEntry``: Array of services, or a single service entry object.
+``Promise`` returns ``DidServiceEntry[]``: Array of services.
 
 -------
 Example
@@ -227,11 +227,11 @@ Example
   const identity = await runtime.verifications.getIdentityForAccount(account, true);
   const did = await runtime.did.convertIdentityToDid(identity);
   await runtime.did.setDidDocument(did, document);
-  const service = [{
+  const service = {
     id: `${did}#randomService`,
     type: `randomService-${random}`,
     serviceEndpoint: `https://openid.example.com/${random}`,
-  }];
+  };
   await runtime.did.setService(did, service);
   const retrieved = await runtime.did.getService(did);
 
@@ -244,7 +244,7 @@ setDidDocument
 
 .. code-block:: typescript
 
-  did.setDidDocument(did, document);
+  did.setDidDocument(myDid, document);
 
 Store given DID document for given DID.
 If the document misses the property `created`, it will automatically be appended.
@@ -256,7 +256,7 @@ Parameters
 ----------
 
 #. ``did`` - ``string``: DID to store DID document for
-#. ``document`` - ``any``: DID document to store, ``getDidDocumentTemplate`` can be used as a starting point for DID documents
+#. ``document`` - ``DidDocument``: DID document to store, ``getDidDocumentTemplate`` can be used as a starting point for DID documents
 
 -------
 Returns
@@ -284,9 +284,9 @@ setService
 
 .. code-block:: typescript
 
-  did.setService(did, service);
+  did.setService(myDid, service);
 
-Sets service in DID document.
+Sets service in DID document. Overrides old services, so make sure to include current service if you only want to add a service.
 
 ----------
 Parameters
@@ -311,11 +311,11 @@ Example
   const identity = await runtime.verifications.getIdentityForAccount(account, true);
   const did = await runtime.did.convertIdentityToDid(identity);
   await runtime.did.setDidDocument(did, document);
-  const service = [{
+  const service = {
     id: `${did}#randomService`,
     type: `randomService-${random}`,
     serviceEndpoint: `https://openid.example.com/${random}`,
-  }];
+  };
   await runtime.did.setService(did, service);
 
 
@@ -332,7 +332,7 @@ convertDidToIdentity
 
 .. code-block:: typescript
 
-  did.convertDidToIdentity(did);
+  did.convertDidToIdentity(didToConvert);
 
 Converts given DID to a evan.network identity.
 
@@ -371,7 +371,7 @@ convertIdentityToDid
 
 .. code-block:: typescript
 
-  did.convertIdentityToDid(identity);
+  did.convertIdentityToDid(identityToConvert);
 
 Converts given evan.network identity hash to DID.
 
@@ -409,7 +409,7 @@ getDidDocumentTemplate
 
 .. code-block:: typescript
 
-  did.getDidDocumentTemplate([]);
+  did.getDidDocumentTemplate();
 
 Gets a DID document for currently configured account/identity pair. Notice, that this document may a
 complete DID document for currently configured active identity, a part of it or not matching it at

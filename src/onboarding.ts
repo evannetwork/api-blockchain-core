@@ -25,6 +25,7 @@ import {
   SignerInternal,
 } from '@evan.network/dbcp';
 
+import { nullAddress } from './common/utils';
 import { createDefaultRuntime, Runtime } from './runtime';
 import { Mail, Mailbox } from './mailbox';
 import { Profile } from './profile/profile';
@@ -364,9 +365,10 @@ export class Onboarding extends Logger {
     recaptchaToken: string,
     network = 'testcore',
   ) {
+    // ensure to set activeIdentity to 0x0..., when use identity is enabled
     const creationRuntime = {
       ...runtime,
-      activeIdentity: '0x0000000000000000000000000000000000000000',
+      activeIdentity: runtime.runtimeConfig.useIdentity ? nullAddress : runtime.activeIdentity,
     };
     // check for correct profile data
     if (!profileData || !profileData.accountDetails || !profileData.accountDetails.accountName) {

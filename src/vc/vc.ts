@@ -511,10 +511,6 @@ export class Vc extends Logger {
    *                   the active identity is found.
    */
   private async getPublicKeyUriFromDid(issuerDid: string): Promise<string> {
-    const signaturePublicKey = (await this.options.signerIdentity.getPublicKey(
-      this.options.signerIdentity.underlyingAccount,
-    )).toLocaleLowerCase();
-    const account = this.options.signerIdentity.underlyingAccount.toLocaleLowerCase();
     const doc = await this.options.did.getDidDocument(issuerDid);
 
     if (!(doc.authentication || doc.publicKey || doc.publicKey.length === 0)) {
@@ -522,23 +518,24 @@ export class Vc extends Logger {
         + 'does not provide authentication material. Cannot sign VC.');
     }
 
-    const key = doc.publicKey.filter(
-      (entry) => {
-        if (entry.ethereumAddress) {
-          return entry.ethereumAddress.toLocaleLowerCase() === account;
-        }
-        if (entry.publicKeyHex) {
-          return entry.publicKeyHex.toLocaleLowerCase() === signaturePublicKey;
-        }
-        return false;
-      },
-    )[0];
+    let keyId;
+    const signaturePublicKey = (await this.options.signerIdentity.getPublicKey(
+      this.options.signerIdentity.underlyingAccount,
+    )).toLocaleLowerCase();
+    const account = this.options.signerIdentity.underlyingAccount.toLocaleLowerCase();
+    for (const entry of doc.publicKey) {
+      if (('ethereumAddress' in entry && entry.ethereumAddress.toLocaleLowerCase() === account)
+      || ('publicKeyHex' in entry && entry.publicKeyHex.toLocaleLowerCase() === signaturePublicKey)) {
+        keyId = entry.id;
+        break;
+      }
+    }
 
-    if (!key) {
+    if (!keyId) {
       throw Error('The signature key of the active account is not associated to its DID document. Cannot sign VC.');
     }
 
-    return key.id;
+    return keyId;
   }
 
   /**

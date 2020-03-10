@@ -1,13 +1,22 @@
 # api-blockchain-core
 
 ## Next Version
+### Features
 
+### Fixes
+
+### Deprecations
+
+
+## Version 2.18.0
 ### Features
 - add methods `deactivateDidDocument` and `didIsDeactivated` to check and handle DID deactivation status
 - improve performance of `shareProperties`, `unshareProperties`, `setContainerShareConfigs` and related operations in `Container`
 - add methods `deactivateDidDocument` and `didIsDeactivated` to check and handle DID deactivation status
 - added additional properties `updated`, `created`, and `proof` to DID documents
 - added proof validation to `getDidDocument` (only for documents that actually contain a proof)
+- export `config` and `runtimeConfig` by `createDefaultRuntime`
+- introduced interfaces for did documents `getDidDocument`, `setDidDocument`, and `setDidDocumentOffline`
 
 ### Fixes
 - fix `credentialStatus.id` uses short hand path for resolver links
@@ -20,9 +29,7 @@
 - replaced deprecated property `owner` in DID publicKey fields with `controller`
 - fix pending contract members after unshare
 - update verification keys for onboarding, when `useIdentity` is enabled
-- reset `activeIdentity` within `createOfflineProfile`
-
-### Deprecations
+- reset `activeIdentity` within `createOfflineProfile` when useIdentity is enabled
 
 
 ## Version 2.17.0
