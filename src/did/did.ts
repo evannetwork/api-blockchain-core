@@ -53,9 +53,9 @@ export interface DidConfig {
  * template for a new DID document, can be used as a starting point for building own documents
  */
 export interface DidDocumentTemplate {
-  '@context': string;
+  '@context': string | string[];
   id: string;
-  controller?: string;
+  controller?: string | string[];
   authentication: {
     type: string;
     publicKey: string;
@@ -434,6 +434,8 @@ export class Did extends Logger {
     const signer = didJWT.SimpleSigner(
       await this.options.accountStore.getPrivateKey(this.options.signerIdentity.underlyingAccount),
     );
+    const documentToSIgn = didDocument;
+    delete documentToSIgn.proof;
     const jwt = await didJWT.createJWT(
       {
         didDocument,
