@@ -23,7 +23,7 @@ import * as chaiAsPromised from 'chai-as-promised';
 
 import { createDefaultRuntime } from './runtime';
 import { TestUtils } from './test/test-utils';
-import { accountMap, accounts } from './test/accounts';
+import { accountMap, accounts, useIdentity } from './test/accounts';
 
 use(chaiAsPromised);
 
@@ -43,6 +43,7 @@ describe('Runtime', function test() {
       keyConfig: {
         [web3.utils.soliditySha3(accounts[1])]: '0030c5e7394585400b1f00d1267b27c3a80080f9000000000000000000000012',
       },
+      useIdentity,
     };
   });
 
@@ -52,11 +53,12 @@ describe('Runtime', function test() {
   });
 
   it('should create a new runtime and parse accountid and password in keyConfig', async () => {
+    const expectedKeyNum = useIdentity ? 5 : 3;
     const tmpRuntimeConfig = runtimeConfig;
     tmpRuntimeConfig.keyConfig[accounts[0]] = 'Test1234';
     const runtime = await createDefaultRuntime(web3, dfs, runtimeConfig);
     expect(runtime).to.be.ok;
-    expect(Object.keys(runtime.keyProvider.keys).length).to.eq(3);
+    expect(Object.keys(runtime.keyProvider.keys).length).to.eq(expectedKeyNum);
   });
 
   it('should create a new and valid runtime with a mnemonic and a password', async () => {
@@ -69,13 +71,14 @@ describe('Runtime', function test() {
   });
 
   it('should create a new and valid runtime with a mnemonic and a password and merge with given accounts', async () => {
+    const expectedKeyNum = useIdentity ? 7 : 5;
     const tmpRuntimeConfig = runtimeConfig;
     tmpRuntimeConfig.keyConfig[accounts[0]] = 'Test1234';
     tmpRuntimeConfig.mnemonic = 'annual lyrics orbit slight object space jeans ethics broccoli umbrella entry couch';
     tmpRuntimeConfig.password = 'Test1234';
     const runtime = await createDefaultRuntime(web3, dfs, tmpRuntimeConfig);
     expect(runtime).to.be.ok;
-    expect(Object.keys(runtime.keyProvider.keys).length).to.eq(5);
+    expect(Object.keys(runtime.keyProvider.keys).length).to.eq(expectedKeyNum);
   });
 
   it('should NOT create a new and valid runtime with only passing mnemonic and empty account map', async () => {

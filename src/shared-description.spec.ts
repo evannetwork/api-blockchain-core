@@ -28,7 +28,7 @@ import {
   NameResolver,
 } from '@evan.network/dbcp';
 
-import { accounts } from './test/accounts';
+import { accounts, useIdentity } from './test/accounts';
 import { Aes } from './encryption/aes';
 import { configTestcore as config } from './config-testcore';
 import { CryptoProvider } from './encryption/crypto-provider';
@@ -36,6 +36,7 @@ import { DataContract } from './contracts/data-contract/data-contract';
 import { Description } from './shared-description';
 import { Sharing } from './contracts/sharing';
 import { TestUtils } from './test/test-utils';
+import { Runtime } from './runtime';
 
 
 use(chaiAsPromised);
@@ -66,57 +67,43 @@ const sampleDescription = {
   },
 };
 const sampleKey = '346c22768f84f3050f5c94cec98349b3c5cbfa0b7315304e13647a49181fd1ef';
-let description: Description;
-let testAddressFoo;
-let executor: Executor;
-let loader: ContractLoader;
 let businessCenterDomain;
-let web3;
-let cryptoProvider: CryptoProvider;
-let sharing: Sharing;
-let dfs;
 let dc: DataContract;
+let identity0: string;
+let identity1: string;
+let runtimes: Runtime[];
+let contractLoader: ContractLoader;
+let description: Description;
+let executor: Executor;
 let nameResolver: NameResolver;
+let testAddressFoo: string;
 
 describe('Description handler', function test() {
   this.timeout(300000);
 
   before(async () => {
-    web3 = TestUtils.getWeb3();
-    description = await TestUtils.getDescription(web3);
-    nameResolver = await TestUtils.getNameResolver(web3);
-    executor = await TestUtils.getExecutor(web3);
-    executor.eventHub = await TestUtils.getEventHub(web3);
-    loader = await TestUtils.getContractLoader(web3);
-    cryptoProvider = await TestUtils.getCryptoProvider();
-    dfs = await TestUtils.getIpfs();
-    sharing = new Sharing({
-      contractLoader: await TestUtils.getContractLoader(web3),
-      cryptoProvider,
+    runtimes = await Promise.all(
+      accounts.slice(0, 2).map(
+        (account) => TestUtils.getRuntime(account, null, { useIdentity }),
+      ),
+    );
+    [{
+      activeIdentity: identity0,
       description,
-      executor: await TestUtils.getExecutor(web3),
-      dfs,
-      keyProvider: TestUtils.getKeyProvider(),
-      nameResolver: await TestUtils.getNameResolver(web3),
-      defaultCryptoAlgo: 'aes',
-    });
-    description.sharing = sharing;
-    dc = new DataContract({
-      cryptoProvider,
-      dfs,
       executor,
-      loader,
-      log: TestUtils.getLogger(),
       nameResolver,
-      sharing,
-      web3: TestUtils.getWeb3(),
-      description,
-    });
-    businessCenterDomain = nameResolver.getDomainName(config.nameResolver.domains.businessCenter);
+      contractLoader,
+      dataContract: dc,
+    }, {
+      activeIdentity: identity1,
+    }] = runtimes;
+    businessCenterDomain = nameResolver.getDomainName(
+      config.nameResolver.domains.businessCenter,
+    );
     const businessCenterAddress = await nameResolver.getAddress(businessCenterDomain);
-    const businessCenter = await loader.loadContract('BusinessCenter', businessCenterAddress);
-    if (!await executor.executeContractCall(businessCenter, 'isMember', accounts[0], { from: accounts[0] })) {
-      await executor.executeContractTransaction(businessCenter, 'join', { from: accounts[0], autoGas: 1.1 });
+    const businessCenter = await contractLoader.loadContract('BusinessCenter', businessCenterAddress);
+    if (!await executor.executeContractCall(businessCenter, 'isMember', identity0, { from: identity0 })) {
+      await executor.executeContractTransaction(businessCenter, 'join', { from: identity0, autoGas: 1.1 });
     }
 
     testAddressFoo = `${testAddressPrefix}.${nameResolver.getDomainName(config.nameResolver.domains.root)}`;
@@ -124,15 +111,15 @@ describe('Description handler', function test() {
 
   describe('when validing used description', () => {
     it('should allow valid description', async () => {
-      const contract = await executor.createContract('Described', [], { from: accounts[0], gas: 1000000 });
+      const contract = await executor.createContract('Described', [], { from: identity0, gas: 1000000 });
       const descriptionEnvelope = { public: { ...sampleDescription } };
       await description.setDescriptionToContract(
-        contract.options.address, descriptionEnvelope, accounts[0],
+        contract.options.address, descriptionEnvelope, identity0,
       );
     });
 
     it('should reject invalid description', async () => {
-      const contract = await executor.createContract('Described', [], { from: accounts[0], gas: 1000000 });
+      const contract = await executor.createContract('Described', [], { from: identity0, gas: 1000000 });
       let descriptionEnvelope;
       let promise;
 
@@ -140,7 +127,7 @@ describe('Description handler', function test() {
       descriptionEnvelope = { public: { ...sampleDescription } };
       delete descriptionEnvelope.public.version;
       promise = description.setDescriptionToContract(
-        contract.options.address, descriptionEnvelope, accounts[0],
+        contract.options.address, descriptionEnvelope, identity0,
       );
       await expect(promise).to.be.rejected;
 
@@ -148,7 +135,7 @@ describe('Description handler', function test() {
       descriptionEnvelope = { public: { ...sampleDescription } };
       descriptionEnvelope.public.newPropery = 123;
       promise = description.setDescriptionToContract(
-        contract.options.address, descriptionEnvelope, accounts[0],
+        contract.options.address, descriptionEnvelope, identity0,
       );
       await expect(promise).to.be.rejected;
 
@@ -156,7 +143,7 @@ describe('Description handler', function test() {
       descriptionEnvelope = { public: { ...sampleDescription } };
       descriptionEnvelope.public.version = 123;
       promise = description.setDescriptionToContract(
-        contract.options.address, descriptionEnvelope, accounts[0],
+        contract.options.address, descriptionEnvelope, identity0,
       );
       await expect(promise).to.be.rejected;
 
@@ -164,7 +151,7 @@ describe('Description handler', function test() {
       descriptionEnvelope = { public: { ...sampleDescription } };
       descriptionEnvelope.public.dapp = { ...descriptionEnvelope.public.dapp, newProperty: 123 };
       promise = description.setDescriptionToContract(
-        contract.options.address, descriptionEnvelope, accounts[0],
+        contract.options.address, descriptionEnvelope, identity0,
       );
       await expect(promise).to.be.rejected;
     });
@@ -172,8 +159,8 @@ describe('Description handler', function test() {
 
   describe('when working with ENS descriptions', () => {
     it('should be able to set and get unencrypted content for ENS addresses', async () => {
-      await description.setDescriptionToEns(
-        testAddressFoo, { public: sampleDescription }, accounts[1],
+      await runtimes[1].description.setDescriptionToEns(
+        testAddressFoo, { public: sampleDescription }, identity1,
       );
       const content = await description.getDescriptionFromEns(testAddressFoo);
       expect(content).to.deep.eq({ public: sampleDescription });
@@ -183,8 +170,8 @@ describe('Description handler', function test() {
       const sampleDescriptionSpecialCharacters = {
         public: { ...sampleDescription, name: 'Special Characters !"§$%&/()=?ÜÄÖ' },
       };
-      await description.setDescriptionToEns(
-        testAddressFoo, sampleDescriptionSpecialCharacters, accounts[1],
+      await runtimes[1].description.setDescriptionToEns(
+        testAddressFoo, sampleDescriptionSpecialCharacters, identity1,
       );
       const content = await description.getDescriptionFromEns(testAddressFoo);
       expect(content).to.deep.eq(sampleDescriptionSpecialCharacters);
@@ -192,13 +179,13 @@ describe('Description handler', function test() {
 
     it('should be able to set and get encrypted content for ENS addresses', async () => {
       const keyConfig = {};
-      keyConfig[nameResolver.soliditySha3(accounts[1])] = sampleKey;
+      keyConfig[nameResolver.soliditySha3(identity1)] = sampleKey;
       const keyProvider = new KeyProvider({ keys: keyConfig });
       // eslint-disable-next-line no-param-reassign
       (description as any).keyProvider = keyProvider;
       const cryptor = new Aes();
       const cryptoConfig = {};
-      const cryptoInfo = cryptor.getCryptoInfo(nameResolver.soliditySha3(accounts[1]));
+      const cryptoInfo = cryptor.getCryptoInfo(nameResolver.soliditySha3(identity1));
       // eslint-disable-next-line no-param-reassign
       (cryptoConfig as any).aes = cryptor;
       // eslint-disable-next-line no-param-reassign
@@ -210,15 +197,19 @@ describe('Description handler', function test() {
         },
         cryptoInfo,
       };
-      await description.setDescriptionToEns(testAddressFoo, secureDescription, accounts[1]);
-      const content = await description.getDescriptionFromEns(testAddressFoo);
+      await runtimes[1].description.setDescriptionToEns(
+        testAddressFoo,
+        secureDescription,
+        identity1,
+      );
+      const content = await runtimes[1].description.getDescriptionFromEns(testAddressFoo);
       expect(content).to.deep.eq(secureDescription);
     });
   });
 
   describe('when working with ENS descriptions', () => {
     it('should be able to set a description on a created contract', async () => {
-      const contract = await dc.create('testdatacontract', accounts[0], businessCenterDomain);
+      const contract = await dc.create('testdatacontract', identity0, businessCenterDomain);
       const keyConfig = {};
       keyConfig[nameResolver.soliditySha3(contract.options.address)] = sampleKey;
       const keyProvider = new KeyProvider(keyConfig);
@@ -236,11 +227,11 @@ describe('Description handler', function test() {
         },
       };
       await description
-        .setDescriptionToContract(contract.options.address, envelope, accounts[0]);
+        .setDescriptionToContract(contract.options.address, envelope, identity0);
     });
 
     it('should be able to get a description from a created contract', async () => {
-      const contract = await dc.create('testdatacontract', accounts[0], businessCenterDomain);
+      const contract = await dc.create('testdatacontract', identity0, businessCenterDomain);
       const keyConfig = {};
       keyConfig[nameResolver.soliditySha3(contract.options.address)] = sampleKey;
       const keyProvider = new KeyProvider(keyConfig);
@@ -258,9 +249,9 @@ describe('Description handler', function test() {
         },
       };
       await description
-        .setDescriptionToContract(contract.options.address, envelope, accounts[0]);
+        .setDescriptionToContract(contract.options.address, envelope, identity0);
       const contractDescription = await description
-        .getDescriptionFromContract(contract.options.address, accounts[0]);
+        .getDescriptionFromContract(contract.options.address, identity0);
       expect(contractDescription).to.deep.eq(envelope);
     });
   });
