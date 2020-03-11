@@ -17,6 +17,7 @@
   the following URL: https://evan.network/license/
 */
 
+import * as didJWT from 'did-jwt';
 import 'mocha';
 import * as chaiAsPromised from 'chai-as-promised';
 import * as _ from 'lodash';
@@ -221,6 +222,30 @@ describe('DID Resolver', function test() {
 
       // Try to retrieve it
       await expect(runtimes[0].did.getDidDocument(accounts0Did)).to.be.rejectedWith('Invalid proof');
+    });
+
+    it('does not sign the proof of a signed document', async () => {
+      const document = await runtimes[0].did.getDidDocumentTemplate();
+      await runtimes[0].did.setDidDocument(accounts0Did, document);
+      let savedDidDocument = await runtimes[0].did.getDidDocument(accounts0Did);
+      await runtimes[0].did.setDidDocument(accounts0Did, savedDidDocument);
+      savedDidDocument = await runtimes[0].did.getDidDocument(accounts0Did);
+      const getResolver = () => ({
+        async resolve() {
+          return document as any;
+        },
+      });
+
+      const verifiedSignature = await didJWT.verifyJWT(
+        savedDidDocument.proof.jws,
+        { resolver: getResolver() },
+      );
+
+      // fails if signed payload and the DID document differ
+      const payload = {
+        ...verifiedSignature.payload.didDocument,
+      };
+      expect(payload).not.to.have.property('proof');
     });
   });
 

@@ -53,9 +53,9 @@ export interface DidConfig {
  * DID document structure
  */
 export interface DidDocument {
-  '@context': string;
+  '@context': string | string[];
   id: string;
-  controller?: string;
+  controller?: string | string[];
   authentication: string[];
   publicKey?: ({
     id: string;
@@ -424,9 +424,11 @@ export class Did extends Logger {
     const signer = didJWT.SimpleSigner(
       await this.options.accountStore.getPrivateKey(this.options.signerIdentity.underlyingAccount),
     );
+    const documentToSign = _.cloneDeep(didDocument);
+    delete documentToSign.proof;
     const jwt = await didJWT.createJWT(
       {
-        didDocument,
+        didDocument: documentToSign,
       }, {
         alg: JWTProofMapping[proofType],
         issuer: proofIssuer,
@@ -535,8 +537,8 @@ export class Did extends Logger {
         publicKey: [{
           id: `${did}#key-1`,
           type: 'Secp256k1VerificationKey2018',
-          controller: `${did}`,
-          ethereumAddress: `${controllerIdentity}`,
+          controller: did,
+          ethereumAddress: controllerIdentity.toLowerCase(),
         }],
         authentication: [
           `${did}#key-1`,
