@@ -54,6 +54,28 @@ describe('Voting handler', function test() {
   );
   const psleep = (ms) => new Promise((s) => setTimeout(() => s(), ms));
 
+  async function testAndCreateContract() {
+    try {
+      const contr = ownerVotings.createContract(
+        votingOwner,
+        {
+          minimumQuorumForProposals: 2,
+          minutesForDebate: 0,
+          marginOfVotesForMajority: 0,
+        },
+      );
+      votingContract = await contr;
+      ownerVotings.addMember(
+        votingContract,
+        votingOwner,
+        votingMember,
+        { name: 'Member No. 2' },
+      );
+    } catch (e) {
+      throw Error(`Test setup failed. Could not create voting contract. Reason: ${e}`);
+    }
+  }
+
   before(async () => {
     const runtimes = await Promise.all(
       accounts.slice(0, 3).map(
@@ -67,26 +89,8 @@ describe('Voting handler', function test() {
     ownerVotings = runtimes[0].votings;
     memberVotings = runtimes[1].votings;
     nonVotingMemberVotings = runtimes[2].votings;
-  });
 
-  it('can create a new voting contract', async () => {
-    const contr = ownerVotings.createContract(
-      votingOwner,
-      {
-        minimumQuorumForProposals: 2,
-        minutesForDebate: 0,
-        marginOfVotesForMajority: 0,
-      },
-    );
-    await expect(contr).not.to.be.rejected;
-    votingContract = await contr;
-    const addMemberPromise = ownerVotings.addMember(
-      votingContract,
-      votingOwner,
-      votingMember,
-      { name: 'Member No. 2' },
-    );
-    await expect(addMemberPromise).to.not.be.rejected;
+    await testAndCreateContract();
   });
 
   describe('when managing voting members', () => {
@@ -111,24 +115,24 @@ describe('Voting handler', function test() {
       await expect(nonVotingMemberVotings.isMember(
         votingContract,
         nonVotingMember,
-      )).to.be.true.eventually;
+      )).to.be.eventually.true;
       await ownerVotings.removeMember(votingContract, votingOwner, nonVotingMember);
       await expect(nonVotingMemberVotings.isMember(
         votingContract,
         nonVotingMember,
-      )).to.be.false.eventually;
+      )).to.be.eventually.false;
     });
 
     it('can re-add members', async () => {
       await expect(nonVotingMemberVotings.isMember(
         votingContract,
         nonVotingMember,
-      )).to.be.false.eventually;
+      )).to.be.eventually.false;
       await ownerVotings.addMember(votingContract, votingOwner, nonVotingMember, { name: 'Member No. 3' });
       await expect(nonVotingMemberVotings.isMember(
         votingContract,
         nonVotingMember,
-      )).to.be.true.eventually;
+      )).to.be.eventually.true;
       await ownerVotings.removeMember(votingContract, votingOwner, nonVotingMember);
     });
   });

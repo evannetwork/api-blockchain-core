@@ -120,7 +120,7 @@ describe('Onboarding helper', function test() {
     const accountToUse = runtime.underlyingAccount;
     const identity = await runtime.verifications.getIdentityForAccount(accountToUse, true);
     const port = 42069;
-    const pKey = await runtime.accountStore.getPrivateKey(accounts[0]);
+    const pKey = await runtime.accountStore.getPrivateKey(accountToUse);
     const accessToken = 'randomToken';
     const contractId = '0x1234random';
 
@@ -150,7 +150,9 @@ describe('Onboarding helper', function test() {
       app.post('/api/smart-agents/profile/fill', (req, res) => {
         try {
           expect(req.body).to.have.property('accountId').that.equals(accountToUse);
-          expect(req.body).to.have.property('identityId').that.equals(identity);
+          if (useIdentity) {
+            expect(req.body).to.have.property('identityId').that.equals(identity);
+          }
           expect(req.body).to.have.property('accessToken').that.equals(accessToken);
           expect(req.body).to.have.property('profileInfo');
           expect(req.body).to.have.property('contractId').that.equals(contractId);

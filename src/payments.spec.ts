@@ -49,10 +49,7 @@ describe('Payment Channels', function test() {
     }, {
       activeIdentity: identity1, payments: payments1,
     }] = runtimes;
-  });
 
-
-  it('should create a new channel manager', async () => {
     const channelManager = await executor.createContract(
       'RaidenMicroTransferChannels',
       [500, []],
