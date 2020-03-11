@@ -135,7 +135,7 @@ describe('Verifications handler', function test() {
     const oldLength = (await verifications.getVerifications(identity1, '/company')).length;
     await timeout(1000);
     await verifications.setVerification(
-      identity0, identity1, '/company', null, null, null, null, useIdentity,
+      identity0, identity1, '/company', 0, null, null, null, useIdentity,
     );
     await timeout(1000);
     const verificationsForAccount = await verifications.getVerifications(identity1, '/company');
@@ -149,7 +149,7 @@ describe('Verifications handler', function test() {
       const oldLength = (await verifications.getVerifications(identity1, '/company')).length;
       await timeout(1000);
       const verificationId = await verifications.setVerification(
-        identity0, identity1, '/company', null, null, null, null, useIdentity,
+        identity0, identity1, '/company', 0, null, null, null, useIdentity,
       );
       await timeout(1000);
       expect(verificationId).to.be.ok;
@@ -228,7 +228,7 @@ describe('Verifications handler', function test() {
       const oldLength = (await verifications.getVerifications(identity1, '/company')).length;
       await timeout(1000);
       await verifications.setVerification(
-        identity0, identity1, '/company', null, null, null, null, useIdentity,
+        identity0, identity1, '/company', 0, null, null, null, useIdentity,
       );
       await timeout(1000);
       const verificationsForAccount = await verifications.getVerifications(identity1, '/company');
@@ -243,16 +243,16 @@ describe('Verifications handler', function test() {
         identity1, '/company/b-s-s/employee/swo3',
       )).length;
       await verifications.setVerification(
-        identity0, identity0, '/company', null, null, null, null, useIdentity,
+        identity0, identity0, '/company', 0, null, null, null, useIdentity,
       );
       await verifications.setVerification(
-        identity0, identity0, '/company/b-s-s', null, null, null, null, useIdentity,
+        identity0, identity0, '/company/b-s-s', 0, null, null, null, useIdentity,
       );
       await verifications.setVerification(
-        identity0, identity0, '/company/b-s-s/employee', null, null, null, null, useIdentity,
+        identity0, identity0, '/company/b-s-s/employee', 0, null, null, null, useIdentity,
       );
       await verifications.setVerification(
-        identity0, identity1, '/company/b-s-s/employee/swo3', null, null, null, null, useIdentity,
+        identity0, identity1, '/company/b-s-s/employee/swo3', 0, null, null, null, useIdentity,
       );
       const verificationsForAccount = await verifications
         .getVerifications(identity1, '/company/b-s-s/employee/swo3');
@@ -267,16 +267,16 @@ describe('Verifications handler', function test() {
         identity1, '/company/b-s-s/employee/swo4',
       )).length;
       await verifications.setVerification(
-        identity0, identity0, '/company', null, null, null, null, useIdentity,
+        identity0, identity0, '/company', 0, null, null, null, useIdentity,
       );
       await verifications.setVerification(
-        identity0, identity0, '/company/b-s-s', null, null, null, null, useIdentity,
+        identity0, identity0, '/company/b-s-s', 0, null, null, null, useIdentity,
       );
       await verifications.setVerification(
-        identity0, identity0, '/company/b-s-s/employee', null, null, null, null, useIdentity,
+        identity0, identity0, '/company/b-s-s/employee', 0, null, null, null, useIdentity,
       );
       const verificationId = await verifications.setVerification(
-        identity0, identity1, '/company/b-s-s/employee/swo4', null, null, null, null, useIdentity,
+        identity0, identity1, '/company/b-s-s/employee/swo4', 0, null, null, null, useIdentity,
       );
       await runtimes[1].verifications.confirmVerification(identity1, identity1, verificationId);
       const verificationsForAccount = await verifications.getVerifications(
@@ -291,7 +291,7 @@ describe('Verifications handler', function test() {
       const before = Math.floor(Date.now() / 1000);
       await timeout(1000);
       await verifications.setVerification(
-        identity0, identity1, '/company', null, null, null, null, useIdentity,
+        identity0, identity1, '/company', 0, null, null, null, useIdentity,
       );
       await timeout(1000);
       const after = Math.floor(Date.now() / 1000);
@@ -323,17 +323,17 @@ describe('Verifications handler', function test() {
         identity1, '/company/b-s-s/employee/swo6',
       )).length;
       await verifications.setVerification(
-        identity0, identity0, '/company', null, null, null, null, useIdentity,
+        identity0, identity0, '/company', 0, null, null, null, useIdentity,
       );
       await verifications.setVerification(
-        identity0, identity0, '/company/b-s-s', null, null, null, null, useIdentity,
+        identity0, identity0, '/company/b-s-s', 0, null, null, null, useIdentity,
       );
       await verifications.setVerification(
-        identity0, identity0, '/company/b-s-s/employee', null, null, null, null, useIdentity,
+        identity0, identity0, '/company/b-s-s/employee', 0, null, null, null, useIdentity,
       );
       await timeout(1000);
       const verificationId = await verifications.setVerification(
-        identity0, identity1, '/company/b-s-s/employee/swo6', null, null, null, null, useIdentity,
+        identity0, identity1, '/company/b-s-s/employee/swo6', 0, null, null, null, useIdentity,
       );
       await timeout(1000);
       let verificationsForAccount = await verifications.getVerifications(
@@ -352,7 +352,7 @@ describe('Verifications handler', function test() {
     it('can track the creation block', async () => {
       const before = await web3.eth.getBlockNumber();
       await verifications.setVerification(
-        identity0, identity1, '/company', null, null, null, null, useIdentity,
+        identity0, identity1, '/company', 0, null, null, null, useIdentity,
       );
       const after = await web3.eth.getBlockNumber();
       const verificationsForAccount = await verifications.getVerifications(identity1, '/company');
@@ -400,16 +400,16 @@ describe('Verifications handler', function test() {
         identity1, '/company/b-s-s/employee/swo4',
       )).length;
       await verifications.setVerification(
-        identity0, identity0, '/company', null, null, null, null, useIdentity,
+        identity0, identity0, '/company', 0, null, null, null, useIdentity,
       );
       await verifications.setVerification(
-        identity0, identity0, '/company/b-s-s', null, null, null, null, useIdentity,
+        identity0, identity0, '/company/b-s-s', 0, null, null, null, useIdentity,
       );
       await verifications.setVerification(
-        identity0, identity0, '/company/b-s-s/employee', null, null, null, null, useIdentity,
+        identity0, identity0, '/company/b-s-s/employee', 0, null, null, null, useIdentity,
       );
       const verificationId = await verifications.setVerification(
-        identity0, identity1, '/company/b-s-s/employee/swo4', null, null, null, null, useIdentity,
+        identity0, identity1, '/company/b-s-s/employee/swo4', 0, null, null, null, useIdentity,
       );
       await runtimes[1].verifications.rejectVerification(identity1, identity1, verificationId);
       const verificationsForAccount = await verifications.getVerifications(
@@ -425,17 +425,17 @@ describe('Verifications handler', function test() {
         identity1, '/company/b-s-s/employee/swo4',
       )).length;
       await verifications.setVerification(
-        identity0, identity0, '/company', null, null, null, null, useIdentity,
+        identity0, identity0, '/company', 0, null, null, null, useIdentity,
       );
       await verifications.setVerification(
-        identity0, identity0, '/company/b-s-s', null, null, null, null, useIdentity,
+        identity0, identity0, '/company/b-s-s', 0, null, null, null, useIdentity,
       );
       await verifications.setVerification(
-        identity0, identity0, '/company/b-s-s/employee', null, null, null, null, useIdentity,
+        identity0, identity0, '/company/b-s-s/employee', 0, null, null, null, useIdentity,
       );
       await timeout(1000);
       const verificationId = await verifications.setVerification(
-        identity0, identity1, '/company/b-s-s/employee/swo4', null, null, null, null, useIdentity,
+        identity0, identity1, '/company/b-s-s/employee/swo4', 0, null, null, null, useIdentity,
       );
       await timeout(1000);
       await runtimes[1].verifications.rejectVerification(
@@ -457,16 +457,16 @@ describe('Verifications handler', function test() {
         identity1, '/company/b-s-s/employee/swo4',
       )).length;
       await verifications.setVerification(
-        identity0, identity0, '/company', null, null, null, null, useIdentity,
+        identity0, identity0, '/company', 0, null, null, null, useIdentity,
       );
       await verifications.setVerification(
-        identity0, identity0, '/company/b-s-s', null, null, null, null, useIdentity,
+        identity0, identity0, '/company/b-s-s', 0, null, null, null, useIdentity,
       );
       await verifications.setVerification(
-        identity0, identity0, '/company/b-s-s/employee', null, null, null, null, useIdentity,
+        identity0, identity0, '/company/b-s-s/employee', 0, null, null, null, useIdentity,
       );
       const verificationId = await verifications.setVerification(
-        identity0, identity1, '/company/b-s-s/employee/swo4', null, null, null, null, useIdentity,
+        identity0, identity1, '/company/b-s-s/employee/swo4', 0, null, null, null, useIdentity,
       );
       await verifications.rejectVerification(
         identity0, identity1, verificationId, { reason: 'denied' },
@@ -507,16 +507,16 @@ describe('Verifications handler', function test() {
 
     it('can not re accept a rejected verification', async () => {
       await verifications.setVerification(
-        identity0, identity0, '/company', null, null, null, null, useIdentity,
+        identity0, identity0, '/company', 0, null, null, null, useIdentity,
       );
       await verifications.setVerification(
-        identity0, identity0, '/company/b-s-s', null, null, null, null, useIdentity,
+        identity0, identity0, '/company/b-s-s', 0, null, null, null, useIdentity,
       );
       await verifications.setVerification(
-        identity0, identity0, '/company/b-s-s/employee', null, null, null, null, useIdentity,
+        identity0, identity0, '/company/b-s-s/employee', 0, null, null, null, useIdentity,
       );
       const verificationId = await verifications.setVerification(
-        identity0, identity1, '/company/b-s-s/employee/swo4', null, null, null, null, useIdentity,
+        identity0, identity1, '/company/b-s-s/employee/swo4', 0, null, null, null, useIdentity,
       );
       await runtimes[1].verifications.rejectVerification(identity1, identity1, verificationId);
       const reacceptedP = runtimes[1].verifications.confirmVerification(
@@ -537,7 +537,7 @@ describe('Verifications handler', function test() {
         // V2
         // // check missing state
         const promise2 = verifications.getNestedVerificationsV2(randomAccount, topic);
-        await expect(promise2).to.be.rejectedWith(/^asd/);
+        await expect(promise2).to.be.rejectedWith(/^could not get identity for/);
       });
 
       it('non existing verifications include the warning "missing" and status should be -1',
@@ -564,7 +564,7 @@ describe('Verifications handler', function test() {
 
           // check missing state is missing after set
           await verifications.setVerification(
-            identity0, identity0, topic, null, null, null, null, useIdentity,
+            identity0, identity0, topic, 0, null, null, null, useIdentity,
           );
           computed = await verifications.getComputedVerification(identity0, topic);
           await expect(computed.status).to.be.eq(0);
@@ -586,10 +586,10 @@ describe('Verifications handler', function test() {
 
         // check issued case
         await verifications.setVerification(
-          identity0, identity0, parentTopic, null, null, null, null, useIdentity,
+          identity0, identity0, parentTopic, 0, null, null, null, useIdentity,
         );
         await verifications.setVerification(
-          identity0, identity1, topic, null, null, null, null, useIdentity,
+          identity0, identity1, topic, 0, null, null, null, useIdentity,
         );
 
         await new Promise((s) => setTimeout(s, 1000));
@@ -627,7 +627,7 @@ describe('Verifications handler', function test() {
 
         // check issued case
         const verificationId = await verifications.setVerification(
-          identity0, identity1, topic, null, null, null, null, useIdentity,
+          identity0, identity1, topic, 0, null, null, null, useIdentity,
         );
         computed = await verifications.getComputedVerification(identity1, topic);
         await expect(computed.status).to.be.eq(0);
@@ -702,7 +702,7 @@ describe('Verifications handler', function test() {
 
           // check issued case
           await verifications.setVerification(
-            identity0, identity0, topic, null, null, null, null, useIdentity,
+            identity0, identity0, topic, 0, null, null, null, useIdentity,
           );
           const computed = await verifications.getComputedVerification(identity0, topic);
           await expect(computed.status).to.be.eq(0);
@@ -732,7 +732,7 @@ describe('Verifications handler', function test() {
 
           // check issued case
           await verifications.setVerification(
-            identity0, identity1, topic, null, null, null, null, useIdentity,
+            identity0, identity1, topic, 0, null, null, null, useIdentity,
           );
           computed = await verifications.getComputedVerification(identity1, topic);
           await expect(computed.warnings).to.include('parentMissing');
@@ -755,7 +755,7 @@ describe('Verifications handler', function test() {
             .to.include(VerificationsStatusFlagsV2.parentMissing);
 
           await verifications.setVerification(
-            identity0, identity0, topicParent, null, null, null, null, useIdentity,
+            identity0, identity0, topicParent, 0, null, null, null, useIdentity,
           );
           computed = await verifications.getComputedVerification(identity1, topic);
           await expect(computed.warnings).to.not.include('parentMissing');
@@ -776,10 +776,10 @@ describe('Verifications handler', function test() {
 
           // check issued case
           await verifications.setVerification(
-            identity0, identity1, topic, null, null, null, null, useIdentity,
+            identity0, identity1, topic, 0, null, null, null, useIdentity,
           );
           await verifications.setVerification(
-            identity0, identity0, topicParent, null, null, null, null, useIdentity,
+            identity0, identity0, topicParent, 0, null, null, null, useIdentity,
           );
           const computed = await verifications.getComputedVerification(identity1, topic);
           await expect(computed.warnings).to.include('parentUntrusted');
@@ -831,7 +831,7 @@ describe('Verifications handler', function test() {
 
           // check issued case
           await verifications.setVerification(
-            identity0, identity1, topic, null, null, null, null, useIdentity,
+            identity0, identity1, topic, 0, null, null, null, useIdentity,
           );
           const computed = await verifications.getComputedVerification(identity1, topic);
           await expect(computed.warnings).to.include('notEnsRootOwner');
@@ -857,10 +857,10 @@ describe('Verifications handler', function test() {
 
           // issue verifications
           await verifications.setVerification(
-            identity0, identity1, topic, null, null, null, null, useIdentity,
+            identity0, identity1, topic, 0, null, null, null, useIdentity,
           );
           await verifications.setVerification(
-            identity0, identity0, topicParent, null, null, null, null, useIdentity,
+            identity0, identity0, topicParent, 0, null, null, null, useIdentity,
           );
 
           // Check the following case: We want to check verifications,
@@ -916,7 +916,7 @@ describe('Verifications handler', function test() {
           identity0, identity0, parentTopic, 0, null, null, true, useIdentity,
         );
         await verifications.setVerification(
-          identity0, identity1, topic, null, null, null, null, useIdentity,
+          identity0, identity1, topic, 0, null, null, null, useIdentity,
         );
 
         // load parent verifications and computed from child
@@ -1645,7 +1645,7 @@ describe('Verifications handler', function test() {
       expect(JSON.parse(nonce1)).to.be.gte(0);
 
       await verifications.setVerification(
-        identity0, identity1, '/company', null, null, null, null, useIdentity,
+        identity0, identity1, '/company', 0, null, null, null, useIdentity,
       );
 
       const nonce2 = await verifications.getExecutionNonce(identity0);
@@ -1787,14 +1787,14 @@ describe('Verifications handler', function test() {
   describe('when working with verifications and VCs using identities', () => {
     (useIdentity ? it : it.skip)('can create a verification with a Vc', async () => {
       const verification = verifications.setVerificationAndVc(
-        identity0, identity1, '/company', null, null, null, null, useIdentity,
+        identity0, identity1, '/company', 0, null, null, null, useIdentity,
       );
       await expect(verification).to.not.be.rejected;
     });
 
     (useIdentity ? it : it.skip)('can retrieve a Vc for verification', async () => {
       const verification = await verifications.setVerificationAndVc(
-        identity0, identity1, '/company', null, null, null, null, useIdentity,
+        identity0, identity1, '/company', 0, null, null, null, useIdentity,
       );
       await timeout(1000);
       expect(verification.verificationId).to.be.not.undefined;
@@ -1829,7 +1829,7 @@ describe('Verifications handler', function test() {
 
     (useIdentity ? it : it.skip)('can create verification and VC with the same timestamp', async () => {
       const verification = await verifications.setVerificationAndVc(
-        identity0, identity1, '/company', null, null, null, null, useIdentity,
+        identity0, identity1, '/company', 0, null, null, null, useIdentity,
       );
       await timeout(1000);
       const verificationsList = await verifications.getVerifications(identity1, '/company');

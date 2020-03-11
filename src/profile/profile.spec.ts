@@ -154,7 +154,7 @@ describe('Profile helper', function test() {
     );
   });
 
-  (useIdentity ? it.skip : it)('should be able to set and load a profile for a given user from the blockchain shorthand', async () => {
+  it('should be able to set and load a profile for a given user from the blockchain shorthand', async () => {
     // create profile
     await Onboarding.createProfile(runtime, {
       accountDetails: {
@@ -207,7 +207,7 @@ describe('Profile helper', function test() {
     expect(await profile.getDappBookmark('sample2.test')).to.be.ok;
   });
 
-  (useIdentity ? it.skip : it)('should read a public part of a profile (e.g. public key)', async () => {
+  it('should read a public part of a profile (e.g. public key)', async () => {
     const initRuntime = await TestUtils.getRuntime(identities[0]);
     initRuntime.profile = await TestUtils.getProfile(runtime);
     await Onboarding.createProfile(initRuntime, {
@@ -319,7 +319,7 @@ describe('Profile helper', function test() {
       );
     }
 
-    (useIdentity ? it.skip : it)('can transform user profile to company profile', async () => {
+    it('can transform user profile to company profile', async () => {
       const newMnemonic = Onboarding.createMnemonic();
       const initRuntime = await TestUtils.getRuntime(identities[0]);
 
@@ -341,7 +341,7 @@ describe('Profile helper', function test() {
       await expect(accountDetails.accountName).to.be.eq('New company');
     });
 
-    (useIdentity ? it.skip : it)('cannot transform specified profile to another profile type', async () => {
+    it('cannot transform specified profile to another profile type', async () => {
       const newMnemonic = Onboarding.createMnemonic();
       const initRuntime = await TestUtils.getRuntime(identities[0]);
 
@@ -372,7 +372,7 @@ describe('Profile helper', function test() {
       await expect(promise).to.be.rejected;
     });
 
-    (useIdentity ? it.skip : it)('can transform user profile to device profile', async () => {
+    it('can transform user profile to device profile', async () => {
       const newMnemonic = Onboarding.createMnemonic();
       const initRuntime = await TestUtils.getRuntime(identities[0]);
 
@@ -394,7 +394,7 @@ describe('Profile helper', function test() {
       await expect(accountDetails.accountName).to.be.eq('New device');
     });
 
-    (useIdentity ? it.skip : it)('can transform user profile to type that does not exists', async () => {
+    it('can transform user profile to type that does not exists', async () => {
       const newMnemonic = Onboarding.createMnemonic();
       const initRuntime = await TestUtils.getRuntime(identities[0]);
 

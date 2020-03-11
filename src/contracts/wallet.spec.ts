@@ -28,6 +28,7 @@ import {
 import { accounts, useIdentity } from '../test/accounts';
 import { TestUtils } from '../test/test-utils';
 import { Wallet } from './wallet';
+import { Runtime } from '../runtime';
 
 use(chaiAsPromised);
 
@@ -36,29 +37,34 @@ describe('Wallet handler', function test() {
   this.timeout(60000);
   let executor: Executor;
   let identity0: string;
-  let wallet: Wallet;
+  let identity1: string;
+  let runtimes: Runtime[];
+  let wallet0: Wallet;
+  let wallet1: Wallet;
   let web3: any;
 
   before(async () => {
-    const runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
-    ({ executor, web3 } = runtime);
-    identity0 = runtime.activeIdentity;
-    wallet = await TestUtils.getWallet(runtime);
+    runtimes = await Promise.all(
+      accounts.slice(0, 2).map((account) => TestUtils.getRuntime(account, null, { useIdentity })),
+    );
+    ([{ activeIdentity: identity0, executor, web3 }, { activeIdentity: identity1 }] = runtimes);
+    wallet0 = await TestUtils.getWallet(runtimes[0]);
+    wallet1 = await TestUtils.getWallet(runtimes[1]);
   });
 
   function runTests(walletType, createWallet) {
     it('can create new wallets', async () => {
       if (walletType === 'MultiSigWallet') {
         // create wallet via factory, returned wallet is of type 'MultiSigWallet'
-        await createWallet(accounts[0], accounts[0], [accounts[0]]);
+        await createWallet(identity0, identity0, [identity0]);
       } else if (walletType === 'MultiSigWalletSG') {
         // create wallet by hand
         const walletContract = await executor.createContract(
           walletType,
-          [[accounts[0]], 1],
+          [[identity0], 1],
           { from: identity0, gas: 2000000 },
         );
-        wallet.load(walletContract.options.address, walletType);
+        wallet0.load(walletContract.options.address, walletType);
       } else {
         throw new Error(`unknown wallet type: ${walletType}`);
       }
@@ -66,33 +72,33 @@ describe('Wallet handler', function test() {
 
     describe('when submitting transactions', () => {
       it('can instantly submit transactions', async () => {
-        await createWallet(accounts[0], accounts[0], [accounts[0], accounts[1]]);
+        await createWallet(identity0, identity0, [identity0, identity1]);
 
         // create test contract and hand over to wallet
         const testContract = await executor.createContract('Owned', [], { from: identity0, gas: 200000 });
-        expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[0]);
-        await executor.executeContractTransaction(testContract, 'transferOwnership', { from: identity0 }, wallet.walletAddress);
-        expect(await executor.executeContractCall(testContract, 'owner')).to.eq(wallet.walletAddress);
+        expect(await executor.executeContractCall(testContract, 'owner')).to.eq(identity0);
+        await executor.executeContractTransaction(testContract, 'transferOwnership', { from: identity0 }, wallet0.walletAddress);
+        expect(await executor.executeContractCall(testContract, 'owner')).to.eq(wallet0.walletAddress);
 
-        await wallet.submitTransaction(testContract, 'transferOwnership', { from: identity0 }, accounts[1]);
-        expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[1]);
+        await wallet0.submitTransaction(testContract, 'transferOwnership', { from: identity0 }, identity1);
+        expect(await executor.executeContractCall(testContract, 'owner')).to.eq(identity1);
 
-        await executor.executeContractTransaction(testContract, 'transferOwnership', { from: accounts[1] }, wallet.walletAddress);
+        await runtimes[1].executor.executeContractTransaction(testContract, 'transferOwnership', { from: identity1 }, wallet0.walletAddress);
 
-        await wallet.submitTransaction(testContract, 'transferOwnership', { from: accounts[1] }, accounts[0]);
-        expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[0]);
+        await wallet1.submitTransaction(testContract, 'transferOwnership', { from: identity1 }, identity0);
+        expect(await executor.executeContractCall(testContract, 'owner')).to.eq(identity0);
       });
 
       it('cannot submit transactions, when not in owners group', async () => {
-        await createWallet(accounts[0], accounts[0], [accounts[0]]);
+        await createWallet(identity0, identity0, [identity0]);
 
         // create test contract and hand over to wallet
         const testContract = await executor.createContract('Owned', [], { from: identity0, gas: 200000 });
-        expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[0]);
-        await executor.executeContractTransaction(testContract, 'transferOwnership', { from: identity0 }, wallet.walletAddress);
-        expect(await executor.executeContractCall(testContract, 'owner')).to.eq(wallet.walletAddress);
+        expect(await executor.executeContractCall(testContract, 'owner')).to.eq(identity0);
+        await executor.executeContractTransaction(testContract, 'transferOwnership', { from: identity0 }, wallet0.walletAddress);
+        expect(await executor.executeContractCall(testContract, 'owner')).to.eq(wallet0.walletAddress);
 
-        const promise = wallet.submitTransaction(testContract, 'transferOwnership', { from: accounts[1] }, accounts[1]);
+        const promise = wallet1.submitTransaction(testContract, 'transferOwnership', { from: identity1 }, identity1);
         await expect(promise).to.be.rejected;
       });
     });
@@ -106,32 +112,32 @@ describe('Wallet handler', function test() {
           contract,
           'transferOwnership',
           { from: identity0 },
-          wallet.walletAddress,
+          wallet0.walletAddress,
         );
         return contract;
       }
 
       before(async () => {
         // setup wallet that needs 2 confirmations
-        await createWallet(accounts[0], accounts[0], [accounts[0], accounts[1]], 2);
+        await createWallet(identity0, identity0, [identity0, identity1], 2);
       });
 
       it('allows any member to submit transactions', async () => {
         const testContract = await createContract();
         // test with account1
-        await expect(wallet.submitTransaction(
-          testContract, 'transferOwnership', { from: identity0 }, accounts[1],
+        await expect(wallet0.submitTransaction(
+          testContract, 'transferOwnership', { from: identity0 }, identity1,
         )).not.to.be.rejected;
         // test with account2
-        await expect(wallet.submitTransaction(
-          testContract, 'transferOwnership', { from: accounts[1] }, accounts[0],
+        await expect(wallet1.submitTransaction(
+          testContract, 'transferOwnership', { from: identity1 }, identity0,
         )).not.to.be.rejected;
       });
 
       it('returns txinfo upon submitting a tx and missing confirmations', async () => {
         const testContract = await createContract();
-        const txInfo = await wallet.submitTransaction(
-          testContract, 'transferOwnership', { from: identity0 }, accounts[1],
+        const txInfo = await wallet0.submitTransaction(
+          testContract, 'transferOwnership', { from: identity0 }, identity1,
         );
         expect(txInfo).to.be.ok;
         expect(txInfo.result).to.be.ok;
@@ -140,30 +146,31 @@ describe('Wallet handler', function test() {
 
         // still owned by wallet
         expect(await executor.executeContractCall(testContract, 'owner'))
-          .to.eq(wallet.walletAddress);
+          .to.eq(wallet0.walletAddress);
       });
 
       it('executes tx when submitting the final confirmation', async () => {
         const testContract = await createContract();
-        const txInfo = await wallet.submitTransaction(
-          testContract, 'transferOwnership', { from: identity0 }, accounts[1],
+        const txInfo = await wallet0.submitTransaction(
+          testContract, 'transferOwnership', { from: identity0 }, identity1,
         );
 
         // still owned by wallet
         expect(await executor.executeContractCall(testContract, 'owner'))
-          .to.eq(wallet.walletAddress);
+          .to.eq(wallet0.walletAddress);
 
-        await wallet.confirmTransaction(accounts[1], txInfo.result.transactionId);
+        wallet1.load(wallet0.walletAddress, wallet0.walletType);
+        await wallet1.confirmTransaction(identity1, txInfo.result.transactionId);
 
         // ownership has changed
-        expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[1]);
+        expect(await executor.executeContractCall(testContract, 'owner')).to.eq(identity1);
       });
     });
 
     describe('when submitting funds alongside transactions', () => {
       it('allows to transfer funds to wallet', async () => {
-        await createWallet(accounts[0], accounts[0], [accounts[0]]);
-        const { walletAddress } = wallet;
+        await createWallet(identity0, identity0, [identity0]);
+        const { walletAddress } = wallet0;
         const valueToSend = Math.floor(Math.random() * 10000);
         const executeSendP = executor.executeSend(
           { from: identity0, to: walletAddress, value: valueToSend },
@@ -173,8 +180,8 @@ describe('Wallet handler', function test() {
       });
 
       it('instantly submits funds to target if instantly submitting transaction', async () => {
-        await createWallet(accounts[0], accounts[0], [accounts[0]]);
-        const { walletAddress } = wallet;
+        await createWallet(identity0, identity0, [identity0]);
+        const { walletAddress } = wallet0;
 
         const valueToSend = Math.floor(Math.random() * 10000);
         await executor.executeSend({ from: identity0, to: walletAddress, value: valueToSend });
@@ -185,15 +192,15 @@ describe('Wallet handler', function test() {
         );
         expect(await web3.eth.getBalance(testContract.options.address)).to.eq('0');
 
-        await wallet.submitTransaction(testContract, 'chargeFunds', { from: identity0, value: valueToSend });
+        await wallet0.submitTransaction(testContract, 'chargeFunds', { from: identity0, value: valueToSend });
         expect(await web3.eth.getBalance(testContract.options.address))
           .to.eq(valueToSend.toString());
         expect(await web3.eth.getBalance(walletAddress)).to.eq('0');
       });
 
       it('waits for final confirmation to transfer funds, when multisigning transactions', async () => {
-        await createWallet(accounts[0], accounts[0], [accounts[0], accounts[1]], 2);
-        const { walletAddress } = wallet;
+        await createWallet(identity0, identity0, [identity0, identity1], 2);
+        const { walletAddress } = wallet0;
 
         const valueToSend = Math.floor(Math.random() * 10000);
         await executor.executeSend({ from: identity0, to: walletAddress, value: valueToSend });
@@ -204,11 +211,11 @@ describe('Wallet handler', function test() {
         );
         expect(await web3.eth.getBalance(testContract.options.address)).to.eq('0');
 
-        const txInfo = await wallet.submitTransaction(testContract, 'chargeFunds', { from: identity0, value: valueToSend });
+        const txInfo = await wallet0.submitTransaction(testContract, 'chargeFunds', { from: identity0, value: valueToSend });
         expect(await web3.eth.getBalance(testContract.options.address)).to.eq('0');
         expect(await web3.eth.getBalance(walletAddress)).to.eq(valueToSend.toString());
 
-        await wallet.confirmTransaction(accounts[1], txInfo.result.transactionId);
+        await wallet1.confirmTransaction(identity1, txInfo.result.transactionId);
         expect(await web3.eth.getBalance(testContract.options.address))
           .to.eq(valueToSend.toString());
         expect(await web3.eth.getBalance(walletAddress)).to.eq('0');
@@ -225,38 +232,39 @@ describe('Wallet handler', function test() {
     ) {
       // create wallet via factory, returned wallet is of type 'MultiSigWallet'
       if (typeof confirmations !== 'undefined') {
-        await wallet.create(executingAccount, manager, participants, confirmations);
+        await wallet0.create(executingAccount, manager, participants, confirmations);
       } else {
-        await wallet.create(executingAccount, manager, participants);
+        await wallet0.create(executingAccount, manager, participants);
       }
+      wallet1.load(wallet0.walletAddress, wallet0.walletType);
     }
 
     runTests('MultiSigWallet', createWallet);
 
     describe('when managing members', () => {
       it('can add members, when admin', async () => {
-        await createWallet(accounts[0], accounts[0], [accounts[0]]);
-        expect(await wallet.getOwners()).to.deep.eq([accounts[0]]);
-        await wallet.addOwner(accounts[0], accounts[1]);
-        expect(await wallet.getOwners()).to.deep.eq([accounts[0], accounts[1]]);
+        await createWallet(identity0, identity0, [identity0]);
+        expect(await wallet0.getOwners()).to.deep.eq([identity0]);
+        await wallet0.addOwner(identity0, identity1);
+        expect(await wallet0.getOwners()).to.deep.eq([identity0, identity1]);
       });
 
       it('cannot add members, when not admin', async () => {
-        await createWallet(accounts[0], accounts[0], [accounts[0]]);
-        const promise = wallet.addOwner(accounts[1], accounts[1]);
+        await createWallet(identity0, identity0, [identity0]);
+        const promise = wallet0.addOwner(identity1, identity1);
         await expect(promise).to.be.rejected;
       });
 
       it('can remove members, when admin', async () => {
-        await createWallet(accounts[0], accounts[0], [accounts[0], accounts[1]]);
-        expect(await wallet.getOwners()).to.deep.eq([accounts[0], accounts[1]]);
-        await wallet.removeOwner(accounts[0], accounts[1]);
-        expect(await wallet.getOwners()).to.deep.eq([accounts[0]]);
+        await createWallet(identity0, identity0, [identity0, identity1]);
+        expect(await wallet0.getOwners()).to.deep.eq([identity0, identity1]);
+        await wallet0.removeOwner(identity0, identity1);
+        expect(await wallet0.getOwners()).to.deep.eq([identity0]);
       });
 
       it('cannot remove members, when not admin', async () => {
-        await createWallet(accounts[0], accounts[0], [accounts[0], accounts[1]]);
-        const promise = wallet.removeOwner(accounts[1], accounts[1]);
+        await createWallet(identity0, identity0, [identity0, identity1]);
+        const promise = wallet0.removeOwner(identity1, identity1);
         await expect(promise).to.be.rejected;
       });
     });
@@ -275,38 +283,39 @@ describe('Wallet handler', function test() {
         [participants, typeof confirmations !== 'undefined' ? confirmations : 1],
         { from: identity0, gas: 2000000 },
       );
-      wallet.load(walletContract.options.address, 'MultiSigWalletSG');
+      wallet0.load(walletContract.options.address, 'MultiSigWalletSG');
+      wallet1.load(wallet0.walletAddress, wallet0.walletType);
     }
 
     runTests('MultiSigWalletSG', createWallet);
 
     describe('when managing members', () => {
       it('can add members, when member of wallet', async () => {
-        await createWallet(accounts[0], accounts[0], [accounts[0]]);
-        expect(await wallet.getOwners()).to.deep.eq([accounts[0]]);
-        await wallet.addOwner(accounts[0], accounts[1]);
-        expect(await wallet.getOwners()).to.deep.eq([accounts[0], accounts[1]]);
-        await wallet.addOwner(accounts[1], accounts[2]);
-        expect(await wallet.getOwners()).to.deep.eq([accounts[0], accounts[1], accounts[2]]);
+        await createWallet(identity0, identity0, [identity0]);
+        expect(await wallet0.getOwners()).to.deep.eq([identity0]);
+        await wallet0.addOwner(identity0, identity1);
+        expect(await wallet0.getOwners()).to.deep.eq([identity0, identity1]);
+        await wallet1.addOwner(identity1, accounts[2]);
+        expect(await wallet0.getOwners()).to.deep.eq([identity0, identity1, accounts[2]]);
       });
 
       it('cannot add members, when not in wallet', async () => {
-        await createWallet(accounts[0], accounts[0], [accounts[0]]);
-        const promise = wallet.addOwner(accounts[1], accounts[2]);
+        await createWallet(identity0, identity0, [identity0]);
+        const promise = wallet1.addOwner(identity1, accounts[2]);
         await expect(promise).to.be.rejected;
       });
 
       it('can remove members, when in wallet', async () => {
-        await createWallet(accounts[0], accounts[0], [accounts[0], accounts[1]]);
-        expect(await wallet.getOwners()).to.deep.eq([accounts[0], accounts[1]]);
-        await wallet.removeOwner(accounts[1], accounts[0]);
-        expect(await wallet.getOwners()).to.deep.eq([accounts[1]]);
+        await createWallet(identity0, identity0, [identity0, identity1]);
+        expect(await wallet0.getOwners()).to.deep.eq([identity0, identity1]);
+        await wallet1.removeOwner(identity1, identity0);
+        expect(await wallet0.getOwners()).to.deep.eq([identity1]);
       });
 
       it('cannot remove members, when not in wallet', async () => {
-        await createWallet(accounts[0], accounts[0], [accounts[0]]);
-        expect(await wallet.getOwners()).to.deep.eq([accounts[0]]);
-        const promise = wallet.removeOwner(accounts[1], accounts[0]);
+        await createWallet(identity0, identity0, [identity0]);
+        expect(await wallet0.getOwners()).to.deep.eq([identity0]);
+        const promise = wallet0.removeOwner(identity1, identity0);
         await expect(promise).to.be.rejected;
       });
     });
