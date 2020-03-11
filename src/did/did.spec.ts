@@ -22,7 +22,6 @@ import 'mocha';
 import * as chaiAsPromised from 'chai-as-promised';
 import * as _ from 'lodash';
 import { expect, use } from 'chai';
-import { resolve } from 'dns';
 import { Did, DidProofType } from './did';
 import { SignerIdentity } from '../contracts/signer-identity';
 import { TestUtils } from '../test/test-utils';
