@@ -424,11 +424,11 @@ export class Did extends Logger {
     const signer = didJWT.SimpleSigner(
       await this.options.accountStore.getPrivateKey(this.options.signerIdentity.underlyingAccount),
     );
-    const documentToSign = didDocument;
+    const documentToSign = _.cloneDeep(didDocument);
     delete documentToSign.proof;
     const jwt = await didJWT.createJWT(
       {
-        documentToSign,
+        didDocument: documentToSign,
       }, {
         alg: JWTProofMapping[proofType],
         issuer: proofIssuer,
