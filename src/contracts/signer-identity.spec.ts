@@ -38,7 +38,7 @@ import {
 
 use(chaiAsPromised);
 
-describe('signer-identity (identity based signer)', function test() {
+(useIdentity ? describe : describe.skip)('signer-identity (identity based signer)', function test() {
   this.timeout(300000);
 
   let runtimes: Runtime[];

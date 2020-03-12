@@ -21,7 +21,7 @@ import 'mocha';
 import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
 import { Ipfs } from '../../dfs/ipfs';
-import { accounts, useIdentity } from '../../test/accounts';
+import { accounts, useIdentity, identities } from '../../test/accounts';
 import { configTestcore as config } from '../../config-testcore';
 import { Container } from './container';
 import { TestUtils } from '../../test/test-utils';
@@ -45,6 +45,8 @@ import { Runtime } from '../../runtime';
 
 import https = require('https');
 
+const [identity0, identity1] = identities;
+
 use(chaiAsPromised);
 
 const ownedDomain = 'twintest.fifs.registrar.test.evan';
@@ -63,9 +65,9 @@ async function getRuntimeWithEnabledPinning(defaultRuntime: Runtime): Promise<Ru
     disablePin: false, // <--
   });
   dfs.setRuntime({
-    activeAccount: accounts[0],
+    activeAccount: identity0,
     signer,
-    underlyingAccount: accounts[0],
+    underlyingAccount: identity0,
     web3,
   });
   const runtime = {
@@ -73,10 +75,10 @@ async function getRuntimeWithEnabledPinning(defaultRuntime: Runtime): Promise<Ru
     cryptoProvider: defaultRuntime.cryptoProvider,
     dataContract: await TestUtils.getDataContract(web3, dfs),
     description: await TestUtils.getDescription(web3, dfs),
-    did: await TestUtils.getDid(web3, accounts[0], dfs),
+    did: await TestUtils.getDid(web3, identity0, dfs),
     executor: defaultRuntime.executor,
     nameResolver: defaultRuntime.nameResolver,
-    profile: await TestUtils.getProfile(defaultRuntime, dfs, null, accounts[0]),
+    profile: await TestUtils.getProfile(defaultRuntime, dfs, null, identity0),
     rightsAndRoles: defaultRuntime.rightsAndRoles,
     sharing: await TestUtils.getSharing(web3, dfs),
     verifications: await TestUtils.getVerifications(web3, dfs),
@@ -88,7 +90,7 @@ async function getRuntimeWithEnabledPinning(defaultRuntime: Runtime): Promise<Ru
 
 async function getPinnedFileHashes(): Promise<string[]> {
   const authHeaders = await getSmartAgentAuthHeaders(
-    await TestUtils.getRuntime(accounts[0]),
+    await TestUtils.getRuntime(identity0),
     Date.now().toString(),
   );
   const reqOptions = {
@@ -139,9 +141,9 @@ describe('DigitalTwin', function test() {
     };
 
     defaultConfig = {
-      accountId: accounts[0],
+      accountId: identity0,
       containerConfig: {
-        accountId: accounts[0],
+        accountId: identity0,
         description: containerDescription,
       },
       description,
@@ -173,7 +175,7 @@ describe('DigitalTwin', function test() {
       delete customDescription.tags;
 
       // reset filled tags
-      await runtime.description.setDescription(address, { public: customDescription }, accounts[0]);
+      await runtime.description.setDescription(address, { public: customDescription }, identity0);
       const validity = await DigitalTwin.getValidity(twinOptions, address);
 
       expect(validity.valid).to.be.false;
@@ -223,7 +225,7 @@ describe('DigitalTwin', function test() {
       expect(newDesc.dbcpVersion).to.be.eq(2);
     });
 
-    (runtime.did ? it : it.skip)('automatically creates a valid did document upon twin creation', async () => {
+    (useIdentity ? it : it.skip)('automatically creates a valid did document upon twin creation', async () => {
       const twin = await DigitalTwin.create(twinOptions, defaultConfig);
       const twinIdentity = (await twin.getDescription()).identity;
       const did = await runtime.did.convertIdentityToDid(twinIdentity);
@@ -266,8 +268,8 @@ describe('DigitalTwin', function test() {
       const randomSecret = `super secret; ${Math.random()}`;
       await localRuntime.sharing.addSharing(
         entries.plugin1.value.config.address,
-        accounts[0],
-        accounts[1],
+        identity0,
+        identity1,
         '*',
         0,
         randomSecret,
@@ -402,8 +404,8 @@ describe('DigitalTwin', function test() {
       const randomSecret = `super secret; ${Math.random()}`;
       await localRuntime.sharing.addSharing(
         entries.plugin1.value.config.address,
-        accounts[0],
-        accounts[1],
+        identity0,
+        identity1,
         '*',
         0,
         randomSecret,
@@ -745,7 +747,7 @@ describe('DigitalTwin', function test() {
     describe('when adding containers', () => {
       before(async () => {
         const factory = await runtime.executor.createContract(
-          'ContainerDataContractFactory', [], { from: accounts[0], gas: 6e6 },
+          'ContainerDataContractFactory', [], { from: identity0, gas: 6e6 },
         );
         defaultConfig.containerConfig.factoryAddress = factory.options.address;
       });
@@ -804,7 +806,7 @@ describe('DigitalTwin', function test() {
       ens, 'owner', runtime.nameResolver.namehash(ownedDomain),
     );
     if (domainOwner === '0x0000000000000000000000000000000000000000') {
-      await runtime.nameResolver.claimAddress(ownedDomain, accounts[0]);
+      await runtime.nameResolver.claimAddress(ownedDomain, identity0);
     }
   });
 

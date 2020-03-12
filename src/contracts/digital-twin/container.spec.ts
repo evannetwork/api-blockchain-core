@@ -108,11 +108,11 @@ describe('Container', function test() {
     const web3 = await TestUtils.getWeb3();
     sha3 = (...args) => web3.utils.soliditySha3(...args);
     const sha9 = (accountId1, accountId2) => sha3(...[sha3(accountId1), sha3(accountId2)].sort());
-    createRuntime = async (accountId, useIdentityFlag) => {
+    createRuntime = async (accountId, identityId, useIdentityFlag) => {
       // data contract instance has sha3 self key and edges to self and other accounts
       const requestedKeys = [
-        sha3(accountId),
-        ...identities.map((partner) => sha9(accountId, partner)),
+        sha3(identityId),
+        ...identities.map((partner) => sha9(identityId, partner)),
       ];
       const runtime = await TestUtils.getRuntime(
         accountId,
@@ -124,7 +124,7 @@ describe('Container', function test() {
       return runtime;
     };
     for (let i = 0; i < identities.length; i += 1) {
-      runtimes[identities[i]] = await createRuntime(accounts[i], useIdentity);
+      runtimes[identities[i]] = await createRuntime(accounts[i], identities[i], useIdentity);
     }
     defaultConfig = {
       accountId: identities[0],
@@ -993,7 +993,7 @@ describe('Container', function test() {
       await container.unshareProperties([{ accountId: consumer, readWrite: ['testField'] }]);
 
       // create new consumer runtime to avoid cached keys, then check result
-      const newConsumerRuntime = await createRuntime(consumer);
+      const newConsumerRuntime = await createRuntime(accounts[1], consumer, useIdentity);
       consumerContainer = new Container(
         newConsumerRuntime,
         { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
@@ -1036,7 +1036,7 @@ describe('Container', function test() {
       let consumerSharing = ((consumerContainer as any).options as ContainerOptions).sharing;
       await container.unshareProperties([{ accountId: consumer, readWrite: ['testField'] }]);
       // create new consumer runtime to avoid cached keys, then check result
-      let newConsumerRuntime = await createRuntime(consumer);
+      let newConsumerRuntime = await createRuntime(accounts[1], consumer, useIdentity);
       consumerContainer = new Container(
         newConsumerRuntime,
         { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
@@ -1061,7 +1061,7 @@ describe('Container', function test() {
       consumerSharing = ((consumerContainer as any).options as ContainerOptions).sharing;
       await container.unshareProperties([{ accountId: consumer, readWrite: ['anotherTestField'] }]);
       // create new consumer runtime to avoid cached keys, then check result
-      newConsumerRuntime = await createRuntime(consumer);
+      newConsumerRuntime = await createRuntime(accounts[1], consumer, useIdentity);
       consumerContainer = new Container(
         newConsumerRuntime,
         { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
@@ -1097,7 +1097,7 @@ describe('Container', function test() {
       await container.unshareProperties([{ accountId: consumer, readWrite: ['testField'] }]);
 
       // create new consumer runtime to avoid cached keys, then check result
-      const newConsumerRuntime = await createRuntime(consumer);
+      const newConsumerRuntime = await createRuntime(accounts[1], consumer, useIdentity);
       consumerContainer = new Container(
         newConsumerRuntime,
         { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
@@ -1136,7 +1136,7 @@ describe('Container', function test() {
       let consumerSharing = ((consumerContainer as any).options as ContainerOptions).sharing;
       await container.unshareProperties([{ accountId: consumer, readWrite: ['testField'] }]);
       // create new consumer runtime to avoid cached keys, then check result
-      let newConsumerRuntime = await createRuntime(consumer);
+      let newConsumerRuntime = await createRuntime(accounts[1], consumer, useIdentity);
       consumerContainer = new Container(
         newConsumerRuntime,
         { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
@@ -1161,7 +1161,7 @@ describe('Container', function test() {
       consumerSharing = ((consumerContainer as any).options as ContainerOptions).sharing;
       await container.unshareProperties([{ accountId: consumer, readWrite: ['anotherTestField'] }]);
       // create new consumer runtime to avoid cached keys, then check result
-      newConsumerRuntime = await createRuntime(consumer);
+      newConsumerRuntime = await createRuntime(accounts[1], consumer, useIdentity);
       consumerContainer = new Container(
         newConsumerRuntime,
         { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
@@ -1197,7 +1197,7 @@ describe('Container', function test() {
       await container.unshareProperties([{ accountId: consumer, write: ['testField'] }]);
 
       // create new consumer runtime to avoid cached keys, then check result
-      const newConsumerRuntime = await createRuntime(consumer);
+      const newConsumerRuntime = await createRuntime(accounts[1], consumer, useIdentity);
       consumerContainer = new Container(
         newConsumerRuntime,
         { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
