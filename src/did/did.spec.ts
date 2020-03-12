@@ -24,7 +24,7 @@ import { expect, use } from 'chai';
 import { Did, DidProofType } from './did';
 import { SignerIdentity } from '../contracts/signer-identity';
 import { TestUtils } from '../test/test-utils';
-import { accounts } from '../test/accounts';
+import { accounts, useIdentity } from '../test/accounts';
 import {
   DigitalTwin,
   DigitalTwinOptions,
@@ -34,7 +34,7 @@ import {
 
 use(chaiAsPromised);
 
-describe('DID Resolver', function test() {
+(useIdentity ? describe : describe.skip)('DID Resolver', function test() {
   this.timeout(600000);
   let accounts0Identity: string;
   let accounts0Did: string;

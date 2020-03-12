@@ -67,7 +67,7 @@ async function getRuntimeWithEnabledPinning(defaultRuntime: Runtime): Promise<Ru
   dfs.setRuntime({
     activeAccount: identity0,
     signer,
-    underlyingAccount: identity0,
+    underlyingAccount: accounts[0],
     web3,
   });
   const runtime = {
@@ -154,7 +154,7 @@ describe('DigitalTwin', function test() {
   });
 
   describe('working with twins', () => {
-    it('can can create new contracts', async () => {
+    it.only('can can create new contracts', async () => {
       const twin = await DigitalTwin.create(twinOptions, defaultConfig);
       expect(await twin.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
     });
