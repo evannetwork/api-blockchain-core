@@ -19,7 +19,7 @@
 import * as Web3 from 'web3';
 
 // eslint-disable-next-line import/no-mutable-exports
-let useIdentity = true;
+let useIdentity = false;
 try {
   useIdentity = JSON.parse(process.env.USE_IDENTITY);
 } catch (_) {
