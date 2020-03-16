@@ -1675,7 +1675,7 @@ describe('Verifications handler', function test() {
       // on identity[2]s side
       const runtime2 = runtimes[2];
       for (const i of txInfos.keys()) {
-        const verificationId = await runtime2.verifications.executeVerification(
+        const verificationId = await runtimes[2].verifications.executeVerification(
           identity2, txInfos[i],
         );
         await timeout(1000);
