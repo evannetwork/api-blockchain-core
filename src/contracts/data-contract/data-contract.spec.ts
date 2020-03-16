@@ -500,7 +500,7 @@ describe('DataContract', function test() {
           for (let i = 0; i < sampleValues.length; i += 1) {
             expect(retrieved[i]).to.eq(sampleValues[i]);
           }
-          const promise = dataContract.removeListEntry(contract, 'list_removable_by_owner', 2, identity1);
+          const promise = runtimes[1].dataContract.removeListEntry(contract, 'list_removable_by_owner', 2, identity1);
           await expect(promise).to.be.rejected;
         });
       });
