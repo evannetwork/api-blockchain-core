@@ -328,6 +328,13 @@ describe('ServiceContract', function test() {
       return currentSample;
     });
     const contract = await sc0.create(identity0, businessCenterDomain, sampleService1);
+    await sc0.inviteToContract(
+      businessCenterDomain, contract.options.address, identity0, identity1,
+    );
+    const contentKey = await sharing.getKey(contract.options.address, identity0, '*', 0);
+    await sharing.addSharing(
+      contract.options.address, identity0, identity1, '*', 0, contentKey,
+    );
     for (const currentSample of sampleCalls) {
       await sc0.sendCall(contract, identity0, currentSample);
     }
@@ -513,10 +520,10 @@ describe('ServiceContract', function test() {
     expect(answers0[answerId].data).to.deep.eq(sampleAnswer);
 
     // retrieve answer with random account
-    const answer1 = await sc2.getAnswer(contract, identity2, callId, answerId);
-    expect(answer1.data).to.deep.eq(null);
-    const answers1 = await sc2.getAnswers(contract, identity2, callId);
-    expect(answers1[answerId].data).to.deep.eq(null);
+    const answer1 = await sc1.getAnswer(contract, identity1, callId, answerId);
+    expect(answer1.data).to.deep.eq(undefined);
+    const answers1 = await sc1.getAnswers(contract, identity1, callId);
+    expect(answers1[answerId].data).to.deep.eq(undefined);
   });
 
   describe('when paging through calls and answers', () => {
