@@ -56,7 +56,7 @@ describe('Voting handler', function test() {
 
   async function testAndCreateContract() {
     try {
-      const contr = ownerVotings.createContract(
+      votingContract = await ownerVotings.createContract(
         votingOwner,
         {
           minimumQuorumForProposals: 2,
@@ -64,7 +64,6 @@ describe('Voting handler', function test() {
           marginOfVotesForMajority: 0,
         },
       );
-      votingContract = await contr;
       ownerVotings.addMember(
         votingContract,
         votingOwner,
