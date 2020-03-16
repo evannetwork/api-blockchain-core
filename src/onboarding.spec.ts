@@ -66,7 +66,7 @@ describe('Onboarding helper', function test() {
   });
 
   it('should check if an account has enough amount of eves to create new profile', async () => {
-    const balance = await web3.eth.getBalance(runtime.activeAccount);
+    const balance = await web3.eth.getBalance(runtime.underlyingAccount);
     const minimumAmount = web3.utils.toWei('1.0097');
 
     expect(Number(balance)).to.be.gt(Number(minimumAmount));
