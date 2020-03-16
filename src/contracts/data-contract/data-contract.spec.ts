@@ -934,7 +934,7 @@ describe('DataContract', function test() {
     it('allows an invited user to decrypt values', async () => {
       const contract = await createContract(true);
       await dataContract.setEntry(contract, 'entry_settable_by_owner', sampleValues[0], identity0);
-      const retrieved = await dataContract.getEntry(contract, 'entry_settable_by_owner', identity1);
+      const retrieved = await runtimes[1].dataContract.getEntry(contract, 'entry_settable_by_owner', identity1);
       expect(retrieved).to.eq(sampleValues[0]);
     });
     it('does not allow an uninvited user to decrypt values', async () => {
