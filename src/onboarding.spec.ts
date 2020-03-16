@@ -76,7 +76,7 @@ describe('Onboarding helper', function test() {
     const password = 'Test1234';
     const mnemonicNew = Onboarding.createMnemonic();
     const runtimeConfig: any = await Onboarding.generateRuntimeConfig(mnemonicNew, password, web3);
-    const balance = await web3.eth.getBalance(runtime.activeAccount);
+    const balance = await web3.eth.getBalance(runtime.underlyingAccount);
     const minimumAmount = web3.utils.toWei('1.0097');
 
     expect(Number(balance)).to.be.gt(Number(minimumAmount));
