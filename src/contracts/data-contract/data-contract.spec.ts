@@ -310,7 +310,7 @@ describe('DataContract', function test() {
         });
         it('does not allow the member to add entries', async () => {
           const contract = await createContract(storeInDfs);
-          const promise = dataContract.addListEntries(
+          const promise = runtimes[1].dataContract.addListEntries(
             contract,
             'list_settable_by_owner',
             sampleValues,
