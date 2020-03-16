@@ -794,7 +794,7 @@ describe('DataContract', function test() {
         });
         it('does not allow the member to add and get entries', async () => {
           const contract = await createContract(storeInDfs);
-          const promise = dataContract.setMappingValue(
+          const promise = runtimes[1].dataContract.setMappingValue(
             contract,
             'mapping_settable_by_owner',
             sampleMappingKeys[0],
