@@ -675,7 +675,7 @@ describe('DataContract', function test() {
           + 'if not permitted to access one of them',
         async () => {
           const contract = await createContract(storeInDfs);
-          const promise = dataContract.addListEntries(
+          const promise = runtimes[1].dataContract.addListEntries(
             contract,
             ['list_settable_by_owner', 'list_settable_by_member'],
             sampleValues,
