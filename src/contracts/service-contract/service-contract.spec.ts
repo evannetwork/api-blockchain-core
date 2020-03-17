@@ -26,6 +26,7 @@ import { ServiceContract } from './service-contract';
 import { configTestcore as config } from '../../config-testcore';
 import { TestUtils } from '../../test/test-utils';
 import { Runtime } from '../../runtime';
+import { KeyProvider } from '../..';
 
 const [identity0, identity1, identity2] = identities;
 
@@ -39,7 +40,10 @@ describe('ServiceContract', function test() {
   let sc2: ServiceContract;
   let businessCenterDomain;
   let dfs: Ipfs;
-  let runtimes: Runtime[];
+  let keys0;
+  let keys1;
+  let keys2;
+  const runtimes: Runtime[] = [];
   let sharing;
   let web3;
   const sampleService1 = {
@@ -179,29 +183,66 @@ describe('ServiceContract', function test() {
     },
   };
 
+  function createKeys() {
+    const defaultKeys = TestUtils.getKeys();
+    keys0 = [
+      // own 'self' key
+      web3.utils.soliditySha3(identity0),
+      // own edge key
+      web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
+        [web3.utils.soliditySha3(identity0), web3.utils.soliditySha3(identity0)].sort()),
+      // key with account 0
+      web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
+        [web3.utils.soliditySha3(identity0), web3.utils.soliditySha3(identity2)].sort()),
+    ];
+    keys1 = [
+      // own 'self' key
+      web3.utils.soliditySha3(identity1),
+      // own edge key
+      web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
+        [web3.utils.soliditySha3(identity1), web3.utils.soliditySha3(identity1)].sort()),
+    ];
+    keys2 = [
+      // own 'self' key
+      web3.utils.soliditySha3(identity2),
+      // own edge key
+      web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
+        [web3.utils.soliditySha3(identity2), web3.utils.soliditySha3(identity2)].sort()),
+      // key with account 0
+      web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
+        [web3.utils.soliditySha3(identity0), web3.utils.soliditySha3(identity2)].sort()),
+    ];
+  }
+
   before(async () => {
-    runtimes = await Promise.all(
-      accounts.slice(0, 3).map((account) => TestUtils.getRuntime(account, null, { useIdentity })),
-    );
+    web3 = TestUtils.getWeb3();
+    createKeys();
+    runtimes.push(await TestUtils.getRuntime(accounts[0], keys0, { useIdentity }));
+    runtimes.push(await TestUtils.getRuntime(accounts[1], keys1, { useIdentity }));
+    runtimes.push(await TestUtils.getRuntime(accounts[2], keys2, { useIdentity }));
+
+    sharing = runtimes[0].sharing;
     dfs = runtimes[0].dfs as Ipfs;
+
     sc0 = new ServiceContract({
       loader: runtimes[0].contractLoader,
+      keyProvider: new KeyProvider({ keys: keys0 }),
       ...(runtimes[0] as any),
     });
 
     sc1 = new ServiceContract({
       loader: runtimes[1].contractLoader,
+      keyProvider: new KeyProvider({ keys: keys1 }),
       ...(runtimes[1] as any),
     });
     sc2 = new ServiceContract({
       loader: runtimes[2].contractLoader,
+      keyProvider: new KeyProvider({ keys: keys2 }),
       ...(runtimes[2] as any),
     });
     businessCenterDomain = runtimes[0].nameResolver.getDomainName(
       config.nameResolver.domains.businessCenter,
     );
-    sharing = runtimes[0].sharing;
-    web3 = runtimes[0].web3;
 
     const businessCenterAddress = await runtimes[0].nameResolver.getAddress(businessCenterDomain);
     const businessCenter = await runtimes[0].contractLoader.loadContract(
@@ -520,9 +561,9 @@ describe('ServiceContract', function test() {
     expect(answers0[answerId].data).to.deep.eq(sampleAnswer);
 
     // retrieve answer with random account
-    const answer1 = await sc1.getAnswer(contract, identity1, callId, answerId);
+    const answer1 = await sc1.getAnswer(contract, identity2, callId, answerId);
     expect(answer1.data).to.deep.eq(undefined);
-    const answers1 = await sc1.getAnswers(contract, identity1, callId);
+    const answers1 = await sc1.getAnswers(contract, identity2, callId);
     expect(answers1[answerId].data).to.deep.eq(undefined);
   });
 
