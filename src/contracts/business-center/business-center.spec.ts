@@ -251,7 +251,7 @@ describe('Business Center', function test() {
         await runtimes[0].executor.executeContractTransaction(
           currentBc, 'invite', { from: identity0, autoGas: 1.1 }, identity1,
         );
-        const isMember = await runtimes[0].executor.executeContractCall(currentBc, 'isMember', identity0);
+        const isMember = await runtimes[0].executor.executeContractCall(currentBc, 'isMember', identity1);
         expect(isMember).to.be.true;
       });
     });
