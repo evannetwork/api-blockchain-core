@@ -26,7 +26,7 @@ import { ServiceContract } from './service-contract';
 import { configTestcore as config } from '../../config-testcore';
 import { TestUtils } from '../../test/test-utils';
 import { Runtime } from '../../runtime';
-import { KeyProvider } from '../..';
+import { Sharing } from '../sharing';
 
 const [identity0, identity1, identity2] = identities;
 
@@ -40,11 +40,11 @@ describe('ServiceContract', function test() {
   let sc2: ServiceContract;
   let businessCenterDomain;
   let dfs: Ipfs;
-  let keys0;
-  let keys1;
-  let keys2;
+  let requiredKeys0;
+  let requiredKeys1;
+  let requiredKeys2;
   const runtimes: Runtime[] = [];
-  let sharing;
+  let sharing: Sharing;
   let web3;
   const sampleService1 = {
     serviceName: 'serviceContractService1',
@@ -184,8 +184,7 @@ describe('ServiceContract', function test() {
   };
 
   function createKeys() {
-    const defaultKeys = TestUtils.getKeys();
-    keys0 = [
+    requiredKeys0 = [
       // own 'self' key
       web3.utils.soliditySha3(identity0),
       // own edge key
@@ -195,14 +194,14 @@ describe('ServiceContract', function test() {
       web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
         [web3.utils.soliditySha3(identity0), web3.utils.soliditySha3(identity2)].sort()),
     ];
-    keys1 = [
+    requiredKeys1 = [
       // own 'self' key
       web3.utils.soliditySha3(identity1),
       // own edge key
       web3.utils.soliditySha3.apply(web3.utils.soliditySha3,
         [web3.utils.soliditySha3(identity1), web3.utils.soliditySha3(identity1)].sort()),
     ];
-    keys2 = [
+    requiredKeys2 = [
       // own 'self' key
       web3.utils.soliditySha3(identity2),
       // own edge key
@@ -217,27 +216,24 @@ describe('ServiceContract', function test() {
   before(async () => {
     web3 = TestUtils.getWeb3();
     createKeys();
-    runtimes.push(await TestUtils.getRuntime(accounts[0], keys0, { useIdentity }));
-    runtimes.push(await TestUtils.getRuntime(accounts[1], keys1, { useIdentity }));
-    runtimes.push(await TestUtils.getRuntime(accounts[2], keys2, { useIdentity }));
+    runtimes.push(await TestUtils.getRuntime(accounts[0], requiredKeys0, { useIdentity }));
+    runtimes.push(await TestUtils.getRuntime(accounts[1], requiredKeys1, { useIdentity }));
+    runtimes.push(await TestUtils.getRuntime(accounts[2], requiredKeys2, { useIdentity }));
 
     sharing = runtimes[0].sharing;
     dfs = runtimes[0].dfs as Ipfs;
 
     sc0 = new ServiceContract({
       loader: runtimes[0].contractLoader,
-      keyProvider: new KeyProvider({ keys: keys0 }),
       ...(runtimes[0] as any),
     });
 
     sc1 = new ServiceContract({
       loader: runtimes[1].contractLoader,
-      keyProvider: new KeyProvider({ keys: keys1 }),
       ...(runtimes[1] as any),
     });
     sc2 = new ServiceContract({
       loader: runtimes[2].contractLoader,
-      keyProvider: new KeyProvider({ keys: keys2 }),
       ...(runtimes[2] as any),
     });
     businessCenterDomain = runtimes[0].nameResolver.getDomainName(
@@ -320,7 +316,7 @@ describe('ServiceContract', function test() {
     const callId = await sc0.sendCall(
       contract, identity0, sampleCall, [identity2],
     );
-    const call = await sc2.getCall(contract, identity0, callId);
+    const call = await sc2.getCall(contract, identity2, callId);
     const answerId = await sc2.sendAnswer(
       contract, identity2, sampleAnswer, callId, call.data.metadata.author,
     );
@@ -338,7 +334,7 @@ describe('ServiceContract', function test() {
       contract.options.address, identity0, identity2, '*', 0, contentKey,
     );
     const callId = await sc0.sendCall(contract, identity0, sampleCall, [identity2]);
-    const call = await sc2.getCall(contract, identity0, callId);
+    const call = await sc2.getCall(contract, identity2, callId);
     const brokenAnswer = JSON.parse(JSON.stringify(sampleAnswer));
     brokenAnswer.payload.someBogus = 123;
     const sendAnswerPromise = sc2.sendAnswer(
@@ -370,20 +366,20 @@ describe('ServiceContract', function test() {
     });
     const contract = await sc0.create(identity0, businessCenterDomain, sampleService1);
     await sc0.inviteToContract(
-      businessCenterDomain, contract.options.address, identity0, identity1,
+      businessCenterDomain, contract.options.address, identity0, identity2,
     );
     const contentKey = await sharing.getKey(contract.options.address, identity0, '*', 0);
     await sharing.addSharing(
-      contract.options.address, identity0, identity1, '*', 0, contentKey,
+      contract.options.address, identity0, identity2, '*', 0, contentKey,
     );
     for (const currentSample of sampleCalls) {
       await sc0.sendCall(contract, identity0, currentSample);
     }
-    await sc1.sendCall(contract, identity1, sampleCalls[0]);
+    await sc2.sendCall(contract, identity2, sampleCalls[0]);
     expect(await sc0.getCallOwner(contract, 0)).to.deep.eq(identity0);
     expect(await sc0.getCallOwner(contract, 1)).to.deep.eq(identity0);
     expect(await sc0.getCallOwner(contract, 2)).to.deep.eq(identity0);
-    expect(await sc0.getCallOwner(contract, 3)).to.deep.eq(identity1);
+    expect(await sc0.getCallOwner(contract, 3)).to.deep.eq(identity2);
   });
 
   it('does not allow calls to be read by every contract member without extending the sharing',
@@ -434,7 +430,7 @@ describe('ServiceContract', function test() {
       contract.options.address, identity0, identity2, '*', 0, contentKey,
     );
     await sc0.sendCall(contract, identity0, sampleCall, [identity2]);
-    const call = await sc2.getCall(contract, identity0, 0);
+    const call = await sc2.getCall(contract, identity2, 0);
     await sc2.sendAnswer(contract, identity2, sampleAnswer, 0, call.data.metadata.author);
 
     // create second service contract helper with fewer keys
@@ -502,7 +498,7 @@ describe('ServiceContract', function test() {
       contract.options.address, identity0, identity2, '*', 0, contentKey,
     );
     await sc0.sendCall(contract, identity0, sampleCall, [identity2]);
-    const call = await sc2.getCall(contract, identity0, 0);
+    const call = await sc2.getCall(contract, identity2, 0);
     for (const currentSample of sampleAnswers) {
       await sc2.sendAnswer(contract, identity2, currentSample, 0, call.data.metadata.author);
     }
@@ -532,7 +528,7 @@ describe('ServiceContract', function test() {
     );
 
     // retrieve answer with first account
-    const answer = await sc2.getAnswer(contract, identity0, callId, answerId);
+    const answer = await sc2.getAnswer(contract, identity2, callId, answerId);
     expect(answer.data).to.deep.eq(sampleAnswer);
   });
 
