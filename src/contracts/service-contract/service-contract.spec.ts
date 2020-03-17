@@ -516,7 +516,7 @@ describe('ServiceContract', function test() {
     // retrieve answer with first account
     const answer0 = await sc0.getAnswer(contract, identity0, callId, answerId);
     expect(answer0.data).to.deep.eq(sampleAnswer);
-    const answers0 = await sc0.getAnswers(contract, identity0, callId);
+    const answers0 = await sc0.getAnswers(contract, identity2, callId);
     expect(answers0[answerId].data).to.deep.eq(sampleAnswer);
 
     // retrieve answer with random account
