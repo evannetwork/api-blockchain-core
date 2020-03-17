@@ -93,7 +93,7 @@ describe('Business Center', function test() {
     );
     if (!isMember) {
       await runtimes[0].executor.executeContractTransaction(
-        businessCenter, 'join', { from: identity0, autoGas: 1.1 },
+        businessCenter, 'join', { from: identity1, autoGas: 1.1 },
       );
     }
   });
