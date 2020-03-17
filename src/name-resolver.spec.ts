@@ -392,7 +392,7 @@ describe('NameResolver class', function test() {
         await expect(setValidUntilP).to.be.rejected;
       });
 
-      it.skip('stops resolving subdomains when time limit reached', async () => {
+      it('stops resolving subdomains when time limit reached', async () => {
         const domain = `sample_${Math.random().toString(36).substr(2)}.ownedbyensowner`;
         const randomAddress = TestUtils.getRandomAddress();
         await nameResolverTimedEO.setAddress(domain, randomAddress, ensOwner, domainOwner);
