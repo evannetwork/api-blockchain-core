@@ -208,8 +208,7 @@ describe('Profile helper', function test() {
   });
 
   it('should read a public part of a profile (e.g. public key)', async () => {
-    const initRuntime = await TestUtils.getRuntime(identities[0]);
-    initRuntime.profile = await TestUtils.getProfile(runtime);
+    const initRuntime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
     await Onboarding.createProfile(initRuntime, {
       accountDetails: {
         profileType: 'company',
@@ -235,7 +234,7 @@ describe('Profile helper', function test() {
   });
 
   it.skip('should be able to set a contact as known', async () => {
-    const initRuntime = await TestUtils.getRuntime(identities[0]);
+    const initRuntime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
     await Onboarding.createProfile(initRuntime, {
       accountDetails: {
         profileType: 'company',
@@ -250,7 +249,7 @@ describe('Profile helper', function test() {
   });
 
   it.skip('should be able to set a contact as unknown', async () => {
-    const initRuntime = await TestUtils.getRuntime(identities[0]);
+    const initRuntime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
     await Onboarding.createProfile(initRuntime, {
       accountDetails: {
         profileType: 'company',
@@ -307,21 +306,21 @@ describe('Profile helper', function test() {
      * @param      {string}  mnemonic  mnemonic to create the runtime with
      * @param      {string}  password  password to create the runtime with
      */
-    async function getProfileRuntime(mnemonic: string, password = 'Test1234') {
+    async function getProfileRuntime(mnemonic: string, password = 'Test1234', useIdentityFlag = false) {
       return createDefaultRuntime(
         await TestUtils.getWeb3(),
         await TestUtils.getIpfs(),
         {
           mnemonic,
           password,
-          useIdentity,
+          useIdentity: useIdentityFlag,
         },
       );
     }
 
     it('can transform user profile to company profile', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      const initRuntime = await TestUtils.getRuntime(identities[0]);
+      const initRuntime = await TestUtils.getRuntime(accounts[0], null);
 
       await Onboarding.createNewProfile(initRuntime, newMnemonic, 'Test1234', {
         accountDetails: {
@@ -343,8 +342,7 @@ describe('Profile helper', function test() {
 
     it('cannot transform specified profile to another profile type', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      const initRuntime = await TestUtils.getRuntime(identities[0]);
-
+      const initRuntime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
       await Onboarding.createNewProfile(initRuntime, newMnemonic, 'Test1234', {
         accountDetails: {
           profileType: 'user',
@@ -374,7 +372,7 @@ describe('Profile helper', function test() {
 
     it('can transform user profile to device profile', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      const initRuntime = await TestUtils.getRuntime(identities[0]);
+      const initRuntime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
 
       await Onboarding.createNewProfile(initRuntime, newMnemonic, 'Test1234', {
         accountDetails: {
@@ -396,7 +394,7 @@ describe('Profile helper', function test() {
 
     it('can transform user profile to type that does not exists', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      const initRuntime = await TestUtils.getRuntime(identities[0]);
+      const initRuntime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
 
       await Onboarding.createNewProfile(initRuntime, newMnemonic, 'Test1234', {
         accountDetails: {
@@ -417,7 +415,7 @@ describe('Profile helper', function test() {
     });
 
     it('can save company profile specific properties to a profile of type company', async () => {
-      const localRuntime = await getProfileRuntime(mnemonics.company);
+      const localRuntime = await getProfileRuntime(mnemonics.company, 'Test1234', true);
       await localRuntime.profile.setProfileProperties(companyProfileProperties);
       const [accountDetails, contact, registration] = await Promise.all(['accountDetails', 'contact', 'registration'].map(
         (p) => localRuntime.profile.getProfileProperty(p),

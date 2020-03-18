@@ -271,7 +271,7 @@ export class TestUtils {
       disablePin: true,
     });
     ipfs.setRuntime({
-      activeIdentity: identities[0],
+      activeIdentity: useIdentity ? identities[0] : accounts[0],
       signer,
       underlyingAccount: accounts[0],
       web3,

@@ -188,13 +188,13 @@ export class Onboarding extends Logger {
       factory,
       'createContract',
       {
-        from: runtime.activeAccount,
+        from: runtime.activeIdentity,
         autoGas: 1.1,
         event: { target: 'BaseContractFactoryInterface', eventName: 'ContractCreated' },
         getEventResult: (event, args) => args.newAddress,
       },
       '0x'.padEnd(42, '0'),
-      runtime.activeAccount,
+      runtime.activeIdentity,
       descriptionHash,
       runtime.nameResolver.config.ensAddress,
       [...Object.values(runtime.profile.treeLabels), ...dataSchemaEntries]
@@ -211,7 +211,7 @@ export class Onboarding extends Logger {
     await runtime.executor.executeContractTransaction(
       contractInterface,
       'init',
-      { from: runtime.activeAccount, autoGas: 1.1 },
+      { from: runtime.activeIdentity, autoGas: 1.1 },
       rootDomain,
       false,
     );
@@ -232,15 +232,15 @@ export class Onboarding extends Logger {
     const profileKeys = Object.keys(profileData);
     // add hashKey
     await runtime.sharing.extendSharings(
-      sharings, runtime.activeAccount, runtime.activeAccount, '*', 'hashKey', hashKey,
+      sharings, runtime.activeIdentity, runtime.activeIdentity, '*', 'hashKey', hashKey,
     );
     // extend sharings for profile data
     const dataContentKeys = await Promise.all(profileKeys.map(() => cryptorAes.generateKey()));
     for (let i = 0; i < profileKeys.length; i += 1) {
       await runtime.sharing.extendSharings(
         sharings,
-        runtime.activeAccount,
-        runtime.activeAccount, profileKeys[i], blockNr, dataContentKeys[i],
+        runtime.activeIdentity,
+        runtime.activeIdentity, profileKeys[i], blockNr, dataContentKeys[i],
       );
     }
     // upload sharings
@@ -249,14 +249,14 @@ export class Onboarding extends Logger {
     );
 
     // eslint-disable-next-line no-param-reassign
-    runtime.profile.profileOwner = runtime.activeAccount;
+    runtime.profile.profileOwner = runtime.activeIdentity;
     // eslint-disable-next-line no-param-reassign
     runtime.profile.profileContract = runtime.contractLoader.loadContract('DataContract', contractId);
 
     await runtime.executor.executeContractTransaction(
       runtime.profile.profileContract,
       'setSharing',
-      { from: runtime.activeAccount, autoGas: 1.1 },
+      { from: runtime.activeIdentity, autoGas: 1.1 },
       sharingsHash,
     );
     const dhKeys = runtime.keyExchange.getDiffieHellmanKeys();
@@ -267,14 +267,14 @@ export class Onboarding extends Logger {
           runtime.profile.profileContract,
           entry,
           profileData[entry],
-          runtime.activeAccount,
+          runtime.activeIdentity,
         ))
       ),
       (async () => {
         await runtime.profile.addContactKey(
           runtime.activeAccount, 'dataKey', dhKeys.privateKey.toString('hex'),
         );
-        await runtime.profile.addProfileKey(runtime.activeAccount, 'alias', profileData.accountDetails.accountName);
+        await runtime.profile.addProfileKey(runtime.activeIdentity, 'alias', profileData.accountDetails.accountName);
         await runtime.profile.addPublicKey(dhKeys.publicKey.toString('hex'));
         await runtime.profile.storeForAccount(runtime.profile.treeLabels.addressBook);
         await runtime.profile.storeForAccount(runtime.profile.treeLabels.publicKey);
@@ -292,7 +292,7 @@ export class Onboarding extends Logger {
         await runtime.executor.executeContractTransaction(
           profileIndexContract,
           'setMyProfile',
-          { from: runtime.activeAccount, autoGas: 1.1 },
+          { from: runtime.activeIdentity, autoGas: 1.1 },
           runtime.profile.profileContract.options.address,
         );
       })(),
