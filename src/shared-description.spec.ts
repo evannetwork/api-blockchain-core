@@ -40,7 +40,12 @@ import { Runtime } from './runtime';
 
 use(chaiAsPromised);
 
-const testAddressPrefix = 'testDapp';
+let testAddressPrefix;
+if (useIdentity === true) {
+  testAddressPrefix = 'testDappIdentity';
+} else {
+  testAddressPrefix = 'testDapp';
+}
 const sampleDescription = {
   name: 'test description',
   description: 'description used in tests.',
