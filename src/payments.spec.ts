@@ -37,6 +37,7 @@ describe('Payment Channels', function test() {
   let initialChannel;
   let proof;
   let runtimes: Runtime[];
+  let startBlock: number;
   let web3: any;
   before(async () => {
     runtimes = await Promise.all(
@@ -49,6 +50,9 @@ describe('Payment Channels', function test() {
     }, {
       activeIdentity: identity1, payments: payments1,
     }] = runtimes;
+
+    // keep current block as starting point for `loadChannelFromBlockchain`
+    startBlock = await runtimes[0].web3.eth.getBlockNumber();
 
     const channelManager = await executor.createContract(
       'RaidenMicroTransferChannels',
@@ -65,7 +69,7 @@ describe('Payment Channels', function test() {
   });
 
   it('should reload a channel to an other account, when loading from blockchain', async () => {
-    const channel = await payments0.loadChannelFromBlockchain(identity0, identity1);
+    const channel = await payments0.loadChannelFromBlockchain(identity0, identity1, startBlock);
     expect(channel.block).to.equal(initialChannel.block);
   });
 
@@ -82,7 +86,7 @@ describe('Payment Channels', function test() {
     expect(info.deposit.eq(new BigNumber(15))).to.be.true;
   });
 
-  it('should close a channel cooperative from the receiver side', async () => {
+  it.skip('[re-enable after CORE-1157] should close a channel cooperative from the receiver side', async () => {
     const closingSig = await payments1.getClosingSig(identity1);
 
     // store balance before closing

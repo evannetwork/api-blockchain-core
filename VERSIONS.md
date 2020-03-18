@@ -7,6 +7,7 @@
 ### Fixes
 - Fixed bug where a new DID document proof would incorporate the old proof and thus would make the document increasingly larger
 - Fixed bug for default DID documents that had a checksum case `ethereumAddress` property which made the proof validating mechanism fail
+- add `startBlock` argument to `loadChannelFromBlockchain` in `Payments` to avoid long running function calls
 
 ### Deprecations
 

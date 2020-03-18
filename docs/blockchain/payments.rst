@@ -325,7 +325,7 @@ loadChannelFromBlockchain
 
   payments.loadChannelFromBlockchain(account, receiver);
 
-Scan the blockchain for an open channel, and load it with 0 balance. The 0 balance may be overwritten with setBalance if server replies with a updated balance on first request. It should ask user for signing the zero-balance proof. Throws/reject if no open channel was found.
+Scan the blockchain for an open channel, and load it with 0 balance. The 0 balance may be overwritten with setBalance if server replies with a updated balance on first request. It should ask user for signing the zero-balance proof. Throws/reject if no open channel was found. Additionally a starting block can be provided to avoid starting from block 0 when looking for payment channels.
 
 ----------
 Parameters
@@ -333,6 +333,7 @@ Parameters
 
 #. ``account`` - ``string``: Sender/client's account address
 #. ``receiver`` - ``string``: Receiver/server's account address
+#. ``startBlock`` - ``number`` (optional): block to start scanning for transactions, defaults to ``0``
 
 -------
 Returns

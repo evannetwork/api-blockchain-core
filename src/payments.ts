@@ -143,7 +143,6 @@ export class Payments extends Logger {
   public constructor(options) {
     super(options);
     this.options = options;
-    this.startBlock = 0;
     if (options.channelManager) {
       this.channelManager = this.options.contractLoader.loadContract(
         'RaidenMicroTransferChannels',
@@ -438,22 +437,27 @@ export class Payments extends Logger {
   /**
    * Scan the blockchain for an open channel, and load it with 0 balance
    *
-   * The 0 balance may be overwritten with setBalance if
-   * server replies with a updated balance on first request.
-   * It should ask user for signing the zero-balance proof
-   * Throws/reject if no open channel was found
+   * The 0 balance may be overwritten with setBalance if server replies with a updated balance on
+   * first request. It should ask user for signing the zero-balance proof Throws/reject if no open
+   * channel was found. Additionally a starting block can be provided to avoid starting from block 0
+   * when looking for payment channels.
    *
-   * @param account  Sender/client's account address
-   * @param receiver  Receiver/server's account address
+   * @param      {string}  account     Sender/client's account address
+   * @param      {string}  receiver    Receiver/server's account address
+   * @param      {Number}  startBlock  block to start scanning for transactions, defaults to 0
    * @returns  Promise to channel info, if a channel was found
    */
-  public async loadChannelFromBlockchain(account: string, receiver: string): Promise<MicroChannel> {
+  public async loadChannelFromBlockchain(
+    account: string,
+    receiver: string,
+    startBlock = 0,
+  ): Promise<MicroChannel> {
     const openEvents = await this.channelManager.getPastEvents('ChannelCreated', {
       filter: {
         _sender_address: account, // eslint-disable-line @typescript-eslint/camelcase
         _receiver_address: receiver, // eslint-disable-line @typescript-eslint/camelcase
       },
-      fromBlock: this.startBlock,
+      fromBlock: startBlock,
       toBlock: 'latest',
     });
     if (!openEvents || openEvents.length === 0) {
