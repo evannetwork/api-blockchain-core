@@ -245,7 +245,7 @@ export class TestUtils {
       web3: runtime.web3,
     });
     const executor = new ExecutorWallet({
-      accountId: runtime.activeAccount,
+      accountId: runtime.runtimeConfig.useIdentity ? runtime.activeIdentity : runtime.activeAccount,
       config,
       contractLoader,
       signer: runtime.signer,
