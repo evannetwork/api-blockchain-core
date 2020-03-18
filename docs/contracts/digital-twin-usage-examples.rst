@@ -579,6 +579,41 @@ Sample AJV data type configurations are listed below and pleae keep in mind, tha
 
 --------------------------------------------------------------------------------
 
+.. _template_default_value:
+
+Default values 
+==============
+Default values can be specified for all entries (expect listentries) next to the dataSchema. The API will directly call `setEntry` for each specified default.
+
+Example: 
+
+.. code-block:: typescript
+
+  {
+    "pluginXYZ": {
+      "entry1": {
+        "dataSchema": {
+          "properties": {
+            "prop1": {
+              "type": "string"
+            },
+            "prop2": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        ...,
+        "value": {
+          "prop1": "default value for prop1"
+        }
+      }
+    }
+  }
+
+
+--------------------------------------------------------------------------------
+
 
 
 .. required for building markup
