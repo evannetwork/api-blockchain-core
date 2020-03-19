@@ -365,10 +365,11 @@ export class Onboarding extends Logger {
     recaptchaToken: string,
     network = 'testcore',
   ) {
-    // ensure to set activeIdentity to 0x0..., when use identity is enabled
+    // ensure to set activeIdentity to 0x0..., when use identity is disabled
     const creationRuntime = {
       ...runtime,
-      activeIdentity: runtime.runtimeConfig.useIdentity ? nullAddress : runtime.activeIdentity,
+      activeIdentity: runtime.activeIdentity === runtime.activeAccount ? nullAddress
+        : runtime.activeIdentity,
     };
     // check for correct profile data
     if (!profileData || !profileData.accountDetails || !profileData.accountDetails.accountName) {
@@ -440,12 +441,11 @@ export class Onboarding extends Logger {
     const newIdentity = (requestedProfile as any).identity;
     const accountHash = creationRuntime.web3.utils.soliditySha3(accountId);
     const identityHash = creationRuntime.web3.utils.soliditySha3(newIdentity);
-    const targetAccount = creationRuntime.activeIdentity !== accountId ? newIdentity : accountId;
-    const targetAccountHash = creationRuntime.activeIdentity !== accountId ? identityHash
-      : accountHash;
+    const targetAccount = creationRuntime.activeIdentity === nullAddress ? accountId : newIdentity;
+    const targetAccountHash = creationRuntime.activeIdentity === nullAddress ? accountHash
+      : identityHash;
 
-    // TODO: Use identity encryption key here!
-    const dataKey = creationRuntime.keyProvider.keys[accountHash];
+    const dataKey = creationRuntime.keyProvider.keys[targetAccountHash];
 
     profile.ipld.originator = creationRuntime.web3.utils.soliditySha3(targetAccount);
     profile.activeAccount = targetAccount;
@@ -454,7 +454,7 @@ export class Onboarding extends Logger {
     // eslint-disable-next-line
     creationRuntime.keyProvider.keys[targetAccountHash] = dataKey;
     // eslint-disable-next-line
-    creationRuntime.keyProvider.keys[creationRuntime.web3.utils.soliditySha3(targetAccountHash, targetAccountHash)] = dataKey;
+    creationRuntime.keyProvider.keys[creationRuntime.web3.utils.soliditySha3(targetAccount, targetAccount)] = dataKey;
 
     const dhKeys = creationRuntime.keyExchange.getDiffieHellmanKeys();
     await profile.addContactKey(
@@ -556,7 +556,7 @@ export class Onboarding extends Logger {
 
     const data = {
       accountId,
-      identityId: creationRuntime.activeIdentity !== accountId ? newIdentity : undefined,
+      identityId: creationRuntime.activeIdentity !== nullAddress ? newIdentity : undefined,
       signature,
       profileInfo: fileHashes,
       accessToken: (requestedProfile as any).accessToken,
@@ -564,7 +564,7 @@ export class Onboarding extends Logger {
     } as any;
 
     // TODO if statement can be removed after account/identity switch is done
-    if ((requestedProfile as any).identity) {
+    if (creationRuntime.activeIdentity !== nullAddress) {
       const didTransactionTuple = await this.createOfflineDidTransaction(creationRuntime,
         accountId, (requestedProfile as any).identity);
       const didTransaction = didTransactionTuple[0];
