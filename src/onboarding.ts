@@ -368,8 +368,7 @@ export class Onboarding extends Logger {
     // ensure to set activeIdentity to 0x0..., when use identity is disabled
     const creationRuntime = {
       ...runtime,
-      activeIdentity: runtime.activeIdentity === runtime.activeAccount ? nullAddress
-        : runtime.activeIdentity,
+      activeIdentity: runtime.runtimeConfig.useIdentity ? runtime.activeIdentity : nullAddress,
     };
     // check for correct profile data
     if (!profileData || !profileData.accountDetails || !profileData.accountDetails.accountName) {
