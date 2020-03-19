@@ -415,7 +415,7 @@ describe('Profile helper', function test() {
     });
 
     it('can save company profile specific properties to a profile of type company', async () => {
-      const localRuntime = await getProfileRuntime(mnemonics.company, 'Test1234', true);
+      const localRuntime = await getProfileRuntime(mnemonics.company, 'Test1234', useIdentity);
       await localRuntime.profile.setProfileProperties(companyProfileProperties);
       const [accountDetails, contact, registration] = await Promise.all(['accountDetails', 'contact', 'registration'].map(
         (p) => localRuntime.profile.getProfileProperty(p),
