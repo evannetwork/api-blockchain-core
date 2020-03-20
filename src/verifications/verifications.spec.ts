@@ -1481,7 +1481,7 @@ describe('Verifications handler', function test() {
           identity0,
         );
         context.subject = contractId;
-        // create identity for further tessts
+        // create identity for further tests
         const identity = await verifications.createIdentity(identity0, contractId);
         expect(identity).to.match(/0x[0-9-a-f]{64}/i);
       });
