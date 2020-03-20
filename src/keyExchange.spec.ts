@@ -118,10 +118,10 @@ describe('KeyExchange class', function test() {
       );
       const keyExchangeOptions = {
         mailbox: mailbox0,
-        cryptoProvider: TestUtils.getCryptoProvider(),
+        cryptoProvider: runtimes[0].cryptoProvider,
         defaultCryptoAlgo: 'aes',
         account: identities[2],
-        keyProvider: TestUtils.getKeyProvider(),
+        keyProvider: runtimes[0].keyProvider,
       };
 
       const blackHat = new KeyExchange(keyExchangeOptions);

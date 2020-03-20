@@ -338,13 +338,8 @@ describe('DigitalTwin', function test() {
       expect(twinDescriptionHash).to.equal(nullBytes32);
 
       // Check if did has been deactivated
-      const did = await TestUtils.getDid(
-        localRuntime.web3,
-        localRuntime.activeAccount,
-        localRuntime.dfs,
-      );
-      const twinDid = await did.convertIdentityToDid(twinIdentity);
-      await expect(did.didIsDeactivated(twinDid)).to.eventually.be.true;
+      const twinDid = await localRuntime.did.convertIdentityToDid(twinIdentity);
+      await expect(localRuntime.did.didIsDeactivated(twinDid)).to.eventually.be.true;
 
       // Check if all pinned hashes have been unpinned
       const pinnedHashesAfterDeactivation = await getPinnedFileHashes();
@@ -441,13 +436,8 @@ describe('DigitalTwin', function test() {
 
       if (useIdentity) {
         // Check if did has been deactivated
-        const did = await TestUtils.getDid(
-          localRuntime.web3,
-          localRuntime.activeAccount,
-          localRuntime.dfs,
-        );
-        const twinDid = await did.convertIdentityToDid(twinIdentity);
-        await expect(did.didIsDeactivated(twinDid)).to.eventually.be.true;
+        const twinDid = await localRuntime.did.convertIdentityToDid(twinIdentity);
+        await expect(localRuntime.did.didIsDeactivated(twinDid)).to.eventually.be.true;
       }
     });
   });

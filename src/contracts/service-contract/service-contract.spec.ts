@@ -418,17 +418,12 @@ describe('ServiceContract', function test() {
     const contract = await sc0.create(identity0, businessCenterDomain, sampleService1);
     const contentKey = await sharing.getKey(contract.options.address, identity0, '*', 0);
     await sc0.inviteToContract(
-      businessCenterDomain, contract.options.address, identity0, identity1,
-    );
-    await sharing.addSharing(
-      contract.options.address, identity0, identity1, '*', 0, contentKey,
-    );
-    await sc0.inviteToContract(
       businessCenterDomain, contract.options.address, identity0, identity2,
     );
     await sharing.addSharing(
       contract.options.address, identity0, identity2, '*', 0, contentKey,
     );
+
     await sc0.sendCall(contract, identity0, sampleCall, [identity2]);
     const call = await sc2.getCall(contract, identity2, 0);
     await sc2.sendAnswer(contract, identity2, sampleAnswer, 0, call.data.metadata.author);
@@ -442,7 +437,7 @@ describe('ServiceContract', function test() {
         ].sort(),
       ),
     ]);
-    const limitedSc = await TestUtils.getServiceContract(web3, dfs, limitedKeyProvider);
+    const limitedSc = await TestUtils.getServiceContract(runtimes[0], dfs, limitedKeyProvider);
     const answer = await limitedSc.getAnswer(contract, identity1, 0, 0);
     await expect(answer.data).to.be.undefined;
   });

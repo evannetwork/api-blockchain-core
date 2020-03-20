@@ -23,7 +23,7 @@ import { expect } from 'chai';
 import { promisify } from 'util';
 import { readFile } from 'fs';
 
-import { accounts, useIdentity, identities } from '../test/accounts';
+import { accounts, useIdentity } from '../test/accounts';
 import { CryptoProvider } from './crypto-provider';
 import { TestUtils } from '../test/test-utils';
 import {
@@ -41,26 +41,11 @@ describe('Encryption Wrapper', function test() {
   let identity: string;
 
   before(async () => {
-    const web3 = TestUtils.getWeb3();
-    // data sharing sha3 self key and edges to self and other accounts
-    const sha3 = (...args) => web3.utils.soliditySha3(...args);
-    const sha9 = (accountId1, accountId2) => sha3(...[sha3(accountId1), sha3(accountId2)].sort());
-    const getKeys = (
-      ownAccount, partnerAccount,
-    ) => [sha3(ownAccount), ...[ownAccount, partnerAccount].map(
-      (partner) => sha9(ownAccount, partner),
-    )];
     const runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
-    const sharing0 = await TestUtils.getSharing(
-      runtime.web3,
-      runtime.dfs,
-      getKeys(identities[0], identities[1]),
-    );
     identity = runtime.activeIdentity;
     ({ cryptoProvider, executor } = runtime);
     encryptionWrapper = new EncryptionWrapper({
       ...(runtime as any),
-      sharing: sharing0,
     });
   });
 
