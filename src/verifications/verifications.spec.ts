@@ -757,6 +757,8 @@ describe('Verifications handler', function test() {
           await verifications.setVerification(
             identity0, identity0, topicParent, 0, null, null, null, useIdentity,
           );
+          // explicitely clear cache
+          verifications.verificationCache = {};
           computed = await verifications.getComputedVerification(identity1, topic);
           await expect(computed.warnings).to.not.include('parentMissing');
 
@@ -1391,6 +1393,8 @@ describe('Verifications handler', function test() {
             await expect(computed.warnings).to.include('parentMissing');
 
             await verifications.setVerification(identity0, identity0, topicParent);
+            // explicitely clear cache
+            verifications.verificationCache = {};
             computed = await verifications.getComputedVerification(subject, topic, isIdentity);
             await expect(computed.warnings).to.not.include('parentMissing');
           });
@@ -1478,7 +1482,7 @@ describe('Verifications handler', function test() {
         );
         context.subject = contractId;
         // create identity for further tessts
-        const identity = await verifications.createIdentity(accounts[0], contractId);
+        const identity = await verifications.createIdentity(identity0, contractId);
         expect(identity).to.match(/0x[0-9-a-f]{64}/i);
       });
 
@@ -1505,7 +1509,7 @@ describe('Verifications handler', function test() {
             },
             identity0,
           );
-          await verifications.createIdentity(accounts[0], localContractId);
+          await verifications.createIdentity(identity0, localContractId);
           await verifications.setVerification(identity0, localContractId, '/company');
 
           // each contract should have one verification
@@ -1570,7 +1574,7 @@ describe('Verifications handler', function test() {
           { from: identity0, gas: 500000 },
         );
         undescribedIdentity = await verifications.createIdentity(
-          accounts[0], undescribedContract.options.address, false,
+          identity0, undescribedContract.options.address, false,
         );
         context.subject = undescribedIdentity;
       });

@@ -35,7 +35,6 @@ import {
   DigitalTwinTemplate,
   DigitalTwinVerificationEntry,
 } from './digital-twin';
-import { SignerInternal } from '../..';
 import {
   nullAddress,
   nullBytes32,
@@ -49,42 +48,11 @@ const [identity0, identity1] = identities;
 
 use(chaiAsPromised);
 
-const ownedDomain = 'twintest.fifs.registrar.test.evan';
+const ownedDomain = useIdentity ? 'twintestidentity.fifs.registrar.test.evan' : 'twintest.fifs.registrar.test.evan';
 
 async function getRuntimeWithEnabledPinning(defaultRuntime: Runtime): Promise<Runtime> {
-  const { web3 } = defaultRuntime;
-
-  const signer = new SignerInternal({
-    accountStore: await TestUtils.getAccountStore(),
-    contractLoader: defaultRuntime.contractLoader,
-    config: {},
-    web3,
-  });
-  const dfs = new Ipfs({
-    dfsConfig: { host: 'ipfs.test.evan.network', port: '443', protocol: 'https' },
-    disablePin: false, // <--
-  });
-  dfs.setRuntime({
-    activeAccount: identity0,
-    signer,
-    underlyingAccount: accounts[0],
-    web3,
-  });
-  const runtime = {
-    contractLoader: defaultRuntime.contractLoader,
-    cryptoProvider: defaultRuntime.cryptoProvider,
-    dataContract: await TestUtils.getDataContract(web3, dfs),
-    description: await TestUtils.getDescription(web3, dfs),
-    did: await TestUtils.getDid(web3, identity0, dfs),
-    executor: defaultRuntime.executor,
-    nameResolver: defaultRuntime.nameResolver,
-    profile: await TestUtils.getProfile(defaultRuntime, dfs, null, identity0),
-    rightsAndRoles: defaultRuntime.rightsAndRoles,
-    sharing: await TestUtils.getSharing(web3, dfs),
-    verifications: await TestUtils.getVerifications(web3, dfs),
-    web3,
-  };
-
+  const runtime = defaultRuntime;
+  (runtime.dfs as any).disablePin = false;
   return runtime;
 }
 
@@ -471,14 +439,16 @@ describe('DigitalTwin', function test() {
       expect(twinAuthority).to.equal(nullAddress);
       expect(twinDescriptionHash).to.equal(nullBytes32);
 
-      // Check if did has been deactivated
-      const did = await TestUtils.getDid(
-        localRuntime.web3,
-        localRuntime.activeAccount,
-        localRuntime.dfs,
-      );
-      const twinDid = await did.convertIdentityToDid(twinIdentity);
-      await expect(did.didIsDeactivated(twinDid)).to.eventually.be.true;
+      if (useIdentity) {
+        // Check if did has been deactivated
+        const did = await TestUtils.getDid(
+          localRuntime.web3,
+          localRuntime.activeAccount,
+          localRuntime.dfs,
+        );
+        const twinDid = await did.convertIdentityToDid(twinIdentity);
+        await expect(did.didIsDeactivated(twinDid)).to.eventually.be.true;
+      }
     });
   });
 
