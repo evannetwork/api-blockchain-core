@@ -757,12 +757,18 @@ export class Verifications extends Logger {
       ? this.options.contractLoader.loadContract('VerificationHolder', sourceIdentity)
       : await this.getIdentityForAccount(accountId);
 
+    // convert bigNumbers to numbers
+    let sendingValue = value;
+    if ((sendingValue as any).toNumber) {
+      sendingValue = (value as any).toNumber();
+    }
+
     // prepare success + result event handling
     const options = {
       event: { eventName: 'Approved', target: 'KeyHolderLibrary' },
       from: accountId,
       getEventResult: (event, eventArgs) => [eventArgs.executionId, event.blockNumber],
-      value,
+      value: sendingValue,
     };
 
     // run tx
@@ -772,7 +778,7 @@ export class Verifications extends Logger {
       signedTransactionInfo ? 'executeDelegated' : 'execute',
       options,
       to || this.contracts.registry.options.address,
-      value,
+      sendingValue,
       data,
     ].concat(signedTransactionInfo ? [signedTransactionInfo] : []));
 

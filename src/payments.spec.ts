@@ -27,7 +27,7 @@ import { Payments } from './payments';
 import { Runtime } from './runtime';
 
 
-describe('Payment Channels', function test() {
+(useIdentity ? describe : describe.skip)('Payment Channels', function test() {
   this.timeout(600000);
   let payments0: Payments;
   let payments1: Payments;
