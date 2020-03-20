@@ -8,17 +8,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        tests: [
-          "src/verifications/*.spec.ts src/profile/*.spec.ts src/*.spec.ts src/votings/*.spec.ts",
-          "src/contracts/data-contract/*.spec.ts src/encryption/*.spec.ts src/dfs/*.spec.ts src/did/*.spec.ts src/vc/*.spec.ts",
-          "src/contracts/*.spec.ts src/contracts/base-contract/*.spec.ts src/contracts/business-center/*.spec.ts src/contracts/service-contract/*.spec.ts",
-          "src/contracts/digital-twin/*.spec.ts"
-        ]
+        tests:
+          - {"name": "Services Contracts", "testpattern":src/verifications/*.spec.ts src/profile/*.spec.ts src/*.spec.ts src/votings/*.spec.ts"}
+          - {"name": "data contract & IPFS & did/vc tests", "src/contracts/data-contract/*.spec.ts src/encryption/*.spec.ts src/dfs/*.spec.ts src/did/*.spec.ts src/vc/*.spec.ts"}
+          - {"name": "service/base/businesscenter contract tests", "src/contracts/*.spec.ts src/contracts/base-contract/*.spec.ts src/contracts/business-center/*.spec.ts src/contracts/service-contract/*.spec.ts"}
+          - {"name": "digital-twin tests", "src/contracts/digital-twin/*.spec.ts"}
         identity: [
           "false",
           "true"
         ]
-    name: Node ${{ matrix.node }} sample
+    name: ${{ matrix.tests.testpattern }} -> identity ${{ matrix.identity }}
     steps:
       - uses: actions/checkout@v2
       - name: Setup node
@@ -34,6 +33,6 @@ jobs:
             npm run testunitcoverage
             bash <(curl -s https://codecov.io/bash) -cF javascript
         env:
-         TESTSPECS: ${{ matrix.tests }}
+         TESTSPECS: ${{ matrix.tests.testpattern }}
          USE_IDENTITY: ${{ matrix.identity }}
          CHAIN_ENDPOINT: 'ws://localhost:7545'
