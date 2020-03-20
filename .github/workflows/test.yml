@@ -17,7 +17,7 @@ jobs:
           "false",
           "true"
         ]
-    name: ${{ matrix.tests.testpattern }} -> identity ${{ matrix.identity }}
+    name: ${{ matrix.tests.name }} -> identity ${{ matrix.identity }}
     steps:
       - uses: actions/checkout@v2
       - name: Setup node
