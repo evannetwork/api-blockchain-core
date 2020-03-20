@@ -583,7 +583,7 @@ Sample AJV data type configurations are listed below and pleae keep in mind, tha
 
 Default values 
 ==============
-Default values can be specified for all entries (expect listentries) next to the dataSchema. The API will directly call `setEntry` for each specified default.
+Default values can be specified for all entries (except list entries) next to the dataSchema. The API will directly call `setEntry` for each specified default.
 
 Example: 
 
