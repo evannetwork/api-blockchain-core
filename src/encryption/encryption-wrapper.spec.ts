@@ -60,7 +60,6 @@ describe('Encryption Wrapper', function test() {
     ({ cryptoProvider, executor } = runtime);
     encryptionWrapper = new EncryptionWrapper({
       ...(runtime as any),
-      sharing: sharing0,
     });
   });
 
