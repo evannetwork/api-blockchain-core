@@ -51,11 +51,6 @@ describe('Encryption Wrapper', function test() {
       (partner) => sha9(ownAccount, partner),
     )];
     const runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
-    const sharing0 = await TestUtils.getSharing(
-      runtime.web3,
-      runtime.dfs,
-      getKeys(identities[0], identities[1]),
-    );
     identity = runtime.activeIdentity;
     ({ cryptoProvider, executor } = runtime);
     encryptionWrapper = new EncryptionWrapper({
