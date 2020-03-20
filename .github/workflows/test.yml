@@ -36,3 +36,4 @@ jobs:
         env:
          TESTSPECS: ${{ matrix.tests }}
          USE_IDENTITY: ${{ matrix.identity }}
+         CHAIN_ENDPOINT: 'ws://localhost:7545'
