@@ -156,7 +156,9 @@ describe('Onboarding helper', function test() {
           expect(req.body).to.have.property('accessToken').that.equals(accessToken);
           expect(req.body).to.have.property('profileInfo');
           expect(req.body).to.have.property('contractId').that.equals(contractId);
-          expect(req.body).to.have.nested.property('didTransaction.sourceIdentity').that.equals(identity);
+          if (useIdentity) {
+            expect(req.body).to.have.nested.property('didTransaction.sourceIdentity').that.equals(identity);
+          }
           expect(req.body).to.have.property('signature');
           expect(runtime.web3.eth.accounts.recover(
             'Gimme Gimme Gimme!', req.body.signature,
