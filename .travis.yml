@@ -36,6 +36,42 @@ matrix:
     script:
       - npm run testunitcoverage
 
+  - name: "(identity) service contracts"
+    node_js: "11"
+    env:
+      - TESTSPECS='src/verifications/*.spec.ts src/profile/*.spec.ts src/*.spec.ts src/votings/*.spec.ts'
+      - CHAIN_ENDPOINT='ws://localhost:7545'
+      - USE_IDENTITY=true
+    script:
+      - npm run testunitcoverage
+
+  - name: "(identity) digital-twin tests"
+    node_js: "11"
+    env:
+      - TESTSPECS='src/contracts/digital-twin/*.spec.ts'
+      - CHAIN_ENDPOINT='ws://localhost:7545'
+      - USE_IDENTITY=true
+    script:
+      - npm run testunitcoverage
+
+  - name: "(identity) data contract & IPFS tests & did/vc tests"
+    node_js: "11"
+    env:
+      - TESTSPECS="src/contracts/data-contract/*.spec.ts src/encryption/*.spec.ts src/dfs/*.spec.ts src/did/*.spec.ts src/vc/*.spec.ts"
+      - CHAIN_ENDPOINT='ws://localhost:7545'
+      - USE_IDENTITY=true
+    script:
+      - npm run testunitcoverage
+
+  - name: "(identity) service/base/businesscenter contract tests"
+    node_js: "11"
+    env:
+      - TESTSPECS='src/contracts/*.spec.ts src/contracts/base-contract/*.spec.ts src/contracts/business-center/*.spec.ts src/contracts/service-contract/*.spec.ts'
+      - CHAIN_ENDPOINT='ws://localhost:7545'
+      - USE_IDENTITY=true
+    script:
+      - npm run testunitcoverage
+
 cache:
   npm: false
 
