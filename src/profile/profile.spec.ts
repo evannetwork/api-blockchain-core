@@ -320,7 +320,7 @@ describe('Profile helper', function test() {
 
     it('can transform user profile to company profile', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      const initRuntime = await TestUtils.getRuntime(accounts[0], null);
+      const initRuntime = await TestUtils.getRuntime(accounts[0]);
 
       await Onboarding.createNewProfile(initRuntime, newMnemonic, 'Test1234', {
         accountDetails: {
