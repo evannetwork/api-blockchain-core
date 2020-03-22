@@ -456,9 +456,16 @@ export class Payments extends Logger {
     receiver: string,
     startBlock = 0,
   ): Promise<MicroChannel> {
+    let channelAccount;
+    if (account === this.options.executor.signer.activeIdentity) {
+      channelAccount = this.options.executor.signer.underlyingAccount;
+    } else {
+      channelAccount = account;
+    }
+
     const openEvents = await this.channelManager.getPastEvents('ChannelCreated', {
       filter: {
-        _sender_address: account, // eslint-disable-line @typescript-eslint/camelcase
+        _sender_address: channelAccount, // eslint-disable-line @typescript-eslint/camelcase
         _receiver_address: receiver, // eslint-disable-line @typescript-eslint/camelcase
       },
       fromBlock: startBlock,
@@ -472,7 +479,7 @@ export class Payments extends Logger {
     const [closeEvents, settleEvents, currentBlock, challenge] = await Promise.all([
       this.channelManager.getPastEvents('ChannelCloseRequested', {
         filter: {
-          _sender_address: account, // eslint-disable-line @typescript-eslint/camelcase
+          _sender_address: channelAccount, // eslint-disable-line @typescript-eslint/camelcase
           _receiver_address: receiver, // eslint-disable-line @typescript-eslint/camelcase
         },
         fromBlock: minBlock,
@@ -480,7 +487,7 @@ export class Payments extends Logger {
       }),
       this.channelManager.getPastEvents('ChannelSettled', {
         filter: {
-          _sender_address: account, // eslint-disable-line @typescript-eslint/camelcase
+          _sender_address: channelAccount, // eslint-disable-line @typescript-eslint/camelcase
           _receiver_address: receiver, // eslint-disable-line @typescript-eslint/camelcase
         },
         fromBlock: minBlock,
@@ -510,7 +517,7 @@ export class Payments extends Logger {
     let openChannel: MicroChannel;
     for (const ev of stillOpen) {
       const channel: MicroChannel = {
-        account,
+        account: channelAccount,
         receiver,
         block: ev.blockNumber,
         proof: { balance: new BigNumber(0) },
@@ -555,9 +562,17 @@ export class Payments extends Logger {
       this.log(`Already valid channel will be forgotten: ${this.channel}`, 'warning');
     }
 
+    let channelAccount;
+    if (account === this.options.executor.signer.activeIdentity) {
+      channelAccount = this.options.executor.signer.underlyingAccount;
+    } else {
+      channelAccount = account;
+    }
+
+
     // first, check if there's enough balance
 
-    const balance = await this.options.web3.eth.getBalance(account);
+    const balance = await this.options.web3.eth.getBalance(channelAccount);
     if (new BigNumber(balance).lt(new BigNumber(deposit))) {
       throw new Error(`Not enough tokens.
         Token balance = ${balance}, required = ${deposit}`);
@@ -568,7 +583,7 @@ export class Payments extends Logger {
       this.channelManager,
       'createChannel',
       {
-        from: account,
+        from: channelAccount,
         value: deposit,
         // event ChannelCreated(address _sender_address,
         // address  _receiver_address, uint256 _deposit)
@@ -581,7 +596,7 @@ export class Payments extends Logger {
     const info = await this.options.executor.executeContractCall(
       this.channelManager,
       'getChannelInfo',
-      account,
+      channelAccount,
       receiver,
       createdBlockNumber,
     );
@@ -589,7 +604,7 @@ export class Payments extends Logger {
       throw new Error('No deposit found!');
     }
     this.setChannel({
-      account,
+      account: channelAccount,
       receiver,
       block: createdBlockNumber,
       proof: { balance: new BigNumber(0) },
@@ -812,10 +827,6 @@ export class Payments extends Logger {
   }
 
   private getClosingProofSignatureParams(): MsgParam[] {
-    let channelAccount = this.channel.account;
-    if (channelAccount === this.options.executor.signer.activeIdentity) {
-      channelAccount = this.options.executor.signer.underlyingAccount;
-    }
     return [
       {
         type: 'string',
@@ -825,7 +836,7 @@ export class Payments extends Logger {
       {
         type: 'address',
         name: 'sender',
-        value: channelAccount,
+        value: this.channel.account,
       },
       {
         type: 'uint32',
