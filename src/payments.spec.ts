@@ -64,12 +64,12 @@ describe('Payment Channels', function test() {
   });
 
   it('should open a new channel to a other account', async () => {
-    initialChannel = await payments0.openChannel(identity0, identity1, 5);
+    initialChannel = await payments0.openChannel(identity0, accounts[1], 5);
     payments1.setChannel(initialChannel);
   });
 
   it('should reload a channel to an other account, when loading from blockchain', async () => {
-    const channel = await payments0.loadChannelFromBlockchain(identity0, identity1, startBlock);
+    const channel = await payments0.loadChannelFromBlockchain(identity0, accounts[1], startBlock);
     expect(channel.block).to.equal(initialChannel.block);
   });
 
@@ -107,12 +107,12 @@ describe('Payment Channels', function test() {
   });
 
   it('should close a channel cooperative from the sender side', async () => {
-    initialChannel = await payments0.openChannel(identity0, identity1, 5);
+    initialChannel = await payments0.openChannel(identity0, accounts[1], 5);
     payments1.setChannel(initialChannel);
     proof = await payments0.incrementBalanceAndSign(1);
     payments0.confirmPayment(proof);
     payments1.channel.proof = proof;
-    const closingSig = await payments1.getClosingSig(identity1);
+    const closingSig = await payments1.getClosingSig(accounts[1]);
 
     // store balance before closing
     const balanceReceiverBefore = new BigNumber(
@@ -133,7 +133,7 @@ describe('Payment Channels', function test() {
   });
 
   it.skip('should close a channel un-cooperative from the receiver side', async () => {
-    const closingSig = await payments1.getClosingSig(identity1);
+    const closingSig = await payments1.getClosingSig(accounts[1]);
     await payments1.closeChannel(closingSig);
   });
 });

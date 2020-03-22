@@ -32,7 +32,7 @@ import { Executor } from '../..';
 use(chaiAsPromised);
 
 describe('baseContract', function test() {
-  this.timeout(60000);
+  this.timeout(100000);
   let baseContract: BaseContract;
   let contractLoader: ContractLoader;
   let executor: Executor;

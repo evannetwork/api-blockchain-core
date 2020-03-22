@@ -250,7 +250,7 @@ use(chaiAsPromised);
         expect(gasPrice).to.be.string;
       });
 
-      it('should reject transfer and balance of identity should remain same', async () => {
+      it('should reject transfer and balance of identity should remain same (except using identity)', async () => {
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
         const contract = await runtimes[0].executor.createContract(
           'TestContract', [randomString], { from: identity0, gas: 1e6 },
@@ -266,11 +266,13 @@ use(chaiAsPromised);
           value: amountToSend,
         })).to.rejected;
 
-        const balanceAfter = new BigNumber(await web3.eth.getBalance(account0));
-        expect(balanceAfter.eq(balanceBefore)).to.be.true;
+        if (!useIdentity) {
+          const balanceAfter = new BigNumber(await web3.eth.getBalance(account0));
+          expect(balanceAfter.eq(balanceBefore)).to.be.true;
+        }
       });
 
-      it('should reject transfer and funds should deduct transfer fee in underlaying account',
+      it('should reject transfer and funds should deduct transfer fee in underlying account',
         async () => {
           const randomString = Math.floor(Math.random() * 1e12).toString(36);
           const contract = await runtimes[0].executor.createContract(
@@ -332,14 +334,14 @@ use(chaiAsPromised);
       it('should perform fund transfer to contract with a fallback function, e.g. identities',
         async () => {
           const amountToSend = Math.floor(Math.random() * 1e3);
-          const balanceBefore = new BigNumber(await web3.eth.getBalance(account0));
+          const balanceBefore = new BigNumber(await web3.eth.getBalance(identity0));
           await runtimes[0].executor.executeSend({
             from: account0,
             to: identity0,
             gas: 100e3,
             value: amountToSend,
           });
-          const balanceAfter = new BigNumber(await web3.eth.getBalance(account0));
+          const balanceAfter = new BigNumber(await web3.eth.getBalance(identity0));
           const diff = balanceAfter.minus(balanceBefore);
           expect(diff.eq(new BigNumber(amountToSend))).to.be.true;
         });
@@ -361,8 +363,13 @@ use(chaiAsPromised);
             value: amountToSend,
           })).to.be.rejected;
 
-          const balanceAfter = new BigNumber(await web3.eth.getBalance(account0));
-          expect(balanceAfter.eq(balanceBefore)).to.be.true;
+          if (useIdentity) {
+            const balanceAfter = new BigNumber(await web3.eth.getBalance(account0));
+            expect(balanceAfter.lt(balanceBefore)).to.be.true;
+          } else {
+            const balanceAfter = new BigNumber(await web3.eth.getBalance(account0));
+            expect(balanceAfter.eq(balanceBefore)).to.be.true;
+          }
         });
     });
   });

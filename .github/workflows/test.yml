@@ -1,0 +1,38 @@
+name: Tests
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-16.04
+    strategy:
+      fail-fast: false
+      matrix:
+        tests:
+          - {"name": "Services Contracts", "testpattern":src/verifications/*.spec.ts src/profile/*.spec.ts src/*.spec.ts src/votings/*.spec.ts"}
+          - {"name": "data contract & IPFS & did/vc tests", "testpattern":"src/contracts/data-contract/*.spec.ts src/encryption/*.spec.ts src/dfs/*.spec.ts src/did/*.spec.ts src/vc/*.spec.ts"}
+          - {"name": "service/base/businesscenter contract tests", "testpattern":"src/votings/*.spec.ts src/contracts/*.spec.ts src/contracts/base-contract/*.spec.ts src/contracts/business-center/*.spec.ts src/contracts/service-contract/*.spec.ts"}
+          - {"name": "digital-twin tests", "testpattern":"src/contracts/digital-twin/*.spec.ts"}
+        identity: [
+          "false",
+          "true"
+        ]
+    name: ${{ matrix.tests.name }} -> identity ${{ matrix.identity }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup node
+        uses: actions/setup-node@v1
+        with:
+          node-version: 11.15.0
+      - run: node --version
+      - run: |
+            docker run -d -p 8546:8546 -p 8545:8545 -u root evannetwork/testcore-snapshot --chain evantestcore --jsonrpc-interface all --unsafe-expose
+            npm i -g ganache-cli
+            npm i
+            ganache-cli --allowUnlimitedContractSize --gasLimit 0xE4E1C0 -p 7545 -f http://localhost:8545 > /dev/null &
+            npm run testunitcoverage
+            bash <(curl -s https://codecov.io/bash) -cF javascript
+        env:
+         TESTSPECS: ${{ matrix.tests.testpattern }}
+         USE_IDENTITY: ${{ matrix.identity }}
+         CHAIN_ENDPOINT: 'ws://localhost:7545'

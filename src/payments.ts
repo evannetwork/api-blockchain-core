@@ -356,7 +356,11 @@ export class Payments extends Logger {
 
     const params = this.getClosingProofSignatureParams();
     let sig: string;
-    const privKey = await this.options.accountStore.getPrivateKey(account);
+    let signAccount = account;
+    if (signAccount === this.options.executor.signer.activeIdentity) {
+      signAccount = this.options.executor.signer.underlyingAccount;
+    }
+    const privKey = await this.options.accountStore.getPrivateKey(signAccount);
     try {
       const result = await signTypedDataLegacy(
         Buffer.from(privKey, 'hex'),
@@ -376,8 +380,8 @@ export class Payments extends Logger {
       recoverTypedSignatureLegacy({ data: params, sig }),
     );
     this.log(`signTypedData = ${sig} , ${recovered}`, 'debug');
-    if (recovered !== account) {
-      throw new Error(`Invalid recovered signature: ${recovered} != ${account}. Do your provider support eth_signTypedData?`);
+    if (recovered !== signAccount) {
+      throw new Error(`Invalid recovered signature: ${recovered} != ${signAccount}. Do your provider support eth_signTypedData?`);
     }
 
     return sig;
@@ -452,9 +456,16 @@ export class Payments extends Logger {
     receiver: string,
     startBlock = 0,
   ): Promise<MicroChannel> {
+    let channelAccount;
+    if (account === this.options.executor.signer.activeIdentity) {
+      channelAccount = this.options.executor.signer.underlyingAccount;
+    } else {
+      channelAccount = account;
+    }
+
     const openEvents = await this.channelManager.getPastEvents('ChannelCreated', {
       filter: {
-        _sender_address: account, // eslint-disable-line @typescript-eslint/camelcase
+        _sender_address: channelAccount, // eslint-disable-line @typescript-eslint/camelcase
         _receiver_address: receiver, // eslint-disable-line @typescript-eslint/camelcase
       },
       fromBlock: startBlock,
@@ -468,7 +479,7 @@ export class Payments extends Logger {
     const [closeEvents, settleEvents, currentBlock, challenge] = await Promise.all([
       this.channelManager.getPastEvents('ChannelCloseRequested', {
         filter: {
-          _sender_address: account, // eslint-disable-line @typescript-eslint/camelcase
+          _sender_address: channelAccount, // eslint-disable-line @typescript-eslint/camelcase
           _receiver_address: receiver, // eslint-disable-line @typescript-eslint/camelcase
         },
         fromBlock: minBlock,
@@ -476,7 +487,7 @@ export class Payments extends Logger {
       }),
       this.channelManager.getPastEvents('ChannelSettled', {
         filter: {
-          _sender_address: account, // eslint-disable-line @typescript-eslint/camelcase
+          _sender_address: channelAccount, // eslint-disable-line @typescript-eslint/camelcase
           _receiver_address: receiver, // eslint-disable-line @typescript-eslint/camelcase
         },
         fromBlock: minBlock,
@@ -506,7 +517,7 @@ export class Payments extends Logger {
     let openChannel: MicroChannel;
     for (const ev of stillOpen) {
       const channel: MicroChannel = {
-        account,
+        account: channelAccount,
         receiver,
         block: ev.blockNumber,
         proof: { balance: new BigNumber(0) },
@@ -551,9 +562,17 @@ export class Payments extends Logger {
       this.log(`Already valid channel will be forgotten: ${this.channel}`, 'warning');
     }
 
+    let channelAccount;
+    if (account === this.options.executor.signer.activeIdentity) {
+      channelAccount = this.options.executor.signer.underlyingAccount;
+    } else {
+      channelAccount = account;
+    }
+
+
     // first, check if there's enough balance
 
-    const balance = await this.options.web3.eth.getBalance(account);
+    const balance = await this.options.web3.eth.getBalance(channelAccount);
     if (new BigNumber(balance).lt(new BigNumber(deposit))) {
       throw new Error(`Not enough tokens.
         Token balance = ${balance}, required = ${deposit}`);
@@ -564,7 +583,7 @@ export class Payments extends Logger {
       this.channelManager,
       'createChannel',
       {
-        from: account,
+        from: channelAccount,
         value: deposit,
         // event ChannelCreated(address _sender_address,
         // address  _receiver_address, uint256 _deposit)
@@ -577,7 +596,7 @@ export class Payments extends Logger {
     const info = await this.options.executor.executeContractCall(
       this.channelManager,
       'getChannelInfo',
-      account,
+      channelAccount,
       receiver,
       createdBlockNumber,
     );
@@ -585,7 +604,7 @@ export class Payments extends Logger {
       throw new Error('No deposit found!');
     }
     this.setChannel({
-      account,
+      account: channelAccount,
       receiver,
       block: createdBlockNumber,
       proof: { balance: new BigNumber(0) },
@@ -682,7 +701,14 @@ export class Payments extends Logger {
 
     const params = this.getBalanceProofSignatureParams(proof);
     let sig: string;
-    const privKey = await this.options.accountStore.getPrivateKey(this.channel.account);
+
+    let channelAccount: string;
+    if (this.channel.account === this.options.executor.signer.activeIdentity) {
+      channelAccount = this.options.executor.signer.underlyingAccount;
+    } else {
+      channelAccount = this.channel.account;
+    }
+    const privKey = await this.options.accountStore.getPrivateKey(channelAccount);
     try {
       const result = await signTypedDataLegacy(
         Buffer.from(privKey, 'hex'),
@@ -706,8 +732,8 @@ export class Payments extends Logger {
       { data: params, sig },
     ));
     this.log(`signTypedData = ${sig}, ${recovered}`, 'debug');
-    if (recovered !== this.channel.account) {
-      throw new Error(`Invalid recovered signature: ${recovered} != ${this.channel.account}. `
+    if (recovered !== channelAccount) {
+      throw new Error(`Invalid recovered signature: ${recovered} != ${channelAccount}. `
         + 'Does your provider support eth_signTypedData?');
     }
     // eslint-disable-next-line no-param-reassign
