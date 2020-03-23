@@ -20,15 +20,12 @@
 import 'mocha';
 import { expect, use } from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
-
 import {
   ContractLoader,
-  DfsInterface,
   Executor,
   NameResolver,
 } from '@evan.network/dbcp';
-
-import { accounts } from '../test/accounts';
+import { accounts, useIdentity } from '../test/accounts';
 import { ExecutorWallet } from './executor-wallet';
 import { TestUtils } from '../test/test-utils';
 import { Wallet } from './wallet';
@@ -38,68 +35,74 @@ use(chaiAsPromised);
 
 describe('Signer Wallet', function test() {
   this.timeout(60000);
-  let dfs: DfsInterface;
   let contractLoader: ContractLoader;
   let executor: Executor;
   let executorWallet0: ExecutorWallet;
   let executorWallet1: ExecutorWallet;
+  let identity0: string;
+  let identity1: string;
   let nameResolver: NameResolver;
   let wallet0: Wallet;
   let wallet1: Wallet;
-  let web3: any;
 
   before(async () => {
-    web3 = TestUtils.getWeb3();
-    dfs = await TestUtils.getIpfs();
-    wallet0 = await TestUtils.getWallet(web3, dfs);
-    wallet1 = await TestUtils.getWallet(web3, dfs);
-    await wallet0.create(accounts[0], accounts[0], [accounts[0]]);
-    await wallet1.create(accounts[1], accounts[1], [accounts[1]]);
-    executor = await TestUtils.getExecutor(web3);
-    contractLoader = await TestUtils.getContractLoader(web3);
-    nameResolver = await TestUtils.getNameResolver(web3);
-    const eventHub = await TestUtils.getEventHub(web3);
-    executor.eventHub = eventHub;
-    executorWallet0 = await TestUtils.getExecutorWallet(web3, wallet0, accounts[0]);
-    executorWallet0.eventHub = eventHub;
-    executorWallet1 = await TestUtils.getExecutorWallet(web3, wallet1, accounts[1]);
-    executorWallet1.eventHub = eventHub;
+    const runtimes = await Promise.all(
+      accounts.slice(0, 2).map((account) => TestUtils.getRuntime(account, null, { useIdentity })),
+    );
+    identity0 = runtimes[0].activeIdentity;
+    identity1 = runtimes[1].activeIdentity;
+    wallet0 = await TestUtils.getWallet(runtimes[0]);
+    wallet1 = await TestUtils.getWallet(runtimes[1]);
+    await wallet0.create(identity0, identity0, [identity0]);
+    await wallet1.create(identity1, identity1, [identity1]);
+    executor = runtimes[0].executor;
+    contractLoader = runtimes[0].contractLoader;
+    nameResolver = runtimes[0].nameResolver;
+    executor.eventHub = runtimes[0].eventHub;
+    executorWallet0 = await TestUtils.getExecutorWallet(
+      wallet0,
+      runtimes[0],
+    );
+    executorWallet1 = await TestUtils.getExecutorWallet(
+      wallet1,
+      runtimes[1],
+    );
   });
 
   describe('when submitting transactions via wallet', () => {
     it('can instantly submit transactions', async () => {
       // create test contract and hand over to wallet
       const testContract = await executor.createContract(
-        'Owned', [], { from: accounts[0], gas: 200000 },
+        'Owned', [], { from: identity0, gas: 200000 },
       );
-      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[0]);
+      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(identity0);
       await executor.executeContractTransaction(
-        testContract, 'transferOwnership', { from: accounts[0] }, wallet0.walletAddress,
+        testContract, 'transferOwnership', { from: identity0 }, wallet0.walletAddress,
       );
       expect(await executor.executeContractCall(
         testContract, 'owner',
       )).to.eq(wallet0.walletAddress);
-      await TestUtils.nextBlock(executor, accounts[0]);
+      await TestUtils.nextBlock(executor, identity0);
       await executorWallet0.executeContractTransaction(
         testContract,
         'transferOwnership',
         { from: wallet0.walletAddress },
-        accounts[1],
+        identity1,
       );
-      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[1]);
+      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(identity1);
     });
 
     it('cannot submit transactions, when not in owners group', async () => {
       // create test contract and hand over to wallet
       const testContract = await executor.createContract(
-        'Owned', [], { from: accounts[0], gas: 200000 },
+        'Owned', [], { from: identity0, gas: 200000 },
       );
-      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[0]);
+      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(identity0);
 
       await executor.executeContractTransaction(
         testContract,
         'transferOwnership',
-        { from: accounts[0], autoGas: 1.1 },
+        { from: identity0, autoGas: 1.1 },
         wallet0.walletAddress,
       );
       expect(await executor.executeContractCall(
@@ -107,7 +110,7 @@ describe('Signer Wallet', function test() {
       )).to.eq(wallet0.walletAddress);
 
       const promise = executorWallet1.executeContractTransaction(
-        testContract, 'transferOwnership', { from: wallet1.walletAddress }, accounts[1],
+        testContract, 'transferOwnership', { from: wallet1.walletAddress }, identity1,
       );
       await expect(promise).to.be.rejected;
     });
@@ -115,11 +118,11 @@ describe('Signer Wallet', function test() {
     it('can instantly submit transactions a second time', async () => {
       // create test contract and hand over to wallet
       const testContract = await executor.createContract(
-        'Owned', [], { from: accounts[0], gas: 200000 },
+        'Owned', [], { from: identity0, gas: 200000 },
       );
-      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[0]);
+      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(identity0);
       await executor.executeContractTransaction(
-        testContract, 'transferOwnership', { from: accounts[0] }, wallet0.walletAddress,
+        testContract, 'transferOwnership', { from: identity0 }, wallet0.walletAddress,
       );
       expect(await executor.executeContractCall(
         testContract, 'owner',
@@ -128,9 +131,9 @@ describe('Signer Wallet', function test() {
         testContract,
         'transferOwnership',
         { from: wallet0.walletAddress, autoGas: 1.1 },
-        accounts[1],
+        identity1,
       );
-      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[1]);
+      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(identity1);
     });
 
     it('can instantly submit transactions with event based result', async () => {
@@ -174,11 +177,11 @@ describe('Signer Wallet', function test() {
     it('can instantly submit transactions a third time', async () => {
       // create test contract and hand over to wallet
       const testContract = await executor.createContract(
-        'Owned', [], { from: accounts[0], gas: 200000 },
+        'Owned', [], { from: identity0, gas: 200000 },
       );
-      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[0]);
+      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(identity0);
       await executor.executeContractTransaction(
-        testContract, 'transferOwnership', { from: accounts[0] }, wallet0.walletAddress,
+        testContract, 'transferOwnership', { from: identity0 }, wallet0.walletAddress,
       );
       expect(await executor.executeContractCall(
         testContract, 'owner',
@@ -188,9 +191,9 @@ describe('Signer Wallet', function test() {
         testContract,
         'transferOwnership',
         { from: wallet0.walletAddress, autoGas: 1.1 },
-        accounts[1],
+        identity1,
       );
-      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[1]);
+      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(identity1);
     });
 
     it('can create new contracts', async () => {
@@ -209,9 +212,9 @@ describe('Signer Wallet', function test() {
         testContract,
         'transferOwnership',
         { from: wallet0.walletAddress, autoGas: 1.1 },
-        accounts[1],
+        identity1,
       );
-      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(accounts[1]);
+      expect(await executor.executeContractCall(testContract, 'owner')).to.eq(identity1);
     });
   });
 });

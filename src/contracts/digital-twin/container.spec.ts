@@ -22,9 +22,7 @@ import * as chaiAsPromised from 'chai-as-promised';
 import { expect, use } from 'chai';
 import { promisify } from 'util';
 import { readFile } from 'fs';
-import { Ipfs } from '../../dfs/ipfs';
-import { Executor } from '../..';
-import { accounts } from '../../test/accounts';
+import { identities, useIdentity, accounts } from '../../test/accounts';
 import { TestUtils } from '../../test/test-utils';
 import { VerificationsStatus } from '../../verifications/verifications';
 import {
@@ -34,17 +32,18 @@ import {
   ContainerPlugin,
   ContainerVerificationEntry,
 } from './container';
+import { Runtime } from '../../runtime';
 
 use(chaiAsPromised);
 
 
 describe('Container', function test() {
   this.timeout(600000);
-  const [owner, consumer, otherUser] = accounts;
+  const [owner, consumer, otherUser] = identities;
   let createRuntime: Function;
-  let dfs: Ipfs;
+  let containerConfigOwner: ContainerOptions;
+  let containerConfigConsumer: ContainerOptions;
   let defaultConfig: ContainerConfig;
-  let executor: Executor;
   const description = {
     name: 'test container',
     description: 'container from test run',
@@ -52,7 +51,7 @@ describe('Container', function test() {
     version: '0.1.0',
     dbcpVersion: 2,
   };
-  const runtimes: { [id: string]: ContainerOptions } = {};
+  const runtimes: { [id: string]: Runtime } = {};
   let sha3: Function;
 
   /**
@@ -62,7 +61,7 @@ describe('Container', function test() {
    */
   async function getConsumerContainer(container: Container) {
     return new Container(
-      runtimes[consumer],
+      containerConfigConsumer,
       { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
     );
   }
@@ -87,7 +86,13 @@ describe('Container', function test() {
     });
 
     // create the container with these properties
-    const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+    const container = await Container.create(
+
+      containerConfigOwner,
+      {
+        ...defaultConfig, plugin,
+      },
+    );
 
     // set random values
     await Promise.all(properties.map(async (property: string) => {
@@ -100,50 +105,45 @@ describe('Container', function test() {
   }
 
   before(async () => {
-    dfs = await TestUtils.getIpfs();
     const web3 = await TestUtils.getWeb3();
-    executor = await TestUtils.getExecutor(web3);
     sha3 = (...args) => web3.utils.soliditySha3(...args);
     const sha9 = (accountId1, accountId2) => sha3(...[sha3(accountId1), sha3(accountId2)].sort());
-    createRuntime = async (accountId) => {
+    createRuntime = async (accountId, identityId, useIdentityFlag) => {
       // data contract instance has sha3 self key and edges to self and other accounts
       const requestedKeys = [
-        sha3(accountId),
-        ...accounts.map((partner) => sha9(accountId, partner)),
+        sha3(identityId),
+        ...identities.map((partner) => sha9(identityId, partner)),
       ];
-      const runtime = {
-        contractLoader: await TestUtils.getContractLoader(web3),
-        cryptoProvider: await TestUtils.getCryptoProvider(dfs),
-        dataContract: await TestUtils.getDataContract(web3, dfs, requestedKeys),
-        description: await TestUtils.getDescription(web3, dfs, requestedKeys),
-        executor,
-        nameResolver: await TestUtils.getNameResolver(web3),
-        rightsAndRoles: await TestUtils.getRightsAndRoles(web3),
-        sharing: await TestUtils.getSharing(web3, dfs, requestedKeys),
-        verifications: await TestUtils.getVerifications(web3, dfs, requestedKeys),
-        web3,
-      };
-      runtime.executor.eventHub = await TestUtils.getEventHub(web3);
+      const runtime = await TestUtils.getRuntime(
+        accountId,
+        requestedKeys,
+        {
+          useIdentity: useIdentityFlag,
+        },
+      );
       return runtime;
     };
-    for (const accountId of accounts) {
-      runtimes[accountId] = await createRuntime(accountId);
+    for (let i = 0; i < identities.length; i += 1) {
+      runtimes[identities[i]] = await createRuntime(accounts[i], identities[i], useIdentity);
     }
     defaultConfig = {
-      accountId: accounts[0],
+      accountId: identities[0],
       description,
       plugin: 'metadata',
     };
     // create factory for test
-    const factory = await executor.createContract(
-      'ContainerDataContractFactory', [], { from: accounts[0], gas: 6e6 },
+    const factory = await runtimes[owner].executor.createContract(
+      'ContainerDataContractFactory', [], { from: identities[0], gas: 6e6 },
     );
     defaultConfig.factoryAddress = factory.options.address;
+
+    containerConfigOwner = { ...(runtimes[owner] as any) };
+    containerConfigConsumer = { ...(runtimes[consumer] as any) };
   });
 
   describe('when setting entries', async () => {
     it('can create new contracts', async () => {
-      const container = await Container.create(runtimes[owner], defaultConfig);
+      const container = await Container.create(containerConfigOwner, defaultConfig);
       expect(await container.getContractAddress()).to.match(/0x[0-9a-f]{40}/i);
     });
 
@@ -152,18 +152,18 @@ describe('Container', function test() {
       const customConfig = JSON.parse(JSON.stringify(defaultConfig));
       delete customConfig.description.dbcpVersion;
 
-      const container = await Container.create(runtimes[owner], defaultConfig);
+      const container = await Container.create(containerConfigOwner, defaultConfig);
       const newDesc = await container.getDescription();
       expect(newDesc.dbcpVersion).to.be.eq(2);
     });
 
     it('can create multiple new contracts in parallel without colliding identities', async () => {
       const [container1, container2, container3, container4, container5] = await Promise.all([
-        Container.create(runtimes[owner], defaultConfig),
-        Container.create(runtimes[owner], defaultConfig),
-        Container.create(runtimes[owner], defaultConfig),
-        Container.create(runtimes[owner], defaultConfig),
-        Container.create(runtimes[consumer], {
+        Container.create(containerConfigOwner, defaultConfig),
+        Container.create(containerConfigOwner, defaultConfig),
+        Container.create(containerConfigOwner, defaultConfig),
+        Container.create(containerConfigOwner, defaultConfig),
+        Container.create(containerConfigConsumer, {
           accountId: consumer,
           description,
           plugin: 'metadata',
@@ -209,7 +209,7 @@ describe('Container', function test() {
     });
 
     it('can get the correct owner for contracts', async () => {
-      const container = await Container.create(runtimes[owner], defaultConfig);
+      const container = await Container.create(containerConfigOwner, defaultConfig);
 
       expect(await container.getOwner()).to.be.eq(owner);
     });
@@ -227,12 +227,12 @@ describe('Container', function test() {
           },
         },
       };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+      const container = await Container.create(containerConfigOwner, { ...defaultConfig, plugin });
       expect(await container.getEntry('type')).to.eq(plugin.template.type);
     });
 
     it('can add new entry properties', async () => {
-      const container = await Container.create(runtimes[owner], defaultConfig);
+      const container = await Container.create(containerConfigOwner, defaultConfig);
       await container.ensureProperty('testField', Container.defaultSchemas.stringEntry);
       await container.shareProperties([{ accountId: consumer, readWrite: ['testField'] }]);
 
@@ -249,7 +249,7 @@ describe('Container', function test() {
     });
 
     it('can set entries if not defined in plugin template (auto adds properties)', async () => {
-      const container = await Container.create(runtimes[owner], defaultConfig);
+      const container = await Container.create(containerConfigOwner, defaultConfig);
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       await container.setEntry('testField', randomString);
 
@@ -263,7 +263,7 @@ describe('Container', function test() {
     });
 
     it('can handle files', async () => {
-      const container = await Container.create(runtimes[owner], defaultConfig);
+      const container = await Container.create(containerConfigOwner, defaultConfig);
       await container.ensureProperty('sampleFiles', Container.defaultSchemas.filesEntry);
 
       const file = await promisify(readFile)(
@@ -301,7 +301,7 @@ describe('Container', function test() {
         permissions: { 0: ['set'] },
         type: 'entry',
       };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+      const container = await Container.create(containerConfigOwner, { ...defaultConfig, plugin });
 
       const file = await promisify(readFile)(
         `${__dirname}/testfiles/animal-animal-photography-cat-96938.jpg`,
@@ -340,7 +340,7 @@ describe('Container', function test() {
         permissions: { 0: ['set'] },
         type: 'list',
       };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+      const container = await Container.create(containerConfigOwner, { ...defaultConfig, plugin });
       const randomNumbers = [...Array(8)].map(() => Math.floor(Math.random() * 1e12));
       await container.addListEntries('testList', randomNumbers);
       expect(await container.getListEntries('testList')).to.deep.eq(randomNumbers);
@@ -353,14 +353,14 @@ describe('Container', function test() {
         permissions: { 0: ['set'] },
         type: 'list',
       };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+      const container = await Container.create(containerConfigOwner, { ...defaultConfig, plugin });
       const randomNumbers = [...Array(8)].map(() => Math.floor(Math.random() * 1e12));
       await container.addListEntries('testList', randomNumbers);
       expect(await container.getListEntry('testList', 0)).to.deep.eq(randomNumbers[0]);
     });
 
     it('can set list entries if not defined in template (auto adds properties)', async () => {
-      const container = await Container.create(runtimes[owner], defaultConfig);
+      const container = await Container.create(containerConfigOwner, defaultConfig);
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       await container.addListEntries('testList', [randomString]);
 
@@ -375,7 +375,7 @@ describe('Container', function test() {
     });
 
     it('can add new list properties', async () => {
-      const container = await Container.create(runtimes[owner], defaultConfig);
+      const container = await Container.create(containerConfigOwner, defaultConfig);
       await container.ensureProperty('testList', Container.defaultSchemas.stringList);
       await container.shareProperties([{ accountId: consumer, readWrite: ['testList'] }]);
 
@@ -388,7 +388,7 @@ describe('Container', function test() {
     });
 
     it('can handle files', async () => {
-      const container = await Container.create(runtimes[owner], defaultConfig);
+      const container = await Container.create(containerConfigOwner, defaultConfig);
       await container.ensureProperty('testList', Container.defaultSchemas.filesList);
 
       const file1 = await promisify(readFile)(
@@ -450,7 +450,7 @@ describe('Container', function test() {
         permissions: { 0: ['set'] },
         type: 'entry',
       };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+      const container = await Container.create(containerConfigOwner, { ...defaultConfig, plugin });
 
       const file1 = await promisify(readFile)(
         `${__dirname}/testfiles/animal-animal-photography-cat-96938.jpg`,
@@ -521,7 +521,7 @@ describe('Container', function test() {
         permissions: { 0: ['set'] },
         type: 'list',
       };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+      const container = await Container.create(containerConfigOwner, { ...defaultConfig, plugin });
       const exported = await container.toPlugin();
       expect(exported.template).to.deep.eq(plugin.template);
     });
@@ -538,7 +538,7 @@ describe('Container', function test() {
         permissions: { 0: ['set'] },
         type: 'list',
       };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+      const container = await Container.create(containerConfigOwner, { ...defaultConfig, plugin });
       const exported = await container.toPlugin(true);
       // we do not export values, so remove them
       expect(exported.template).to.deep.eq(plugin.template);
@@ -548,7 +548,7 @@ describe('Container', function test() {
       const { container, randomValues } = await createTestContainerWithProperties(['testField']);
 
       const clonedContainer = await Container.clone(
-        runtimes[owner],
+        containerConfigOwner,
         defaultConfig,
         container,
         true,
@@ -557,7 +557,7 @@ describe('Container', function test() {
     });
 
     it('can save plugins to users profile', async () => {
-      const profile = await TestUtils.getProfile(runtimes[owner].web3, dfs, null, owner);
+      const { profile } = runtimes[owner];
 
       // setup template
       const pluginName = 'awesometemplate';
@@ -589,7 +589,7 @@ describe('Container', function test() {
 
   describe('when setting multiple entries at once with storeData', async () => {
     it('can save data to automatically generated entries', async () => {
-      const container = await Container.create(runtimes[owner], defaultConfig);
+      const container = await Container.create(containerConfigOwner, defaultConfig);
       await container.ensureProperty('testField', Container.defaultSchemas.stringEntry);
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       await container.setEntry('testField', randomString);
@@ -603,7 +603,7 @@ describe('Container', function test() {
     });
 
     it('can save data to automatically generated list entries', async () => {
-      const container = await Container.create(runtimes[owner], defaultConfig);
+      const container = await Container.create(containerConfigOwner, defaultConfig);
       await container.ensureProperty('testList', Container.defaultSchemas.numberList);
       const randomNumbers = [...Array(3)].map(() => Math.floor(Math.random() * 1e12));
       await container.addListEntries('testList', randomNumbers);
@@ -622,7 +622,7 @@ describe('Container', function test() {
         permissions: { 0: ['set'] },
         type: 'entry',
       };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+      const container = await Container.create(containerConfigOwner, { ...defaultConfig, plugin });
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       await container.storeData({
         testField: randomString,
@@ -637,7 +637,7 @@ describe('Container', function test() {
         permissions: { 0: ['set'] },
         type: 'list',
       };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+      const container = await Container.create(containerConfigOwner, { ...defaultConfig, plugin });
       const randomNumbers = [...Array(3)].map(() => Math.floor(Math.random() * 1e12));
       await container.addListEntries('testList', randomNumbers);
       expect(await container.getListEntries('testList')).to.deep.eq(randomNumbers);
@@ -649,7 +649,7 @@ describe('Container', function test() {
     });
 
     it('can implicitly add new entries to data schema', async () => {
-      const container = await Container.create(runtimes[owner], defaultConfig);
+      const container = await Container.create(containerConfigOwner, defaultConfig);
       await container.ensureProperty('testField', Container.defaultSchemas.stringEntry);
       const randomString = Math.floor(Math.random() * 1e12).toString(36);
       await container.storeData({
@@ -659,7 +659,7 @@ describe('Container', function test() {
     });
 
     it('can implicitly add new lists to data schema', async () => {
-      const container = await Container.create(runtimes[owner], defaultConfig);
+      const container = await Container.create(containerConfigOwner, defaultConfig);
       await container.ensureProperty('testList', Container.defaultSchemas.numberList);
       const randomNumbers = [...Array(3)].map(() => Math.floor(Math.random() * 1e12));
       await container.storeData({
@@ -678,15 +678,22 @@ describe('Container', function test() {
           permissions: { 0: ['set'] },
           type: 'entry',
         };
-        const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+        const container = await Container.create(
+          containerConfigOwner,
+          { ...defaultConfig, plugin },
+        );
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
         await container.setEntry('testField', randomString);
         expect(await container.getEntry('testField')).to.eq(randomString);
 
         await container.shareProperties([{ accountId: consumer, read: ['testField'] }]);
         const consumerContainer = new Container(
-          runtimes[consumer],
-          { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
+          containerConfigConsumer,
+          {
+            ...defaultConfig,
+            address: await container.getContractAddress(),
+            accountId: consumer,
+          },
         );
         expect(await consumerContainer.getEntry('testField')).to.eq(randomString);
 
@@ -702,14 +709,20 @@ describe('Container', function test() {
           permissions: { 0: ['set'] },
           type: 'entry',
         };
-        const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+        const container = await Container.create(
+          containerConfigOwner,
+          {
+            ...defaultConfig,
+            plugin,
+          },
+        );
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
         await container.setEntry('testField', randomString);
         expect(await container.getEntry('testField')).to.eq(randomString);
 
         await container.shareProperties([{ accountId: consumer, readWrite: ['testField'] }]);
         const consumerContainer = new Container(
-          runtimes[consumer],
+          containerConfigConsumer,
           { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
         );
         expect(await consumerContainer.getEntry('testField')).to.eq(randomString);
@@ -734,14 +747,20 @@ describe('Container', function test() {
           permissions: { 0: ['set'] },
           type: 'list',
         };
-        const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+        const container = await Container.create(
+          containerConfigOwner,
+          {
+            ...defaultConfig,
+            plugin,
+          },
+        );
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
         await container.addListEntries('testList', [randomString]);
         expect(await container.getListEntries('testList')).to.deep.eq([randomString]);
 
         await container.shareProperties([{ accountId: consumer, read: ['testList'] }]);
         const consumerContainer = new Container(
-          runtimes[consumer],
+          containerConfigConsumer,
           { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
         );
         expect(await consumerContainer.getListEntries('testList')).to.deep.eq([randomString]);
@@ -754,15 +773,21 @@ describe('Container', function test() {
           permissions: { 0: ['set'] },
           type: 'list',
         };
-        const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+        const container = await Container.create(
+          containerConfigOwner,
+          {
+            ...defaultConfig,
+            plugin,
+          },
+        );
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
         await container.addListEntries('testList', [randomString]);
         expect(await container.getListEntries('testList')).to.deep.eq([randomString]);
 
         await container.shareProperties([{ accountId: consumer, readWrite: ['testList'] }]);
-        await TestUtils.nextBlock(runtimes[consumer].executor, consumer);
+        await TestUtils.nextBlock(containerConfigConsumer.executor, consumer);
         const consumerContainer = new Container(
-          runtimes[consumer],
+          containerConfigConsumer,
           { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
         );
         expect(await consumerContainer.getListEntries('testList')).to.deep.eq([randomString]);
@@ -783,14 +808,20 @@ describe('Container', function test() {
           permissions: { 0: ['set'] },
           type: 'list',
         };
-        const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+        const container = await Container.create(
+          containerConfigOwner,
+          {
+            ...defaultConfig,
+            plugin,
+          },
+        );
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
         await container.addListEntries('testList', [randomString]);
         expect(await container.getListEntries('testList')).to.deep.eq([randomString]);
 
         await container.shareProperties([{ accountId: consumer, readWrite: ['testList'], removeListEntries: ['testList'] }]);
         const consumerContainer = new Container(
-          runtimes[consumer],
+          containerConfigConsumer,
           { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
         );
         expect(await consumerContainer.getListEntries('testList')).to.deep.eq([randomString]);
@@ -800,7 +831,7 @@ describe('Container', function test() {
         await consumerContainer.addListEntries('testList', [newRandomString]);
 
         const containerId = await consumerContainer.getContractAddress();
-        await runtimes[consumer].dataContract.removeListEntry(containerId, 'testList', 1, consumer);
+        await containerConfigConsumer.dataContract.removeListEntry(containerId, 'testList', 1, consumer);
 
         expect(await consumerContainer.getListEntries('testList'))
           .to.deep.eq([randomString]);
@@ -817,13 +848,19 @@ describe('Container', function test() {
           permissions: { 0: ['set'] },
           type: 'entry',
         };
-        const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+        const container = await Container.create(
+          containerConfigOwner,
+          {
+            ...defaultConfig,
+            plugin,
+          },
+        );
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
         await container.setEntry('testField', randomString);
         expect(await container.getEntry('testField')).to.eq(randomString);
 
         const consumerContainer = new Container(
-          runtimes[consumer],
+          containerConfigConsumer,
           { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
         );
 
@@ -838,14 +875,20 @@ describe('Container', function test() {
           permissions: { 0: ['set'] },
           type: 'entry',
         };
-        const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+        const container = await Container.create(
+          containerConfigOwner,
+          {
+            ...defaultConfig,
+            plugin,
+          },
+        );
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
         await container.setEntry('testField', randomString);
         expect(await container.getEntry('testField')).to.eq(randomString);
 
         await container.shareProperties([{ accountId: consumer, read: ['testField'] }]);
         const consumerContainer = new Container(
-          runtimes[consumer],
+          containerConfigConsumer,
           { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
         );
         expect(await consumerContainer.getEntry('testField')).to.eq(randomString);
@@ -866,14 +909,20 @@ describe('Container', function test() {
           permissions: { 0: ['set'] },
           type: 'entry',
         };
-        const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+        const container = await Container.create(
+          containerConfigOwner,
+          {
+            ...defaultConfig,
+            plugin,
+          },
+        );
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
         await container.setEntry('testField', randomString);
         expect(await container.getEntry('testField')).to.eq(randomString);
 
         await container;
         const consumerContainer = new Container(
-          runtimes[consumer],
+          containerConfigConsumer,
           { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
         );
 
@@ -893,20 +942,32 @@ describe('Container', function test() {
           permissions: { 0: ['set'] },
           type: 'entry',
         };
-        const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+        const container = await Container.create(
+          containerConfigOwner,
+          {
+            ...defaultConfig,
+            plugin,
+          },
+        );
         const randomString = Math.floor(Math.random() * 1e12).toString(36);
         await container.setEntry('testField', randomString);
         expect(await container.getEntry('testField')).to.eq(randomString);
 
         await container.shareProperties([{ accountId: consumer, read: ['testField'] }]);
         const consumerContainer = new Container(
-          runtimes[consumer],
+          containerConfigConsumer,
           { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
         );
         expect(await consumerContainer.getEntry('testField')).to.eq(randomString);
 
         const clonedContainer = await Container.clone(
-          runtimes[consumer], { ...defaultConfig, accountId: consumer }, consumerContainer, true,
+          containerConfigConsumer,
+          {
+            ...defaultConfig,
+            accountId: consumer,
+          },
+          consumerContainer,
+          true,
         );
         expect(await clonedContainer.getEntry('testField')).to.eq(randomString);
       });
@@ -932,7 +993,7 @@ describe('Container', function test() {
       await container.unshareProperties([{ accountId: consumer, readWrite: ['testField'] }]);
 
       // create new consumer runtime to avoid cached keys, then check result
-      const newConsumerRuntime = await createRuntime(consumer);
+      const newConsumerRuntime = await createRuntime(accounts[1], consumer, useIdentity);
       consumerContainer = new Container(
         newConsumerRuntime,
         { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
@@ -940,7 +1001,9 @@ describe('Container', function test() {
       ((consumerContainer as any).options as ContainerOptions).sharing.clearCache();
       consumerSharing = ((consumerContainer as any).options as ContainerOptions).sharing;
       shareConfig = await container.getContainerShareConfigForAccount(consumer);
-      const members = await runtimes[owner].rightsAndRoles.getMembers((container as any).contract);
+      const members = await containerConfigOwner.rightsAndRoles.getMembers(
+        (container as any).contract,
+      );
       expect(members['1']).not.to.include(consumer);
       await expect(consumerContainer.getEntry('testField'))
         .to.be.rejectedWith('could not get entry; no hashKey key found');
@@ -973,7 +1036,7 @@ describe('Container', function test() {
       let consumerSharing = ((consumerContainer as any).options as ContainerOptions).sharing;
       await container.unshareProperties([{ accountId: consumer, readWrite: ['testField'] }]);
       // create new consumer runtime to avoid cached keys, then check result
-      let newConsumerRuntime = await createRuntime(consumer);
+      let newConsumerRuntime = await createRuntime(accounts[1], consumer, useIdentity);
       consumerContainer = new Container(
         newConsumerRuntime,
         { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
@@ -998,7 +1061,7 @@ describe('Container', function test() {
       consumerSharing = ((consumerContainer as any).options as ContainerOptions).sharing;
       await container.unshareProperties([{ accountId: consumer, readWrite: ['anotherTestField'] }]);
       // create new consumer runtime to avoid cached keys, then check result
-      newConsumerRuntime = await createRuntime(consumer);
+      newConsumerRuntime = await createRuntime(accounts[1], consumer, useIdentity);
       consumerContainer = new Container(
         newConsumerRuntime,
         { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
@@ -1034,7 +1097,7 @@ describe('Container', function test() {
       await container.unshareProperties([{ accountId: consumer, readWrite: ['testField'] }]);
 
       // create new consumer runtime to avoid cached keys, then check result
-      const newConsumerRuntime = await createRuntime(consumer);
+      const newConsumerRuntime = await createRuntime(accounts[1], consumer, useIdentity);
       consumerContainer = new Container(
         newConsumerRuntime,
         { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
@@ -1073,7 +1136,7 @@ describe('Container', function test() {
       let consumerSharing = ((consumerContainer as any).options as ContainerOptions).sharing;
       await container.unshareProperties([{ accountId: consumer, readWrite: ['testField'] }]);
       // create new consumer runtime to avoid cached keys, then check result
-      let newConsumerRuntime = await createRuntime(consumer);
+      let newConsumerRuntime = await createRuntime(accounts[1], consumer, useIdentity);
       consumerContainer = new Container(
         newConsumerRuntime,
         { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
@@ -1098,7 +1161,7 @@ describe('Container', function test() {
       consumerSharing = ((consumerContainer as any).options as ContainerOptions).sharing;
       await container.unshareProperties([{ accountId: consumer, readWrite: ['anotherTestField'] }]);
       // create new consumer runtime to avoid cached keys, then check result
-      newConsumerRuntime = await createRuntime(consumer);
+      newConsumerRuntime = await createRuntime(accounts[1], consumer, useIdentity);
       consumerContainer = new Container(
         newConsumerRuntime,
         { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
@@ -1134,7 +1197,7 @@ describe('Container', function test() {
       await container.unshareProperties([{ accountId: consumer, write: ['testField'] }]);
 
       // create new consumer runtime to avoid cached keys, then check result
-      const newConsumerRuntime = await createRuntime(consumer);
+      const newConsumerRuntime = await createRuntime(accounts[1], consumer, useIdentity);
       consumerContainer = new Container(
         newConsumerRuntime,
         { ...defaultConfig, address: await container.getContractAddress(), accountId: consumer },
@@ -1329,7 +1392,7 @@ describe('Container', function test() {
         permissions: { 0: ['set'] },
         type: 'entry',
       };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+      const container = await Container.create(containerConfigOwner, { ...defaultConfig, plugin });
       await container.unshareProperties([{ accountId: owner, readWrite: ['testField'], force: true }]);
 
       const containerDescription = await container.getDescription();
@@ -1343,7 +1406,7 @@ describe('Container', function test() {
         permissions: { 0: ['set'] },
         type: 'entry',
       };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+      const container = await Container.create(containerConfigOwner, { ...defaultConfig, plugin });
       await container.shareProperties([{ accountId: consumer, read: ['testField'] }]);
       await container.unshareProperties([{ accountId: consumer, readWrite: ['testField'], force: true }]);
 
@@ -1362,7 +1425,7 @@ describe('Container', function test() {
         permissions: { 0: ['set'] },
         type: 'entry',
       };
-      const container = await Container.create(runtimes[owner], { ...defaultConfig, plugin });
+      const container = await Container.create(containerConfigOwner, { ...defaultConfig, plugin });
       const unshare = container.unshareProperties([{ accountId: owner, readWrite: ['testField'] }]);
       await expect(unshare).to.be.rejectedWith(new RegExp(`^current account "${owner}" is owner of the contract and cannot remove himself from sharing without force attribute`, 'i'));
     });
@@ -1425,7 +1488,7 @@ describe('Container', function test() {
 
   describe('when working with verifications', () => {
     it('can set verifications to container', async () => {
-      const container = await Container.create(runtimes[owner], defaultConfig);
+      const container = await Container.create(containerConfigOwner, defaultConfig);
       const verifications: ContainerVerificationEntry[] = [...Array(3)].map(
         (_, i) => ({ topic: `verifcation_${i}` }),
       );
@@ -1457,7 +1520,7 @@ describe('Container', function test() {
     });
 
     it('can fetch permissions for all accounts', async () => {
-      const container = await Container.create(runtimes[owner], defaultConfig);
+      const container = await Container.create(containerConfigOwner, defaultConfig);
       const randomString1 = Math.floor(Math.random() * 1e12).toString(36);
       await container.setEntry('testField1', randomString1);
       const randomString2 = Math.floor(Math.random() * 1e12).toString(36);

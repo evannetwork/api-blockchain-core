@@ -28,23 +28,22 @@ import {
 
 import { CryptoProvider } from '../encryption/crypto-provider';
 import { Runtime } from '../runtime';
-import { accounts } from '../test/accounts';
+import { accounts, useIdentity } from '../test/accounts';
 import { sampleContext, TestUtils } from '../test/test-utils';
+import { Sharing } from './sharing';
 
 
 use(chaiAsPromised);
-let useIdentity = false;
-try {
-  useIdentity = JSON.parse(process.env.USE_IDENTITY);
-} catch (_) {
-  // silently continue
-}
 
 describe('Sharing handler', function test() {
   this.timeout(300000);
   let runtimes: Runtime[];
   let dfs: DfsInterface;
+  let identity0: string;
+  let identity1: string;
   let nameResolver: NameResolver;
+  let sharing0: Sharing;
+  let sharing1: Sharing;
   let web3;
   let cryptoProvider: CryptoProvider;
 
@@ -60,6 +59,10 @@ describe('Sharing handler', function test() {
       nameResolver,
       web3,
     }] = runtimes);
+    identity0 = runtimes[0].activeIdentity;
+    identity1 = runtimes[1].activeIdentity;
+    sharing0 = runtimes[0].sharing;
+    sharing1 = runtimes[1].sharing;
   });
 
   function runContractTests(isMultiShared) {
@@ -70,12 +73,12 @@ describe('Sharing handler', function test() {
     it('should be able to add a sharing', async () => {
       const randomSecret = `super secret; ${Math.random()}`;
       const contract = await runtimes[0].executor.createContract(
-        contractName, [], { from: runtimes[0].activeIdentity, gas: 1e6 },
+        contractName, [], { from: identity0, gas: 1e6 },
       );
-      await runtimes[0].sharing.addSharing(
+      await sharing0.addSharing(
         contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[1].activeIdentity,
+        identity0,
+        identity1,
         '*',
         0,
         randomSecret,
@@ -88,12 +91,12 @@ describe('Sharing handler', function test() {
     it('should be able to get a sharing key', async () => {
       const randomSecret = `super secret; ${Math.random()}`;
       const contract = await runtimes[0].executor.createContract(
-        contractName, [], { from: runtimes[0].activeIdentity, gas: 500000 },
+        contractName, [], { from: identity0, gas: 500000 },
       );
-      await runtimes[0].sharing.addSharing(
+      await sharing0.addSharing(
         contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[1].activeIdentity,
+        identity0,
+        identity1,
         '*',
         0,
         randomSecret,
@@ -101,25 +104,25 @@ describe('Sharing handler', function test() {
         false,
         sharingId,
       );
-      const key = await runtimes[0].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, '*', 0, sharingId);
+      const key = await sharing0.getKey(contract.options.address, identity1, '*', 0, sharingId);
       expect(key).to.eq(randomSecret);
     });
 
     it('should be able to list all sharings', async () => {
       const randomSecret = `super secret; ${Math.random()}`;
       const contract = await runtimes[0].executor.createContract(
-        contractName, [], { from: runtimes[0].activeIdentity, gas: 500000 },
+        contractName, [], { from: identity0, gas: 500000 },
       );
-      await runtimes[0].sharing.addSharing(contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[1].activeIdentity,
+      await sharing0.addSharing(contract.options.address,
+        identity0,
+        identity1,
         '*',
         0,
         randomSecret,
         null,
         false,
         sharingId);
-      const sharings = await runtimes[0].sharing.getSharings(
+      const sharings = await sharing0.getSharings(
         contract.options.address, null, null, null, sharingId,
       );
       expect(sharings).not.to.be.undefined;
@@ -128,12 +131,12 @@ describe('Sharing handler', function test() {
     it('should be able to remove a sharing', async () => {
       const randomSecret = `super secret; ${Math.random()}`;
       const contract = await runtimes[0].executor.createContract(
-        contractName, [], { from: runtimes[0].activeIdentity, gas: 500000 },
+        contractName, [], { from: identity0, gas: 500000 },
       );
-      await runtimes[0].sharing.addSharing(
+      await sharing0.addSharing(
         contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[1].activeIdentity,
+        identity0,
+        identity1,
         '*',
         0,
         randomSecret,
@@ -141,41 +144,41 @@ describe('Sharing handler', function test() {
         false,
         sharingId,
       );
-      let sharings = await runtimes[0].sharing.getSharings(
+      let sharings = await sharing0.getSharings(
         contract.options.address, null, null, null, sharingId,
       );
       expect(Object.keys(sharings).length).to.eq(1);
-      expect(Object.keys(sharings[nameResolver.soliditySha3(runtimes[1].activeIdentity)]).length)
+      expect(Object.keys(sharings[nameResolver.soliditySha3(identity1)]).length)
         .to.eq(1);
       expect(
         Object.keys(
-          sharings[nameResolver.soliditySha3(runtimes[1].activeIdentity)][nameResolver.soliditySha3('*')],
+          sharings[nameResolver.soliditySha3(identity1)][nameResolver.soliditySha3('*')],
         ).length,
       )
         .to.eq(1);
-      expect(sharings[nameResolver.soliditySha3(runtimes[1].activeIdentity)][nameResolver.soliditySha3('*')][0])
+      expect(sharings[nameResolver.soliditySha3(identity1)][nameResolver.soliditySha3('*')][0])
         .to.eq(randomSecret);
 
-      await runtimes[0].sharing.removeSharing(
-        contract.options.address, runtimes[0].activeIdentity, runtimes[1].activeIdentity, '*', sharingId,
+      await sharing0.removeSharing(
+        contract.options.address, identity0, identity1, '*', sharingId,
       );
-      sharings = await runtimes[0].sharing.getSharings(
+      sharings = await sharing0.getSharings(
         contract.options.address, null, null, null, sharingId,
       );
       expect(Object.keys(sharings).length).to.eq(0);
-      const key1 = await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, '*', 0, sharingId);
+      const key1 = await sharing1.getKey(contract.options.address, identity1, '*', 0, sharingId);
       expect(key1).to.be.undefined;
     });
 
     it('should be able to store sharings under a given context', async () => {
       const randomSecret = `super secret; ${Math.random()}`;
       const contract = await runtimes[0].executor.createContract(
-        contractName, [], { from: runtimes[0].activeIdentity, gas: 500000 },
+        contractName, [], { from: identity0, gas: 500000 },
       );
-      await runtimes[0].sharing.addSharing(
+      await sharing0.addSharing(
         contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[1].activeIdentity,
+        identity0,
+        identity1,
         '*',
         0,
         randomSecret,
@@ -183,19 +186,19 @@ describe('Sharing handler', function test() {
         false,
         sharingId,
       );
-      const key = await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, '*', 0, sharingId);
+      const key = await sharing1.getKey(contract.options.address, identity1, '*', 0, sharingId);
       expect(key).to.eq(randomSecret);
 
       const contract2 = await runtimes[0].executor.createContract(
-        contractName, [], { from: runtimes[0].activeIdentity, gas: 500000 },
+        contractName, [], { from: identity0, gas: 500000 },
       );
       const unknownContext = 'I have not been added to any config';
       let err;
       try {
-        await runtimes[1].sharing.addSharing(
+        await sharing1.addSharing(
           contract2.options.address,
-          runtimes[0].activeIdentity,
-          runtimes[1].activeIdentity,
+          identity0,
+          identity1,
           '*',
           0,
           randomSecret,
@@ -203,8 +206,8 @@ describe('Sharing handler', function test() {
           false,
           sharingId,
         );
-        await runtimes[1].sharing.getKey(
-          contract2.options.address, runtimes[1].activeIdentity, '*', 0, sharingId,
+        await sharing1.getKey(
+          contract2.options.address, identity1, '*', 0, sharingId,
         );
       } catch (ex) {
         err = ex;
@@ -219,12 +222,12 @@ describe('Sharing handler', function test() {
         `super secret; ${Math.random()}`,
       ];
       const contract = await runtimes[0].executor.createContract(
-        contractName, [], { from: runtimes[0].activeIdentity, gas: 500000 },
+        contractName, [], { from: identity0, gas: 500000 },
       );
-      await runtimes[0].sharing.addSharing(
+      await sharing0.addSharing(
         contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[1].activeIdentity,
+        identity0,
+        identity1,
         'sectionOne',
         0,
         randomSecret[0],
@@ -232,10 +235,10 @@ describe('Sharing handler', function test() {
         false,
         sharingId,
       );
-      await runtimes[0].sharing.addSharing(
+      await sharing0.addSharing(
         contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[1].activeIdentity,
+        identity0,
+        identity1,
         'sectionTwo',
         0,
         randomSecret[1],
@@ -243,10 +246,10 @@ describe('Sharing handler', function test() {
         false,
         sharingId,
       );
-      await runtimes[0].sharing.addSharing(
+      await sharing0.addSharing(
         contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[1].activeIdentity,
+        identity0,
+        identity1,
         'sectionThree',
         0,
         randomSecret[2],
@@ -254,35 +257,35 @@ describe('Sharing handler', function test() {
         false,
         sharingId,
       );
-      const sharings = await runtimes[0].sharing.getSharings(
+      const sharings = await sharing0.getSharings(
         contract.options.address, null, null, null, sharingId,
       );
       // object checks
       expect(Object.keys(sharings))
-        .to.deep.eq([nameResolver.soliditySha3(runtimes[1].activeIdentity)]);
+        .to.deep.eq([nameResolver.soliditySha3(identity1)]);
       expect(
-        sharings[nameResolver.soliditySha3(runtimes[1].activeIdentity)][nameResolver.soliditySha3('sectionOne')],
+        sharings[nameResolver.soliditySha3(identity1)][nameResolver.soliditySha3('sectionOne')],
       )
         .to.deep.eq({ 0: randomSecret[0] });
       expect(
-        sharings[nameResolver.soliditySha3(runtimes[1].activeIdentity)][nameResolver.soliditySha3('sectionTwo')],
+        sharings[nameResolver.soliditySha3(identity1)][nameResolver.soliditySha3('sectionTwo')],
       )
         .to.deep.eq({ 0: randomSecret[1] });
       expect(
-        sharings[nameResolver.soliditySha3(runtimes[1].activeIdentity)][nameResolver.soliditySha3('sectionThree')],
+        sharings[nameResolver.soliditySha3(identity1)][nameResolver.soliditySha3('sectionThree')],
       )
         .to.deep.eq({ 0: randomSecret[2] });
       // getKey checks
       expect(
-        await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionOne', 1000, sharingId),
+        await sharing1.getKey(contract.options.address, identity1, 'sectionOne', 1000, sharingId),
       )
         .to.eq(randomSecret[0]);
       expect(
-        await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionTwo', 1000, sharingId),
+        await sharing1.getKey(contract.options.address, identity1, 'sectionTwo', 1000, sharingId),
       )
         .to.eq(randomSecret[1]);
       expect(
-        await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionThree', 1000, sharingId),
+        await sharing1.getKey(contract.options.address, identity1, 'sectionThree', 1000, sharingId),
       )
         .to.eq(randomSecret[2]);
     });
@@ -293,12 +296,12 @@ describe('Sharing handler', function test() {
         `super secret; ${Math.random()}`,
       ];
       const contract = await runtimes[0].executor.createContract(
-        contractName, [], { from: runtimes[0].activeIdentity, gas: 500000 },
+        contractName, [], { from: identity0, gas: 500000 },
       );
-      await runtimes[0].sharing.addSharing(
+      await sharing0.addSharing(
         contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[1].activeIdentity,
+        identity0,
+        identity1,
         'sectionOne',
         100,
         randomSecret[0],
@@ -306,10 +309,10 @@ describe('Sharing handler', function test() {
         false,
         sharingId,
       );
-      await runtimes[0].sharing.addSharing(
+      await sharing0.addSharing(
         contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[1].activeIdentity,
+        identity0,
+        identity1,
         'sectionOne',
         200,
         randomSecret[1],
@@ -317,49 +320,49 @@ describe('Sharing handler', function test() {
         false,
         sharingId,
       );
-      const sharings = await runtimes[0].sharing.getSharings(
+      const sharings = await sharing0.getSharings(
         contract.options.address, null, null, null, sharingId,
       );
       // object checks
       expect(Object.keys(sharings))
-        .to.deep.eq([nameResolver.soliditySha3(runtimes[1].activeIdentity)]);
+        .to.deep.eq([nameResolver.soliditySha3(identity1)]);
       expect(
-        sharings[nameResolver.soliditySha3(runtimes[1].activeIdentity)][nameResolver.soliditySha3('sectionOne')]['100'],
+        sharings[nameResolver.soliditySha3(identity1)][nameResolver.soliditySha3('sectionOne')]['100'],
       )
         .to.eq(randomSecret[0]);
       expect(
-        sharings[nameResolver.soliditySha3(runtimes[1].activeIdentity)][nameResolver.soliditySha3('sectionOne')]['200'],
+        sharings[nameResolver.soliditySha3(identity1)][nameResolver.soliditySha3('sectionOne')]['200'],
       )
         .to.eq(randomSecret[1]);
       // getKey checks
       // exactly in block 0
       expect(
-        await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionOne', 0, sharingId),
+        await sharing1.getKey(contract.options.address, identity1, 'sectionOne', 0, sharingId),
       )
         .to.eq(undefined);
       // between before block 100
       expect(
-        await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionOne', 12, sharingId),
+        await sharing1.getKey(contract.options.address, identity1, 'sectionOne', 12, sharingId),
       )
         .to.eq(undefined);
       // exactly in block 100
       expect(
-        await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionOne', 100, sharingId),
+        await sharing1.getKey(contract.options.address, identity1, 'sectionOne', 100, sharingId),
       )
         .to.eq(randomSecret[0]);
       // between block 100 and block 200
       expect(
-        await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionOne', 123, sharingId),
+        await sharing1.getKey(contract.options.address, identity1, 'sectionOne', 123, sharingId),
       )
         .to.eq(randomSecret[0]);
       // exactly in block 200
       expect(
-        await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionOne', 200, sharingId),
+        await sharing1.getKey(contract.options.address, identity1, 'sectionOne', 200, sharingId),
       )
         .to.eq(randomSecret[1]);
       // after block 200
       expect(
-        await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionOne', 234, sharingId),
+        await sharing1.getKey(contract.options.address, identity1, 'sectionOne', 234, sharingId),
       )
         .to.eq(randomSecret[1]);
     });
@@ -370,12 +373,12 @@ describe('Sharing handler', function test() {
         `super secret; ${Math.random()}`,
       ];
       const contract = await runtimes[0].executor.createContract(
-        contractName, [], { from: runtimes[0].activeIdentity, gas: 500000 },
+        contractName, [], { from: identity0, gas: 500000 },
       );
-      await runtimes[0].sharing.addSharing(
+      await sharing0.addSharing(
         contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[1].activeIdentity,
+        identity0,
+        identity1,
         'sectionOne',
         0,
         randomSecret[0],
@@ -383,10 +386,10 @@ describe('Sharing handler', function test() {
         false,
         sharingId,
       );
-      await runtimes[0].sharing.addSharing(
+      await sharing0.addSharing(
         contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[0].activeIdentity,
+        identity0,
+        identity0,
         'sectionOne',
         0,
         randomSecret[1],
@@ -394,34 +397,34 @@ describe('Sharing handler', function test() {
         false,
         sharingId,
       );
-      const sharings = await runtimes[0].sharing.getSharings(
+      const sharings = await sharing0.getSharings(
         contract.options.address, null, null, null, sharingId,
       );
       // object checks
       expect(Object.keys(sharings).sort())
         .to.deep.eq(
           [
-            nameResolver.soliditySha3(runtimes[1].activeIdentity),
-            nameResolver.soliditySha3(runtimes[0].activeIdentity),
+            nameResolver.soliditySha3(identity1),
+            nameResolver.soliditySha3(identity0),
           ].sort(),
         );
       expect(
-        sharings[nameResolver.soliditySha3(runtimes[1].activeIdentity)][nameResolver.soliditySha3('sectionOne')],
+        sharings[nameResolver.soliditySha3(identity1)][nameResolver.soliditySha3('sectionOne')],
       )
         .to.deep.eq(
           { 0: randomSecret[0] },
         );
       expect(
-        sharings[nameResolver.soliditySha3(runtimes[0].activeIdentity)][nameResolver.soliditySha3('sectionOne')],
+        sharings[nameResolver.soliditySha3(identity0)][nameResolver.soliditySha3('sectionOne')],
       )
         .to.deep.eq({ 0: randomSecret[1] });
       // getKey checks
       expect(
-        await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionOne', 0, sharingId),
+        await sharing1.getKey(contract.options.address, identity1, 'sectionOne', 0, sharingId),
       )
         .to.eq(randomSecret[0]);
       expect(
-        await runtimes[0].sharing.getKey(contract.options.address, runtimes[0].activeIdentity, 'sectionOne', 0, sharingId),
+        await sharing0.getKey(contract.options.address, identity0, 'sectionOne', 0, sharingId),
       )
         .to.eq(randomSecret[1]);
     });
@@ -432,12 +435,12 @@ describe('Sharing handler', function test() {
         `super secret; ${Math.random()}`,
       ];
       const contract = await runtimes[0].executor.createContract(
-        contractName, [], { from: runtimes[0].activeIdentity, gas: 500000 },
+        contractName, [], { from: identity0, gas: 500000 },
       );
-      await runtimes[0].sharing.addSharing(
+      await sharing0.addSharing(
         contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[1].activeIdentity,
+        identity0,
+        identity1,
         'sectionOne',
         100,
         randomSecret[0],
@@ -445,58 +448,58 @@ describe('Sharing handler', function test() {
         false,
         sharingId,
       );
-      runtimes[1].sharing.clearCache();
-      let sharings = await runtimes[1].sharing.getSharings(
+      sharing1.clearCache();
+      let sharings = await sharing1.getSharings(
         contract.options.address, null, null, null, sharingId,
       );
       // object checks
       expect(Object.keys(sharings))
-        .to.deep.eq([nameResolver.soliditySha3(runtimes[1].activeIdentity)]);
+        .to.deep.eq([nameResolver.soliditySha3(identity1)]);
       expect(
-        sharings[nameResolver.soliditySha3(runtimes[1].activeIdentity)][nameResolver.soliditySha3('sectionOne')]['100'],
+        sharings[nameResolver.soliditySha3(identity1)][nameResolver.soliditySha3('sectionOne')]['100'],
       )
         .to.eq(randomSecret[0]);
       expect(
-        sharings[nameResolver.soliditySha3(runtimes[1].activeIdentity)][nameResolver.soliditySha3('sectionOne')]['200'],
+        sharings[nameResolver.soliditySha3(identity1)][nameResolver.soliditySha3('sectionOne')]['200'],
       )
         .to.eq(undefined);
       // initial keys setup
       // exactly in block 0
       expect(
-        await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionOne', 0, sharingId),
+        await sharing1.getKey(contract.options.address, identity1, 'sectionOne', 0, sharingId),
       )
         .to.eq(undefined);
       // between before block 100
       expect(
-        await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionOne', 12, sharingId),
+        await sharing1.getKey(contract.options.address, identity1, 'sectionOne', 12, sharingId),
       )
         .to.eq(undefined);
       // exactly in block 100
       expect(
-        await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionOne', 100, sharingId),
+        await sharing1.getKey(contract.options.address, identity1, 'sectionOne', 100, sharingId),
       )
         .to.eq(randomSecret[0]);
       // between block 100 and block 200
       expect(
-        await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionOne', 123, sharingId),
+        await sharing1.getKey(contract.options.address, identity1, 'sectionOne', 123, sharingId),
       )
         .to.eq(randomSecret[0]);
       // exactly in block 200
       expect(
-        await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionOne', 200, sharingId),
+        await sharing1.getKey(contract.options.address, identity1, 'sectionOne', 200, sharingId),
       )
         .to.eq(randomSecret[0]);
       // after block 200
       expect(
-        await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionOne', 234, sharingId),
+        await sharing1.getKey(contract.options.address, identity1, 'sectionOne', 234, sharingId),
       )
         .to.eq(randomSecret[0]);
 
       // add new key, valid in and after block 200
-      await runtimes[0].sharing.addSharing(
+      await sharing0.addSharing(
         contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[1].activeIdentity,
+        identity0,
+        identity1,
         'sectionOne',
         200,
         randomSecret[1],
@@ -504,48 +507,48 @@ describe('Sharing handler', function test() {
         false,
         sharingId,
       );
-      runtimes[1].sharing.clearCache();
-      sharings = await runtimes[1].sharing.getSharings(
+      sharing1.clearCache();
+      sharings = await sharing1.getSharings(
         contract.options.address, null, null, null, sharingId,
       );
       expect(Object.keys(sharings))
-        .to.deep.eq([nameResolver.soliditySha3(runtimes[1].activeIdentity)]);
+        .to.deep.eq([nameResolver.soliditySha3(identity1)]);
       expect(
-        sharings[nameResolver.soliditySha3(runtimes[1].activeIdentity)][nameResolver.soliditySha3('sectionOne')]['100'],
+        sharings[nameResolver.soliditySha3(identity1)][nameResolver.soliditySha3('sectionOne')]['100'],
       )
         .to.eq(randomSecret[0]);
       expect(
-        sharings[nameResolver.soliditySha3(runtimes[1].activeIdentity)][nameResolver.soliditySha3('sectionOne')]['200'],
+        sharings[nameResolver.soliditySha3(identity1)][nameResolver.soliditySha3('sectionOne')]['200'],
       )
         .to.eq(randomSecret[1]);
       // exactly in block 0
       expect(
-        await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionOne', 0, sharingId),
+        await sharing1.getKey(contract.options.address, identity1, 'sectionOne', 0, sharingId),
       )
         .to.eq(undefined);
       // between before block 100
       expect(
-        await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionOne', 12, sharingId),
+        await sharing1.getKey(contract.options.address, identity1, 'sectionOne', 12, sharingId),
       )
         .to.eq(undefined);
       // exactly in block 100
       expect(
-        await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionOne', 100, sharingId),
+        await sharing1.getKey(contract.options.address, identity1, 'sectionOne', 100, sharingId),
       )
         .to.eq(randomSecret[0]);
       // between block 100 and block 200
       expect(
-        await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionOne', 123, sharingId),
+        await sharing1.getKey(contract.options.address, identity1, 'sectionOne', 123, sharingId),
       )
         .to.eq(randomSecret[0]);
       // exactly in block 200
       expect(
-        await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionOne', 200, sharingId),
+        await sharing1.getKey(contract.options.address, identity1, 'sectionOne', 200, sharingId),
       )
         .to.eq(randomSecret[1]);
       // after block 200
       expect(
-        await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionOne', 234, sharingId),
+        await sharing1.getKey(contract.options.address, identity1, 'sectionOne', 234, sharingId),
       )
         .to.eq(randomSecret[1]);
     });
@@ -557,20 +560,20 @@ describe('Sharing handler', function test() {
         `super secret; ${Math.random()}`,
       ];
       const contract = await runtimes[0].executor.createContract(
-        contractName, [], { from: runtimes[0].activeIdentity, gas: 500000 },
+        contractName, [], { from: identity0, gas: 500000 },
       );
       // if no sharings added, key is undefined
       expect(
-        await runtimes[1].sharing.getKey(
-          contract.options.address, runtimes[1].activeIdentity, 'sectionOne', Number.MAX_SAFE_INTEGER, sharingId,
+        await sharing1.getKey(
+          contract.options.address, identity1, 'sectionOne', Number.MAX_SAFE_INTEGER, sharingId,
         ),
       )
         .to.eq(undefined);
       // add a key, this will be the latest key
-      await runtimes[0].sharing.addSharing(
+      await sharing0.addSharing(
         contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[1].activeIdentity,
+        identity0,
+        identity1,
         'sectionOne',
         100,
         randomSecret[0],
@@ -578,18 +581,18 @@ describe('Sharing handler', function test() {
         false,
         sharingId,
       );
-      runtimes[1].sharing.clearCache();
+      sharing1.clearCache();
       expect(
-        await runtimes[1].sharing.getKey(
-          contract.options.address, runtimes[1].activeIdentity, 'sectionOne', Number.MAX_SAFE_INTEGER, sharingId,
+        await sharing1.getKey(
+          contract.options.address, identity1, 'sectionOne', Number.MAX_SAFE_INTEGER, sharingId,
         ),
       )
         .to.eq(randomSecret[0]);
       // add a key before the first one --> latest key should not change
-      await runtimes[0].sharing.addSharing(
+      await sharing0.addSharing(
         contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[1].activeIdentity,
+        identity0,
+        identity1,
         'sectionOne',
         50,
         randomSecret[1],
@@ -598,16 +601,16 @@ describe('Sharing handler', function test() {
         sharingId,
       );
       expect(
-        await runtimes[1].sharing.getKey(
-          contract.options.address, runtimes[1].activeIdentity, 'sectionOne', Number.MAX_SAFE_INTEGER, sharingId,
+        await sharing1.getKey(
+          contract.options.address, identity1, 'sectionOne', Number.MAX_SAFE_INTEGER, sharingId,
         ),
       )
         .to.eq(randomSecret[0]);
       // add a key after the first one --> latest key should change
-      await runtimes[0].sharing.addSharing(
+      await sharing0.addSharing(
         contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[1].activeIdentity,
+        identity0,
+        identity1,
         'sectionOne',
         150,
         randomSecret[2],
@@ -615,10 +618,10 @@ describe('Sharing handler', function test() {
         false,
         sharingId,
       );
-      runtimes[1].sharing.clearCache();
+      sharing1.clearCache();
       expect(
-        await runtimes[1].sharing.getKey(
-          contract.options.address, runtimes[1].activeIdentity, 'sectionOne', Number.MAX_SAFE_INTEGER, sharingId,
+        await sharing1.getKey(
+          contract.options.address, identity1, 'sectionOne', Number.MAX_SAFE_INTEGER, sharingId,
         ),
       )
         .to.eq(randomSecret[2]);
@@ -626,51 +629,51 @@ describe('Sharing handler', function test() {
 
     it('should be able to share hash keys', async () => {
       const contract = await runtimes[0].executor.createContract(
-        contractName, [], { from: runtimes[0].activeIdentity, gas: 500000 },
+        contractName, [], { from: identity0, gas: 500000 },
       );
       const hashCryptor = cryptoProvider.getCryptorByCryptoAlgo('aesEcb');
       const hashKey = await hashCryptor.generateKey();
-      await runtimes[0].sharing.ensureHashKey(
+      await sharing0.ensureHashKey(
         contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[0].activeIdentity,
+        identity0,
+        identity0,
         hashKey,
         null,
         sharingId,
       );
-      await runtimes[0].sharing.ensureHashKey(
+      await sharing0.ensureHashKey(
         contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[1].activeIdentity,
+        identity0,
+        identity1,
         hashKey,
         null,
         sharingId,
       );
-      const key = await runtimes[1].sharing.getHashKey(
-        contract.options.address, runtimes[1].activeIdentity, sharingId,
+      const key = await sharing1.getHashKey(
+        contract.options.address, identity1, sharingId,
       );
       expect(key).to.eq(hashKey);
     });
 
     it('should be able to share hash implicitely when sharing other keys', async () => {
       const contract = await runtimes[0].executor.createContract(
-        contractName, [], { from: runtimes[0].activeIdentity, gas: 500000 },
+        contractName, [], { from: identity0, gas: 500000 },
       );
       const hashCryptor = cryptoProvider.getCryptorByCryptoAlgo('aesEcb');
       const hashKey = await hashCryptor.generateKey();
-      await runtimes[0].sharing.ensureHashKey(
+      await sharing0.ensureHashKey(
         contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[0].activeIdentity,
+        identity0,
+        identity0,
         hashKey,
         null,
         sharingId,
       );
       const randomSecret = `super secret; ${Math.random()}`;
-      await runtimes[0].sharing.addSharing(
+      await sharing0.addSharing(
         contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[1].activeIdentity,
+        identity0,
+        identity1,
         '*',
         0,
         randomSecret,
@@ -679,13 +682,13 @@ describe('Sharing handler', function test() {
         sharingId,
       );
       // check shared key
-      const sharedKey = await runtimes[1].sharing.getKey(
-        contract.options.address, runtimes[1].activeIdentity, '*', 0, sharingId,
+      const sharedKey = await sharing1.getKey(
+        contract.options.address, identity1, '*', 0, sharingId,
       );
       expect(sharedKey).to.eq(randomSecret);
       // check hash key
-      const hashKeyRetrieved = await runtimes[1].sharing.getHashKey(
-        contract.options.address, runtimes[1].activeIdentity, sharingId,
+      const hashKeyRetrieved = await sharing1.getHashKey(
+        contract.options.address, identity1, sharingId,
       );
       expect(hashKeyRetrieved).to.eq(hashKey);
     });
@@ -700,12 +703,12 @@ describe('Sharing handler', function test() {
         200: randomSecret[1],
       };
       const contract = await runtimes[0].executor.createContract(
-        contractName, [], { from: runtimes[0].activeIdentity, gas: 500000 },
+        contractName, [], { from: identity0, gas: 500000 },
       );
-      await runtimes[0].sharing.addSharing(
+      await sharing0.addSharing(
         contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[1].activeIdentity,
+        identity0,
+        identity1,
         'sectionOne',
         100,
         randomSecret[0],
@@ -713,10 +716,10 @@ describe('Sharing handler', function test() {
         false,
         sharingId,
       );
-      await runtimes[0].sharing.addSharing(
+      await sharing0.addSharing(
         contract.options.address,
-        runtimes[0].activeIdentity,
-        runtimes[1].activeIdentity,
+        identity0,
+        identity1,
         'sectionOne',
         200,
         randomSecret[1],
@@ -724,8 +727,8 @@ describe('Sharing handler', function test() {
         false,
         sharingId,
       );
-      const history = await runtimes[1].sharing.getKeyHistory(
-        contract.options.address, runtimes[1].activeIdentity, 'sectionOne', sharingId,
+      const history = await sharing1.getKeyHistory(
+        contract.options.address, identity1, 'sectionOne', sharingId,
       );
 
       expect(history).to.deep.eq(target);
@@ -736,12 +739,12 @@ describe('Sharing handler', function test() {
         const randomSecret = `super secret; ${Math.random()}`;
         // create a contract with a sharing
         const contract = await runtimes[0].executor.createContract(
-          contractName, [], { from: runtimes[0].activeIdentity, gas: 500000 },
+          contractName, [], { from: identity0, gas: 500000 },
         );
-        await runtimes[0].sharing.addSharing(
+        await sharing0.addSharing(
           contract.options.address,
-          runtimes[0].activeIdentity,
-          runtimes[1].activeIdentity,
+          identity0,
+          identity1,
           '*',
           0,
           randomSecret,
@@ -756,11 +759,11 @@ describe('Sharing handler', function test() {
           : runtimes[0].executor.executeContractCall(contract, 'sharing')
         );
         const sharings = await dfs.get(sharingHash);
-        runtimes[1].sharing.addHashToCache(
+        sharing1.addHashToCache(
           contract.options.address, JSON.parse(sharings.toString()), sharingId,
         );
-        const key = await runtimes[1].sharing.getKey(
-          contract.options.address, runtimes[1].activeIdentity, '*', 0, sharingId,
+        const key = await sharing1.getKey(
+          contract.options.address, identity1, '*', 0, sharingId,
         );
         expect(key).to.eq(randomSecret);
       });
@@ -777,22 +780,22 @@ describe('Sharing handler', function test() {
           `super secret; ${Math.random()}`,
         ];
         const contract = await runtimes[0].executor.createContract(
-          'Shared', [], { from: runtimes[0].activeIdentity, gas: 500000 },
+          'Shared', [], { from: identity0, gas: 500000 },
         );
-        await runtimes[0].sharing.addSharing(
+        await sharing0.addSharing(
           contract.options.address,
-          runtimes[0].activeIdentity,
-          runtimes[1].activeIdentity,
+          identity0,
+          identity1,
           'sectionOne',
           100,
           randomSecret[0],
           null,
           false,
         );
-        await runtimes[0].sharing.addSharing(
+        await sharing0.addSharing(
           contract.options.address,
-          runtimes[0].activeIdentity,
-          runtimes[1].activeIdentity,
+          identity0,
+          identity1,
           'sectionOne',
           200,
           randomSecret[1],
@@ -802,17 +805,17 @@ describe('Sharing handler', function test() {
 
         const bumpKey = `bump bump bump ${Math.random()}`;
         let block = await web3.eth.getBlockNumber();
-        await runtimes[0].sharing.bumpSharings(
+        await sharing0.bumpSharings(
           contract.options.address,
-          runtimes[0].activeIdentity,
-          [runtimes[1].activeIdentity],
+          identity0,
+          [identity1],
           'sectionOne',
           block,
           bumpKey,
         );
-        runtimes[1].sharing.clearCache();
+        sharing1.clearCache();
         block = await web3.eth.getBlockNumber();
-        const key = await runtimes[1].sharing.getKey(contract.options.address, runtimes[1].activeIdentity, 'sectionOne', block);
+        const key = await sharing1.getKey(contract.options.address, identity1, 'sectionOne', block);
         expect(key).to.eq(bumpKey);
       });
   });
@@ -827,13 +830,13 @@ describe('Sharing handler', function test() {
       );
       const randomSecrets = [...Array(count)].map(() => `super secret; ${Math.random()}`);
       const contract = await runtimes[0].executor.createContract(
-        'MultiSharedTest', [], { from: runtimes[0].activeIdentity, gas: 500000 },
+        'MultiSharedTest', [], { from: identity0, gas: 500000 },
       );
       for (let i = 0; i < count; i += 1) {
-        await runtimes[0].sharing.addSharing(
+        await sharing0.addSharing(
           contract.options.address,
-          runtimes[0].activeIdentity,
-          runtimes[1].activeIdentity,
+          identity0,
+          identity1,
           '*',
           0,
           randomSecrets[i],
@@ -843,8 +846,8 @@ describe('Sharing handler', function test() {
         );
       }
       for (let i = 0; i < count; i += 1) {
-        const key = await runtimes[1].sharing.getKey(
-          contract.options.address, runtimes[1].activeIdentity, '*', 0, sharingIds[i],
+        const key = await sharing1.getKey(
+          contract.options.address, identity1, '*', 0, sharingIds[i],
         );
         expect(key).to.eq(randomSecrets[i]);
       }

@@ -479,13 +479,23 @@ export class DigitalTwin extends Logger {
     // Deactivate identity
     if (this.options.verifications.contracts.registry) {
       const verificationRegistry = this.options.verifications.contracts.registry;
-      await this.options.verifications.executeAndHandleEventResult(
-        this.config.accountId,
-        verificationRegistry.methods.transferIdentity(
+      if (this.config.accountId === this.options.verifications.config.activeIdentity) {
+        await this.options.executor.executeContractTransaction(
+          verificationRegistry,
+          'transferIdentity',
+          { from: this.config.accountId },
           description.identity,
           nullAddress,
-        ).encodeABI(),
-      );
+        );
+      } else {
+        await this.options.verifications.executeAndHandleEventResult(
+          this.config.accountId,
+          verificationRegistry.methods.transferIdentity(
+            description.identity,
+            nullAddress,
+          ).encodeABI(),
+        );
+      }
     }
 
     // Deactivate twin contract

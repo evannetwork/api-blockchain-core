@@ -21,7 +21,7 @@ import 'mocha';
 import { expect, use } from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
 
-import { accounts } from '../test/accounts';
+import { accounts, useIdentity } from '../test/accounts';
 import { getSmartAgentAuthHeaders } from './utils';
 import { Runtime } from '../index';
 import { TestUtils } from '../test/test-utils';
@@ -37,13 +37,11 @@ function parseAuthData(authData) {
   });
   return authComponents;
 }
-function ensureAuth(web3, authData) {
+function ensureAuth(web3, authData, customMessage) {
   const authComponents = parseAuthData(authData);
-
-  const signedTime = parseInt(authComponents.EvanMessage, 10);
+  const signedTime = parseInt(authComponents.EvanMessage, 16);
   const maxAge = 1000 * 60 * 5; // max age of signed message is 5m
-
-  if (signedTime + maxAge < Date.now()) {
+  if (!customMessage && (signedTime + maxAge) < Date.now()) {
     throw new Error('signed message has expired');
   }
 
@@ -63,7 +61,7 @@ describe('utils', function test() {
   let runtime: Runtime;
 
   before(async () => {
-    runtime = await TestUtils.getRuntime(accounts[0]);
+    runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
   });
 
   it('can sign with default message syntax', async () => {
@@ -78,7 +76,7 @@ describe('utils', function test() {
     const authData = await getSmartAgentAuthHeaders(runtime, message);
     const parsed = parseAuthData(authData);
     expect(parsed.EvanAuth).to.eq(runtime.activeAccount);
-    expect(parsed.EvanMessage).to.eq(message);
-    expect(ensureAuth.bind(null, runtime.web3, authData)).not.to.throw();
+    expect(runtime.web3.utils.hexToUtf8(parsed.EvanMessage)).to.eq(message);
+    expect(ensureAuth.bind(null, runtime.web3, authData, true)).not.to.throw();
   });
 });
