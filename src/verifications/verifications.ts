@@ -760,7 +760,7 @@ export class Verifications extends Logger {
     // convert bigNumbers to numbers
     let sendingValue = value;
     if ((sendingValue as any).toNumber) {
-      sendingValue = (value as any).toNumber();
+      sendingValue = (sendingValue as any).toNumber();
     }
 
     // prepare success + result event handling
