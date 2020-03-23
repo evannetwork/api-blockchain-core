@@ -1548,7 +1548,7 @@ export class Verifications extends Logger {
   /**
    * checks if a address is an identity or not
    *
-   * @param {string} identityAddress The identity address to fetch the owner for.
+   * @param {string} address The address to check
    * @returns {Promise<boolean>} identity or not.
    */
   public async isIdentity(address: string): Promise<boolean> {
