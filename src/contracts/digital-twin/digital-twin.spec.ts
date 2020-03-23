@@ -50,8 +50,8 @@ use(chaiAsPromised);
 
 const ownedDomain = useIdentity ? 'twintestidentity.fifs.registrar.test.evan' : 'twintest.fifs.registrar.test.evan';
 
-async function getRuntimeWithEnabledPinning(defaultRuntime: Runtime): Promise<Runtime> {
-  const runtime = defaultRuntime;
+async function getRuntimeWithEnabledPinning(account): Promise<Runtime> {
+  const runtime = await TestUtils.getRuntime(account, null, { useIdentity });
   (runtime.dfs as any).disablePin = false;
   return runtime;
 }
@@ -213,7 +213,7 @@ describe('DigitalTwin', function test() {
 
     it.skip('can deactivate a created twin (also checks for hashes, unskip this as soon as'
       + 'ticket is included & remove other test', async () => {
-      const localRuntime = await getRuntimeWithEnabledPinning(runtime);
+      const localRuntime = await getRuntimeWithEnabledPinning(accounts[0]);
 
       const configWithTemplate = {
         ...defaultConfig,
@@ -349,7 +349,7 @@ describe('DigitalTwin', function test() {
     });
 
     it('can deactivate a created twin (without hash unpinning check)', async () => {
-      const localRuntime = await getRuntimeWithEnabledPinning(runtime);
+      const localRuntime = await getRuntimeWithEnabledPinning(accounts[0]);
 
       const configWithTemplate = {
         ...defaultConfig,
