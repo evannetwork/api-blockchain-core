@@ -10,7 +10,7 @@ jobs:
       fail-fast: false
       matrix:
         tests:
-          - {"name": "Services Contracts", "testpattern":"src/verifications/*.spec.ts src/profile/*.spec.ts src/*.spec.ts src/votings/*.spec.ts"}
+          - {"name": "Services Contracts", "testpattern":"src/verifications/*.spec.ts src/profile/*.spec.ts src/*.spec.ts src/votings/*.spec.ts src/common/*spec.ts"}
           - {"name": "data contract & IPFS & did/vc tests", "testpattern":"src/contracts/data-contract/*.spec.ts src/encryption/*.spec.ts src/dfs/*.spec.ts src/did/*.spec.ts src/vc/*.spec.ts"}
           - {"name": "service/base/businesscenter contract tests", "testpattern":"src/votings/*.spec.ts src/contracts/*.spec.ts src/contracts/base-contract/*.spec.ts src/contracts/business-center/*.spec.ts src/contracts/service-contract/*.spec.ts"}
           - {"name": "digital-twin tests", "testpattern":"src/contracts/digital-twin/*.spec.ts"}
