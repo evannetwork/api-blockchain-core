@@ -313,10 +313,9 @@ export class Verifications extends Logger {
     validationOptions: this.defaultValidationOptions,
   };
 
-  public cachedIdentities: any = { };
-
   public cachedAccountIdentities: any = { };
 
+  public cachedIdentities: any = { };
   public config: VerificationsConfig;
 
   public contracts: any = { };
