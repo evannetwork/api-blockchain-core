@@ -3,11 +3,20 @@
 ## Next Version
 ### Features
 - A DID document's `@context` and `controller` properties can now also be arrays
+- ensure support for `Runtime`s `useIdentity` flag in entire library
+- update following modules for `useIdentity` support
+  + `DigitalTwin`
+  + `Onboarding`
+  + `Payments` (limited, will undergo further changes in future)
+  + `Verifications`
+  + `Votings`
 
 ### Fixes
 - Fixed bug where a new DID document proof would incorporate the old proof and thus would make the document increasingly larger
 - Fixed bug for default DID documents that had a checksum case `ethereumAddress` property which made the proof validating mechanism fail
 - add `startBlock` argument to `loadChannelFromBlockchain` in `Payments` to avoid long running function calls
+- update tests to allow running tests via identity
+- include identity tests to automatic test runs
 
 ### Deprecations
 
