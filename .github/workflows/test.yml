@@ -31,8 +31,8 @@ jobs:
             npm i
             ganache-cli --allowUnlimitedContractSize --gasLimit 0xE4E1C0 -p 7545 -f http://localhost:8545 > /dev/null &
       - run: npm run testunitcoverage
-      - run: bash <(curl -s https://codecov.io/bash) -cF javascript
         env:
-         TESTSPECS: ${{ matrix.tests.testpattern }}
-         USE_IDENTITY: ${{ matrix.identity }}
-         CHAIN_ENDPOINT: 'ws://localhost:7545'
+          TESTSPECS: ${{ matrix.tests.testpattern }}
+          USE_IDENTITY: ${{ matrix.identity }}
+          CHAIN_ENDPOINT: 'ws://localhost:7545'
+      - run: bash <(curl -s https://codecov.io/bash) -cF javascript
