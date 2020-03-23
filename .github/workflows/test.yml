@@ -23,15 +23,15 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v1
         with:
-          node-version: 11.15.0
+          node-version: 12.16.1
       - run: node --version
       - run: |
             docker run -d -p 8546:8546 -p 8545:8545 -u root evannetwork/testcore-snapshot --chain evantestcore --jsonrpc-interface all --unsafe-expose
             npm i -g ganache-cli
             npm i
             ganache-cli --allowUnlimitedContractSize --gasLimit 0xE4E1C0 -p 7545 -f http://localhost:8545 > /dev/null &
-            npm run testunitcoverage
-            bash <(curl -s https://codecov.io/bash) -cF javascript
+      - run: npm run testunitcoverage
+      - run: bash <(curl -s https://codecov.io/bash) -cF javascript
         env:
          TESTSPECS: ${{ matrix.tests.testpattern }}
          USE_IDENTITY: ${{ matrix.identity }}
