@@ -441,9 +441,9 @@ export class Payments extends Logger {
   /**
    * Scan the blockchain for an open channel, and load it with 0 balance
    *
-   * The 0 balance may be overwritten with setBalance if server replies with an updated balance on
-   * first request. It should ask user for signing the zero-balance proof Throws/rejects if no open
-   * channel was found. Additionally a starting block can be provided to avoid starting from block 0
+   * The 0 balance may be overwritten with setBalance if the server replies with an updated balance on
+   * first request. It should ask the user for signing the zero-balance proof. If no open
+   * channel was found an error is thrown. Additionally, a starting block can be provided to avoid starting from block 0
    * when looking for payment channels.
    *
    * @param      {string}  account     Sender/client's account address
