@@ -316,6 +316,7 @@ export class Verifications extends Logger {
   public cachedAccountIdentities: any = { };
 
   public cachedIdentities: any = { };
+
   public config: VerificationsConfig;
 
   public contracts: any = { };
