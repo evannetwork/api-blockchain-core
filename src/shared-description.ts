@@ -37,7 +37,10 @@ export class Description extends Dbcp.Description {
   /**
    * loads description envelope from contract
    *
-   * @param      {string}    ensAddress  The ens address where the description is stored
+   * @param      {string}    contractAddress  The contract address where the description
+   *                                          is stored
+   * @param      {string}    accountId ID of the identity or the account that is allowed to
+   *                                   read the description
    * @return     {Envelope}  description as an Envelope
    */
   public async getDescriptionFromContract(
@@ -81,7 +84,8 @@ export class Description extends Dbcp.Description {
    *                                                 stored
    * @param      {Envelope|string}  envelope         description as an envelope or a presaved
    *                                                 description hash
-   * @param      {string}           accountId        ETH account id
+   * @param      {string}           accountId        ID of either an account or an identity that is
+   *                                                 supposed to encrypt the description
    * @return     {Promise}  resolved when done
    */
   public async setDescriptionToContract(
