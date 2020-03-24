@@ -36,7 +36,8 @@ export async function getEnvironment(web3: any): Promise<string> {
 }
 
 /**
- * create auth header data to authenticate with current account against a smart agent server
+ * create auth header data to authenticate with current account/identity against a smart agent
+ * server
  *
  * @param      {Runtime}  runtime    an initialized runtime
  * @param      {string}   message    (optional): message to sign, uses current timestamp by default

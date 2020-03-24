@@ -122,12 +122,12 @@ export class BusinessCenterProfile extends Logger {
    * stores profile to business centers profile store
    *
    * @param      {string}   businessCenterDomain  ENS domain name of a business center
-   * @param      {string}   account               Ethereum account id
+   * @param      {string}   account/identity               Ethereum account id
    * @return     {Promise}  resolved when done
    */
   public async storeForBusinessCenter(
     businessCenterDomain: string,
-    account: string,
+    identity: string,
   ): Promise<void> {
     const [stored, address] = await Promise.all([
       this.storeToIpld(),
@@ -139,26 +139,26 @@ export class BusinessCenterProfile extends Logger {
     await this.nameResolver.executor.executeContractTransaction(
       contract,
       'setMyProfile',
-      { from: account, autoGas: 1.1 },
+      { from: identity, autoGas: 1.1 },
       stored,
     );
   }
 
   /**
-   * load profile for given account from global profile contract
+   * load profile for given account/Identity from global profile contract
    *
    * @param      {string}   businessCenterDomain  ENS domain name of a business center
-   * @param      {string}   account               Ethereum account id
+   * @param      {string}   account/Identity               Ethereum account id
    * @return     {Promise}  resolved when done
    */
   // eslint-disable-next-line consistent-return
-  public async loadForBusinessCenter(businessCenterDomain: string, account: string): Promise<any> {
+  public async loadForBusinessCenter(businessCenterDomain: string, identity: string): Promise<any> {
     const address = await this.nameResolver.getAddress(businessCenterDomain);
     const contract = this.nameResolver.contractLoader.loadContract(
       'BusinessCenterInterface', address,
     );
     const hash = await this.nameResolver.executor.executeContractCall(
-      contract, 'getProfile', account,
+      contract, 'getProfile', identity,
     );
     if (hash === '0x0000000000000000000000000000000000000000000000000000000000000000') {
       this.ipldData = {
@@ -180,14 +180,14 @@ export class BusinessCenterProfile extends Logger {
   public async getMyBusinessCenterContracts(
     businessCenterDomain: string,
     contractType: string,
-    account: string,
+    identity: string,
   ): Promise<any> {
     const address = await this.nameResolver.getAddress(businessCenterDomain);
     const contract = this.nameResolver.contractLoader.loadContract(
       'BusinessCenterInterface', address,
     );
     const bcIndex = await this.nameResolver.executor.executeContractCall(
-      contract, 'getMyIndex', { from: account },
+      contract, 'getMyIndex', { from: identity },
     );
     const indexContract = this.nameResolver.contractLoader.loadContract(
       'DataStoreIndexInterface', bcIndex,
