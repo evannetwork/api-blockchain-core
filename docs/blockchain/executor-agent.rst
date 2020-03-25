@@ -16,17 +16,17 @@ ExecutorAgent
      - `executor-agent.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/executor-agent.spec.ts>`_
 
 
-The ``ExecutorAgent`` module is designed to cover basically the same tasks as the `Executor <../blockchain/executor.html>`_ module. While the last one performs the transactions directly with an account, that is given as inputOptions, the ``ExecutorAgent`` module wraps those transactions by submitting them to a smart agent.
+The ``ExecutorAgent`` module is designed to cover basically the same tasks as the `Executor <../blockchain/executor.html>`_ module. While the last one performs the transactions directly with an account or identity, that is given as inputOptions, the ``ExecutorAgent`` module wraps those transactions by submitting them to a smart agent.
 
-The smart agent receives those transactions and performs them with its own account, if a valid tokens has been passed to it alongside the transaction data. Tokens for transactions can be issued at the smart agent as well (a password is required for this).
+The smart agent receives those transactions and performs them with its own account or identity, if a valid tokens has been passed to it alongside the transaction data. Tokens for transactions can be issued at the smart agent as well (a password is required for this).
 
-Using the ``ExecutorAgent`` allows to delegate transactions to users that do not have their own blockchain accounts. Delegating those transactions requires that smart agent user to be invited into the contract instead of the users, that will interact with the contract.
+Using the ``ExecutorAgent`` allows to delegate transactions to users that do not have their own blockchain accounts or identities. Delegating those transactions requires that smart agent user to be invited into the contract instead of the users, that will interact with the contract.
 
-Users without accounts are then interacting with the front-end the same way as regular users, but do not submit their transactions themselves, they make a REST request against a smart agent server. To prevent spamming and scamming, the users use tokens for their transactions. Tokens are basically like prepaid telephone card and allows to perform a limited set of functions for a limited amount of times. Tokens can only be created with a valid password.
+Users without accounts or identities are then interacting with the front-end the same way as regular users, but do not submit their transactions themselves, they make a REST request against a smart agent server. To prevent spamming and scamming, the users use tokens for their transactions. Tokens are basically like prepaid telephone card and allows to perform a limited set of functions for a limited amount of times. Tokens can only be created with a valid password.
 
-Let's say, we have created a `DataContract <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/data-contract/data-contract.ts>`_, that contains three questions, that should be answered by someone without an own blockchain account (think of a customer survey or something similar).
+Let's say, we have created a `DataContract <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/data-contract/data-contract.ts>`_, that contains three questions, that should be answered by someone without an own blockchain account or identity (think of a customer survey or something similar).
 
-To allow that, first invite the corresponding smart agent account into the contract. Smart agent accounts for this should be known to the party, that wants to delegate transactions and their funds are maintained by this party, we'll use an example address for this here.
+To allow that, first invite the corresponding smart agent account or identity into the contract. Smart agent accounts or identities for this should be known to the party, that wants to delegate transactions and their funds are maintained by this party, we'll use an example address for this here.
 
 For abbreviation we assume, we have the following values:
 
@@ -65,9 +65,9 @@ Now with the smart agent being able to perform transactions, create a token for 
 
 Allowing ``addListEntry`` three time is to allow them to write three answers. One of the ``changeConsumerState`` times is for accepting the contract, which is done by setting the own state to ``Active``. The other one is for marking editing as done (setting the own state to ``Terminated``).
 
-The resulting token ``txToken`` is a string, that can be handed over to our users without an account. This is usually done by sending them an email with a link, that contains the token and skips the login step for them and routes them directly to the contract, they should respond to.
+The resulting token ``txToken`` is a string, that can be handed over to our users without an account or or identity. This is usually done by sending them an email with a link, that contains the token and skips the login step for them and routes them directly to the contract, they should respond to.
 
-Let's switch sides. The next steps are performed in the front-end by a user without a blockchain account, that has received the token.
+Let's switch sides. The next steps are performed in the front-end by a user without a blockchain account or identity, that has received the token.
 
 To make transaction via a smart agent, create an instance of the ``ExecutorWallet`` and assign the token from before as ``token`` .
 
@@ -82,7 +82,7 @@ To make transaction via a smart agent, create an instance of the ``ExecutorWalle
   });
   executor.token = txToken;
 
-To use the ``ExecutorWallet`` instance created this way in your other modules, hand it over to their contstructor like instead of a normal ``Executor`` instance. Then use your modules, that have the ``ExeutorWallet`` instance like you would use them for making transactions with your own account.
+To use the ``ExecutorWallet`` instance created this way in your other modules, hand it over to their contstructor like instead of a normal ``Executor`` instance. Then use your modules, that have the ``ExeutorWallet`` instance like you would use them for making transactions with your own account or identity.
 
 .. code-block:: typescript
 
@@ -92,7 +92,7 @@ To use the ``ExecutorWallet`` instance created this way in your other modules, h
   };
   await dataContract.addListEntries(dataContractInstance, ['surveyAnswers'], [sampleValue], smartAgentId);
 
-Note, that the last sample uses the smartAgentId as the performing account. Because transactions are estimated before being executed and in some cases the underlying modules require an "active" account, that is used as the users identity, this has to match the smart agents account id. The smart agent account id is passed alongside the token via the link in the email for users wihtout blockchain accounts. References, that would point to a users account have to be replaced with this smart agent account id.
+Note, that the last sample uses the smartAgentId as the performing account or identity. Because transactions are estimated before being executed and in some cases the underlying modules require an "active" account or identity, that is used as the users identity, this has to match the smart agents account id. The smart agent account id is passed alongside the token via the link in the email for users wihtout blockchain accounts or identities. References, that would point to a users account or identity have to be replaced with this smart agent account id or identity.
 
 
 .. figure::  ../_static/agent_tx_transparent.png
@@ -244,7 +244,7 @@ execute a transaction against the blockchain, handle gas exceeded and return val
 
 this is done as a rest call against the smart agent
 
-transactions, that transfer EVEs to a target account, will be rejected
+transactions, that transfer EVEs to a target account or identity, will be rejected
 
 this requires a valid token issued with ``generateToken`` beforehand, tokens can be set at the executor with:
 
@@ -362,7 +362,7 @@ creates a contract by contstructing creation transaction and signing it with pri
 
 this is done as a rest call against the smart agent
 
-transactions, that transfer EVEs to a target account, will be rejected
+transactions, that transfer EVEs to a target account or identity, will be rejected
 
 this requires a valid token issued with ``generateToken`` beforehand, tokens can be set at the executor with:
 

@@ -57,10 +57,10 @@ So now we have a valid and working wallet loaded to our module and start perform
 
 Looks pretty simple, but comes with a few things to consider:
 
-- ``accountId`` is the account, that performs the transaction from the "outside perspective" (if you look into a chain explorer like the `evan.network Test-Explorer <https://testexplorer.evan.network>`_ you'll see, that account ``accountId`` is actually performing the transaction and not the wallet contract)
+- ``accountId`` is the account or identity, that performs the transaction from the "outside perspective" (if you look into a chain explorer like the `evan.network Test-Explorer <https://testexplorer.evan.network>`_ you'll see, that account or identity ``accountId`` is actually performing the transaction and not the wallet contract)
 - ``accountId`` pays the gas cost for the transaction (obviously, when considering the last point)
 - from the perspective of the target contract ``ownedContract``, the wallet contract (either loaded or created beforehand) is performing the transaction
-- taken our example transaction ``transferOwnership``, **the wallet contract has to be the current owner** and not the account ``accountId``
+- taken our example transaction ``transferOwnership``, **the wallet contract has to be the current owner** and not the account or identity ``accountId``
 
 .. figure::  ../_static/wallet_tx_transparent.png
    :align:   center
@@ -139,8 +139,8 @@ Create a new wallet contract and uses it as its wallet contract.
 Parameters
 ----------
 
-#. ``accountId`` - ``string``: account id, that creates the wallet
-#. ``manager`` - ``string``: account, that will be able to manage the new wallet
+#. ``accountId`` - ``string``: account id or identity, that creates the wallet
+#. ``manager`` - ``string``: account or identity, that will be able to manage the new wallet
 #. ``owners`` - ``string[]``: wallet owners
 #. ``confirmations`` - ``number`` (optional): number of confirmations required to complete a transaction, defaults to ``1``
 
@@ -257,8 +257,8 @@ Function description
 Parameters
 ----------
 
-#. ``accountId`` - ``string``: account with management permissions on wallet
-#. ``toAdd`` - ``string``: account to add as an owner
+#. ``accountId`` - ``string``: account or identity with management permissions on wallet
+#. ``toAdd`` - ``string``: account or identity to add as an owner
 
 -------
 Returns
@@ -293,8 +293,8 @@ Remove an owner from a wallet contract.
 Parameters
 ----------
 
-#. ``accountId`` - ``string``: account with management permissions on wallet
-#. ``toAdd`` - ``string``: account to remove from wallet owners
+#. ``accountId`` - ``string``: account or identity with management permissions on wallet
+#. ``toAdd`` - ``string``: account or identity to remove from wallet owners
 
 -------
 Returns
@@ -335,7 +335,7 @@ Parameters
 Returns
 -------
 
-``Promise`` returns ``string[]``: array of account ids
+``Promise`` returns ``string[]``: array of account ids or identities
 
 -------
 Example
