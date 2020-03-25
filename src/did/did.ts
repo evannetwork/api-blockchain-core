@@ -234,14 +234,14 @@ export class Did extends Logger {
   }
 
   /**
-   * Gets a DID document for currently configured account/identity pair. Notice, that this document
+   * Gets a DID document for currently configured identity. Notice, that this document
    * may a complete DID document for currently configured active identity, a part of it or not
    * matching it at all. You can use the result of this function to build a new DID document but
    * should extend it or an existing DID document, if your details derive from default format.
    *
    * All three arguments are optional. When they are used, all of them have to be given and the
    * result then describes a contracts DID document. If all of them are omitted the result describes
-   * an accounts DID document.
+   * an identity's DID document.
    *
    * @param      {string}  did                   (optional) contract DID
    * @param      {string}  controllerDid         (optional) controller of contracts identity (DID)

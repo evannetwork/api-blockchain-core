@@ -41,10 +41,6 @@ export class AesEcb extends Logger implements Cryptor {
 
   public options: any;
 
-  private readonly encodingUnencrypted = 'utf-8';
-
-  private readonly encodingEncrypted = 'hex';
-
   public constructor(options?: AesEcbOptions) {
     super(options);
     this.options = { ...AesEcb.defaultOptions, ...options || {} };

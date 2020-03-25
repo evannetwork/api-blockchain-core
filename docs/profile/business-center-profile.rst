@@ -2,7 +2,7 @@
 Business Center Profile
 ================================================================================
 
-.. list-table:: 
+.. list-table::
    :widths: auto
    :stub-columns: 1
 
@@ -80,7 +80,7 @@ Example
 -------
 
 .. code-block:: typescript
-  
+
   const businessCenterProfile = new BusinessCenterProfile({
     ipld,
     nameResolver,
@@ -170,7 +170,7 @@ storeForBusinessCenter
 
 .. code-block:: typescript
 
-  businessCenterProfile.storeForBusinessCenter(businessCenterDomain, account);
+  businessCenterProfile.storeForBusinessCenter(businessCenterDomain, identity);
 
 Stores profile to business centers profile store.
 
@@ -179,7 +179,7 @@ Parameters
 ----------
 
 #. ``businessCenerDomain`` - ``string``: ENS domain name of a business center
-#. ``account`` - ``string``: Ethereum account id
+#. ``executorAddress`` - ``string``: Identity or account making the transaction
 
 -------
 Returns
@@ -194,7 +194,7 @@ Example
 .. code-block:: typescript
 
   await businessCenterProfile.setContactCard(contactCard);
-  await businessCenterProfile.storeForBusinessCenter(businessCenterDomain, accounts[0]);
+  await businessCenterProfile.storeForBusinessCenter(businessCenterDomain, identities[0]);
 
 
 
@@ -207,7 +207,7 @@ loadForBusinessCenter
 
 .. code-block:: typescript
 
-  businessCenterProfile.loadForBusinessCenter(businessCenterDomain, account);
+  businessCenterProfile.loadForBusinessCenter(businessCenterDomain, identity);
 
 Function description
 
@@ -216,7 +216,7 @@ Parameters
 ----------
 
 #. ``businessCenerDomain`` - ``string``: ENS domain name of a business center
-#. ``account`` - ``string``: Ethereum account id
+#. ``executorAddress`` - ``string``: Identity or account making the transaction
 
 -------
 Returns
@@ -230,7 +230,7 @@ Example
 
 .. code-block:: typescript
 
-  await newProfilebusinessCenterProfile.loadForBusinessCenter(businessCenterDomain, accounts[0]);
+  await newProfilebusinessCenterProfile.loadForBusinessCenter(businessCenterDomain, identities[0]);
   const contactCard = await businessCenterProfile.getContactCard();
 
 
@@ -304,8 +304,44 @@ Example
   businessCenterProfile.loadFromIpld(ipldIpfsHash);
 
 
+------------------------------------------------------------------------------
 
-.. required for building marku
+.. _business-center-profile_getMyBusinessCenterContracts:
+
+getMyBusinessCenterContracts
+================================================================================
+
+.. code-block:: typescript
+
+  businessCenterProfile.getMyBusinessCenterContracts(domain, contractType, subject);
+
+Gets all registered contracts for a specific contract type on a businesscenter
+
+----------
+Parameters
+----------
+
+#. ``businessCenterDomain`` - ``string``: The business center domain
+#. ``contractType`` - ``string``: The contract type
+#. ``subject`` - ``string``: Subject to get the contracts for
+
+-------
+Returns
+-------
+
+``Promise`` returns ``any``: Array with all registered bc contracts
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  businessCenterProfile.loadFromIpld(ipldIpfsHash);
+
+
+
+.. required for building markup
 
 .. |source cryptoProvider| replace:: ``CryptoProvider``
 .. _source cryptoProvider: ../encryption/crypto-provider.html

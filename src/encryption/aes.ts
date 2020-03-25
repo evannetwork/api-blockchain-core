@@ -53,8 +53,6 @@ export class Aes extends Logger implements Cryptor {
 
   private readonly encodingUnencrypted = 'utf-8';
 
-  private readonly encodingEncrypted = 'hex';
-
   public constructor(options?: AesOptions) {
     super(options);
     this.options = { ...Aes.defaultOptions, ...options || {} };
