@@ -78,7 +78,8 @@ export class BaseContract extends Logger {
    * create new contract but do not initialize it yet
    *
    * @param      {string}           factoryName           contract factory name, used for ENS lookup
-   * @param      {string}           accountId             Ethereum account id
+   * @param      {string}           accountId             Ethereum account id - can be either
+   *                                                      account or identity
    * @param      {string}           businessCenterDomain  business center in which the contract will
    *                                                      be created; use null when working without
    *                                                      business center
@@ -155,8 +156,8 @@ export class BaseContract extends Logger {
    *                                                    contract was created in; use null when
    *                                                    working without business center
    * @param      {string}         contract              Ethereum id of the contract
-   * @param      {string}         inviterId             account id of inviting user
-   * @param      {string}         inviteeId             account id of invited user
+   * @param      {string}         inviterId             account or identity id of inviting user
+   * @param      {string}         inviteeId             account or identity id of invited user
    * @return     {Promise<void>}  resolved when done
    */
   public async inviteToContract(
@@ -186,7 +187,7 @@ export class BaseContract extends Logger {
    * set state of the contract
    *
    * @param      {string|any}     contract   contract instance or contract id
-   * @param      {string}         accountId  Ethereum account id
+   * @param      {string}         accountId  Ethereum account or identity id which will change state
    * @param      {ContractState}  state      new state
    * @return     {Promise<void>}  resolved when done
    */
@@ -209,8 +210,8 @@ export class BaseContract extends Logger {
    * set state of a consumer
    *
    * @param      {string|any}     contract    contract instance or contract id
-   * @param      {string}         accountId   Ethereum account id
-   * @param      {string}         consumerId  Ethereum account id
+   * @param      {string}         accountId   account or identity id which will change state
+   * @param      {string}         consumerId  account or identity id whose state will change
    * @param      {ConsumerState}  state       new state
    * @return     {Promise<void>}  resolved when done
    */
@@ -238,8 +239,9 @@ export class BaseContract extends Logger {
    *                                                    contract was created in; use null when
    *                                                    working without business center
    * @param      {string}         contract              Ethereum id of the contract
-   * @param      {string}         accountId             account id of executing user
-   * @param      {string}         idToBeRemoved         account id which should be removed
+   * @param      {string}         accountId             account or identity id of executing user
+   * @param      {string}         idToBeRemoved         account or identity id which should
+   *                                                    be removed
    * @return     {Promise<void>}  resolved when done
    */
   public async removeFromContract(
