@@ -7,7 +7,7 @@ On the evan.network a profile is simply a `data contract <https://evannetwork.gi
 .. figure::  ../docu/img/identity_based_profile.png
    :align:   center
    :alt: identity based profile
-
+   
    identity based profile
 
 When an account requests for an identity based profile, A random 32 bytes address(profile) is generated and this is then linked to the identity and this is mapped to the account which becomes the owner of this identity based profile. All functionalities generating address, linking the identity and mapping the owner are provided using the IdentityHolder contract. Once this identity based profile has been created then this profile is added to the user registry.
