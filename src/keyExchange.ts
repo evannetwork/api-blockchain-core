@@ -53,8 +53,6 @@ export interface KeyExchangeOptions extends LoggerOptions {
 export class KeyExchange extends Logger {
   public publicKey: string;
 
-  private COMM_KEY_CONTEXT = 'mailboxKeyExchange';
-
   private SHARED_SECRET = Buffer.from('a832d7a4c60473d4fcddabf5c31f5b64dcb2382bbebbeb7c49b6cfc2f08fe9c3', 'hex');
 
   private account: string;
@@ -109,7 +107,7 @@ export class KeyExchange extends Logger {
    * decrypts a given communication key with an exchange key
    *
    * @param      {string}           encryptedCommKey  encrypted communications key received from
-   *                                                  another account
+   *                                                  another identity (or account)
    * @param      {string}           exchangeKey       Diffie Hellman exchange key from
    *                                                  computeSecretKey
    * @return     {Promise<Buffer>}  commKey as a buffer
@@ -143,7 +141,7 @@ export class KeyExchange extends Logger {
   /**
    * creates a bmail for exchanging comm keys
    *
-   * @param      {string}  from              sender accountId
+   * @param      {string}  from              sender address
    * @param      {any}     mailContent       bmail metadata
    * @param      {string}  encryptedCommKey  comm key, that should be exchanged
    * @return     {Mail}    bmail for key exchange
@@ -176,18 +174,18 @@ ${(mailContent && mailContent.fromAlias) || from}`;
   };
 
   /**
-   * sends a mailbox mail to the target account with the partial key for the key exchange
+   * sends a mailbox mail to the target with the partial key for the key exchange
    *
-   * @param      {string}         targetAccount    receiver of the invitation
-   * @param      {string}         targetPublicKey  combination of shared secret plus targetAccounts
+   * @param      {string}         receiver         receiver of the invitation
+   * @param      {string}         targetPublicKey  combination of shared secret plus receiver's
    *                                               private secret
    * @param      {string}         commKey          communication key between sender and
-   *                                               targetAccount
+   *                                               receiver
    * @param      {any}            mailContent      mail to send
    * @return     {Promise<void>}  resolved when done
    */
   public async sendInvite(
-    targetAccount: string,
+    receiver: string,
     targetPublicKey: string,
     commKey: string,
     mailContent: any,
@@ -198,7 +196,7 @@ ${(mailContent && mailContent.fromAlias) || from}`;
     await this.mailbox.sendMail(
       this.getExchangeMail(this.account, mailContent, encryptedCommKey.toString('hex')),
       this.account,
-      targetAccount,
+      receiver,
       '0',
       'mailboxKeyExchange',
     );

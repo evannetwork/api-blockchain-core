@@ -2,7 +2,7 @@
 Key Exchange
 ================================================================================
 
-.. list-table:: 
+.. list-table::
    :widths: auto
    :stub-columns: 1
 
@@ -36,38 +36,38 @@ This example retrieves public facing partial Diffie Hellman key part from a seco
 
 .. code-block:: typescript
 
-  // account, that initiates the invitation
-  const account1 = '0x0000000000000000000000000000000000000001';
-  // account, that will receive the invitation
-  const account2 = '0x0000000000000000000000000000000000000002';
+  // identity, that initiates the invitation
+  const identity1 = '0x0000000000000000000000000000000000000001';
+  // identity, that will receive the invitation
+  const identity2 = '0x0000000000000000000000000000000000000002';
   // profile from user, that initiates key exchange
   const profile1 = {};
   await profile1.loadForAccount();
   // profile from user, that is going to receive the invitation
   const profile2 = {};
   await profile2.loadForAccount();
-  // key exchange instance for account1
+  // key exchange instance for identity1
   const keyExchange1 = {};
-  // key exchange instance for account2
+  // key exchange instance for identity2
   const keyExchange2 = {};
 
   const foreignPubkey = await profile2.getPublicKey();
   const commKey = await keyExchange1.generateCommKey();
-  await keyExchange1.sendInvite(account2, foreignPubkey, commKey, {
+  await keyExchange1.sendInvite(identity2, foreignPubkey, commKey, {
     fromAlias: 'Bob',           // initiating user states, that his name is 'Bob'
   });
-  await profile1.addContactKey(account2, 'commKey', commKey);
+  await profile1.addContactKey(identity2, 'commKey', commKey);
   await profile1.storeForAccount(profile1.treeLabels.addressBook);
 
 ----------------------------------
 Finishing the Key Exchange Process
 ----------------------------------
 
-Let's assume that the communication key from the last example has been successfully sent to the other party and continue at there end from here. To keep the roles from the last example, the variables profile1, profile2 will belong to the same accounts:
+Let's assume that the communication key from the last example has been successfully sent to the other party and continue at there end from here. To keep the roles from the last example, the variables profile1, profile2 will belong to the same identites:
 
 .. code-block:: typescript
 
-  const encryptedCommKey = '...';       // key sent by account1
+  const encryptedCommKey = '...';       // key sent by identity1
   const profile1 = await profile1.getPublicKey();
   const commSecret = keyExchange2.computeSecretKey(profile1);
   const commKey = await keyExchange2.decryptCommKey(encryptedCommKey, commSecret.toString('hex'));
@@ -92,7 +92,7 @@ Parameters
 ----------
 
 #. ``options`` - ``KeyExchangeOptions``: options for KeyExchange constructor.
-    * ``account`` - ``string``: account, that will perform actions
+    * ``account`` - ``string``: address of identity or account, that will perform actions
     * ``cryptoProvider`` - |source cryptoProvider|_: |source cryptoProvider|_ instance
     * ``defaultCryptoAlgo`` - ``string``: default encryption algorithm
     * ``keyProvider`` - |source keyProviderInterface|_: |source keyProviderInterface|_ instance
@@ -115,12 +115,12 @@ Example
 -------
 
 .. code-block:: typescript
-  
+
   const keyExchange = new KeyExchange({
     mailbox,
     cryptoProvider,
     defaultCryptoAlgo: 'aes',
-    account: accounts[0],
+    account: identities[0],
     keyProvider,
   });
 
@@ -157,9 +157,9 @@ Example
 
 .. code-block:: typescript
 
-  // encrypted communication key sent from account 1 to account 2
+  // encrypted communication key sent from identity 1 to identity 2
   const encryptedKey = '...'
-  // (profile 1 belongs to account 1, keyExchange 2 to account 2)
+  // (profile 1 belongs to identity 1, keyExchange 2 to identity 2)
   const publicKeyProfile1 = await profile1.getPublicKey();
   const commSecret = keyExchange2.computeSecretKey(publicKeyProfile1);
   commKey = await keyExchange2.decryptCommKey(encryptedKey, commSecret.toString('hex'));
@@ -183,7 +183,7 @@ Decrypts a given communication key with an exchange key.
 Parameters
 ----------
 
-#. ``encryptedCommKey`` - ``string``: encrypted communications key received from another account
+#. ``encryptedCommKey`` - ``string``: encrypted communications key received from another identity (or account)
 #. ``exchangeKey`` - ``string``: Diffie Hellman exchange key from computeSecretKey
 
 -------
@@ -198,9 +198,9 @@ Example
 
 .. code-block:: typescript
 
-  // encrypted communication key sent from account 1 to account 2
+  // encrypted communication key sent from identity 1 to identity 2
   const encryptedKey = '...'
-  // (profile 1 belongs to account 1, keyExchange 2 to account 2)
+  // (profile 1 belongs to identity 1, keyExchange 2 to identity 2)
   const publicKeyProfile1 = await profile1.getPublicKey();
   const commSecret = keyExchange2.computeSecretKey(publicKeyProfile1);
   commKey = await keyExchange2.decryptCommKey(encryptedKey, commSecret.toString('hex'));
@@ -301,7 +301,7 @@ Creates a bmail for exchanging comm keys.
 Parameters
 ----------
 
-#. ``from`` - ``string``: sender accountId
+#. ``from`` - ``string``: sender address
 #. ``mailContent`` - ``any``: bmail metadata
 #. ``encryptedCommKey`` - ``string`` (optional): comm key, that should be exchanged
 
@@ -324,7 +324,7 @@ Example
   );
   console.log(mail);
   // Output:
-  // { content: 
+  // { content:
   //    { from: '0x0000000000000000000000000000000000000001',
   //      fromAlias: 'user 1',
   //      fromMail: 'user1@example.com',
@@ -343,17 +343,17 @@ sendInvite
 
 .. code-block:: typescript
 
-  keyExchange.sendInvite(targetAccount, targetPublicKey, commKey, mailContent);
+  keyExchange.sendInvite(receiver, targetPublicKey, commKey, mailContent);
 
-Sends a mailbox mail to the target account with the partial key for the key exchange.
+Sends a mailbox mail to the target with the partial key for the key exchange.
 
 ----------
 Parameters
 ----------
 
-#. ``string`` - ``targetAccount``: receiver of the invitation
-#. ``string`` - ``targetPublicKey``: combination of shared secret plus targetAccounts private secret
-#. ``string`` - ``commKey``: communication key between sender and targetAccount
+#. ``string`` - ``receiver``: receiver of the invitation
+#. ``string`` - ``targetPublicKey``: combination of shared secret plus receiver's private secret
+#. ``string`` - ``commKey``: communication key between sender and receiver
 #. ``any`` - ``mailContent``: mail to send
 
 -------
@@ -370,8 +370,8 @@ Example
 
   const foreignPubkey = await profile2.getPublicKey();
   const commKey = await keyExchange1.generateCommKey();
-  await keyExchange1.sendInvite(accounts[1], foreignPubkey, commKey, { fromAlias: 'Bob', });
-  await profile.addContactKey(accounts[1], 'commKey', commKey);
+  await keyExchange1.sendInvite(identities[1], foreignPubkey, commKey, { fromAlias: 'Bob', });
+  await profile.addContactKey(identities[1], 'commKey', commKey);
   await profile.storeForAccount(profile.treeLabels.addressBook);
 
 
