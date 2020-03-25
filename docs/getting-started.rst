@@ -112,6 +112,55 @@ That's it! Now you can use the ``runtime`` object and interact with the evan.net
 
 The blockchain-core api is a set of modules which can be plugged in individually. So the above ``runtime`` is a full blown entry point to the api. You can also plug your own runtime with needed modules together.
 
+Configuring to use identity based profile
+=========================================
+
+`Identity based profiles are the entities which act on behalf of an account. All transactions are done via the the underlying account for the identity however the transaction objects are prepared using the identity. Configuring a runtime to use identity based profile is similar to the process of creating a runtime which uses account based profile as discussed in (getting started)[/getting-started.html#create-a-new-profile-on-evan-network-via-api]
+
+.. code-block:: javascript
+
+    // require blockchain-core dependencies
+    const Web3 = require('web3');
+
+    // require blockchain-core
+    const { Ipfs, createDefaultRuntime } = require('@evan.network/api-blockchain-core');
+
+    const runtimeConfig = {
+      // account map to blockchain accounts with their private key
+      accountMap: {
+        'ACCOUNTID':
+          'PRIVATE KEY',
+      },
+      // key configuration for private data handling
+      keyConfig: {
+        'ACCOUNTID': 'PASSWORD',
+      },
+      // use identity flag for using identity based profiles
+      useIdentity: true,
+      // ipfs configuration for evan.network storage
+      ipfs: {host: 'ipfs.test.evan.network', port: '443', protocol: 'https'},
+      // web3 provider config (currently evan.network testcore)
+      web3Provider: 'wss://testcore.evan.network/ws',
+    };
+
+
+    async function init() {
+      // initialize dependencies
+      const provider = new Web3.providers.WebsocketProvider(
+        runtimeConfig.web3Provider,
+        { clientConfig: { keepalive: true, keepaliveInterval: 5000 } });
+      const web3 = new Web3(provider, null, { transactionConfirmationBlocks: 1 });
+      const dfs = new Ipfs({ dfsConfig: runtimeConfig.ipfs });
+
+      // create runtime
+      const runtime = await createDefaultRuntime(web3, dfs, { accountMap: runtimeConfig.accountMap, keyConfig: runtimeConfig.keyConfig, useIdentity: runtimeConfig.useIdentity });
+      console.dir(runtime);
+    }
+
+    init();
+
+Now you can use an a `runtime` object which uses an identity as an execution point to interact with the evan.network blockchain.
+
 Create a new profile on evan.network via API
 ============================================
 
