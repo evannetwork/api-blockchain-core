@@ -39,7 +39,7 @@ const defaultProposalOptions = {
  */
 export interface MemberInfo {
   /**
-   * accountId of member
+   * address of the member's identtity (or account)
    */
   address: string;
   /**
@@ -95,7 +95,7 @@ export interface ProposalInfo {
    */
   proposalPassed: boolean;
   /**
-   * target of proposal (contract/account to send transaction to)
+   * target of proposal (contract/identity/account to send transaction to)
    */
   to: string;
   /**
@@ -190,22 +190,23 @@ export class Votings extends Logger {
    * add member to voting contract
    *
    * @param      {string|any}     contract       web3 voting contract instance or contract address
-   * @param      {string}         accountId      account that performs the action
-   * @param      {string}         targetAccount  account to add to votings contract
+   * @param      {string}         executingAddress address of the account or identity that performs
+   *                                               the action (usually the voting owner)
+   * @param      {string}         invitee        address to add to votings contract
    * @param      {MemberOptions}  memberOptions  options for new member
    * @return     {Promise<void>}  resolved when done
    */
   public async addMember(
     contract: string|any,
-    accountId: string,
-    targetAccount: string,
+    executingAddress: string,
+    invitee: string,
     memberOptions: MemberOptions,
   ): Promise<void> {
     await this.options.executor.executeContractTransaction(
       this.ensureContract(contract),
       'addMember',
-      { from: accountId },
-      targetAccount,
+      { from: executingAddress },
+      invitee,
       memberOptions.name,
     );
   }
@@ -213,13 +214,14 @@ export class Votings extends Logger {
   /**
    * create new voting contract instance
    *
-   * @param      {string}                  accountId               account that performs the action
+   * @param      {string}                  creator        address of the identity or account that
+   *                                                      should create and own the contract
    * @param      {VotingsContractOptions}  votingsContractOptions  additional options for voting
    *                                                               contract
    * @return     {Promise<any>}            votings contract web3 instance
    */
   public async createContract(
-    accountId: string,
+    creator: string,
     votingsContractOptions: VotingsContractOptions,
   ): Promise<any> {
     const congressOptions = [
@@ -228,7 +230,7 @@ export class Votings extends Logger {
       votingsContractOptions.marginOfVotesForMajority,
     ];
     return this.options.executor.createContract(
-      'Congress', congressOptions, { from: accountId, gas: 2000000 },
+      'Congress', congressOptions, { from: creator, gas: 2000000 },
     );
   }
 
@@ -237,23 +239,23 @@ export class Votings extends Logger {
    *
    * @param      {string|any}       contract         web3 voting contract instance or contract
    *                                                 address
-   * @param      {string}           accountId        account that performs the action
+   * @param      {string}           proposalCreator  identity or account to create the proposal
    * @param      {ProposalOptions}  proposalOptions  options for new proposal
    * @return     {Promise<string>}  id of new proposal
    */
   public async createProposal(
     contract: string|any,
-    accountId: string,
+    proposalCreator: string,
     proposalOptions: ProposalOptions,
   ): Promise<string> {
     this.log(`creating proposal in congress "${contract.options.address || contract}" `
-      + `with account ${accountId}`, 'info');
+      + `with account ${proposalCreator}`, 'info');
     const options = { ...defaultProposalOptions, ...proposalOptions };
     return this.options.executor.executeContractTransaction(
       this.ensureContract(contract),
       'newProposal',
       {
-        from: accountId,
+        from: proposalCreator,
         // emit ProposalAdded(proposalID, beneficiary, weiAmount, jobDescription);
         event: { target: 'Congress', eventName: 'ProposalAdded' },
         getEventResult: (_, args) => args.proposalID.toString(),
@@ -269,7 +271,7 @@ export class Votings extends Logger {
    * execute a proposal
    *
    * @param      {string|any}     contract   web3 voting contract instance or contract address
-   * @param      {string}         accountId  account that performs the action
+   * @param      {string}         proposalExecutor identity or account to execute the proposal
    * @param      {string|number}  proposal   id of proposal
    * @param      {string}         data       (optional) transaction input bytes as string
    *                                         (`0x${functionhash}${argumentsData}`)
@@ -277,15 +279,15 @@ export class Votings extends Logger {
    */
   public async execute(
     contract: string|any,
-    accountId: string,
+    proposalExecutor: string,
     proposal: string|number, data = '0x',
   ): Promise<any> {
     this.log(`executing proposal in congress "${contract.options.address}", `
-      + `proposal "${proposal}" with account ${accountId}`, 'info');
+      + `proposal "${proposal}" with account ${proposalExecutor}`, 'info');
     await this.options.executor.executeContractTransaction(
       this.ensureContract(contract),
       'executeProposal',
-      { from: accountId, force: true },
+      { from: proposalExecutor, force: true },
       proposal,
       data,
     );
@@ -296,14 +298,14 @@ export class Votings extends Logger {
    *
    * @param      {string|any}           contract       web3 voting contract instance or contract
    *                                                   address
-   * @param      {string}               targetAccount  account to get info for
+   * @param      {string}               target  identity or account to get info for
    * @return     {Promise<MemberInfo>}  info about member
    */
-  public async getMemberInfo(contract: string|any, targetAccount: string): Promise<MemberInfo> {
+  public async getMemberInfo(contract: string|any, target: string): Promise<MemberInfo> {
     const memberId = await this.options.executor.executeContractCall(
       this.ensureContract(contract),
       'memberId',
-      targetAccount,
+      target,
     );
     if (memberId.toString() !== '0') {
       const fromContract = await this.options.executor.executeContractCall(
@@ -311,7 +313,7 @@ export class Votings extends Logger {
         'members',
         memberId.toString(),
       );
-      if (fromContract.member === targetAccount) {
+      if (fromContract.member === target) {
         return {
           ...fromContract,
           memberSince: parseInt(`${fromContract.fromContract}000`, 10),
@@ -402,11 +404,11 @@ export class Votings extends Logger {
    * checks if a given account is member in voting contract
    *
    * @param      {string|any}  contract       web3 voting contract instance or contract address
-   * @param      {string}      targetAccount  account to check
+   * @param      {string}      target         identity or account to check
    * @return     {Promise<boolean>}  true if member, false otherwise.
    */
-  public async isMember(contract: string|any, targetAccount: string): Promise<any> {
-    const memberInfo = await this.getMemberInfo(contract, targetAccount);
+  public async isMember(contract: string|any, target: string): Promise<any> {
+    const memberInfo = await this.getMemberInfo(contract, target);
     return !!memberInfo;
   }
 
@@ -414,20 +416,20 @@ export class Votings extends Logger {
    * remove member from votings contract
    *
    * @param      {string|any}  contract       web3 voting contract instance or contract address
-   * @param      {string}      accountId      account that performs the action
-   * @param      {string}      targetAccount  account to remove from votings contract
+   * @param      {string}      remover        identity or account that performs the action
+   * @param      {string}      removee        identity or account to remove from votings contract
    * @return     {Promise<void>}   resolved when done
    */
   public async removeMember(
     contract: string|any,
-    accountId: string,
-    targetAccount: string,
+    remover: string,
+    removee: string,
   ): Promise<void> {
     await this.options.executor.executeContractTransaction(
       this.ensureContract(contract),
       'removeMember',
-      { from: accountId },
-      targetAccount,
+      { from: remover },
+      removee,
     );
   }
 
@@ -435,7 +437,7 @@ export class Votings extends Logger {
    * vote for a proposal
    *
    * @param      {string|any}     contract   web3 voting contract instance or contract address
-   * @param      {string}         accountId  account that performs the action
+   * @param      {string}         voter      identity or account that performs the action
    * @param      {string|number}  proposal   id of proposal
    * @param      {boolean}        accept     true if accepting proposal
    * @param      {string}         comment    (optional) comment for vote
@@ -443,17 +445,17 @@ export class Votings extends Logger {
    */
   public async vote(
     contract: string|any,
-    accountId: string,
+    voter: string,
     proposal: string,
     accept: boolean,
     comment = '',
   ): Promise<void> {
     this.log(`voting for proposal in congress "${contract.options.address}", `
-      + `proposal "${proposal}" with account ${accountId}, responst is "${accept}"`, 'info');
+      + `proposal "${proposal}" with account ${voter}, responst is "${accept}"`, 'info');
     await this.options.executor.executeContractTransaction(
       this.ensureContract(contract),
       'vote',
-      { from: accountId },
+      { from: voter },
       proposal,
       accept,
       comment,

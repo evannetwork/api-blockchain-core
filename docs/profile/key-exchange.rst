@@ -343,7 +343,7 @@ sendInvite
 
 .. code-block:: typescript
 
-  keyExchange.sendInvite(receiver, targetPublicKey, commKey, mailContent);
+  keyExchange.sendInvite(receiver, receiverPublicKey, commKey, mailContent);
 
 Sends a mailbox mail to the target with the partial key for the key exchange.
 
@@ -352,7 +352,7 @@ Parameters
 ----------
 
 #. ``string`` - ``receiver``: receiver of the invitation
-#. ``string`` - ``targetPublicKey``: combination of shared secret plus receiver's private secret
+#. ``string`` - ``receiverPublicKey``: public key of the receiver
 #. ``string`` - ``commKey``: communication key between sender and receiver
 #. ``any`` - ``mailContent``: mail to send
 

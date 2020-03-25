@@ -177,8 +177,7 @@ ${(mailContent && mailContent.fromAlias) || from}`;
    * sends a mailbox mail to the target with the partial key for the key exchange
    *
    * @param      {string}         receiver         receiver of the invitation
-   * @param      {string}         targetPublicKey  combination of shared secret plus receiver's
-   *                                               private secret
+   * @param      {string}         receiverPublicKey  public key of the receiver
    * @param      {string}         commKey          communication key between sender and
    *                                               receiver
    * @param      {any}            mailContent      mail to send
@@ -186,11 +185,11 @@ ${(mailContent && mailContent.fromAlias) || from}`;
    */
   public async sendInvite(
     receiver: string,
-    targetPublicKey: string,
+    receiverPublicKey: string,
     commKey: string,
     mailContent: any,
   ): Promise<void> {
-    const secret = this.computeSecretKey(targetPublicKey).toString('hex');
+    const secret = this.computeSecretKey(receiverPublicKey).toString('hex');
     const cryptor = this.cryptoProvider.getCryptorByCryptoAlgo(this.defaultCryptoAlgo);
     const encryptedCommKey = await cryptor.encrypt(commKey, { key: secret });
     await this.mailbox.sendMail(
