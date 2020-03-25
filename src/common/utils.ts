@@ -45,6 +45,7 @@ export async function getEnvironment(web3: any): Promise<string> {
 export async function getSmartAgentAuthHeaders(
   runtime: Runtime,
   message?: string,
+  identity = runtime.activeIdentity,
 ): Promise<string> {
   const messageToSign = message || `${new Date().getTime()}`;
   const hexMessage = runtime.web3.utils.toHex(messageToSign);
@@ -52,6 +53,7 @@ export async function getSmartAgentAuthHeaders(
   const signature = await runtime.signer.signMessage(runtime.underlyingAccount, paddedMessage);
   return [
     `EvanAuth ${runtime.underlyingAccount}`,
+    `EvanIdentity ${identity}`,
     `EvanMessage ${paddedMessage}`,
     `EvanSignedMessage ${signature}`,
   ].join(',');
