@@ -302,7 +302,7 @@ getDescriptionFromContract
 
 .. code-block:: javascript
 
-    description.getDescriptionFromContract(address, accountId);
+    description.getDescriptionFromContract(address, myIdentity);
 
 loads description envelope from contract
 
@@ -311,7 +311,7 @@ Parameters
 ----------
 
 #. ``address`` - ``string``: The contract address where the description is stored
-#. ``accountId`` - ``string``: ID of the identity or the account that encrypted the description
+#. ``readerAddress`` - ``string``: Address of the identity or the account that is allowed to read the description
 
 -------
 Returns
@@ -326,8 +326,8 @@ Example
 .. code-block:: javascript
 
     const address = '0x9c0Aaa728Daa085Dfe85D3C72eE1c1AdF425be49';
-    const accountId = '0x000000000000000000000000000000000000beef';
-    const description = await runtime.description.getDescriptionFromContract(address, accountId);
+    const identityId = '0x000000000000000000000000000000000000beef';
+    const description = await runtime.description.getDescriptionFromContract(address, identityId);
     console.dir(description);
     // Output:
     // { public:
@@ -348,7 +348,7 @@ setDescriptionToContract
 
 .. code-block:: javascript
 
-    description.setDescriptionToContract(contractAddress, envelope, accountId);
+    description.setDescriptionToContract(contractAddress, envelope, myIdentity);
 
 store description at contract
 
@@ -358,7 +358,7 @@ Parameters
 
 #. ``contractAddress`` - ``string``: The contract address where description will be stored
 #. ``envelope`` - ``Envelope``: description as an envelope
-#. ``accountId`` - ``string``: ID of either an account or an identity supposed to encrypt the description
+#. ``encryptorAddress`` - ``string``: address of either an account or an identity that is supposed to encrypt the description
 
 -------
 Returns
@@ -373,7 +373,7 @@ Example
 .. code-block:: javascript
 
     const address = '0x...';
-    const accountId = '0x...';
+    const myIdentity = '0x...';
     const description = {
       "public": {
         "name": "DBCP sample contract",
@@ -387,7 +387,7 @@ Example
         "dbcpVersion": 2
       }
     };
-    await runtime.description.setDescriptionToContract(address, description, accountId);
+    await runtime.description.setDescriptionToContract(address, description, myIdentity);
 
 ------------------------------------------------------------------------------
 
