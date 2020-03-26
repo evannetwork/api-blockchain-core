@@ -18,7 +18,7 @@ Base Contract
 The `BaseContract <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/base-contract/base-contract.ts>`_ is the base contract class used for
 
 *  :doc:`DataContracts <data-contract>`
-* `ServiceContractss <#servicecontract>`_
+* `ServiceContracts <#servicecontract>`_
 
 Contracts, that inherit from ``BaseContracts``, are able to:
 
@@ -109,7 +109,7 @@ Parameters
 ----------
 
 #. ``factoryName`` - ``string``: contract factory name, used for ENS lookup; if the factory name contains periods, it is threaded as an absolute ENS domain and used as such, if not it will be used as ``${factoryName}.factory.${businessCenterDomain}``
-#. ``accountId`` - ``string``: Ethereum account id
+#. ``accountId`` - ``string``: Ethereum account id - can be either account or identity
 #. ``businessCenterDomain`` - ``string`` (optional): business center in which the contract will be created; use ``null`` when working without business center
 #. ``descriptionDfsHash`` - ``string`` (optional): bytes32 hash for description in dfs
 
@@ -155,8 +155,8 @@ Parameters
 
 #. ``businessCenterDomain`` - ``string`` : ENS domain name of the business center the contract was created in; use null when working without business center
 #. ``contract`` - ``string`` : Ethereum id of the contract
-#. ``inviterId`` - ``string`` : account id of inviting user
-#. ``inviteeId`` - ``string`` : account id of invited user
+#. ``inviterId`` - ``string`` : account or identity id of inviting user
+#. ``inviteeId`` - ``string`` : account or identity id of invited user
 
 -------
 Returns
@@ -213,8 +213,8 @@ Parameters
 
 #. ``businessCenterDomain`` - ``string`` : ENS domain name of the business center the contract was created in; use null when working without business center
 #. ``contract`` - ``string`` : Ethereum id of the contract
-#. ``accountId`` - ``string`` : account id of executing user
-#. ``idToBeRemoved`` - ``string`` : account id which should be removed
+#. ``accountId`` - ``string`` : account or identity id of executing user
+#. ``idToBeRemoved`` - ``string`` : account or identity id which should be removed
 
 -------
 Returns
@@ -269,8 +269,8 @@ Parameters
 ----------
 
 #. ``contract`` - ``string|any``: contract instance or contract id
-#. ``accountId`` - ``string``: Ethereum account id
-#. ``consumerId`` - ``string``: Ethereum account id
+#. ``accountId`` - ``string``: Ethereum account or identity id which will change state
+#. ``consumerId`` - ``string``: Ethereum account or identity id whose state will change
 #. ``state`` - |source consumerState|_: new state
 
 -------
@@ -310,7 +310,7 @@ Parameters
 ----------
 
 #. ``contract`` - ``string|any``: contract instance or contract id
-#. ``accountId`` - ``string``: Ethereum account id
+#. ``accountId`` - ``string``: EEthereum account or identity id which will change state
 #. ``state`` - |source contractState|_: new state
 
 -------

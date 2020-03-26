@@ -217,7 +217,7 @@ Parameters
 
 #. ``address`` - ``string``: contract address or ENS address
 #. ``originator`` - ``string``: Ethereum account id of the sharing user
-#. ``partner`` - ``string``: Ethereum account id for which key shall be added
+#. ``partner`` - ``string``: Ethereum account ID or identity for which key shall be added
 #. ``section`` - ``string``: data section the key is intended for or '*'
 #. ``block`` - ``number|string``: starting with this block, the key is valid
 #. ``sharingKey`` - ``string``: key to share
@@ -277,8 +277,8 @@ Parameters
 ----------
 
 #. ``sharings`` - ``any``: object with sharings info
-#. ``originator`` - ``string``: Ethereum account id of the sharing user
-#. ``partner`` - ``string``: Ethereum account id for which key shall be added
+#. ``originator`` - ``string``: Ethereum account ID or identity of the sharing user
+#. ``partner`` - ``string``: Ethereum account ID or identity for which key shall be added
 #. ``section`` - ``string``: data section the key is intended for or '*'
 #. ``block`` - ``number|string``: starting with this block, the key is valid
 #. ``sharingKey`` - ``string``: key to share
@@ -335,7 +335,7 @@ trimSharings
 Removes properties from given sharing. If a block is given, the specific blocks key is removed, if
 no block is given, all keys for this section are removed. The same goes for section and partner.
 Note that only the last properties can be omitted and not properties in between can be set to null.
-So for example it is not possible to remove the same field for all accounts by just setting partner
+So for example it is not possible to remove the same field for all accounts or identities by just setting partner
 to null.
 
 ----------
@@ -343,7 +343,7 @@ Parameters
 ----------
 
 #. ``sharings`` - ``any``: sharings to trim
-#. ``partner`` - ``string``: Ethereum account id to remove keys for
+#. ``partner`` - ``string``: Ethereum account ID or identity to remove keys for
 #. ``section`` - ``string``: data section the key is intended for or '*'
 #. ``block`` - ``number|string``: block to remove keys for
 
@@ -386,8 +386,8 @@ bumpSharings
 
   sharing.bumpSharings(address, originator, partners, section, block, sharingKey);
 
-Bump keys for given accounts by adding given key to their sharings. This is basically a shorthand
-version for adding the new key for every account in the ``partners`` array in a single transaction.
+Bump keys for given accounts or identities by adding given key to their sharings. This is basically a shorthand
+version for adding the new key for every account or identity in the ``partners`` array in a single transaction.
 
 ``context``, ``hashKeys`` and ``sharingId`` are currently not supported.
 
@@ -396,8 +396,8 @@ Parameters
 ----------
 
 #. ``address`` - ``string``: contract address or ENS address
-#. ``originator`` - ``string``: Ethereum account id of the sharing user
-#. ``partner`` - ``string``: Ethereum account id for which key shall be added
+#. ``originator`` - ``string``: Ethereum account ID or identity of the sharing user
+#. ``partner`` - ``string``: Ethereum account ID or identity for which key shall be added
 #. ``section`` - ``string``: data section the key is intended for or '*'
 #. ``block`` - ``number|string``: starting with this block, the key is valid
 #. ``sharingKey`` - ``string``: key to share
@@ -442,7 +442,7 @@ Parameters
 ----------
 
 #. ``address`` - ``string``: contract address or ENS address
-#. ``partner`` - ``string``: Ethereum account id for which key shall be retrieved
+#. ``partner`` - ``string``: Ethereum account ID or identityfor which key shall be retrieved
 #. ``section`` - ``string``: data section the key is intended for or '*'
 #. ``block`` - ``number|string`` (optional): starting with this block, the key is valid, defaults to ``Number.MAX_SAFE_INTEGER``
 #. ``sharingId`` - ``string`` (optional): id of a sharing (when multi-sharings is used), defaults to ``null``
@@ -478,7 +478,7 @@ getKeyHistory
 
   sharing.getKeyHistory(address, partner, section[, sharingId]);
 
-Get history of keys for an account and a section.
+Get history of keys for an account or identity and a section.
 
 ----------
 Parameters
@@ -519,15 +519,15 @@ ensureHashKey
 
   sharing.ensureHashKey(address, originator, partner, hashKey[, context, sharingId]);
 
-Give hash key "hashKey" to account "partner", if this account does not have a hash key already.
+Give hash key "hashKey" to account or identity "partner", if this account or identity does not have a hash key already.
 
 ----------
 Parameters
 ----------
 
 #. ``address`` - ``string``: contract address or ENS address
-#. ``originator`` - ``string``: Ethereum account id of the sharing user
-#. ``partner`` - ``string``: Ethereum account id for which key shall be added
+#. ``originator`` - ``string``: Ethereum account ID or identity of the sharing user
+#. ``partner`` - ``string``: Ethereum account ID or identity for which key shall be added
 #. ``hashKey`` - ``string``: key for DFS hashes
 #. ``context`` - ``string`` (optional): context to share key in
 #. ``sharingId`` - ``string`` (optional): id of a sharing (when multi-sharings is used)
@@ -568,7 +568,7 @@ Parameters
 ----------
 
 #. ``address`` - ``string``: contract address or ENS address
-#. ``partner`` - ``string``: Ethereum account id for which key shall be retrieved
+#. ``partner`` - ``string``: Ethereum account ID or identity for which key shall be retrieved
 #. ``sharingId`` - ``string`` (optional): id of a sharing (when multi-sharings is used)
 
 -------
@@ -613,7 +613,7 @@ Parameters
 ----------
 
 #. ``address`` - ``string``: contract address or ENS address
-#. ``_partner`` - ``string`` (optional): Ethereum account id for which key shall be retrieved
+#. ``_partner`` - ``string`` (optional): Ethereum account ID or identity for which key shall be retrieved
 #. ``_section`` - ``string`` (optional): data section the key is intended for or '*'
 #. ``_block`` - ``number`` (optional): starting with this block, the key is valid
 #. ``sharingId`` - ``string`` (optional): id of a sharing (when multi-sharings is used)
@@ -669,8 +669,8 @@ Parameters
 ----------
 
 #. ``address`` - ``string``: contract address or ENS address
-#. ``originator`` - ``string``: Ethereum account id of the sharing user
-#. ``partner`` - ``string``: Ethereum account id for which key shall be removed
+#. ``originator`` - ``string``: Ethereum account ID or identity of the sharing user
+#. ``partner`` - ``string``: Ethereum account ID or identity for which key shall be removed
 #. ``section`` - ``string``: data section of the key
 #. ``sharingId`` - ``string`` (optional): id of a sharing (when multi-sharings is used), defaults to ``null``
 
@@ -774,7 +774,7 @@ Parameters
 
 #. ``contract`` - ``string|any``: contract address or instance
 #. ``sharings`` - ``any``: sharings object with encrypted keys
-#. ``originator`` - ``string``: Ethereum account id of the sharing user
+#. ``originator`` - ``string``: Ethereum account ID or identity of the sharing user
 #. ``sharingId`` - ``string`` (optional): id of a sharing (when multi-sharings is used)
 
 -------
