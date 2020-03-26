@@ -5,7 +5,7 @@ Identity Based Profile
 On the evan.network a profile is simply a `Link Data Contract <https://evannetwork.github.io/docs/developers/concepts/data-contract.html>`_. The data can be initialy by the owner of the profile but when `Link permissions <https://evannetwork.github.io/docs/developers/concepts/smart-contract-permissioning.html>`_ are granted other members can also the data. Similarly to under stand what an identity based profile is we need to look into roles and permissions. An identity based profile is also a data contract but the owner of the data contract is another contract which we shall call the identity contract. The previous implementations were all account based profiles on the evan.network but now all the new users will be using identity based profiles.
 
 .. figure::  ../_static/Identity_based_profile.png
-   :align:   center
+   :align: center
    :alt: identity based profile
  
    identity based profile
@@ -14,7 +14,7 @@ When an account requests for an identity based profile, A random 32 bytes addres
 
 When using identities we will come accross three important terminologies. `activeIdentity` and `underlyingAccount` and `activeAccount`. A single user can have multiple identities and the identity being used is known as the activeIdentity. The account which is used to execute the transaction for the identity is known as the underlyingAccount. Finally multiple accounts can delegate a single identity and the account which is using the identity is known as the activeAccount.
 
-Further more these identities can be converted into DIDs using the :doc:`DID <did>`_ module and they can issue and be issued verifiable credentials using the :doc:`VC <vc>`_ module.
+Further more these identities can be converted into `Link DIDs <https://evannetwork.github.io/docs/developers/concepts/did.html>`_ using the DID module and they can issue and be issued `Link verifiable credentials <https://evannetwork.github.io/docs/developers/concepts/vc.html>`_ using the VC module.
 
 Configuring to use identity based profile
 =========================================
