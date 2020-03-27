@@ -107,7 +107,7 @@ export class KeyExchange extends Logger {
    * decrypts a given communication key with an exchange key
    *
    * @param      {string}           encryptedCommKey  encrypted communications key received from
-   *                                                  another identity (or account)
+   *                                                  another identity or account
    * @param      {string}           exchangeKey       Diffie Hellman exchange key from
    *                                                  computeSecretKey
    * @return     {Promise<Buffer>}  commKey as a buffer

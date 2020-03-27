@@ -145,7 +145,7 @@ export class BusinessCenterProfile extends Logger {
   }
 
   /**
-   * load profile for given account/Identity from global profile contract
+   * load profile for given Identity or account from global profile contract
    *
    * @param      {string}   businessCenterDomain  ENS domain name of a business center
    * @param      {string}   executorAddress       Identity or account making the transaction

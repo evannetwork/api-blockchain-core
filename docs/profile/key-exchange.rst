@@ -183,7 +183,7 @@ Decrypts a given communication key with an exchange key.
 Parameters
 ----------
 
-#. ``encryptedCommKey`` - ``string``: encrypted communications key received from another identity (or account)
+#. ``encryptedCommKey`` - ``string``: encrypted communications key received from another identity or account
 #. ``exchangeKey`` - ``string``: Diffie Hellman exchange key from computeSecretKey
 
 -------
