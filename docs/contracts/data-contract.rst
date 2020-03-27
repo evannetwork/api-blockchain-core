@@ -874,7 +874,7 @@ Parameters
 
 #. ``toDecrypt`` - ``Envelope``: hash to decrypt
 #. ``contract`` - ``any``: contract instance or contract id
-#. ``accountId`` - ``string``: encrypting identity or account
+#. ``accountId`` - ``string``: identity or account that decrypts the hash
 
 -------
 Returns

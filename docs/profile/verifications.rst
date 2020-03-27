@@ -1331,7 +1331,7 @@ A description can be setup even after verifications have been issued. So it is r
 Parameters
 ----------
 
-#. ``identityOrAccount`` - ``string``: identity or accountId, that performs the description update
+#. ``identityOrAccount`` - ``string``: identity or account, that performs the description update
 #. ``topic`` - ``string``: name of the verification (full path) to set description
 #. ``domain`` - ``string``: domain of the verification, this is a subdomain under 'verifications.evan', so passing 'example' will link verifications description to 'example.verifications.evan'
 #. ``description`` - ``string``: DBCP description of the verification; can be an Envelope but only public properties are used

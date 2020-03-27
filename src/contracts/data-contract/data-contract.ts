@@ -75,7 +75,7 @@ export class DataContract extends BaseContract {
    *
    * @param      {string}        factoryName           factory to use for creating contract (without
    *                                                   the business center suffix)
-   * @param      {string}        accountId             owner(account/identity) of the new contract
+   * @param      {string}        accountId             owner(identity/account) of the new contract
    *                                                   and transaction executor
    * @param      {string}        businessCenterDomain  ENS domain name of the business center
    * @param      {string|any}    contractDescription   bytes32 hash of DBCP description or a schema
@@ -287,8 +287,7 @@ export class DataContract extends BaseContract {
    *
    * @param      {string}        toDecrypt     data to decrypt
    * @param      {any}           contract      contract instance or contract id
-   * @param      {string}        accountId     account id or identity underlying account
-   *                                           that decrypts the data
+   * @param      {string}        accountId     identity or account that decrypts the data
    * @param      {string}        propertyName  property in contract that is decrypted
    * @return     {Promise<any>}  decrypted envelope
    */
@@ -330,8 +329,7 @@ export class DataContract extends BaseContract {
    *
    * @param      {string}           toDecrypt  hash to decrypt
    * @param      {any}              contract   contract instance or contract id
-   * @param      {string}           accountId  account id or identity underlying account
-   *                                           that decrypts the data
+   * @param      {string}           accountId  identity or account that decrypts the hash
    * @return     {Promise<string>}  decrypted hash
    */
   public async decryptHash(toDecrypt: string, contract: any, accountId: string): Promise<string> {

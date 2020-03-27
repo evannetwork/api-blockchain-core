@@ -482,11 +482,10 @@ export class Verifications extends Logger {
    * identity is either a 20B contract address (for account identities) or a 32B identity hash
    * contract identities
    *
-   * @param      {string}  creator          identity or account that runs transaction, receiver of
-   *                                        identity when omitting the other arguments
+   * @param      {string}  creator            identity or account that runs transaction, receiver of
+   *                                          identity when omitting the other arguments
    * @param      {string}  contractId         (optional) contract address to create the identity
-   *                                          for, creates identity for ``creator`` if
-   *                                          omitted
+   *                                          for, creates identity for ``creator`` if omitted
    * @param      {bool}    updateDescription  (optional) update description of contract, defaults to
    *                                          ``true``
    * @param      {bool}    linkContract       link contract address to its identity
@@ -1578,10 +1577,11 @@ export class Verifications extends Logger {
    * track additional informations about the rejection. Issuer and Subject can reject a special
    * verification.
    *
-   * @param      {string}         rejector       identity or account rejecting the verification
-   * @param      {string}         subject         account, that rejects the verification
-   * @param      {string}         verificationId  id of a verification to reject
-   * @param      {any}            rejectReason    (optional) rejectReason object
+   * @param      {string}   rejector        identity or account rejecting the verification
+   * @param      {string}   subject         account, that rejects the verification
+   * @param      {string}   verificationId  id of a verification to reject
+   * @param      {any}      rejectReason    (optional) rejectReason object
+   * @param      {boolean}  isIdentity      Indicates if rejectr is an identity
    * @return     {Promise<void>}  resolved when done
    */
   public async rejectVerification(
@@ -1796,14 +1796,16 @@ export class Verifications extends Logger {
   /**
    * set description for a verification under a domain owned by given account
    *
-   * @param      {string}  identityOrAccount   identity or  account, that performs the description
-   *                                           update
-   * @param      {string}  topic        name of the verification (full path) to set description
-   * @param      {string}  domain       domain of the verification, this is a subdomain under
-   *                                    'verifications.evan', so passing `example` will link
-   *                                    verifications description to 'example.verifications.evan'
-   * @param      {any}     description  description of the verification; can be an Envelope but only
-   *                                    public properties are used
+   * @param      {string}  identityOrAccount  identity or  account, that performs the description
+   *                                          update
+   * @param      {string}  topic              name of the verification (full path) to set
+   *                                          description
+   * @param      {string}  domain             domain of the verification, this is a subdomain under
+   *                                          'verifications.evan', so passing `example` will link
+   *                                          verifications description to
+   *                                          'example.verifications.evan'
+   * @param      {any}     description        description of the verification; can be an Envelope
+   *                                          but only public properties are used
    * @return     {Promise<void>}  resolved when done
    */
   public async setVerificationDescription(

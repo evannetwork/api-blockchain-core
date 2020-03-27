@@ -214,11 +214,11 @@ export class Votings extends Logger {
   /**
    * create new voting contract instance
    *
-   * @param      {string}                  creator        address of the identity or account that
-   *                                                      should create and own the contract
+   * @param      {string}                  creator                 identity or account that should
+   *                                                               create and own the contract
    * @param      {VotingsContractOptions}  votingsContractOptions  additional options for voting
    *                                                               contract
-   * @return     {Promise<any>}            votings contract web3 instance
+   * @return     {Promise<any>}  votings contract web3 instance
    */
   public async createContract(
     creator: string,
@@ -270,11 +270,12 @@ export class Votings extends Logger {
   /**
    * execute a proposal
    *
-   * @param      {string|any}     contract   web3 voting contract instance or contract address
-   * @param      {string}         proposalExecutor identity or account to execute the proposal
-   * @param      {string|number}  proposal   id of proposal
-   * @param      {string}         data       (optional) transaction input bytes as string
-   *                                         (`0x${functionhash}${argumentsData}`)
+   * @param      {string|any}     contract          web3 voting contract instance or contract
+   *                                                address
+   * @param      {string}         proposalExecutor  identity or account to execute the proposal
+   * @param      {string|number}  proposal          id of proposal
+   * @param      {string}         data              (optional) transaction input bytes as string
+   *                                                (`0x${functionhash}${argumentsData}`)
    * @return     {Promise<void>}  resolved when done
    */
   public async execute(
@@ -296,9 +297,8 @@ export class Votings extends Logger {
   /**
    * get info of a member
    *
-   * @param      {string|any}           contract       web3 voting contract instance or contract
-   *                                                   address
-   * @param      {string}               target  identity or account to get info for
+   * @param      {string|any}  contract  web3 voting contract instance or contract address
+   * @param      {string}      target    identity or account to get info for
    * @return     {Promise<MemberInfo>}  info about member
    */
   public async getMemberInfo(contract: string|any, target: string): Promise<MemberInfo> {
@@ -366,11 +366,10 @@ export class Votings extends Logger {
   /**
    * get multiple proposals from votings contract
    *
-   * @param      {string|any}              contract  web3 voting contract instance or
-   *                                                 contractaddress
-   * @param      {number}                  count     number of items to retrieve
-   * @param      {number}                  offset    skip this many entries
-   * @param      {boolean}                 reverse   fetch entries, starting with last entry
+   * @param      {string|any}  contract  web3 voting contract instance or contractaddress
+   * @param      {number}      count     number of items to retrieve
+   * @param      {number}      offset    skip this many entries
+   * @param      {boolean}     reverse   fetch entries, starting with last entry
    * @return     {Promise<ProposalInfos>}  proposals listing
    */
   public async getProposalInfos(

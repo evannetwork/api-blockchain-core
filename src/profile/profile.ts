@@ -650,7 +650,7 @@ export class Profile extends Logger {
   /**
    * remove a contact from bookmarkedDapps
    *
-   * @param      {string}         address  address of the contact
+   * @param      {string}         address  identity or account of the contact
    * @return     {Promise<void>}  resolved when done
    */
   public async removeContact(address: string): Promise<void> {
@@ -746,7 +746,7 @@ export class Profile extends Logger {
   /**
    * store given state for this account
    *
-   * @param      {string}         contactAddress address of a contact
+   * @param      {string}         contactAddress identity or account of a contact
    * @param      {boolean}        contactKnown   true if known, false if not
    * @return     {Promise<void>}  resolved when done
    */

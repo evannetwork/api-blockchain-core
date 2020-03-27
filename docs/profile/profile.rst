@@ -332,7 +332,7 @@ Store given state for this account.
 Parameters
 ----------
 
-#. ``contactAddress`` - ``string``: contactAddress
+#. ``contactAddress`` - ``string``: contact identity or account
 #. ``contactKnown`` - ``boolean``: true if known, false if not
 
 -------
@@ -785,7 +785,7 @@ Remove a contact from bookmarkedDapps.
 Parameters
 ----------
 
-#. ``address`` - ``string``: address of the contact
+#. ``address`` - ``string``: identity or account of the contact
 
 -------
 Returns

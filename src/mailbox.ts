@@ -368,8 +368,8 @@ export class Mailbox extends Logger {
    * sends a mail to given target
    *
    * @param      {Mail}           mail     a mail to send
-   * @param      {string}         from     sender address
-   * @param      {string}         to       receiver address
+   * @param      {string}         from     sender identity or account
+   * @param      {string}         to       receiver identity or account
    * @param      {string}         value    (optional) UTC amount to send with mail in Wei can be
    *                                       created with web3[.utils].toWei(...)
    * @param      {string}         context  encrypt mail with different context

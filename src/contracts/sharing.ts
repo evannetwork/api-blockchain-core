@@ -308,7 +308,7 @@ export class Sharing extends Logger {
   }
 
   /**
-   * returns an accounts or identity key for file hashes
+   * returns an identity or account key for file hashes
    *
    * @param      {string}           address    contract address or ENS address
    * @param      {string}           partner    identity or account
@@ -658,8 +658,8 @@ export class Sharing extends Logger {
    * Removes properties from given sharing. If a block is given, the specific blocks key is removed,
    * if no block is given, all keys for this section are removed. The same goes for section and
    * partner. Note that only the last properties can be omitted and not properties in between can be
-   * set to null. So for example it is not possible to remove the same field for all accounts or
-   * identities by just setting partner to null.
+   * set to null. So for example it is not possible to remove the same field for all identities or
+   * accounts by just setting partner to null.
    *
    * @param      {any}           sharings  sharings to trim
    * @param      {string}        partner   identity or account to remove keys for

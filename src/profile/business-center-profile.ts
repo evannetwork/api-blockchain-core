@@ -122,7 +122,7 @@ export class BusinessCenterProfile extends Logger {
    * stores profile to business centers profile store
    *
    * @param      {string}   businessCenterDomain  ENS domain name of a business center
-   * @param      {string}   executorAddress       Identity or account making the transaction
+   * @param      {string}   executorAddress       identity or account making the transaction
    * @return     {Promise}  resolved when done
    */
   public async storeForBusinessCenter(
@@ -148,7 +148,7 @@ export class BusinessCenterProfile extends Logger {
    * load profile for given Identity or account from global profile contract
    *
    * @param      {string}   businessCenterDomain  ENS domain name of a business center
-   * @param      {string}   executorAddress       Identity or account making the transaction
+   * @param      {string}   executorAddress       identity or account making the transaction
    * @return     {Promise}  resolved when done
    */
   // eslint-disable-next-line consistent-return
@@ -175,8 +175,8 @@ export class BusinessCenterProfile extends Logger {
    *
    * @param      {string}  businessCenterDomain  The business center domain
    * @param      {string}  contractType          The contract type
-   * @param      {string}  subject   subject to get the contracts for
-   * @return     {Array}   Array with all registered bc contracts
+   * @param      {string}  subject               subject to get the contracts for
+   * @return     {Array}  Array with all registered bc contracts
    */
   public async getMyBusinessCenterContracts(
     businessCenterDomain: string,

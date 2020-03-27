@@ -152,8 +152,8 @@ Parameters
 ----------
 
 #. ``mail`` - ``Mail``: a mail to send
-#. ``from`` - ``string``: sender address
-#. ``to`` - ``string``: receiver address
+#. ``from`` - ``string``: sender identity or account
+#. ``to`` - ``string``: receiver identity or account
 #. ``value`` - ``string`` (optional): amount of EVEs to send with mail in Wei, can be created with ``web3[.utils].toWei(...)``, defaults to ``0``
 #. ``context`` - ``string`` (optional): encryption context for bmail, if a special context should be used (e.g. ``keyExchange``)
 

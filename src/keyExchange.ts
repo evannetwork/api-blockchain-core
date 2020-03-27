@@ -141,7 +141,7 @@ export class KeyExchange extends Logger {
   /**
    * creates a bmail for exchanging comm keys
    *
-   * @param      {string}  from              sender address
+   * @param      {string}  from              sender identity or account
    * @param      {any}     mailContent       bmail metadata
    * @param      {string}  encryptedCommKey  comm key, that should be exchanged
    * @return     {Mail}    bmail for key exchange

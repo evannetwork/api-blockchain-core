@@ -75,7 +75,7 @@ export class RightsAndRoles extends Logger {
    * contract; operation hashes can be build with `getOperationCapabilityHash`
    *
    * @param      {string|any}  contract   contract to check for
-   * @param      {string}      accountId  account id or identity to check call for
+   * @param      {string}      accountId  identity or account to check call for
    * @param      {string}      hash       hash from `getOperationCapabilityHash`
    */
   public async canCallOperation(

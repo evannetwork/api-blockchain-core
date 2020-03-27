@@ -301,7 +301,7 @@ Creates a bmail for exchanging comm keys.
 Parameters
 ----------
 
-#. ``from`` - ``string``: sender address
+#. ``from`` - ``string``: sender identity or account
 #. ``mailContent`` - ``any``: bmail metadata
 #. ``encryptedCommKey`` - ``string`` (optional): comm key, that should be exchanged
 

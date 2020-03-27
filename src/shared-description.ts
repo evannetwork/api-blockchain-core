@@ -37,10 +37,9 @@ export class Description extends Dbcp.Description {
   /**
    * loads description envelope from contract
    *
-   * @param      {string}    contractAddress  The contract address where the description
-   *                                          is stored
-   * @param      {string}    readerAddress Address of the identity or the account that is allowed to
-   *                                   read the description
+   * @param      {string}  contractAddress  The contract address where the description is stored
+   * @param      {string}  readerAddress    identity or account of the identity or the account that
+   *                                        is allowed to read the description
    * @return     {Envelope}  description as an Envelope
    */
   public async getDescriptionFromContract(
@@ -80,12 +79,13 @@ export class Description extends Dbcp.Description {
   /**
    * store description at contract
    *
-   * @param      {string}           contractAddress  The contract address where description will be
-   *                                                 stored
-   * @param      {Envelope|string}  envelope         description as an envelope or a presaved
-   *                                                 description hash
-   * @param      {string}           encryptorAddress address of either an account or an identity
-   *                                                 that is supposed to encrypt the description
+   * @param      {string}           contractAddress   The contract address where description will be
+   *                                                  stored
+   * @param      {Envelope|string}  envelope          description as an envelope or a presaved
+   *                                                  description hash
+   * @param      {string}           encryptorAddress  identity or account of either an account or an
+   *                                                  identity that is supposed to encrypt the
+   *                                                  description
    * @return     {Promise}  resolved when done
    */
   public async setDescriptionToContract(

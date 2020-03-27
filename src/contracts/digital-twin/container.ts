@@ -46,7 +46,7 @@ import { Verifications } from '../../verifications/verifications';
  * config properties, specific to `Container` instances
  */
 export interface ContainerConfig {
-  /** account id or identity of user, that interacts with container */
+  /** identity or account of user, that interacts with container */
   accountId: string;
   /** address of a ``DataContract`` instance, can be ENS or contract address */
   address?: string;
@@ -824,7 +824,7 @@ export class Container extends Logger {
    */
   public async removeEntries(entries: string|string[]) {
     // only allowed by owner, will be enforced by the unshareProperties function
-    // load accounts or identities that are permitted to this contract
+    // load identities or accounts that are permitted to this contract
     await this.ensureContract();
     const roleMap = await this.options.rightsAndRoles.getMembers(this.contract);
     const unique = Array.from(new Set([].concat(...Object.values(roleMap))));
@@ -840,7 +840,7 @@ export class Container extends Logger {
     const schemaProperties = (await this.toPlugin(false)).template.properties;
     const listEntries = entriesParameter.filter((entry) => schemaProperties[entry].type === 'list');
 
-    // unshare all accounts or identities from the specific roles
+    // unshare all identities or accounts from the specific roles
     await this.unshareProperties(unique.map((accountId) => ({
       accountId,
       readWrite: entriesParameter as string[],
@@ -1031,7 +1031,7 @@ export class Container extends Logger {
       if (!read.includes('type')) {
         read.push('type');
       }
-      // ensure that roles for fields exist and that accounts or identities have permissions
+      // ensure that roles for fields exist and that identities or accounts have permissions
       let accessPromises = readWrite.map((property, index) => async () => {
         // get permissions from contract
         const hash = this.options.rightsAndRoles.getOperationCapabilityHash(
@@ -1309,7 +1309,7 @@ export class Container extends Logger {
    * Remove keys and/or permissions for a user; this also handles role permissions, role
    * memberships.
    *
-   * @param      {ContainerUnshareConfig[]}  unshareConfigs  list of accounts or identities-field
+   * @param      {ContainerUnshareConfig[]}  unshareConfigs  list of identity/account-field
    *                                                         setups to remove permissions/keys for
    */
   public async unshareProperties(unshareConfigs: ContainerUnshareConfig[]): Promise<void> {
@@ -1762,8 +1762,8 @@ export class Container extends Logger {
   /**
    * ensure, that current user has permission to set values on given property; note that this
    * function is for internal use in `Container` and skips a check to verify, that given
-   * account/identity is in specified role; used out of context, this may check check if an
-   * account/identity has permissions on a field and add then adds this account/identity to
+   * identity/account is in specified role; used out of context, this may check check if an
+   * identity/account has permissions on a field and add then adds this identity/account to
    * an unrelated role, therefore not granting permission on checked field
    *
    * @param      {string}  name       name of the property to ensure permission for
