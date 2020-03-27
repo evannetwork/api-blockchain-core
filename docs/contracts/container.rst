@@ -64,7 +64,7 @@ Parameters
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
     * ``logLogLevel`` - |source logLevel|_ (optional): messages with this level will be pushed to ``logLog``
 #. ``config`` - ``DigitalTwinconfIg``: config for new container
-    * ``accountId`` - ``string``: account id or identity of user, that interacts with container
+    * ``accountId`` - ``string``: identity or account of user, that interacts with container
     * ``address`` - ``string``: address of a ``DataContract`` instance, can be ENS or contract address
 
 -------
@@ -129,7 +129,7 @@ Parameters
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
     * ``logLogLevel`` - |source logLevel|_ (optional): messages with this level will be pushed to ``logLog``
 #. ``config`` - ``DigitalTwinconfIg``: config for new container
-    * ``accountId`` - ``string``: account id or identity of user, that interacts with container
+    * ``accountId`` - ``string``: identity or account of user, that interacts with container
     * ``address`` - ``string``: ENS address used for container
     * ``description`` - ``string``: description has to be passed to ``.create`` to apply it to to contract
     * ``factoryAddress`` - ``string`` (optional): factory address can be passed to ``.create`` for customer container factory
@@ -169,7 +169,7 @@ Clone ``Container`` instance into plugin and creates new ``Container`` with it.
 
 Cloning containers:
 
-- is done with identity or account from ``config.accountId``, this identity or account will be owner of the new contract
+- is done with identity or account from ``config.accountId``, which will be owner of the new contract
 - copies all fields from source container to new container (including roles, that have permissions on them)
 - copies values for entry-fields (no lists) to new container, if ``copyValues`` is set
 - does not copy role membership
@@ -208,7 +208,7 @@ Parameters
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
     * ``logLogLevel`` - |source logLevel|_ (optional): messages with this level will be pushed to ``logLog``
 #. ``config`` - ``DigitalTwinconfIg``: config for new container
-    * ``accountId`` - ``string``: account id or identity of user, that interacts with container
+    * ``accountId`` - ``string``: identity or account of user, that interacts with container
     * ``address`` - ``string``: ENS address used for container
     * ``description`` - ``string``: description has to be passed to ``.create`` to apply it to to contract
     * ``factoryAddress`` - ``string`` (optional): factory address can be passed to ``.create`` for customer container factory
@@ -991,7 +991,7 @@ Remove keys and/or permissions for a user; this also handles role permissions, r
 Parameters
 ----------
 
-#. ``unshareConfigs`` - :ref:`container_ContainerUnShareConfig`: list of identity-field setups to remove permissions/keys for
+#. ``unshareConfigs`` - :ref:`container_ContainerUnShareConfig`: list of identity/account-field setups to remove permissions/keys for
 
 -------
 Returns
@@ -1152,7 +1152,7 @@ setContainerShareConfigs
 
   container.setContainerShareConfigs(newConfigs, originalConfigs);
 
-Takes a full share configuration for an accountId or identity (or a list of them), share newly added properties and unshare removed properties from the container. Also accepts a list or instance of the original sharing configurations so that duplicated loading can be avoided.
+Takes a full share configuration for an identity or account (or a list of them), share newly added properties and unshare removed properties from the container. Also accepts a list or instance of the original sharing configurations so that duplicated loading can be avoided.
 
 ----------
 Parameters
@@ -1261,13 +1261,13 @@ getOwner
 
   container.getOwner();
 
-Gets the owner account id or identity for the container.
+Gets the owner identity or account for the container.
 
 -------
 Returns
 -------
 
-``Promise`` returns ``string``: owner account id or identity
+``Promise`` returns ``string``: owner identity or account
 
 -------
 Example
@@ -1495,7 +1495,7 @@ ContainerConfig
 
 config properties, specific to `Container` instances
 
-#. ``accountId`` - ``string``: account id or identity of user, that interacts with container
+#. ``accountId`` - ``string``: identity or account of user, that interacts with container
 #. ``address`` - ``string`` (optional): address of a ``DataContract`` instance, can be ENS or contract address
 #. ``description`` - ``string`` (optional): description has to be passed to ``.create`` to apply it to to contract
 #. ``factoryAddress`` - ``string`` (optional): factory address can be passed to ``.create`` for customer container factory
