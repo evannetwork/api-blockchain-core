@@ -91,7 +91,7 @@ addAccountToRole
 
   rightsAndRoles.addAccountToRole(contract, accountId, targetAccountId, role);
 
-Adds the traget identity or account to a specific role.
+Adds the target identity or account to a specific role.
 
 The main principle is that an identity or account can be assigned to roles and those roles can be granted capabilities. :ref:`Function Permissions <rights-and-roles_setFunctionPermission>` are basically the capability to call specific functions if the calling identity or account belongs to a certain role. To add an identity or account to the role 'member'.
 
