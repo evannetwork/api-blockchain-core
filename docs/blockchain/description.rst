@@ -133,7 +133,7 @@ Parameters
 ----------
 
 #. ``address`` - ``string``: The ens address or contract address where the description is stored
-#. ``accountId`` - ``string``: ID of the identity or the account that encrypted the description
+#. ``accountId`` - ``string``: identity or account that is allowed to read the description
 
 -------
 Returns
@@ -180,7 +180,7 @@ Parameters
 
 #. ``address`` - ``string``: contract address or ENS address
 #. ``envelope`` - ``Envelope``: description as an envelope
-#. ``accountId`` - ``string``: ID of the account or identity supposed to encrypt the description
+#. ``accountId`` - ``string``: identity or account supposed to encrypt the description
 
 -------
 Returns
@@ -311,7 +311,7 @@ Parameters
 ----------
 
 #. ``address`` - ``string``: The contract address where the description is stored
-#. ``readerAddress`` - ``string``: Address of the identity or the account that is allowed to read the description
+#. ``readerAddress`` - ``string``: identity or account that is allowed to read the description
 
 -------
 Returns
@@ -358,7 +358,7 @@ Parameters
 
 #. ``contractAddress`` - ``string``: The contract address where description will be stored
 #. ``envelope`` - ``Envelope``: description as an envelope
-#. ``encryptorAddress`` - ``string``: address of either an account or an identity that is supposed to encrypt the description
+#. ``encryptorAddress`` - ``string``: identity or account that is supposed to encrypt the description
 
 -------
 Returns
@@ -461,7 +461,7 @@ Parameters
 
 #. ``contractAddress`` - ``string``: The ens address where description will be stored
 #. ``envelope`` - ``Envelope``: description as an envelope
-#. ``accountId`` - ``string``: ID of the account or identity supposed to encrypt the contents
+#. ``accountId`` - ``string``: identity or account that is supposed to encrypt the description
 
 -------
 Returns

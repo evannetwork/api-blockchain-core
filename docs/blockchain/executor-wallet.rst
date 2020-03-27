@@ -15,7 +15,7 @@ ExecutorWallet
    * - Examples
      - `executor-wallet.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/contracts/executor-wallet.spec.ts>`_
 
-The ``ExecutorWallet`` module is designed to cover basically the same tasks as the |source executor|_ module. While the last one performs the transactions directly with an account or identity, that is given as inputOptions, the ``ExecutorWallet`` module wraps those transactions by submitting them to a configured wallet contract.
+The ``ExecutorWallet`` module is designed to cover basically the same tasks as the |source executor|_ module. While the last one performs the transactions directly with an identity or account, that is given as inputOptions, the ``ExecutorWallet`` module wraps those transactions by submitting them to a configured wallet contract.
 
 .. figure::  ../_static/wallet_tx_transparent.png
    :align:   center
@@ -23,7 +23,7 @@ The ``ExecutorWallet`` module is designed to cover basically the same tasks as t
 
    transaction flow in wallet based transactions
 
-The wallet is a smart contract and the account or identity, that performs the transactions against the target contracts on the blockchain. Transactions are wrapped by using the |source wallet|_ module, see details on how to transactions are performed internally at the documentation page of the |source wallet|_ module.
+The wallet is a smart contract and the identity or account, that performs the transactions against the target contracts on the blockchain. Transactions are wrapped by using the |source wallet|_ module, see details on how to transactions are performed internally at the documentation page of the |source wallet|_ module.
 
 Because transactions are performed via the |source wallet|_ module, they have the same limitations in regards to en- and decryption as described in the introduction section of the |source wallet|_. 
 
@@ -171,7 +171,7 @@ executeContractTransaction
 
 execute a transaction against the blockchain, handle gas exceeded and return values from contract function,
 
-note, that a from passed to this function will be replaced with the wallets address and that transactions, that transfer EVEs to a target account or identity, will be rejected
+note, that a from passed to this function will be replaced with the wallets address and that transactions, that transfer EVEs to a target identity or account, will be rejected
 
 ----------
 Parameters
