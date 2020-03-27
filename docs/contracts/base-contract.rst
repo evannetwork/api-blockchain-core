@@ -269,8 +269,8 @@ Parameters
 ----------
 
 #. ``contract`` - ``string|any``: contract instance or contract id
-#. ``accountId`` - ``string``: Ethereum account or identity id which will change state
-#. ``consumerId`` - ``string``: Ethereum account or identity id whose state will change
+#. ``accountId`` - ``string``: identity or account which will change state
+#. ``consumerId`` - ``string``: identity or account whose state will change
 #. ``state`` - |source consumerState|_: new state
 
 -------
