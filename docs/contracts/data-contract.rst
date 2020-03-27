@@ -23,7 +23,7 @@ The following functions support the ``encryptionContext`` argument:
 - :ref:`setEntry <data-contract_setEntry>`
 - :ref:`setMappingValue <data-contract_setMappingValue>`
 
-If this argument is set, the data key in the data contracts sharing is encrypted by using a context key instead of the communication key between owner and contract member. This allows to omit key exchanges between contract owner and members and therefore enables the owner to write content to the smart contract, that can be used by a group of accounts/identities, which only needs to hold the context key. So the ``encryptionContext`` can be used to address a group of accounts/identities instead of single account/identity.
+If this argument is set, the data key in the data contracts sharing is encrypted by using a context key instead of the communication key between owner and contract member. This allows to omit key exchanges between contract owner and members and therefore enables the owner to write content to the smart contract, that can be used by a group of identities/accounts, which only needs to hold the context key. So the ``encryptionContext`` can be used to address a group of accounts/identities instead of single account/identity.
 
 For more information about DataContracts purpose and their authorities see `Data Contract <https://evannetwork.github.io/docs/developers/concepts/data-contract.html>`_ in the evan.network wiki.
 
@@ -100,7 +100,7 @@ Parameters
 ----------
 
 #. ``factoryName`` - ``string``: contract factory name, used for ENS lookup; if the factory name contains periods, it is threaded as an absolute ENS domain and used as such, if not it will be used as ``${factoryName}.factory.${businessCenterDomain}``
-#. ``accountId`` - ``string``:  owner(account/identity) of the new contract and transaction executor
+#. ``accountId`` - ``string``:  owner(identity/accounts) of the new contract and transaction executor
 #. ``businessCenterDomain`` - ``string`` (optional): ENS domain name of the business center
 #. ``contractDescription`` - ``string|any`` (optional): bytes32 hash of DBCP description or a schema object
 #. ``allowConsumerInvite`` - ``bool`` (optional): true if consumers are allowed to invite other consumer
@@ -798,7 +798,7 @@ Parameters
 
 #. ``toDecrypt`` - ``string``: data to decrypt
 #. ``contract`` - ``any``: contract instance or contract id
-#. ``accountId`` - ``string``: account id or identity underlying account that decrypts the data
+#. ``accountId`` - ``string``: identity or account that decrypts the data
 #. ``propertyName`` - ``string``: property in contract that is decrypted
 
 -------
