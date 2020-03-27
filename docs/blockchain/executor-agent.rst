@@ -92,7 +92,7 @@ To use the ``ExecutorWallet`` instance created this way in your other modules, h
   };
   await dataContract.addListEntries(dataContractInstance, ['surveyAnswers'], [sampleValue], smartAgentId);
 
-Note, that the last sample uses the smartAgentId as the performing account or identity. Because transactions are estimated before being executed and in some cases the underlying modules require an "active" account or identity, that is used as the users identity, this has to match the smart agents account id. The smart agent account id is passed alongside the token via the link in the email for users wihtout blockchain accounts or identities. References, that would point to a users account or identity have to be replaced with this smart agent account id or identity.
+Note, that the last sample uses the smartAgentId as the performing identity or account. Because transactions are estimated before being executed and in some cases the underlying modules require an "active" identity or account, that is used as the users identity, this has to match the smart agents identity or account. The smart agent identity or account is passed alongside the token via the link in the email for users without blockchain accounts. References, that would point to a users identity or account have to be replaced with this smart agent identity or account.
 
 
 .. figure::  ../_static/agent_tx_transparent.png
