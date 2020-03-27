@@ -109,7 +109,7 @@ Parameters
 ----------
 
 #. ``factoryName`` - ``string``: contract factory name, used for ENS lookup; if the factory name contains periods, it is threaded as an absolute ENS domain and used as such, if not it will be used as ``${factoryName}.factory.${businessCenterDomain}``
-#. ``accountId`` - ``string``: Ethereum account id - can be either account or identity
+#. ``accountId`` - ``string``: identity or account to create contract with
 #. ``businessCenterDomain`` - ``string`` (optional): business center in which the contract will be created; use ``null`` when working without business center
 #. ``descriptionDfsHash`` - ``string`` (optional): bytes32 hash for description in dfs
 
@@ -155,8 +155,8 @@ Parameters
 
 #. ``businessCenterDomain`` - ``string`` : ENS domain name of the business center the contract was created in; use null when working without business center
 #. ``contract`` - ``string`` : Ethereum id of the contract
-#. ``inviterId`` - ``string`` : account or identity id of inviting user
-#. ``inviteeId`` - ``string`` : account or identity id of invited user
+#. ``inviterId`` - ``string`` : identity or account id of inviting user
+#. ``inviteeId`` - ``string`` : identity or account id of invited user
 
 -------
 Returns
@@ -213,8 +213,8 @@ Parameters
 
 #. ``businessCenterDomain`` - ``string`` : ENS domain name of the business center the contract was created in; use null when working without business center
 #. ``contract`` - ``string`` : Ethereum id of the contract
-#. ``accountId`` - ``string`` : account or identity id of executing user
-#. ``idToBeRemoved`` - ``string`` : account or identity id which should be removed
+#. ``accountId`` - ``string`` : identity or account id of executing user
+#. ``idToBeRemoved`` - ``string`` : identity or account id which should be removed
 
 -------
 Returns

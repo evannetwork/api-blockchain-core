@@ -223,7 +223,7 @@ Get the closing balance signature signed from the defined account. This signatur
 Parameters
 ----------
 
-#. ``signerId`` - ``string``: ID of the identity or account which should sign the closing signature (mostly the current active identity/account)
+#. ``signerId`` - ``string``: identity or account which should sign the closing signature (mostly the current active identity/account)
 
 -------
 Returns
@@ -331,7 +331,7 @@ Scan the blockchain for an open channel, and load it with 0 balance. The 0 balan
 Parameters
 ----------
 
-#. ``sender`` - ``string``: Address of either the Sender/client's identity or account
+#. ``sender`` - ``string``: identity or account of sender/client
 #. ``receiver`` - ``string``: Receiver/server's account address
 #. ``startBlock`` - ``number`` (optional): block to start scanning for transactions, defaults to ``0``
 
@@ -367,7 +367,7 @@ Open a channel for account to receiver, depositing some EVE on it. Replaces curr
 Parameters
 ----------
 
-#. ``account`` - ``string``: Address of the Sender/client's identity or account
+#. ``account`` - ``string``: Sender/client's identity or account
 #. ``receiver`` - ``string``: Receiver/server's account address
 #. ``deposit`` - ``BigNumber|string``: deposit in WEI
 

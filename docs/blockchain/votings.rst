@@ -86,7 +86,7 @@ Create new voting contract instance.
 Parameters
 ----------
 
-#. ``creator`` - ``string``: address of the identity or account that should create and own the contract
+#. ``creator`` - ``string``: identity or account that should create and own the contract
 #. ``votingsContractOptions`` - |source votingscontractoptions|_: additional options for votings contract
 
 -------
@@ -133,7 +133,7 @@ Parameters
 ----------
 
 #. ``contract`` - ``string|any``: web3 voting contract instance or contract address
-#. ``executingAddress`` - ``string``: address of the account or identity that performs the action (usually the voting owner)
+#. ``executingAddress`` - ``string``: identity or account that performs the action (usually the voting owner)
 #. ``invitee`` - ``string``: address to add to votings contract
 #. ``memberOptions`` - |source memberoptions|_: options for new member
 
@@ -608,7 +608,7 @@ Interfaces
 MemberInfo
 ----------
 
-#. ``address`` - ``string``: address of the member's identtity (or account)
+#. ``address`` - ``string``: member's identity or account
 #. ``name`` - ``string``: description text of member
 #. ``memberSince`` - ``string``: date of joining votings contract
 

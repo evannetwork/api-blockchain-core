@@ -181,7 +181,7 @@ setAddressOrContent
 
 .. code-block:: javascript
 
-    nameResolver.setAddressOrContent(name, value, parentDomainOwner, domainOwnerId, type);
+    nameResolver.setAddressOrContent(name, value, accountId, domainOwnerId, type);
 
 set ens name. this can be a root level domain domain.test or a subdomain sub.domain.test
 
@@ -191,7 +191,7 @@ Parameters
 
 #. ``name`` - ``string``: ens domain name (plain text)
 #. ``value`` - ``string``: ethereum address
-#. ``parentDomainOwner`` - ``string``: owner of the parent domain
+#. ``accountId`` - ``string``: owner of the parent domain
 #. ``domainOwnerId`` - ``string``: owner of the address to set
 #. ``type`` - ``string``: content type to set
 
@@ -226,7 +226,7 @@ setAddress
 
 .. code-block:: javascript
 
-    nameResolver.setAddress(name, address, ownerAddress, domainOwnerId);
+    nameResolver.setAddress(name, address, accountId, domainOwnerId);
 
 set address for ens name. this can be a root level domain domain.test or a subdomain sub.domain.test
 
@@ -236,7 +236,7 @@ Parameters
 
 #. ``name`` - ``string``: ens domain name (plain text)
 #. ``address`` - ``string``: ethereum address
-#. ``ownerAddress`` - ``string``: owner of the parent domain
+#. ``accountId`` - ``string``: owner of the parent domain
 #. ``domainOwnerId`` - ``string``: owner of the address to set
 
 -------
@@ -269,7 +269,7 @@ setContent
 
 .. code-block:: javascript
 
-    nameResolver.setContent(name, content, parentDomainOwner, domainOwnerId);
+    nameResolver.setContent(name, content, accountId, domainOwnerId);
 
 set content for ens name. this can be a root level domain domain.test or a subdomain sub.domain.test
 
@@ -279,7 +279,7 @@ Parameters
 
 #. ``name`` - ``string``: ens domain name (plain text)
 #. ``content`` - ``string``: ethereum address
-#. ``parentDomainOwner`` - ``string``: owner of the parent domain
+#. ``accountId`` - ``string``: owner of the parent domain
 #. ``domainOwnerId`` - ``string``: owner of the address to set
 
 -------
@@ -322,7 +322,7 @@ Parameters
 ----------
 
 #. ``name`` - ``string``: domain name to set (plain text)
-#. ``executingAddress`` - ``string``: ID of the account or identity executing the transaction
+#. ``executingAddress`` - ``string``: identity or account executing the transaction
 #. ``domainOwnerId`` - ``string`` (optional): owner of the new domain, defaults to ``executingAddress``
 #. ``value`` - ``string|number`` (optional): value to send (if registrar is payable)
 
@@ -367,7 +367,7 @@ Parameters
 ----------
 
 #. ``name`` - ``string``: domain name to set (plain text)
-#. ``executingAddress`` - ``string``: account or identity, that executes the transaction, has to be registrar owner
+#. ``executingAddress`` - ``string``: identity or account, that executes the transaction, has to be registrar owner
 #. ``domainOwnerId`` - ``string`` (optional): owner of the new domain, defaults to ``executingAddress``
 
 -------
@@ -406,7 +406,7 @@ Parameters
 ----------
 
 #. ``name`` - ``string``: ENS address of a domain owned by a registrar (e.g. 'sample.payable.test.evan')
-#. ``executingAddress`` - ``string``: account or identity that performs the action (needs proper permisions for registrar)
+#. ``executingAddress`` - ``string``: identity or account that performs the action (needs proper permisions for registrar)
 #. ``newPrice`` - ``number|string`` (optional): new price in Wei
 
 -------
@@ -484,7 +484,7 @@ Parameters
 ----------
 
 #. ``name`` - ``string``: ENS address of a domain owned by a registrar (e.g. 'sample.payable.test.evan')
-#. ``executingAddress`` - ``string``: account or identity that performs the action; must be parent owner of given domain
+#. ``executingAddress`` - ``string``: identity or account that performs the action; must be parent owner of given domain
 #. ``validUntil`` - ``number|string``: js timestamp, when name resolution stops
 
 -------
@@ -562,7 +562,7 @@ Parameters
 ----------
 
 #. ``name`` - ``string``: ENS address of a domain owned by a registrar (e.g. 'sample.payable.test.evan')
-#. ``executingAddress`` - ``string``: account or identity that performs the action (needs proper permisions for registrar)
+#. ``executingAddress`` - ``string``: identity or account that performs the action (needs proper permisions for registrar)
 
 -------
 Returns
