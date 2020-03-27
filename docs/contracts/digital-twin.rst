@@ -21,7 +21,7 @@ A ``DigitalTwin`` is a wrapper, that holds data or references to data. This data
 
 - a |source Container|_ - This is the most common use case, actual data is stored in the container and the ``DigitalTwin`` merely holds a reference to the container.
 - an ``DigitalTwin`` - DigitalTwins can be linked together, so an entry can be another ``DigitalTwin``, which allows to navigate through twins to retrieve data properties from linked twins, see :ref:`getEntry <digital-twin_getEntry>`
-- an account address / a contract address / identity address
+- an identity/account address / a contract address
 - ``bytes32`` hashes (e.g. file hashes)
 
 
@@ -61,7 +61,7 @@ Parameters
     * ``verifications`` - |source verifications|_: |source verifications|_ instance
     * ``web3`` - |source web3|_: |source web3|_ instance
 #. ``config`` - ``DigitalTwinConfig``: digital twin related config
-    * ``accountId`` - ``string``: account id or identity of user, that interacts with digital twin
+    * ``accountId`` - ``string``: identity or account of user, that interacts with digital twin
     * ``containerConfig`` - ``ContainerConfig``: address of a ``DigitalTwin`` instance, can be ENS or contract address
     * ``address`` - ``string`` (optional): address of an ``DigitalTwin`` instance, can be ENS or contract address
     * ``description`` - ``string``: description has to be passed to ``.create`` to apply it to to contract
@@ -129,7 +129,7 @@ Parameters
     * ``logLog`` - |source logLogInterface|_ (optional): container for collecting log messages
     * ``logLogLevel`` - |source logLevel|_ (optional): messages with this level will be pushed to ``logLog``
 #. ``config`` - ``DigitalTwinConfig``: digital twin related config
-    * ``accountId`` - ``string``: account id or identity of user, that interacts with digital twin
+    * ``accountId`` - ``string``: identity or account of user, that interacts with digital twin
     * ``containerConfig`` - ``ContainerConfig``: config, that will be used, when containers are created
     * ``address`` - ``string`` (optional): ENS address used for digital twin
     * ``description`` - ``string``: description has to be passed to ``.create`` to apply it to to contract

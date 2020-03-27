@@ -100,7 +100,7 @@ Parameters
 ----------
 
 #. ``factoryName`` - ``string``: contract factory name, used for ENS lookup; if the factory name contains periods, it is threaded as an absolute ENS domain and used as such, if not it will be used as ``${factoryName}.factory.${businessCenterDomain}``
-#. ``accountId`` - ``string``:  owner(identity/accounts) of the new contract and transaction executor
+#. ``accountId`` - ``string``:  owner(identity/account) of the new contract and transaction executor
 #. ``businessCenterDomain`` - ``string`` (optional): ENS domain name of the business center
 #. ``contractDescription`` - ``string|any`` (optional): bytes32 hash of DBCP description or a schema object
 #. ``allowConsumerInvite`` - ``bool`` (optional): true if consumers are allowed to invite other consumer
