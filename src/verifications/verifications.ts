@@ -930,7 +930,7 @@ export class Verifications extends Logger {
   /**
    * Gets current execution nonce for an identity or an accounts identity.
    *
-   * @param      {string}   issuer      account or identity to get execution nonce for
+   * @param      {string}   issuer      identity or account to get execution nonce for
    * @param      {boolean}  isIdentity  optional, true if given issuer is an identity, defaults to
    *                                    ``false``
    * @return     {Promise<string>}  execution nonce

@@ -102,7 +102,7 @@ export class Wallet extends Logger {
   /**
    * add an owner to a wallet contract
    *
-   * @param      {string}         accountId  account or identity with management
+   * @param      {string}         accountId  identity or account with management
    *                                         permissions on wallet
    * @param      {string}         toAdd      account to add as an owner
    * @return     {Promise<void>}  resolved when done
@@ -136,7 +136,7 @@ export class Wallet extends Logger {
   /**
    * create a new wallet contract and uses it as its wallet contract
    *
-   * @param      {string}         accountId      account id or identity, that creates the wallet
+   * @param      {string}         accountId      identity or account, that creates the wallet
    * @param      {string}         manager        account, that will be able to manage the new wallet
    * @param      {string[]}       owners         wallet owners
    * @param      {number}         confirmations  number of confirmations required to complete a
@@ -207,7 +207,7 @@ export class Wallet extends Logger {
   /**
    * remove an owner from a wallet contract
    *
-   * @param      {string}         accountId  account or identity with management
+   * @param      {string}         accountId  identity or account with management
    *                                         permissions on wallet
    * @param      {string}         toRemove   account to remove from wallet owners
    * @return     {Promise<void>}  resolved when done

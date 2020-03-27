@@ -169,7 +169,7 @@ Clone ``Container`` instance into plugin and creates new ``Container`` with it.
 
 Cloning containers:
 
-- is done with account or identity from ``config.accountId``, this account or identity will be owner of the new contract
+- is done with identity or account from ``config.accountId``, this identity or account will be owner of the new contract
 - copies all fields from source container to new container (including roles, that have permissions on them)
 - copies values for entry-fields (no lists) to new container, if ``copyValues`` is set
 - does not copy role membership
@@ -901,7 +901,7 @@ Share configurations are given per user, that receives gets data shared with. Th
 
 - ``accountId``:
 
-    - account or identity, that gets properties shared
+    - identity or account, that gets properties shared
     - this user will be invited to the contract as a consumer (role 1)
 
 - ``read``:
@@ -1042,7 +1042,7 @@ getContainerShareConfigForAccount
 
   container.getContainerShareConfigForAccount(accountId);
 
-Check permissions for given account or identity and return them as ContainerShareConfig object.
+Check permissions for given identity or account and return them as ContainerShareConfig object.
 
 ----------
 Parameters
@@ -1105,7 +1105,7 @@ getContainerShareConfigs
 
   container.getContainerShareConfigs();
 
-Check permissions for given account or identity and return them as ContainerShareConfig object.
+Check permissions for given identity or account and return them as ContainerShareConfig object.
 
 -------
 Returns
@@ -1525,7 +1525,7 @@ ContainerShareConfig
 
 config for sharing multiple fields to one account (read and/or readWrite access)
 
-#. ``accountId`` - ``string``: account or identity, that gets properties shared
+#. ``accountId`` - ``string``: identity or account, that gets properties shared
 #. ``read`` - ``string[]`` (optional): list of properties, that are shared read-only
 #. ``readWrite`` - ``string[]`` (optional): list of properties, that are shared readable and writable
 
@@ -1537,7 +1537,7 @@ ContainerUnshareConfig
 
 config for unsharing multiple fields from one account (write and/or readWrite access)
 
-#. ``accountId`` - ``string``: account or identity, that gets properties unshared
+#. ``accountId`` - ``string``: identity or account, that gets properties unshared
 #. ``readWrite`` - ``string[]`` (optional): list of properties, that are unshared (read and write permissions)
 #. ``removeListEntries`` - ``string[]`` (optional): list of properties, that are losing the rights to remove listentries
 #. ``write`` - ``string[]`` (optional): list of properties, for which write permissions should be removed
@@ -1574,7 +1574,7 @@ template for container instances, covers properties setup and permissions
 ContainerTemplateProperty
 -------------------------
 
-config for sharing multiple fields to one account or identity (read and/or readWrite access)
+config for sharing multiple fields to one identity or account (read and/or readWrite access)
 
 #. ``dataSchema`` - ``any``: `Ajv <https://github.com/epoberezkin/ajv>`_ data schema for field
 #. ``permissions`` - ``{ [id: number]: string[] }``: permissions for this template, key is role id, value is array with 'set' and/or 'remove'

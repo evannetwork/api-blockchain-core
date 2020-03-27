@@ -29,7 +29,7 @@ export class NameResolver extends Dbcp.NameResolver {
    * is a registar, that supports claiming address from it (FIFS registrar or PayableRegistrar)
    *
    * @param      {string}         name           domain name to set (plain text)
-   * @param      {string}         executingAddress      ID of the account or identity executing
+   * @param      {string}         executingAddress  identity or account executing
    *                                             the transaction
    * @param      {string}         domainOwnerId  owner of the new domain, fallbacks to accountId
    * @param      {string|number}  value          (optional) value to send (if registrar is payable)
@@ -80,7 +80,7 @@ export class NameResolver extends Dbcp.NameResolver {
    * registers a permanent domain via registrar, can only be done by registrar owner
    *
    * @param      {string}         name           domain name to set (plain text)
-   * @param      {string}         executingAddress  account or identity, that executes the
+   * @param      {string}         executingAddress  identity or account, that executes the
    *                                                transaction has to be registrar owner
    * @param      {string}         domainOwnerId  owner of the new domain, fallbacks to accountId
    * @return     {Promise<void>}  resolved when done
@@ -116,7 +116,7 @@ export class NameResolver extends Dbcp.NameResolver {
    *
    * @param      {string}         name       ENS address of a domain owned by a registrar (e.g.
    *                                         'sample.payable.test.evan')
-   * @param      {string}         executingAddress  account or identity that performs the action
+   * @param      {string}         executingAddress  identity or account that performs the action
    *                                                (needs proper permisions for registrar)
    * @return     {Promise<void>}  resolved when done
    */
@@ -187,7 +187,7 @@ export class NameResolver extends Dbcp.NameResolver {
    *
    * @param      {string}         name       ENS address of a domain owned by a registrar (e.g.
    *                                         'sample.payable.test.evan')
-   * @param      {string}         executingAddress  account or identity that performs the action
+   * @param      {string}         executingAddress  identity or account that performs the action
    *                                                 (needs proper permisions for registrar)
    * @param      {number|string}  newPrice   new price in Wei
    * @return     {Promise<void>}  resolved when done
@@ -223,7 +223,7 @@ export class NameResolver extends Dbcp.NameResolver {
    * can only be done by parent owner of given domain
    *
    * @param      {string}         name        domain to set valid until for
-   * @param      {string}         executingAddress   account or identity that performs the action;
+   * @param      {string}         executingAddress   identity or account that performs the action;
    *                                                 must be parent owner of given domain
    * @param      {number|string}  validUntil  js timestamp, when name resolution stops
    * @return     {Promise<void>}  resolved when done

@@ -272,7 +272,7 @@ getOwnerAddressForIdentity
 
   verifications.getOwnerAddressForIdentity(identityAddress);
 
-Gets an identity's owner's address. This can be either an account or an identity address.
+Gets an identity's owner's address. This can be either an identity or account address.
 
 
 ----------
@@ -1110,7 +1110,7 @@ Nonce is returned as ``string``. When using nonces for preparing multiple transa
 Parameters
 ----------
 
-#. ``issuer`` - ``string``: account or identity to get execution nonce for
+#. ``issuer`` - ``string``: identity or account to get execution nonce for
 #. ``isIdentity`` - ``boolean`` (optional): true if given issuer is an identity, defaults to ``false``
 
 -------

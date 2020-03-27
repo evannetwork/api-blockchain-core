@@ -133,7 +133,7 @@ export class DataContract extends BaseContract {
   /**
    * create initial sharing for contract
    *
-   * @param      {string}        account or Identity Id which is owner of the new contract
+   * @param      {string}        identity or account which is owner of the new contract
    * @return     {Promise<any>}  sharing info with { contentKey, hashKey, sharings, sharingsHash, }
    */
   public async createSharing(accountId: string, skipUpload = false): Promise<any> {
@@ -171,7 +171,7 @@ export class DataContract extends BaseContract {
    * @param      {object|string}  contract         contract or contractId
    * @param      {string}         listName         name of the list in the data contract
    * @param      {any}            values           values to add
-   * @param      {string}         accountId        Ethereum account or identity id
+   * @param      {string}         accountId        identity or account
    * @param      {boolean}        dfsStorage       store values in dfs
    * @param      {boolean}        encryptedHashes  encrypt hashes from values
    * @param      {string}         encryption       encryption algorithm to use
@@ -355,7 +355,7 @@ export class DataContract extends BaseContract {
    *
    * @param      {Envelope}         toEncrypt     envelope with data to encrypt
    * @param      {any}              contract      contract instance or contract id
-   * @param      {string}           accountId     encrypting account or identity underlying account
+   * @param      {string}           accountId     encrypting identity or account
    * @param      {string}           propertyName  property in contract, the data is encrypted for
    * @param      {number}           block         block the data belongs to
    * @param      {string}           encryption    encryption name
@@ -405,7 +405,7 @@ export class DataContract extends BaseContract {
    *
    * @param      {string}           toEncrypt  hash to encrypt
    * @param      {any}              contract   contract to encrypt data for
-   * @param      {string}           accountId  encrypting account or identity underlying account
+   * @param      {string}           accountId  encrypting identity or account
    * @return     {Promise<string>}  encrypted hash as string
    */
   public async encryptHash(toEncrypt: string, contract: any, accountId: string): Promise<string> {
@@ -433,7 +433,7 @@ export class DataContract extends BaseContract {
    *
    * @param      {object|string}   contract         contract or contractId
    * @param      {string}          entryName        entry name
-   * @param      {string}          accountId        Ethereum account or identity id
+   * @param      {string}          accountId        identity or account
    * @param      {boolean}         dfsStorage       store values in dfs
    * @param      {boolean}         encryptedHashes  decrypt hashes from values
    * @return     {Promise<any[]>}  list entries
@@ -479,7 +479,7 @@ export class DataContract extends BaseContract {
    * @param      {object|string}  contract         contract or contractId
    * @param      {string}         mappingName      name of a data contracts mapping property
    * @param      {string}         entryName        entry name
-   * @param      {string}         accountId        Ethereum account or identity id
+   * @param      {string}         accountId        identity or account
    * @param      {boolean}        dfsStorage       store values in dfs
    * @param      {boolean}        encryptedHashes  encrypt hashes from values
    * @return     {Promise<any>}   mappings value for given key
@@ -526,7 +526,7 @@ export class DataContract extends BaseContract {
    *
    * @param      {object|string}   contract         contract or contractId
    * @param      {string}          listName         name of the list in the data contract
-   * @param      {string}          accountId        Ethereum account or identity id
+   * @param      {string}          accountId        identity or account
    * @param      {boolean}         dfsStorage       store values in dfs
    * @param      {boolean}         encryptedHashes  encrypt hashes from values
    * @param      {number}          count            number of elements to retrieve (page size)
@@ -587,7 +587,7 @@ export class DataContract extends BaseContract {
    * @param      {object|string}  contract         contract or contractId
    * @param      {string}         listName         name of the list in the data contract
    * @param      {number}         index            list entry id to retrieve
-   * @param      {string}         accountId        Ethereum account or identity id
+   * @param      {string}         accountId        identity or account
    * @param      {boolean}        dfsStorage       store values in dfs
    * @param      {boolean}        encryptedHashes  encrypt hashes from values
    * @return     {Promise<any>}   list entry
@@ -644,7 +644,7 @@ export class DataContract extends BaseContract {
    * @param      {string}         listNameFrom  origin list
    * @param      {number}         entryIndex    index of the entry to move in the origin list
    * @param      {string[]}       listNamesTo   lists to move data into
-   * @param      {string}         accountId     Ethereum account or identity id
+   * @param      {string}         accountId     identity or account
    * @return     {Promise<void>}  resolved when done
    */
   public async moveListEntry(
@@ -672,7 +672,7 @@ export class DataContract extends BaseContract {
    * @param      {object|string}  contract    contract or contractId
    * @param      {string}         listName    name of the list in the data contract
    * @param      {number}         entryIndex  index of list entry
-   * @param      {string}         accountId   Ethereum account or identity id
+   * @param      {string}         accountId   identity or account
    * @return     {Promise<void>}  resolved when done
    */
   public async removeListEntry(
@@ -698,7 +698,7 @@ export class DataContract extends BaseContract {
    * @param      {object|string}  contract         contract or contractId
    * @param      {string}         entryName        entry name
    * @param      {any}            value            value to add
-   * @param      {string}         accountId        Ethereum account or identity id
+   * @param      {string}         accountId        identity or account
    * @param      {boolean}        dfsStorage       store values in dfs
    * @param      {boolean}        encryptedHashes  encrypt hashes from values
    * @param      {string}         encryption       encryption algorithm to use
@@ -760,7 +760,7 @@ export class DataContract extends BaseContract {
    * @param      {string}         mappingName      name of a data contracts mapping property
    * @param      {string}         entryName        entry name (property in the mapping)
    * @param      {any}            value            value to add
-   * @param      {string}         accountId        Ethereum account or identity id
+   * @param      {string}         accountId        identity or account
    * @param      {boolean}        dfsStorage       store values in dfs
    * @param      {boolean}        encryptedHashes  encrypt hashes from values
    * @param      {string}         encryption       encryption algorith (key provider property)

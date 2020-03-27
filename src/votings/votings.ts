@@ -39,7 +39,7 @@ const defaultProposalOptions = {
  */
 export interface MemberInfo {
   /**
-   * address of the member's identtity (or account)
+   * address of the member's identity or account
    */
   address: string;
   /**
@@ -190,7 +190,7 @@ export class Votings extends Logger {
    * add member to voting contract
    *
    * @param      {string|any}     contract       web3 voting contract instance or contract address
-   * @param      {string}         executingAddress address of the account or identity that performs
+   * @param      {string}         executingAddress address of the identity or account that performs
    *                                               the action (usually the voting owner)
    * @param      {string}         invitee        address to add to votings contract
    * @param      {MemberOptions}  memberOptions  options for new member

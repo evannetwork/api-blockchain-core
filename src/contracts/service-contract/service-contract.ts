@@ -113,7 +113,7 @@ export class ServiceContract extends BaseContract {
    * adds list of accounts to a calls sharings list
    *
    * @param      {any|string}     contract   contract instance or contract id
-   * @param      {string}         accountId  account id or identity of sharing user
+   * @param      {string}         accountId  identity or account of sharing user
    * @param      {number}         callId     id of the call to extend sharings for
    * @param      {string[]}       to         list of account ids
    * @return     {Promise<void>}  resolved when done
@@ -212,7 +212,7 @@ export class ServiceContract extends BaseContract {
    * retrieve a single answer
    *
    * @param      {any|string}    contract     smart contract instance or contract ID
-   * @param      {string}        accountId    Ethereum account ID or identity
+   * @param      {string}        accountId    identity or account
    * @param      {number}        callId       index of the call to which the answer was created
    * @param      {number}        answerIndex  index of the answer in the call (starts from 0 for
    *                                          every call)
@@ -265,7 +265,7 @@ export class ServiceContract extends BaseContract {
    * gets answers for a given call
    *
    * @param      {any|string}      contract   smart contract instance or contract ID
-   * @param      {string}          accountId  Ethereum account ID or identity
+   * @param      {string}          accountId  identity or account
    * @param      {number}          callId     index of the call to which the answer was created
    * @param      {number}          count      number of elements to retrieve
    * @param      {number}          offset     skip this many elements
@@ -319,7 +319,7 @@ export class ServiceContract extends BaseContract {
    * get a call from a contract
    *
    * @param      {any|string}    contract   smart contract instance or contract ID
-   * @param      {string}        accountId  Ethereum account ID or identity
+   * @param      {string}        accountId  identity or account
    * @param      {number}        callId  index of the call to retrieve
    * @return     {Promise<any>}  the call
    */
@@ -349,7 +349,7 @@ export class ServiceContract extends BaseContract {
    * get all calls from a contract
    *
    * @param      {any|string}      contract   smart contract instance or contract ID
-   * @param      {string}          accountId  Ethereum account ID or identity
+   * @param      {string}          accountId  identity or account
    * @param      {number}          count      number of elements to retrieve
    * @param      {number}          offset     skip this many elements
    * @param      {boolean}         reverse    retrieve last elements first
@@ -419,7 +419,7 @@ export class ServiceContract extends BaseContract {
    *
    * @param      {any|string}       contract  contract instance or id
    * @param      {number}           callId    id of a call
-   * @return     {Promise<string>}  account id or identity of call owner
+   * @return     {Promise<string>}  identity or account of call owner
    */
   public async getCallOwner(contract: any|string, callId: number): Promise<string> {
     const serviceContract = (typeof contract === 'object')
@@ -433,7 +433,7 @@ export class ServiceContract extends BaseContract {
    * gets the service of a service contract
    *
    * @param      {any|string}       contract   smart contract instance or contract ID
-   * @param      {string}           accountId  Ethereum account ID or identity
+   * @param      {string}           accountId  identity or account
    * @return     {Promise<string>}  service description
    */
   public async getService(contract: any|string, accountId: string): Promise<string> {
@@ -457,10 +457,10 @@ export class ServiceContract extends BaseContract {
    * send answer to service contract call
    *
    * @param      {any|string}     contract    smart contract instance or contract ID
-   * @param      {string}         accountId   Ethereum account ID or identity
+   * @param      {string}         accountId   identity or account
    * @param      {any}            answer      answer to send
    * @param      {number}         callId      index of the call to which the answer was created
-   * @param      {string}         callAuthor  Ethereum account ID or identity of the
+   * @param      {string}         callAuthor  identity or account of the
    *                                          creator of the initial call
    * @return     {Promise<number>}  resolved when done
    */
@@ -570,7 +570,7 @@ export class ServiceContract extends BaseContract {
    * send a call to a service
    *
    * @param      {any|string}       contract   smart contract instance or contract ID
-   * @param      {string}           accountId  Ethereum account ID or identity
+   * @param      {string}           accountId  identity or account
    * @param      {any}              call       call to send
    * @return     {Promise<number>}  returns id of new call
    */
@@ -711,7 +711,7 @@ export class ServiceContract extends BaseContract {
    * set service description
    *
    * @param      {any|string}     contract              smart contract instance or contract ID
-   * @param      {string}         accountId             Ethereum account ID or identity
+   * @param      {string}         accountId             identity or account
    * @param      {any}            service               service to set
    * @param      {string}         businessCenterDomain  domain of the business the service contract
    *                                                    belongs to
@@ -762,7 +762,7 @@ export class ServiceContract extends BaseContract {
    *
    * @param      {string}           toDecrypt     message to decrypt
    * @param      {any}              contract      contract the message belongs to
-   * @param      {string}           accountId     account or identity, that decrypts
+   * @param      {string}           accountId     identity or account, that decrypts
    * @param      {string}           propertyName  name of the property to decrypt
    * @param      {string}           callId        (optional) if a call, id of the call to decrypt
    * @return     {Promise<string>}  decrypted message or null (if unable to decyrypt)
@@ -834,7 +834,7 @@ export class ServiceContract extends BaseContract {
    *
    * @param      {string}        toDecrypt  data to decrypt
    * @param      {any}           contract   contract instance or contract id
-   * @param      {string}        accountId  account id or identity that decrypts the data
+   * @param      {string}        accountId  identity or account that decrypts the data
    * @param      {string}        callId     (optional) if a call should be decrypted, id of the call
    * @return     {Promise<any>}  decrypted envelope or null (if unable to decyrypt)
    */
@@ -874,7 +874,7 @@ export class ServiceContract extends BaseContract {
    *
    * @param      {string}           toEncrypt     message to encrypt
    * @param      {any}              contract      contract to encrypt message for
-   * @param      {string}           from          encrypting account or identity
+   * @param      {string}           from          encrypting identity or account
    * @param      {string}           propertyName  property, that is encrypted
    * @param      {number}           block         current block
    * @param      {to}               to            (optional) target of message (if encrypting a
@@ -977,7 +977,7 @@ export class ServiceContract extends BaseContract {
    *
    * @param      {string}           toEncrypt  hash to encrypt
    * @param      {any}              contract   contract to encrypt data for
-   * @param      {string}           accountId  encrypting account or identity
+   * @param      {string}           accountId  encrypting identity or account
    * @param      {Buffer}           key        key to use (if no key is provided, use key from
    *                                           sharings)
    * @return     {Promise<string>}  encrypted envelope or hash as string

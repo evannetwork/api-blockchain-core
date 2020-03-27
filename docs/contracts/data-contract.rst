@@ -201,7 +201,7 @@ Create initial sharing for contract.
 Parameters
 ----------
 
-#. ``accountId`` - ``string``: account or Identity Id which is owner of the new contract
+#. ``accountId`` - ``string``: identity or account which is owner of the new contract
 
 -------
 Returns
@@ -243,7 +243,7 @@ Parameters
 #. ``contract`` - ``any|string``: contract or contractId
 #. ``entryName`` - ``string``: entry name
 #. ``value`` - ``any``: value to set
-#. ``accountId`` - ``string``: Ethereum account or identity id
+#. ``accountId`` - ``string``: identity or account
 #. ``dfsStorage`` - ``Function`` (optional): store values in dfs, defaults to ``true``
 #. ``encryptedHashes`` - ``boolean`` (optional): encrypt hashes from values, defaults to ``true``
 #. ``encryption`` - ``string`` (optional): encryption algorithm to use, defaults to ``defaultCryptoAlgo`` (set in constructor)
@@ -293,7 +293,7 @@ Parameters
 
 #. ``contract`` - ``any|string``: contract or contractId
 #. ``entryName`` - ``string``: entry name
-#. ``accountId`` - ``string``: Ethereum account or identity id
+#. ``accountId`` - ``string``: identity or account
 #. ``dfsStorage`` - ``Function`` (optional): store values in dfs, defaults to ``true``
 #. ``encryptedHashes`` - ``boolean`` (optional): decrypt hashes from values, defaults to ``true``
 
@@ -352,7 +352,7 @@ Parameters
 #. ``contract`` - ``any|string``: contract or contractId
 #. ``listName`` - ``string``: name of the list in the data contract
 #. ``values`` - ``any[]``: values to add
-#. ``accountId`` - ``string``: Ethereum account or identity id
+#. ``accountId`` - ``string``: identity or account
 #. ``dfsStorage`` - ``string`` (optional): store values in dfs, defaults to ``true``
 #. ``encryptedHashes`` - ``boolean`` (optional): encrypt hashes from values, defaults to ``true``
 #. ``encryption`` - ``string`` (optional): encryption algorithm to use, defaults to ``defaultCryptoAlgo`` (set in constructor)
@@ -447,7 +447,7 @@ Parameters
 
 #. ``contract`` - ``any|string``: contract or contractId
 #. ``listName`` - ``string``: name of the list in the data contract
-#. ``accountId`` - ``string``: Ethereum account or identity id
+#. ``accountId`` - ``string``: identity or account
 #. ``dfsStorage`` - ``string`` (optional): store values in dfs, defaults to ``true``
 #. ``encryptedHashes`` - ``boolean`` (optional): decrypt hashes from values, defaults to ``true``
 #. ``count`` - ``number`` (optional): number of elements to retrieve, defaults to ``10``
@@ -491,7 +491,7 @@ Parameters
 #. ``contract`` - ``any|string``: contract or contractId
 #. ``listName`` - ``string``: name of the list in the data contract
 #. ``index`` - ``number``: list entry id to retrieve
-#. ``accountId`` - ``string``: Ethereum account or identity id
+#. ``accountId`` - ``string``: identity or account
 #. ``dfsStorage`` - ``string`` (optional): store values in dfs, defaults to ``true``
 #. ``encryptedHashes`` - ``boolean`` (optional): decrypt hashes from values, defaults to ``true``
 
@@ -543,7 +543,7 @@ how to grant permissions to delete list entries from list `exampleList` to group
   const contractOwner = '0x0000000000000000000000000000000000000001';
   await rightsAndRoles.setOperationPermission(
     contract,                   // contract to be updated
-    contractOwner,              // account or identity, that can change permissions
+    contractOwner,              // identity or account, that can change permissions
     0,                          // role id, uint8 value
     'exampleList',              // name of the object
     PropertyType.ListEntry,     // what type of element is modified
@@ -559,7 +559,7 @@ Parameters
 #. ``contract`` - ``any|string``: contract or contractId
 #. ``listName`` - ``string``: name of the list in the data contract
 #. ``index`` - ``number``: index of the entry to remove from list
-#. ``accountId`` - ``string``: Ethereum account or identity id
+#. ``accountId`` - ``string``: identity or account
 
 -------
 Returns
@@ -602,7 +602,7 @@ Parameters
 #. ``listNameFrom`` - ``string``: origin list
 #. ``index`` - ``number``: index of the entry to move in the origin list
 #. ``listNamesTo`` - ``string``: lists to move data into
-#. ``accountId`` - ``string``: Ethereum account or identity id
+#. ``accountId`` - ``string``: identity or account
 
 -------
 Returns
@@ -649,7 +649,7 @@ Parameters
 #. ``mappingName`` - ``string``: name of a data contracts mapping property
 #. ``entryName`` - ``string``: entry name (property in the mapping)
 #. ``value`` - ``any``: value to add
-#. ``accountId`` - ``string``: Ethereum account or identity id
+#. ``accountId`` - ``string``: identity or account 
 #. ``dfsStorage`` - ``string`` (optional): store values in dfs, defaults to ``true``
 #. ``encryptedHashes`` - ``boolean`` (optional): encrypt hashes from values, defaults to ``true``
 #. ``encryption`` - ``string`` (optional): encryption algorithm to use, defaults to ``defaultCryptoAlgo`` (set in constructor)
@@ -699,7 +699,7 @@ Parameters
 #. ``contract`` - ``any|string``: contract or contractId
 #. ``mappingName`` - ``string``: name of a data contracts mapping property
 #. ``entryName`` - ``string``: entry name (property in the mapping)
-#. ``accountId`` - ``string``: Ethereum account or identity id
+#. ``accountId`` - ``string``: identity or account
 #. ``dfsStorage`` - ``string`` (optional): store values in dfs, defaults to ``true``
 #. ``encryptedHashes`` - ``boolean`` (optional): encrypt hashes from values, defaults to ``true``
 #. ``encryption`` - ``string`` (optional): encryption algorithm to use, defaults to ``defaultCryptoAlgo`` (set in constructor)
@@ -750,7 +750,7 @@ Parameters
 
 #. ``toEncrypt`` - ``Envelope``: envelope with data to encrypt
 #. ``contract`` - ``any``: contract instance or contract id
-#. ``accountId`` - ``string``: encrypting account or identity underlying account
+#. ``accountId`` - ``string``: identity or account
 #. ``propertyName`` - ``string``: property in contract, the data is encrypted for
 #. ``block`` - ``block``: block the data belongs to
 #. ``encryption`` - ``string``: encryption name, defaults to ``defaultCryptoAlgo`` (set in constructor)
@@ -836,7 +836,7 @@ Parameters
 
 #. ``toEncrypt`` - ``Envelope``: hash to encrypt
 #. ``contract`` - ``any``: contract instance or contract id
-#. ``accountId`` - ``string``: encrypting account or identity underlying account
+#. ``accountId`` - ``string``: encrypting identity or account
 
 -------
 Returns
@@ -874,7 +874,7 @@ Parameters
 
 #. ``toDecrypt`` - ``Envelope``: hash to decrypt
 #. ``contract`` - ``any``: contract instance or contract id
-#. ``accountId`` - ``string``: encrypting account or identity underlying account
+#. ``accountId`` - ``string``: encrypting identity or account
 
 -------
 Returns

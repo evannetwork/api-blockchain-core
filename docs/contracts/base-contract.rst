@@ -310,7 +310,7 @@ Parameters
 ----------
 
 #. ``contract`` - ``string|any``: contract instance or contract id
-#. ``accountId`` - ``string``: EEthereum account or identity id which will change state
+#. ``accountId`` - ``string``: identity or account which will change state
 #. ``state`` - |source contractState|_: new state
 
 -------
