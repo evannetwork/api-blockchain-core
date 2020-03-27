@@ -216,7 +216,7 @@ Parameters
 ----------
 
 #. ``businessCenerDomain`` - ``string``: ENS domain name of a business center
-#. ``executorAddress`` - ``string``: Identity or account making the transaction
+#. ``executorAddress`` - ``string``: identity or account making the transaction
 
 -------
 Returns

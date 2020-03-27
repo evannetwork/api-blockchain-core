@@ -442,7 +442,7 @@ Parameters
 ----------
 
 #. ``address`` - ``string``: contract address or ENS address
-#. ``partner`` - ``string``: identity or accountfor which key shall be retrieved
+#. ``partner`` - ``string``: identity or account for which key shall be retrieved
 #. ``section`` - ``string``: data section the key is intended for or '*'
 #. ``block`` - ``number|string`` (optional): starting with this block, the key is valid, defaults to ``Number.MAX_SAFE_INTEGER``
 #. ``sharingId`` - ``string`` (optional): id of a sharing (when multi-sharings is used), defaults to ``null``
