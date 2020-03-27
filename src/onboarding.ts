@@ -368,7 +368,7 @@ export class Onboarding extends Logger {
     // ensure to set activeIdentity to 0x0..., when use identity is disabled
     const creationRuntime = {
       ...runtime,
-      activeIdentity: runtime.runtimeConfig.useIdentity ? runtime.activeIdentity : nullAddress,
+      activeIdentity: nullAddress,
     };
     // check for correct profile data
     if (!profileData || !profileData.accountDetails || !profileData.accountDetails.accountName) {
@@ -440,11 +440,11 @@ export class Onboarding extends Logger {
     const newIdentity = (requestedProfile as any).identity;
     const accountHash = creationRuntime.web3.utils.soliditySha3(accountId);
     const identityHash = creationRuntime.web3.utils.soliditySha3(newIdentity);
-    const targetAccount = creationRuntime.activeIdentity === nullAddress ? accountId : newIdentity;
-    const targetAccountHash = creationRuntime.activeIdentity === nullAddress ? accountHash
-      : identityHash;
-
-    const dataKey = creationRuntime.keyProvider.keys[targetAccountHash];
+    const targetAccount = creationRuntime.runtimeConfig.useIdentity ? newIdentity : accountId;
+    const targetAccountHash = creationRuntime.runtimeConfig.useIdentity ? identityHash
+      : accountHash;
+    // How would we know what identity we have before we created it? So use the accountHas
+    const dataKey = creationRuntime.keyProvider.keys[accountHash];
 
     profile.ipld.originator = creationRuntime.web3.utils.soliditySha3(targetAccount);
     profile.activeAccount = targetAccount;
@@ -453,7 +453,7 @@ export class Onboarding extends Logger {
     // eslint-disable-next-line
     creationRuntime.keyProvider.keys[targetAccountHash] = dataKey;
     // eslint-disable-next-line
-    creationRuntime.keyProvider.keys[creationRuntime.web3.utils.soliditySha3(targetAccount, targetAccount)] = dataKey;
+    creationRuntime.keyProvider.keys[creationRuntime.web3.utils.soliditySha3(targetAccountHash, targetAccountHash)] = dataKey;
 
     const dhKeys = creationRuntime.keyExchange.getDiffieHellmanKeys();
     await profile.addContactKey(
@@ -555,7 +555,7 @@ export class Onboarding extends Logger {
 
     const data = {
       accountId,
-      identityId: creationRuntime.activeIdentity !== nullAddress ? newIdentity : undefined,
+      identityId: creationRuntime.runtimeConfig.useIdentity ? newIdentity : undefined,
       signature,
       profileInfo: fileHashes,
       accessToken: (requestedProfile as any).accessToken,
@@ -563,7 +563,7 @@ export class Onboarding extends Logger {
     } as any;
 
     // TODO if statement can be removed after account/identity switch is done
-    if (creationRuntime.activeIdentity !== nullAddress) {
+    if (creationRuntime.runtimeConfig.useIdentity) {
       const didTransactionTuple = await this.createOfflineDidTransaction(creationRuntime,
         accountId, (requestedProfile as any).identity);
       const didTransaction = didTransactionTuple[0];
