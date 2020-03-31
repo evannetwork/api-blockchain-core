@@ -248,6 +248,19 @@ export class Profile extends Logger {
   }
 
   /**
+   * Adds an identity to profile.
+   *
+   * @param      {string}  address  The address
+   * @param      {string}  key      The key
+   * @param      {string}  value    The value
+   */
+  public async setIdentityAccess(address: string, value: string): Promise<void> {
+    this.throwIfNotOwner('add identity Key');
+    const context = 'identityAccess';
+    await this.addContactKey(address, context, value);
+  }
+
+  /**
    * add a profile value to an account
    *
    * @param      {string}         address  account key of the contact
@@ -478,6 +491,22 @@ export class Profile extends Logger {
     );
   }
 
+
+  /**
+   * Gets the identity list.
+   */
+  public async getIdentityAccessList(): Promise<any> {
+    await this.getAddressBook();
+    const { keys } = this.trees[this.treeLabels.addressBook];
+    const filteredIdentities = Object.keys(keys)
+      .filter((key) => keys[key].identityAccess);
+    const result = {};
+    for (const identity of filteredIdentities) {
+      result[identity] = keys[identity];
+    }
+    return result;
+  }
+
   /**
    * Return the saved profile information according to the specified profile type. No type directly
    * uses "user" type.
@@ -679,6 +708,24 @@ export class Profile extends Logger {
     }
     this.ensureTree('bookmarkedDapps');
     await this.ipld.remove(this.trees.bookmarkedDapps, `bookmarkedDapps/${address}`);
+  }
+
+
+  /**
+   * Removes an identity.
+   *
+   * @param      {string}  address  The address
+   */
+  public async removeIdentityAccess(address: string): Promise<void> {
+    this.throwIfNotOwner('remove identity key');
+    const addressHash = this.nameResolver.soliditySha3(
+      ...[
+        this.nameResolver.soliditySha3(address),
+        this.nameResolver.soliditySha3(this.activeAccount),
+      ].sort(),
+    );
+    const addressBook = await this.getAddressBook();
+    delete (addressBook.keys[addressHash].identityAccess);
   }
 
   /**
