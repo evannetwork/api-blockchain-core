@@ -443,7 +443,7 @@ export class Onboarding extends Logger {
     const targetAccount = creationRuntime.runtimeConfig.useIdentity ? newIdentity : accountId;
     const targetAccountHash = creationRuntime.runtimeConfig.useIdentity ? identityHash
       : accountHash;
-    // How would we know what identity we have before we created it? So use the accountHas
+    // How would we know what identity we have before we created it? So use the accountHash
     const dataKey = creationRuntime.keyProvider.keys[accountHash];
 
     profile.ipld.originator = creationRuntime.web3.utils.soliditySha3(targetAccount);
