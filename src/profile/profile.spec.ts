@@ -73,17 +73,35 @@ describe('Profile helper', function test() {
     expect(await profile.getContactKey(identities[2], 'context a')).to.be.undefined;
   });
 
-  it('should be able to be add dapp bookmarks', async () => {
+  it.only('should be able to be add identity key', async () => {
+    await profile.setIdentityAccess(identities[0], 'key 0x01_a');
+    const addressHash = profile.nameResolver.soliditySha3(
+      ...[
+        profile.nameResolver.soliditySha3(identities[0]),
+        profile.nameResolver.soliditySha3(profile.activeAccount),
+      ].sort(),
+    );
+    const list = await profile.getIdentityAccessList();
+    expect(list[addressHash].identityAccess).to.be.eq('key 0x01_a');
+  });
+
+  it.only('should be able to remove an identity key', async () => {
+    await profile.setIdentityAccess(identities[0], 'key 0x01_a');
+    await profile.removeIdentityAccess(identities[0]);
+    const changedList = await profile.getIdentityAccessList();
+    expect(changedList).to.be.empty;
+  });
+
+  it('should remove an identity', async () => {
     await profile.addDappBookmark('sample1.test', sampleDesc);
+    await profile.addDappBookmark('sample2.test', sampleDesc);
 
     expect(await profile.getDappBookmark('sample1.test')).to.be.ok;
-    expect((await profile.getDappBookmark('sample1.test')).title)
-      .to.eq('sampleTest');
+    expect(await profile.getDappBookmark('sample2.test')).to.be.ok;
 
-    // adding on existing
-    await profile.addDappBookmark('sample1.test', sampleUpdateDesc);
-    expect((await profile.getDappBookmark('sample1.test')).title)
-      .to.eq('sampleUpdateTest');
+    await profile.removeDappBookmark('sample1.test');
+    expect(await profile.getDappBookmark('sample1.test')).not.to.be.ok;
+    expect(await profile.getDappBookmark('sample2.test')).to.be.ok;
   });
 
   it('should be able to store data container plugins', async () => {
