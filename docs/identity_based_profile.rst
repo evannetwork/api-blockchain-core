@@ -70,4 +70,4 @@ Identity based profiles are the entities which act on behalf of an account. All 
 
     init();
 
-Now you can use an a `runtime` object which uses an identity as an execution point to interact with the evan.network blockchain. Remember to use `runtime.activeIdentity` when you want to specify who is doing an an actions when using the API.
+Now you can use an a `runtime` object which uses an identity as an execution point to interact with the evan.network blockchain. Remember to use `runtime.activeIdentity` when you want to specify who is doing an an action when using the API.
