@@ -444,6 +444,7 @@ export class Onboarding extends Logger {
     const targetAccount = creationRuntime.runtimeConfig.useIdentity ? newIdentity : accountId;
     const targetAccountHash = creationRuntime.runtimeConfig.useIdentity ? identityHash
       : accountHash;
+
     // generate the encryption key with the provided password and the target account
     const dataKey = creationRuntime.web3.sha3(targetAccount + password).replace(/0x/g, '');
 
