@@ -363,6 +363,7 @@ export class Onboarding extends Logger {
     accountId: string,
     pKey: string,
     recaptchaToken: string,
+    password: string,
     network = 'testcore',
   ) {
     // ensure to set activeIdentity to 0x0..., when use identity is disabled
@@ -443,8 +444,8 @@ export class Onboarding extends Logger {
     const targetAccount = creationRuntime.runtimeConfig.useIdentity ? newIdentity : accountId;
     const targetAccountHash = creationRuntime.runtimeConfig.useIdentity ? identityHash
       : accountHash;
-    // How would we know what identity we have before we created it? So use the accountHas
-    const dataKey = creationRuntime.keyProvider.keys[accountHash];
+    // generate the encryption key with the provided password and the target account
+    const dataKey = creationRuntime.web3.sha3(targetAccount + password).replace(/0x/g, '');
 
     profile.ipld.originator = creationRuntime.web3.utils.soliditySha3(targetAccount);
     profile.activeAccount = targetAccount;
