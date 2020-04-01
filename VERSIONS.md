@@ -10,6 +10,7 @@
   + `Payments` (limited, will undergo further changes in future)
   + `Verifications`
   + `Votings`
+- addded `EvanIdentity` as authorization parameter to result of `utils.getSmartAgentAuthHeaders` (for usage sample have a look to [edge-server-seed](https://github.com/evannetwork/edge-server-seed/tree/develop#auth-middleware))
 
 ### Fixes
 - Fixed bug where a new DID document proof would incorporate the old proof and thus would make the document increasingly larger
