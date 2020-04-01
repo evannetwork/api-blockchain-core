@@ -62,8 +62,6 @@ export class AesBlob extends Logger implements Cryptor {
 
   private readonly encodingUnencrypted = 'utf-8';
 
-  private readonly encodingEncrypted = 'hex';
-
   public constructor(options?: AesBlobOptions) {
     super(options);
     this.algorithm = 'aes-256-cbc';

@@ -2,7 +2,7 @@
 Mailbox
 ================================================================================
 
-.. list-table:: 
+.. list-table::
    :widths: auto
    :stub-columns: 1
 
@@ -25,7 +25,7 @@ The mailbox is a `smart contract <https://github.com/evannetwork/smart-contracts
   + recipient of a mail
   + sender of a mail
   + amount of EVEs, that belongs to the bmail
-  
+
 - if the mail is an answer to another mail, the reference to the original mail
 
 
@@ -74,7 +74,7 @@ Example
 -------
 
 .. code-block:: typescript
-  
+
   const mailbox = new Mailbox({
     mailboxOwner,
     nameResolver,
@@ -129,7 +129,7 @@ Example
     cryptoProvider,
     keyProvider,
     defaultCryptoAlgo: 'aes',
-  }); 
+  });
   await mailbox.init();
 
 
@@ -152,8 +152,8 @@ Parameters
 ----------
 
 #. ``mail`` - ``Mail``: a mail to send
-#. ``from`` - ``string``: account id to send mail from
-#. ``to`` - ``string``: account id to send mail to
+#. ``from`` - ``string``: sender identity or account
+#. ``to`` - ``string``: receiver identity or account
 #. ``value`` - ``string`` (optional): amount of EVEs to send with mail in Wei, can be created with ``web3[.utils].toWei(...)``, defaults to ``0``
 #. ``context`` - ``string`` (optional): encryption context for bmail, if a special context should be used (e.g. ``keyExchange``)
 
@@ -313,7 +313,7 @@ Results can be paged with passing arguments for page size and offsetto the ``get
   const received = await mailbox2.getMails(3, 0);
   console.dir(JSON.stringify(received[0], null, 2));
   // Output:
-  // { mails: 
+  // { mails:
   //    { '0x000000000000000000000000000000000000000e': { content: [Object], cryptoInfo: [Object] },
   //      '0x000000000000000000000000000000000000000d': { content: [Object], cryptoInfo: [Object] },
   //      '0x000000000000000000000000000000000000000c': { content: [Object], cryptoInfo: [Object] } },

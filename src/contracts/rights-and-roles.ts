@@ -71,11 +71,11 @@ export class RightsAndRoles extends Logger {
   }
 
   /**
-   * check if given account can use operation (capability) on given contract; operation hashes can
-   * be build with `getOperationCapabilityHash`
+   * check if given identity or account can use operation (capability) on given
+   * contract; operation hashes can be build with `getOperationCapabilityHash`
    *
    * @param      {string|any}  contract   contract to check for
-   * @param      {string}      accountId  account id to check call for
+   * @param      {string}      accountId  identity or account to check call for
    * @param      {string}      hash       hash from `getOperationCapabilityHash`
    */
   public async canCallOperation(
@@ -150,10 +150,10 @@ export class RightsAndRoles extends Logger {
   }
 
   /**
-   * allows or denies contract function for the accountId
+   * allows or denies contract function for the identity or account
    *
    * @param      {string|any}     contract           contractId or contract instance
-   * @param      {string}         accountId          executing accountId
+   * @param      {string}         accountId          executing identity or account
    * @param      {number}         role               roleid
    * @param      {string}         functionSignature  4 Bytes function signature
    * @param      {boolean}        allow              allow or deny function
@@ -183,7 +183,7 @@ export class RightsAndRoles extends Logger {
    * allows or denies setting properties on a contract
    *
    * @param      {string|any}        contract          contractId or contract instance
-   * @param      {string}            accountId         executing accountId
+   * @param      {string}            accountId         executing identity or account
    * @param      {number}            role              roleId
    * @param      {string}            propertyName      target property name
    * @param      {PropertyType}      propertyType      list or entry
@@ -216,11 +216,11 @@ export class RightsAndRoles extends Logger {
   }
 
   /**
-   * adds the target account to a specific role
+   * adds the target identity or account to a specific role
    *
    * @param      {string|any}     contract         contractId or contract instance
-   * @param      {string}         accountId        executing accountId
-   * @param      {string}         targetAccountId  target accountId
+   * @param      {string}         accountId        executing identity or account
+   * @param      {string}         targetAccountId  target identity or account
    * @param      {number}         role             roleId
    * @return     {Promise<void>}  resolved when done
    */
@@ -241,12 +241,12 @@ export class RightsAndRoles extends Logger {
   }
 
   /**
-   * returns true or false, depending on if the account has the specific role
+   * returns true or false, depending on if the identity or account has the specific role
    * @deprecated second argument "accountId" will be dropped, as it isnt' required anymore
    *
    * @param      {string|any}        contract         contractId or contract instance
-   * @param      {string}            accountId        executing accountId
-   * @param      {string}            targetAccountId  to be checked accountId
+   * @param      {string}            accountId        executing identity or account
+   * @param      {string}            targetAccountId  to be checked identity or account
    * @param      {number}            role             roleId
    * @return     {Promise<boolean>}  true is given user as specified role
    */
@@ -264,11 +264,11 @@ export class RightsAndRoles extends Logger {
   }
 
   /**
-   * removes target account from a specific role
+   * removes target identity or account from a specific role
    *
    * @param      {string|any}     contract         contractId or contract instance
-   * @param      {string}         accountId        executing accountId
-   * @param      {string}         targetAccountId  target accountId
+   * @param      {string}         accountId        executing identity or account
+   * @param      {string}         targetAccountId  target identity or account
    * @param      {number}         role             roleId
    * @return     {Promise<void>}  resolved when done
    */
@@ -292,8 +292,8 @@ export class RightsAndRoles extends Logger {
    * transfer ownership of a contract and its authority to another account
    *
    * @param      {string|any}     contract         contractId or contract instance
-   * @param      {string}         accountId        executing accountId
-   * @param      {string}         targetAccountId  target accountId
+   * @param      {string}         accountId        executing identity or account
+   * @param      {string}         targetAccountId  target identity or account
    * @return     {Promise<void>}  resolved when done
    */
   public async transferOwnership(

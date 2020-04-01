@@ -98,7 +98,7 @@ getSmartAgentAuthHeaders
 
     utils.getSmartAgentAuthHeaders(runtime[, message]);
 
-create auth header data to authenticate with current account against a smart agent server
+create auth header data to authenticate with active account or underlying account of active identity against a smart agent server
 
 ----------
 Parameters

@@ -28,13 +28,15 @@ export class NameResolver extends Dbcp.NameResolver {
    * tries to claim node ownership from parent nodes owner, this assumes, that the parent node owner
    * is a registar, that supports claiming address from it (FIFS registrar or PayableRegistrar)
    *
-   * @param      {string}         name           domain name to set (plain text)
-   * @param      {string}         accountId      account, that executes the transaction
-   * @param      {string}         domainOwnerId  owner of the new domain, fallbacks to accountId
-   * @param      {string|number}  value          (optional) value to send (if registrar is payable)
+   * @param      {string}         name              domain name to set (plain text)
+   * @param      {string}         executingAddress  identity or account executing the transaction
+   * @param      {string}         domainOwnerId     owner of the new domain, fallbacks to accountId
+   * @param      {string|number}  value             (optional) value to send (if registrar is
+   *                                                payable)
    * @return     {Promise<void>}  resolved when done
    */
-  public async claimAddress(name: string, accountId: string, domainOwnerId = accountId, value = '0'): Promise<void> {
+  public async claimAddress(name: string, executingAddress: string, domainOwnerId = executingAddress, value = '0'):
+  Promise<void> {
     // check ownership
     const namehash = this.namehash(name);
     const nodeOwner = await this.executor.executeContractCall(this.ensContract, 'owner', namehash);
@@ -68,7 +70,7 @@ export class NameResolver extends Dbcp.NameResolver {
     await this.executor.executeContractTransaction(
       registrar,
       'register',
-      { from: accountId, value },
+      { from: executingAddress, value },
       this.web3.utils.sha3(`${node}`),
       domainOwnerId,
     );
@@ -77,16 +79,16 @@ export class NameResolver extends Dbcp.NameResolver {
   /**
    * registers a permanent domain via registrar, can only be done by registrar owner
    *
-   * @param      {string}         name           domain name to set (plain text)
-   * @param      {string}         accountId      account, that executes the transaction, has to be
-   *                                             registrar owner
-   * @param      {string}         domainOwnerId  owner of the new domain, fallbacks to accountId
+   * @param      {string}  name              domain name to set (plain text)
+   * @param      {string}  executingAddress  identity or account, that executes the transaction has
+   *                                         to be registrar owner
+   * @param      {string}  domainOwnerId     owner of the new domain, fallbacks to accountId
    * @return     {Promise<void>}  resolved when done
    */
   public async claimPermanentAddress(
     name: string,
-    accountId: string,
-    domainOwnerId = accountId,
+    executingAddress: string,
+    domainOwnerId = executingAddress,
   ): Promise<void> {
     const [, node, parentName] = /^([^.]+)\.(.*)$/.exec(name);
     const parentOnwer = await this.executor.executeContractCall(
@@ -105,20 +107,20 @@ export class NameResolver extends Dbcp.NameResolver {
     }
     const registrar = this.contractLoader.loadContract('PayableRegistrar', parentOnwer);
     await this.executor.executeContractTransaction(
-      registrar, 'registerPermanent', { from: accountId }, this.soliditySha3(node), domainOwnerId,
+      registrar, 'registerPermanent', { from: executingAddress }, this.soliditySha3(node), domainOwnerId,
     );
   }
 
   /**
    * claim funds for domain
    *
-   * @param      {string}         name       ENS address of a domain owned by a registrar (e.g.
+   * @param      {string}  name              ENS address of a domain owned by a registrar (e.g.
    *                                         'sample.payable.test.evan')
-   * @param      {string}         accountId  account that performs the action (needs proper
-   *                                         permisions for registrar)
+   * @param      {string}  executingAddress  identity or account that performs the action (needs
+   *                                         proper permisions for registrar)
    * @return     {Promise<void>}  resolved when done
    */
-  public async claimFunds(name: string, accountId: string): Promise<void> {
+  public async claimFunds(name: string, executingAddress: string): Promise<void> {
     const parentOnwer = await this.executor.executeContractCall(
       this.ensContract, 'owner', this.namehash(name),
     );
@@ -134,7 +136,7 @@ export class NameResolver extends Dbcp.NameResolver {
       throw new Error(msg);
     }
     const registrar = this.contractLoader.loadContract('PayableRegistrar', parentOnwer);
-    await this.executor.executeContractTransaction(registrar, 'claimFunds', { from: accountId });
+    await this.executor.executeContractTransaction(registrar, 'claimFunds', { from: executingAddress });
   }
 
   /**
@@ -183,14 +185,15 @@ export class NameResolver extends Dbcp.NameResolver {
   /**
    * set price for a registrar at a domain
    *
-   * @param      {string}         name       ENS address of a domain owned by a registrar (e.g.
-   *                                         'sample.payable.test.evan')
-   * @param      {string}         accountId  account that performs the action (needs proper
-   *                                         permisions for registrar)
-   * @param      {number|string}  newPrice   new price in Wei
+   * @param      {string}         name              ENS address of a domain owned by a registrar
+   *                                                (e.g. 'sample.payable.test.evan')
+   * @param      {string}         executingAddress  identity or account that performs the action
+   *                                                (needs proper permisions for registrar)
+   * @param      {number|string}  newPrice          new price in Wei
    * @return     {Promise<void>}  resolved when done
    */
-  public async setPrice(name: string, accountId: string, newPrice: number|string): Promise<void> {
+  public async setPrice(name: string, executingAddress: string, newPrice: number|string):
+  Promise<void> {
     const parentOnwer = await this.executor.executeContractCall(
       this.ensContract, 'owner', this.namehash(name),
     );
@@ -209,7 +212,7 @@ export class NameResolver extends Dbcp.NameResolver {
     await this.executor.executeContractTransaction(
       registrar,
       'setPrice',
-      { from: accountId },
+      { from: executingAddress },
       newPrice,
     );
   }
@@ -219,22 +222,22 @@ export class NameResolver extends Dbcp.NameResolver {
    * of the ENS an extra period, where owner is still available, can be granted; notice that this
    * can only be done by parent owner of given domain
    *
-   * @param      {string}         name        domain to set valid until for
-   * @param      {string}         accountId   account that performs the action; must be parent owner
-   *                                          of given domain
-   * @param      {number|string}  validUntil  js timestamp, when name resolution stops
+   * @param      {string}         name              domain to set valid until for
+   * @param      {string}         executingAddress  identity or account that performs the action;
+   *                                                must be parent owner of given domain
+   * @param      {number|string}  validUntil        js timestamp, when name resolution stops
    * @return     {Promise<void>}  resolved when done
    */
   public async setValidUntil(
     name: string,
-    accountId: string,
+    executingAddress: string,
     validUntil: number|string,
   ): Promise<void> {
     const numberString = `${validUntil}`;
     await this.executor.executeContractTransaction(
       this.ensContract,
       'setValidUntil',
-      { from: accountId },
+      { from: executingAddress },
       this.namehash(name),
       numberString.substr(0, numberString.length - 3),
     );
