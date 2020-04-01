@@ -134,7 +134,7 @@ Parameters
 
 #. ``contract`` - ``string|any``: web3 voting contract instance or contract address
 #. ``executingAddress`` - ``string``: identity or account that performs the action (usually the voting owner)
-#. ``invitee`` - ``string``: address to add to votings contract
+#. ``invitee`` - ``string``: identity or account to add to votings contract
 #. ``memberOptions`` - |source memberoptions|_: options for new member
 
 -------
