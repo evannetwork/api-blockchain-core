@@ -1759,6 +1759,12 @@ export class Verifications extends Logger {
     const [lastVerification] = allVerifications.filter(
       (verification) => verification.id === verificationId,
     );
+
+    // early exit, when a runtime without useIdentity is used - did instance will be missing
+    if (!this.options.did) {
+      this.log(`Tried to create a vc for ${subject} without a useIdentity runtime.`, 'warning');
+      return { vcId: null, verificationId: lastVerification.id };
+    }
     const creationDateNew = new Date(lastVerification.creationDate * 1000).toISOString();
     const issuerIdentity = await this.getIdentityForAccount(issuer, true);
     const vcData: VcDocumentTemplate = {
