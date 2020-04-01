@@ -18,7 +18,7 @@ ExecutorAgent
 
 The ``ExecutorAgent`` module is designed to cover basically the same tasks as the `Executor <../blockchain/executor.html>`_ module. While the last one performs the transactions directly with an identity or account, that is given as inputOptions, the ``ExecutorAgent`` module wraps those transactions by submitting them to a smart agent.
 
-The smart agent receives those transactions and performs them with its own identity or account, if a valid tokens has been passed to it alongside the transaction data. Tokens for transactions can be issued at the smart agent as well (a password is required for this).
+The smart agent receives those transactions and performs them with its own identity or account, if a valid token has been passed to it alongside the transaction data. Tokens for transactions can be issued at the smart agent as well (a password is required for this).
 
 Using the ``ExecutorAgent`` allows to delegate transactions to users that do not have their own blockchain identity or account. Delegating those transactions requires that smart agent user to be invited into the contract instead of the users, that will interact with the contract.
 
