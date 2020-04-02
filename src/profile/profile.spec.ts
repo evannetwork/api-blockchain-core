@@ -73,7 +73,7 @@ describe('Profile helper', function test() {
     expect(await profile.getContactKey(identities[2], 'context a')).to.be.undefined;
   });
 
-  it.only('should be able to be add identity key', async () => {
+  it('should be able to be add identity key', async () => {
     await profile.setIdentityAccess(identities[0], 'key 0x01_a');
     const addressHash = profile.nameResolver.soliditySha3(
       ...[
