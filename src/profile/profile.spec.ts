@@ -85,7 +85,7 @@ describe('Profile helper', function test() {
     expect(list[addressHash].identityAccess).to.be.eq('key 0x01_a');
   });
 
-  it.only('should be able to remove an identity key', async () => {
+  it('should remove an identity key', async () => {
     await profile.setIdentityAccess(identities[0], 'key 0x01_a');
     await profile.removeIdentityAccess(identities[0]);
     const changedList = await profile.getIdentityAccessList();
