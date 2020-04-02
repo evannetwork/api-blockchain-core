@@ -18,6 +18,8 @@
 - add `startBlock` argument to `loadChannelFromBlockchain` in `Payments` to avoid long running function calls
 - update tests to allow running tests via identity
 - include identity tests to automatic test runs
+- use `useIdentity` flag for `createOfflineProfile`
+- pass `password` to `createOfflineProfile` to enable dataKey generation based on the users identity
 
 ### Deprecations
 
