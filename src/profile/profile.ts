@@ -251,7 +251,6 @@ export class Profile extends Logger {
    * Adds an identity to profile.
    *
    * @param      {string}  address  The address
-   * @param      {string}  key      The key
    * @param      {string}  value    The value
    */
   public async setIdentityAccess(address: string, value: string): Promise<void> {
