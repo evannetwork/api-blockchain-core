@@ -183,6 +183,7 @@ describe('Onboarding helper', function test() {
         accounts[0],
         pKey,
         '',
+        '',
       ).then(() => resolve());
     });
   });
