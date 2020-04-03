@@ -30,6 +30,7 @@ import {
   Unencrypted,
 } from '@evan.network/dbcp';
 
+import { cloneDeep } from 'lodash';
 import { Aes } from './encryption/aes';
 import { AesBlob } from './encryption/aes-blob';
 import { AesEcb } from './encryption/aes-ecb';
@@ -621,21 +622,39 @@ export async function createDefaultRuntime(
   };
 }
 
+/**
+ * Creates and switches to a new runtime for identity.
+ *
+ * @param      {Runtime}  existingRuntime  existing runtime instance
+ * @param      {string}   identity         identity address
+ * @return     {Promise<Runtime>}  runtime instance
+ */
 export async function getRuntimeForIdentity(existingRuntime: Runtime,
   identity: string): Promise<Runtime> {
-  const profileSha3Identity = existingRuntime.web3.utils.soliditySha3(identity);
   const identityList = await existingRuntime.profile.getIdentityAccessList();
-  const key = identityList[identity].identityAccess;
+  let key = identityList[identity]?.identityAccess;
   // check if identityList contains the idenitity, if not throw an error.
   if (!key) {
-    throw new Error('Access to identity $`identity` is not permitted');
+    const addressHash = existingRuntime.nameResolver.soliditySha3(
+      ...[
+        existingRuntime.nameResolver.soliditySha3(identity),
+        existingRuntime.nameResolver.soliditySha3(existingRuntime.activeIdentity),
+      ].sort(),
+    );
+    key = identityList[addressHash]?.identityAccess;
+    if (!key) {
+      throw new Error('Access to identity is not permitted');
+    }
   }
+
   // clone the runtimeConfig from existingRuntime
-  const clonedRuntimeConfig = await existingRuntime.runtimeConfig;
+  const clonedRuntimeConfig = cloneDeep(existingRuntime.runtimeConfig);
+
   // check if identity is defined in the runtimeConfig
   if (!clonedRuntimeConfig.identity) {
     clonedRuntimeConfig.identity = identity;
   }
+
   // hash and add key to clonedRuntimeConfig keyConfig
   const sha3Identity = existingRuntime.web3.utils.soliditySha3(identity);
   const sha9Identity = existingRuntime.web3.utils.soliditySha3(sha3Identity, sha3Identity);
