@@ -24,7 +24,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v1
         with:
-          node-version: 12.16.1
+          node-version: 13.12.0
       - run: node --version
       - run: |
             docker run -d -p 8546:8546 -p 8545:8545 -u root evannetwork/testcore-snapshot --chain evantestcore --jsonrpc-interface all --unsafe-expose
