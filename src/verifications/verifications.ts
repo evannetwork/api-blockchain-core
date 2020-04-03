@@ -1740,6 +1740,11 @@ export class Verifications extends Logger {
     isIdentity = false,
     uri = '',
   ): Promise<{vcId: string; verificationId: string}> {
+    // early exit, when a runtime without useIdentity is used - did instance will be missing
+    if (!this.options.did) {
+      throw new Error(`Tried to create a vc without a useIdentity runtime for ${subject}.`);
+    }
+
     const verificationId = await this.setVerification(
       issuer,
       subject,
