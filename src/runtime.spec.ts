@@ -21,9 +21,11 @@ import 'mocha';
 import { expect, use } from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
 
-import { createDefaultRuntime } from './runtime';
+import { createDefaultRuntime, getRuntimeForIdentity } from './runtime';
 import { TestUtils } from './test/test-utils';
-import { accountMap, accounts, useIdentity } from './test/accounts';
+import {
+  accountMap, accounts, useIdentity, identities, dataKeys,
+} from './test/accounts';
 
 use(chaiAsPromised);
 
@@ -40,16 +42,27 @@ describe('Runtime', function test() {
 
     runtimeConfig = {
       accountMap,
-      keyConfig: {
-        [web3.utils.soliditySha3(accounts[1])]: '0030c5e7394585400b1f00d1267b27c3a80080f9000000000000000000000012',
-      },
+      keyConfig: dataKeys,
       useIdentity,
+      // identity: identities[0],
     };
   });
 
   it('should create a new runtime for a given config', async () => {
     const runtime = await createDefaultRuntime(web3, dfs, runtimeConfig);
     expect(runtime).to.be.ok;
+  });
+
+  it('should switch the runtime for identity', async () => {
+    const runtime = await createDefaultRuntime(web3, dfs, runtimeConfig);
+    await runtime.profile.setIdentityAccess(
+      identities[0],
+      dataKeys[web3.utils.sha3(identities[0])],
+    );
+    const switchedRuntime = await getRuntimeForIdentity(runtime, identities[0]);
+    expect(runtime).to.be.ok;
+    expect(switchedRuntime).to.be.ok;
+    expect(switchedRuntime.profile).to.exist;
   });
 
   it('should create a new runtime and parse accountid and password in keyConfig', async () => {

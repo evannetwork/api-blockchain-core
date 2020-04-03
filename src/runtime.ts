@@ -302,7 +302,21 @@ export async function createDefaultRuntime(
   let underlyingAccount: string;
   if (runtimeConfig.useIdentity) {
     try {
-      activeIdentity = await verifications.getIdentityForAccount(activeAccount, true);
+      if (runtimeConfig.identity) {
+        const sha3Identity = web3.utils.soliditySha3(runtimeConfig.identity);
+        if (!runtimeConfig.keyConfig[sha3Identity]) {
+          throw new Error('identity key not set');
+        }
+        activeIdentity = runtimeConfig.identity;
+      } else {
+        activeIdentity = await verifications.getIdentityForAccount(activeAccount, true);
+      }
+
+      // activeIdentity = runtimeConfig.useIdentity
+      // hashing logic to be also included in here for
+      // activeIdentity = runtimeConfig.identity
+      //   || await verifications.getIdentityForAccount(activeAccount, true);
+
       underlyingAccount = activeAccount;
       signer.updateConfig(
         { verifications },
@@ -446,6 +460,10 @@ export async function createDefaultRuntime(
     rightsAndRoles,
     sharing,
   });
+  // introduce check again if no key copy it from your primary
+  // identity add to runtimeConfig.keyconfig
+  // const sha3Identity = web3.utils.soliditySha3(runtimeConfig.identity);
+
   // this key provider is linked to profile for key retrieval
   // keyProviderOwn is not linked to profile to prevent profile key lookups
   keyProvider.init(profile);
@@ -601,4 +619,31 @@ export async function createDefaultRuntime(
     ...(vc && { vc }),
     ...(underlyingAccount && { underlyingAccount }),
   };
+}
+
+export async function getRuntimeForIdentity(existingRuntime: Runtime,
+  identity: string): Promise<Runtime> {
+  const profileSha3Identity = existingRuntime.web3.utils.soliditySha3(identity);
+  const identityList = await existingRuntime.profile.getIdentityAccessList();
+  const key = identityList[identity].identityAccess;
+  // check if identityList contains the idenitity, if not throw an error.
+  if (!key) {
+    throw new Error('Access to identity $`identity` is not permitted');
+  }
+  // clone the runtimeConfig from existingRuntime
+  const clonedRuntimeConfig = await existingRuntime.runtimeConfig;
+  // check if identity is defined in the runtimeConfig
+  if (!clonedRuntimeConfig.identity) {
+    clonedRuntimeConfig.identity = identity;
+  }
+  // hash and add key to clonedRuntimeConfig keyConfig
+  const sha3Identity = existingRuntime.web3.utils.soliditySha3(identity);
+  const sha9Identity = existingRuntime.web3.utils.soliditySha3(sha3Identity, sha3Identity);
+  clonedRuntimeConfig.keyConfig[sha3Identity] = key;
+  clonedRuntimeConfig.keyConfig[sha9Identity] = key;
+  // create new dfs
+  const dfs = new Ipfs({ dfsConfig: (existingRuntime.dfs as any).dfsConfig });
+
+  // introduce hashing?
+  return this.createDefaultRuntime(existingRuntime.web3, dfs, clonedRuntimeConfig);
 }
