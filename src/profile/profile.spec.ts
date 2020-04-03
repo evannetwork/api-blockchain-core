@@ -57,7 +57,7 @@ describe('Profile helper', function test() {
   };
 
   before(async () => {
-    runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
+    runtime = await TestUtils.getRuntime(accounts[1], null, { useIdentity });
     ({ nameResolver, profile } = runtime);
     ensName = nameResolver.getDomainName(config.nameResolver.domains.profile);
   });
@@ -75,22 +75,29 @@ describe('Profile helper', function test() {
 
   it('should be able to be add identity key', async () => {
     await profile.loadForAccount(profile.treeLabels.addressBook);
-    await profile.setIdentityAccess(identities[1], 'key 0x01_a');
-    const addressHash = profile.nameResolver.soliditySha3(
-      ...[
-        profile.nameResolver.soliditySha3(identities[1]),
-        profile.nameResolver.soliditySha3(profile.activeAccount),
-      ].sort(),
-    );
+    await profile.setIdentityAccess(identities[0], 'key 0x01_a');
     const list = await profile.getIdentityAccessList();
-    expect(list[addressHash].identityAccess).to.be.eq('key 0x01_a');
+    expect(list).to.be.not.empty;
+
+    await profile.storeForAccount(profile.treeLabels.addressBook);
+    await profile.loadForAccount(profile.treeLabels.addressBook);
+    const loadedList = await profile.getIdentityAccessList();
+    expect(loadedList).to.be.deep.eq(list);
   });
 
   it('should remove an identity key', async () => {
-    await profile.setIdentityAccess(identities[0], 'key 0x01_a');
-    await profile.removeIdentityAccess(identities[0]);
-    const changedList = await profile.getIdentityAccessList();
-    expect(changedList).to.be.empty;
+    await profile.loadForAccount(profile.treeLabels.addressBook);
+    const beforeSettingList = await profile.getIdentityAccessList();
+
+    await profile.setIdentityAccess(identities[1], 'key 0x01_b');
+    await profile.storeForAccount(profile.treeLabels.addressBook);
+    await profile.loadForAccount(profile.treeLabels.addressBook);
+
+    await profile.removeIdentityAccess(identities[1]);
+    await profile.storeForAccount(profile.treeLabels.addressBook);
+    await profile.loadForAccount(profile.treeLabels.addressBook);
+    const afterRemovingList = await profile.getIdentityAccessList();
+    expect(afterRemovingList).to.be.deep.eq(beforeSettingList);
   });
 
   it('should remove an identity', async () => {

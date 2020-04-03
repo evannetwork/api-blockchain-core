@@ -248,15 +248,16 @@ export class Profile extends Logger {
   }
 
   /**
-   * Adds an identity to profile.
+   * Sets an identity to address book.
    *
-   * @param      {string}  address  The address
-   * @param      {string}  value    The value
+   * @param      {string}  address  identity address
+   * @param      {string}  key    identity datakey
+   * @return     {Promise<void>}  resolved when done
    */
-  public async setIdentityAccess(address: string, value: string): Promise<void> {
+  public async setIdentityAccess(address: string, key: string): Promise<void> {
     this.throwIfNotOwner('add identity Key');
     const context = 'identityAccess';
-    await this.addContactKey(address, context, value);
+    await this.addContactKey(address, context, key);
   }
 
   /**
@@ -492,7 +493,10 @@ export class Profile extends Logger {
 
 
   /**
-   * Gets the identity list.
+   * The adress book needs to be loaded beforehand
+   * using loadForAccount API.
+   * Gets the identity list from loaded address book.
+   * @return     {any}     identity list from address book
    */
   public async getIdentityAccessList(): Promise<any> {
     const addressBook = await this.getAddressBook();
@@ -727,9 +731,10 @@ export class Profile extends Logger {
 
 
   /**
-   * Removes an identity.
+   * Removes an identity access from address book.
    *
-   * @param      {string}  address  The address
+   * @param      {string}  address  identity address
+   * @return     {Promise<void>} resolved when done
    */
   public async removeIdentityAccess(address: string): Promise<void> {
     this.throwIfNotOwner('remove identity key');
