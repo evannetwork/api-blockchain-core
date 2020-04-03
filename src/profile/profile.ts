@@ -495,13 +495,29 @@ export class Profile extends Logger {
    * Gets the identity list.
    */
   public async getIdentityAccessList(): Promise<any> {
-    await this.getAddressBook();
-    const { keys } = this.trees[this.treeLabels.addressBook];
-    const filteredIdentities = Object.keys(keys)
-      .filter((key) => keys[key].identityAccess);
+    const addressBook = await this.getAddressBook();
+    // console.dir(addressBook);
+    const { keys } = addressBook;
+    // filter key list by hashes with identity access and assign it to result
     const result = {};
-    for (const identity of filteredIdentities) {
-      result[identity] = keys[identity];
+    for (const sha9Hash of Object.keys(keys)) {
+      if (keys[sha9Hash].identityAccess) {
+        result[sha9Hash] = { identityAccess: keys[sha9Hash].identityAccess };
+      }
+    }
+    const profiles = Object.keys(addressBook.profile);
+    const activeIdentityHash = this.options.nameResolver.soliditySha3(this.activeAccount);
+    for (const id of profiles) {
+      const sha9Hash = this.options.nameResolver.soliditySha3(
+        ...[
+          this.options.nameResolver.soliditySha3(id),
+          activeIdentityHash,
+        ].sort(),
+      );
+      if (result[sha9Hash]) {
+        result[sha9Hash].alias = addressBook.profile[id].alias;
+        result[id] = result[sha9Hash];
+      }
     }
     return result;
   }

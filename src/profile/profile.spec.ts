@@ -74,10 +74,11 @@ describe('Profile helper', function test() {
   });
 
   it('should be able to be add identity key', async () => {
-    await profile.setIdentityAccess(identities[0], 'key 0x01_a');
+    await profile.loadForAccount(profile.treeLabels.addressBook);
+    await profile.setIdentityAccess(identities[1], 'key 0x01_a');
     const addressHash = profile.nameResolver.soliditySha3(
       ...[
-        profile.nameResolver.soliditySha3(identities[0]),
+        profile.nameResolver.soliditySha3(identities[1]),
         profile.nameResolver.soliditySha3(profile.activeAccount),
       ].sort(),
     );
