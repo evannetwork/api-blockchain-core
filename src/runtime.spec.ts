@@ -44,7 +44,7 @@ describe('Runtime', function test() {
       accountMap,
       keyConfig: dataKeys,
       useIdentity,
-      // identity: identities[0],
+      // identity: identities[1],
     };
   });
 
@@ -55,18 +55,25 @@ describe('Runtime', function test() {
 
   it('should switch the runtime for identity', async () => {
     const runtime = await createDefaultRuntime(web3, dfs, runtimeConfig);
+    await runtime.profile.loadForAccount(runtime.profile.treeLabels.addressBook);
+    await runtime.profile.getIdentityAccessList();
     await runtime.profile.setIdentityAccess(
-      identities[0],
-      dataKeys[web3.utils.sha3(identities[0])],
+      identities[1],
+      dataKeys[web3.utils.sha3(identities[1])],
     );
-    const switchedRuntime = await getRuntimeForIdentity(runtime, identities[0]);
+
+    await runtime.profile.storeForAccount(runtime.profile.treeLabels.addressBook);
+    await runtime.profile.loadForAccount(runtime.profile.treeLabels.addressBook);
+    await runtime.profile.getIdentityAccessList();
+
+    const switchedRuntime = await getRuntimeForIdentity(runtime, identities[1]);
     expect(runtime).to.be.ok;
     expect(switchedRuntime).to.be.ok;
     expect(switchedRuntime.profile).to.exist;
   });
 
   it('should create a new runtime and parse accountid and password in keyConfig', async () => {
-    const expectedKeyNum = useIdentity ? 5 : 3;
+    const expectedKeyNum = useIdentity ? 16 : 3;
     const tmpRuntimeConfig = runtimeConfig;
     tmpRuntimeConfig.keyConfig[accounts[0]] = 'Test1234';
     const runtime = await createDefaultRuntime(web3, dfs, runtimeConfig);
@@ -84,7 +91,7 @@ describe('Runtime', function test() {
   });
 
   it('should create a new and valid runtime with a mnemonic and a password and merge with given accounts', async () => {
-    const expectedKeyNum = useIdentity ? 7 : 5;
+    const expectedKeyNum = useIdentity ? 18 : 5;
     const tmpRuntimeConfig = runtimeConfig;
     tmpRuntimeConfig.keyConfig[accounts[0]] = 'Test1234';
     tmpRuntimeConfig.mnemonic = 'annual lyrics orbit slight object space jeans ethics broccoli umbrella entry couch';
