@@ -17,7 +17,7 @@
 - add `startBlock` argument to `loadChannelFromBlockchain` in `Payments` to avoid long running function calls
 - update tests to allow running tests via identity
 - include identity tests to automatic test runs
-- skip `vc` creation when `setVerificationAndVc` is used without useIdentity runtime 
+- throw correct error message when running `setVerificationAndVc` without useIdentity runtime 
 
 ### Deprecations
 
