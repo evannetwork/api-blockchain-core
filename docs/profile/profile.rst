@@ -624,6 +624,117 @@ Example
 
 
 
+==============================================================================
+
+.. _profile_setIdentityAccess:
+
+setIdentityAccess
+================================================================================
+
+.. code-block:: typescript
+
+  profile.setIdentityAccess(address, key);
+
+Function description
+
+Add identity key to address book
+
+----------
+Parameters
+----------
+
+#. ``address`` - ``string``: identity address
+#. ``key`` - ``string``: identity datakey
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await profile.setIdentityAccess(identities[0], 'key 0x01_b');
+
+
+
+==============================================================================
+
+.. _profile_removeIdentityAccess:
+
+removeIdentityAccess
+================================================================================
+
+.. code-block:: typescript
+
+  profile.removeIdentityAccess(address);
+
+Function description
+
+Remove identity key from address book
+
+----------
+Parameters
+----------
+
+#. ``address`` - ``string``: identity address to be removed
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await profile.removeIdentityAccess(identities[0]);
+
+
+==============================================================================
+
+.. _profile_getIdentityAccessList:
+
+getIdentityAccessList
+================================================================================
+
+.. code-block:: typescript
+
+  profile.getIdentityAccessList();
+
+Function description
+
+Gets a list of identities that have access from address book. Keep in mind address book needs to be loaded beforehand using the :ref:`loadForAccount` API.
+
+----------
+Parameters
+----------
+
+(none)
+
+-------
+Returns
+-------
+
+``any``: identity list from address loaded book
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await profile.getIdentityAccessList();
+
+
+
 ------------------------------------------------------------------------------
 
 .. _profile_getAddressBookAddress:
