@@ -313,11 +313,6 @@ export async function createDefaultRuntime(
         activeIdentity = await verifications.getIdentityForAccount(activeAccount, true);
       }
 
-      // activeIdentity = runtimeConfig.useIdentity
-      // hashing logic to be also included in here for
-      // activeIdentity = runtimeConfig.identity
-      //   || await verifications.getIdentityForAccount(activeAccount, true);
-
       underlyingAccount = activeAccount;
       signer.updateConfig(
         { verifications },
@@ -461,9 +456,6 @@ export async function createDefaultRuntime(
     rightsAndRoles,
     sharing,
   });
-  // introduce check again if no key copy it from your primary
-  // identity add to runtimeConfig.keyconfig
-  // const sha3Identity = web3.utils.soliditySha3(runtimeConfig.identity);
 
   // this key provider is linked to profile for key retrieval
   // keyProviderOwn is not linked to profile to prevent profile key lookups

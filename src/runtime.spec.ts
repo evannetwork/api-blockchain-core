@@ -64,7 +64,6 @@ describe('Runtime', function test() {
 
     await runtime.profile.storeForAccount(runtime.profile.treeLabels.addressBook);
     await runtime.profile.loadForAccount(runtime.profile.treeLabels.addressBook);
-    await runtime.profile.getIdentityAccessList();
 
     const switchedRuntime = await getRuntimeForIdentity(runtime, identities[1]);
     expect(runtime).to.be.ok;

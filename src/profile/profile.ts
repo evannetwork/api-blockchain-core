@@ -500,7 +500,6 @@ export class Profile extends Logger {
    */
   public async getIdentityAccessList(): Promise<any> {
     const addressBook = await this.getAddressBook();
-    // console.dir(addressBook);
     const { keys } = addressBook;
     // filter key list by hashes with identity access and assign it to result
     const result = {};
