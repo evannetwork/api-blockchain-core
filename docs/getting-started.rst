@@ -23,7 +23,17 @@ First you need to get blockchain core into your project. This can be done using 
 
 After that you need to create a blockchain core runtime with a predefined configuration.
 
-Node.js version >= 10 is supported. The framework has been tested with Node.js 10, 11 and 12.
+.. _compatiblity-blockchain-core:
+
+Node.js compatibility
+======================
+
+Supported and tested Node.js versions are:
+
+* Node.js 10.x
+* Node.js 11.x
+* Node.js 12.x
+* Node.js 13.x
 
 .. _configuring-and-initializing-blockchain-core:
 

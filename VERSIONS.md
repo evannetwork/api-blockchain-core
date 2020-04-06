@@ -21,6 +21,7 @@
 - throw correct error message when running `setVerificationAndVc` without useIdentity runtime 
 - use `useIdentity` flag for `createOfflineProfile`
 - pass `password` to `createOfflineProfile` to enable dataKey generation based on the users identity
+- checked node 13 compatibility
 
 ### Deprecations
 
