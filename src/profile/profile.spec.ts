@@ -87,17 +87,18 @@ describe('Profile helper', function test() {
 
   it('should remove an identity key', async () => {
     await profile.loadForAccount(profile.treeLabels.addressBook);
-    const beforeSettingList = await profile.getIdentityAccessList();
-
     await profile.setIdentityAccess(identities[1], 'key 0x01_b');
     await profile.storeForAccount(profile.treeLabels.addressBook);
     await profile.loadForAccount(profile.treeLabels.addressBook);
+    
+    const beforeSettingList = await profile.getIdentityAccessList();
+    expect(beforeSettingList[identities[1]]).to.be.eq('key 0x01_b');
 
     await profile.removeIdentityAccess(identities[1]);
     await profile.storeForAccount(profile.treeLabels.addressBook);
     await profile.loadForAccount(profile.treeLabels.addressBook);
     const afterRemovingList = await profile.getIdentityAccessList();
-    expect(afterRemovingList).to.be.deep.eq(beforeSettingList);
+    expect(afterRemovingList).to.not.include(identities[1]);
   });
 
   it('should remove an identity', async () => {
