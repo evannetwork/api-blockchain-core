@@ -643,7 +643,7 @@ export async function getRuntimeForIdentity(existingRuntime: Runtime,
   const clonedRuntimeConfig = cloneDeep(existingRuntime.runtimeConfig);
 
   // check if identity is defined in the runtimeConfig
-  if (!clonedRuntimeConfig.identity) {
+  if (clonedRuntimeConfig.identity !== identity) {
     clonedRuntimeConfig.identity = identity;
   }
 

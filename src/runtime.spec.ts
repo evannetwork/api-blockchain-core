@@ -54,7 +54,10 @@ describe('Runtime', function test() {
   });
 
   it('should switch the runtime for identity', async () => {
-    const runtime = await createDefaultRuntime(web3, dfs, runtimeConfig);
+    const runtime = await createDefaultRuntime(web3, dfs, {
+      ...runtimeConfig,
+      identity: identities[0],
+    });
     await runtime.profile.loadForAccount(runtime.profile.treeLabels.addressBook);
     await runtime.profile.getIdentityAccessList();
     await runtime.profile.setIdentityAccess(
@@ -69,6 +72,7 @@ describe('Runtime', function test() {
     expect(runtime).to.be.ok;
     expect(switchedRuntime).to.be.ok;
     expect(switchedRuntime.profile).to.exist;
+    expect(switchedRuntime.activeIdentity).to.be.eq(identities[1]);
   });
 
   it('should create a new runtime and parse accountid and password in keyConfig', async () => {
