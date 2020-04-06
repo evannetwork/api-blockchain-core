@@ -44,7 +44,6 @@ describe('Runtime', function test() {
       accountMap,
       keyConfig: dataKeys,
       useIdentity,
-      // identity: identities[1],
     };
   });
 
