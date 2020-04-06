@@ -84,7 +84,7 @@ export enum VerificationsStatusFlagsV2 {
   parentUntrusted = 'parentUntrusted',
   /** verification has been issued and then rejected by subject */
   rejected = 'rejected',
-  /** verification issuer is the same account as the subject */
+  /** verification issuer is the same as the subject */
   selfIssued = 'selfIssued',
 }
 
@@ -452,7 +452,7 @@ export class Verifications extends Logger {
    * confirms a verification; this can be done, if a verification has been issued for a subject and
    * the subject wants to confirm it
    *
-   * @param      {string}   accountId       account, that performs the action
+   * @param      {string}   confirmer       identity or account to confirm the verification
    * @param      {string}   subject         verification subject
    * @param      {string}   verificationId  id of a verification to confirm
    * @param      {boolean}  isIdentity      (optional): ``true`` if given ``subject`` is an
@@ -460,7 +460,7 @@ export class Verifications extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async confirmVerification(
-    accountId: string,
+    confirmer: string,
     subject: string,
     verificationId: string,
     isIdentity = false,
@@ -469,7 +469,7 @@ export class Verifications extends Logger {
       subject,
       isIdentity,
       'approveVerification',
-      { from: accountId },
+      { from: confirmer },
       verificationId,
     );
 
@@ -482,18 +482,17 @@ export class Verifications extends Logger {
    * identity is either a 20B contract address (for account identities) or a 32B identity hash
    * contract identities
    *
-   * @param      {string}  accountId          account that runs transaction, receiver of identity
-   *                                          when omitting the other arguments
+   * @param      {string}  creator            identity or account that runs transaction, receiver of
+   *                                          identity when omitting the other arguments
    * @param      {string}  contractId         (optional) contract address to create the identity
-   *                                          for, creates account identity for ``accountId`` if
-   *                                          omitted
+   *                                          for, creates identity for ``creator`` if omitted
    * @param      {bool}    updateDescription  (optional) update description of contract, defaults to
    *                                          ``true``
    * @param      {bool}    linkContract       link contract address to its identity
    * @return     {Promise<string>}  new identity (20Bytes for accounts, 32Bytes for other)
    */
   public async createIdentity(
-    accountId: string,
+    creator: string,
     contractId?: string,
     updateDescription = true,
     linkContract = true,
@@ -504,7 +503,7 @@ export class Verifications extends Logger {
     if (!contractId && linkContract) {
       // create Identity contract
       const identityContract = await this.options.executor.createContract(
-        'VerificationHolder', [accountId], { from: accountId, gas: 3000000 },
+        'VerificationHolder', [creator], { from: creator, gas: 3000000 },
       );
 
       const identityStorage = this.contracts.storage.options.address !== nullAddress
@@ -516,24 +515,24 @@ export class Verifications extends Logger {
       await this.options.executor.executeContractTransaction(
         identityStorage,
         'registerUser',
-        { from: accountId },
+        { from: creator },
         identityContract.options.address,
       );
       identity = identityContract.options.address;
     } else {
-      if (accountId === this.config.activeIdentity) {
+      if (creator === this.config.activeIdentity) {
         identity = await this.options.executor.executeContractTransaction(
           this.contracts.registry,
           'createIdentity',
           {
             event: { eventName: 'IdentityCreated', target: 'VerificationsRegistry' },
-            from: accountId,
+            from: creator,
             getEventResult: (_, args) => args.identity,
           },
         );
       } else {
         identity = await this.executeAndHandleEventResult(
-          accountId,
+          creator,
           this.contracts.registry.methods.createIdentity().encodeABI(),
           { contract: this.contracts.registry, eventName: 'IdentityCreated' },
           (_, args) => args.identity,
@@ -542,29 +541,29 @@ export class Verifications extends Logger {
 
       // write identity to description
       if (updateDescription) {
-        const description = await this.options.description.getDescription(contractId, accountId);
+        const description = await this.options.description.getDescription(contractId, creator);
         description.public.identity = identity;
         // update to dbcpVersion 2 if 1 is selected, to support the new identity property
         if (!description.public.dbcpVersion || description.public.dbcpVersion === 1) {
           description.public.dbcpVersion = 2;
         }
-        await this.options.description.setDescriptionToContract(contractId, description, accountId);
+        await this.options.description.setDescriptionToContract(contractId, description, creator);
       }
 
       // link contract address to its identity in global registry?
       if (linkContract) {
         const link = `0x${contractId.substr(2).toLowerCase().padStart(64, '0')}`;
-        if (accountId === this.config.activeIdentity) {
+        if (creator === this.config.activeIdentity) {
           await this.options.executor.executeContractTransaction(
             this.contracts.registry,
             'linkIdentity',
-            { from: accountId },
+            { from: creator },
             identity,
             link,
           );
         } else {
           await this.executeAndHandleEventResult(
-            accountId,
+            creator,
             this.contracts.registry.methods.linkIdentity(identity, link).encodeABI(),
           );
         }
@@ -572,7 +571,7 @@ export class Verifications extends Logger {
     }
 
     // clear cache for this account
-    this.deleteFromVerificationCache(accountId, '/');
+    this.deleteFromVerificationCache(creator, '/');
 
     return identity;
   }
@@ -617,7 +616,7 @@ export class Verifications extends Logger {
    * verification may only delete it, if they are the issuer as well. If not, they can only react to
    * it by confirming or rejecting the verification.
    *
-   * @param      {string}   accountId       account, that performs the action
+   * @param      {string}   deletor         identity or account deleting the verification
    * @param      {string}   subject         the subject of the verification
    * @param      {string}   verificationId  id of a verification to delete
    * @param      {boolean}  isIdentity      (optional): ``true`` if given ``subject`` is an
@@ -625,7 +624,7 @@ export class Verifications extends Logger {
    * @return     {Promise<void>}  resolved when done
    */
   public async deleteVerification(
-    accountId: string,
+    deletor: string,
     subject: string,
     verificationId: string,
     isIdentity = false,
@@ -634,7 +633,7 @@ export class Verifications extends Logger {
       subject,
       isIdentity,
       'removeVerification',
-      { from: accountId },
+      { from: deletor },
       verificationId,
     );
 
@@ -840,8 +839,9 @@ export class Verifications extends Logger {
    * usually is a transaction, that has been prepared by the identity owner and is now submitted to
    * the chain and executed by another account.
    *
-   * @param      {string}                       accountId       account, that sends transaction to
-   *                                                            the blockchain and pays for it
+   * @param      {string}                       executorAddress      identity or account, that sends
+   *                                                           transaction to the blockchain and
+   *                                                           pays for it
    * @param      {VerificationsDelegationInfo}  txInfo          details about the transaction
    * @param      {<type>}                       event           The event
    * @param      {Function}                     getEventResult  The get event result
@@ -849,7 +849,7 @@ export class Verifications extends Logger {
    *                                                            triggered by this transaction
    */
   public async executeTransaction(
-    accountId: string,
+    executorAddress: string,
     txInfo: VerificationsDelegationInfo,
     { event = null, getEventResult = null }: { event?: any; getEventResult?: Function } = {},
   ): Promise<any> {
@@ -867,7 +867,7 @@ export class Verifications extends Logger {
       : this.contracts.registry.options.address); // contract/pseudonym identity given
 
     return this.executeAndHandleEventResult(
-      accountId,
+      executorAddress,
       input,
       event,
       getEventResult,
@@ -883,16 +883,17 @@ export class Verifications extends Logger {
    * This account will be the origin of the transaction and not of the verification.
    * Second argument is generated with ``signSetVerificationTransaction``.
    *
-   * @param      {string}                       accountId  account, that submits the transaction
+   * @param      {string}                       executorAddress  identity or account, that submits
+   *                                                             the transaction
    * @param      {VerificationsDelegationInfo}  txInfo     information with verification tx data
    * @return     {Promise<string>}  id of new verification
    */
   public async executeVerification(
-    accountId: string,
+    executorAddress: string,
     txInfo: VerificationsDelegationInfo,
   ): Promise<any> {
     return this.executeTransaction(
-      accountId,
+      executorAddress,
       txInfo,
       {
         event: {
@@ -928,7 +929,7 @@ export class Verifications extends Logger {
   /**
    * Gets current execution nonce for an identity or an accounts identity.
    *
-   * @param      {string}   issuer      account or identity to get execution nonce for
+   * @param      {string}   issuer      identity or account to get execution nonce for
    * @param      {boolean}  isIdentity  optional, true if given issuer is an identity, defaults to
    *                                    ``false``
    * @return     {Promise<string>}  execution nonce
@@ -1576,14 +1577,15 @@ export class Verifications extends Logger {
    * track additional informations about the rejection. Issuer and Subject can reject a special
    * verification.
    *
-   * @param      {string}         accountId       account, that performs the action
-   * @param      {string}         subject         account, that rejects the verification
-   * @param      {string}         verificationId  id of a verification to reject
-   * @param      {any}            rejectReason    (optional) rejectReason object
+   * @param      {string}   rejector        identity or account rejecting the verification
+   * @param      {string}   subject         account, that rejects the verification
+   * @param      {string}   verificationId  id of a verification to reject
+   * @param      {any}      rejectReason    (optional) rejectReason object
+   * @param      {boolean}  isIdentity      Indicates if rejectr is an identity
    * @return     {Promise<void>}  resolved when done
    */
   public async rejectVerification(
-    accountId: string,
+    rejector: string,
     subject: string,
     verificationId: string,
     rejectReason?: any,
@@ -1608,7 +1610,7 @@ export class Verifications extends Logger {
       subject,
       isIdentity,
       'rejectVerification',
-      { from: accountId },
+      { from: rejector },
       verificationId,
       rejectReason,
     );
@@ -1738,6 +1740,11 @@ export class Verifications extends Logger {
     isIdentity = false,
     uri = '',
   ): Promise<{vcId: string; verificationId: string}> {
+    // early exit, when a runtime without useIdentity is used - did instance will be missing
+    if (!this.options.did) {
+      throw new Error(`Tried to create a vc without a useIdentity runtime for ${subject}.`);
+    }
+
     const verificationId = await this.setVerification(
       issuer,
       subject,
@@ -1794,24 +1801,27 @@ export class Verifications extends Logger {
   /**
    * set description for a verification under a domain owned by given account
    *
-   * @param      {string}  accountId    accountId, that performs the description update
-   * @param      {string}  topic        name of the verification (full path) to set description
-   * @param      {string}  domain       domain of the verification, this is a subdomain under
-   *                                    'verifications.evan', so passing `example` will link
-   *                                    verifications description to 'example.verifications.evan'
-   * @param      {any}     description  description of the verification; can be an Envelope but only
-   *                                    public properties are used
+   * @param      {string}  identityOrAccount  identity or  account, that performs the description
+   *                                          update
+   * @param      {string}  topic              name of the verification (full path) to set
+   *                                          description
+   * @param      {string}  domain             domain of the verification, this is a subdomain under
+   *                                          'verifications.evan', so passing `example` will link
+   *                                          verifications description to
+   *                                          'example.verifications.evan'
+   * @param      {any}     description        description of the verification; can be an Envelope
+   *                                          but only public properties are used
    * @return     {Promise<void>}  resolved when done
    */
   public async setVerificationDescription(
-    accountId: string, topic: string, domain: string, description: any,
+    identityOrAccount: string, topic: string, domain: string, description: any,
   ): Promise<void> {
     let toSet = JSON.parse(JSON.stringify(description));
     if (!Object.prototype.hasOwnProperty.call(toSet, 'public')) {
       toSet = { public: toSet };
     }
     const domainWithHash = this.getFullDescriptionDomainWithHash(topic, domain);
-    await this.options.description.setDescription(domainWithHash, toSet, accountId);
+    await this.options.description.setDescription(domainWithHash, toSet, identityOrAccount);
 
     // clear cache for verifications using this description ens address
     this.deleteFromVerificationCache('*', topic);

@@ -411,7 +411,7 @@ getDidDocumentTemplate
 
   did.getDidDocumentTemplate();
 
-Gets a DID document for currently configured account/identity pair. Notice, that this document may a
+Gets a DID document for currently configured identity. Notice, that this document may a
 complete DID document for currently configured active identity, a part of it or not matching it at
 all. You can use the result of this function to build a new DID document but should extend it or an
 existing DID document, if your details derive from default format.

@@ -1788,6 +1788,13 @@ describe('Verifications handler', function test() {
   });
 
   describe('when working with verifications and VCs using identities', () => {
+    (useIdentity ? it.skip : it)('should throw well defined error message, when setting vc without useIdentity', async () => {
+      const verification = verifications.setVerificationAndVc(
+        identity0, identity1, '/company', 0, null, null, null, useIdentity,
+      );
+      await expect(verification).to.be.rejectedWith(`Tried to create a vc without a useIdentity runtime for ${identity1}`);
+    });
+
     (useIdentity ? it : it.skip)('can create a verification with a Vc', async () => {
       const verification = verifications.setVerificationAndVc(
         identity0, identity1, '/company', 0, null, null, null, useIdentity,

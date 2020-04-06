@@ -98,7 +98,7 @@ getSmartAgentAuthHeaders
 
     utils.getSmartAgentAuthHeaders(runtime[, message]);
 
-create auth header data to authenticate with current account against a smart agent server
+create auth header data to authenticate with active account or underlying account of active identity against a smart agent server
 
 ----------
 Parameters
@@ -106,6 +106,7 @@ Parameters
 
 #. ``runtime`` - ``Runtime``: an initialized runtime
 #. ``message`` - ``string`` (optional): message to sign, defaults to current timestamp
+#. ``identity`` - ``string`` (optional): identity address that is controlled by the underlying account of the runtime, uses activeIdentity as default
 
 -------
 Returns
@@ -122,4 +123,4 @@ Example
     const authData = await getSmartAgentAuthHeaders(runtime);
     console.log(authData);
     // Output:
-    // EvanAuth 0x001De828935e8c7e4cb56Fe610495cAe63fb2612,EvanMessage 1566569193297,EvanSignedMessage 0x4ce5c94b3fb77e6fbd7dcbbedc564058d841c849020f11514b7e525776b033eb6cb54f480b604ae7dccb9858eb116267cfe547fab52679730b5e33ac975dbbab1b
+    // EvanAuth 0x001De828935e8c7e4cb56Fe610495cAe63fb2612,EvanIdentity 0x0d87204C3957D73b68AE28d0AF961d3c72403906,EvanMessage 1566569193297,EvanSignedMessage 0x4ce5c94b3fb77e6fbd7dcbbedc564058d841c849020f11514b7e525776b033eb6cb54f480b604ae7dccb9858eb116267cfe547fab52679730b5e33ac975dbbab1b

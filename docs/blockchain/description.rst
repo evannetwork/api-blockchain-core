@@ -2,7 +2,7 @@
 Description
 ================================================================================
 
-.. list-table:: 
+.. list-table::
    :widths: auto
    :stub-columns: 1
 
@@ -102,7 +102,7 @@ Example
 -------
 
 .. code-block:: typescript
-  
+
   const description = new Description({
       cryptoProvider,
       dfs,
@@ -133,7 +133,7 @@ Parameters
 ----------
 
 #. ``address`` - ``string``: The ens address or contract address where the description is stored
-#. ``accountId`` - ``string``: Account id to load the contract address for
+#. ``accountId`` - ``string``: identity or account that is allowed to read the description
 
 -------
 Returns
@@ -152,7 +152,7 @@ Example
     const description = await runtime.description.getDescription(address, accountId);
     console.dir(description);
     // Output:
-    // { public: 
+    // { public:
     //    { name: 'DBCP sample greeter',
     //      description: 'smart contract with a greeting message and a data property',
     //      author: 'dbcp test',
@@ -180,7 +180,7 @@ Parameters
 
 #. ``address`` - ``string``: contract address or ENS address
 #. ``envelope`` - ``Envelope``: description as an envelope
-#. ``accountId`` - ``string``: ETH account id
+#. ``accountId`` - ``string``: identity or account supposed to encrypt the description
 
 -------
 Returns
@@ -302,7 +302,7 @@ getDescriptionFromContract
 
 .. code-block:: javascript
 
-    description.getDescriptionFromContract(address, accountId);
+    description.getDescriptionFromContract(address, myIdentity);
 
 loads description envelope from contract
 
@@ -310,8 +310,8 @@ loads description envelope from contract
 Parameters
 ----------
 
-#. ``address`` - ``string``: The ens address or contract address where the description is stored
-#. ``accountId`` - ``string``: Account id to load the contract address for
+#. ``address`` - ``string``: The contract address where the description is stored
+#. ``readerAddress`` - ``string``: identity or account that is allowed to read the description
 
 -------
 Returns
@@ -326,11 +326,11 @@ Example
 .. code-block:: javascript
 
     const address = '0x9c0Aaa728Daa085Dfe85D3C72eE1c1AdF425be49';
-    const accountId = '0x000000000000000000000000000000000000beef';
-    const description = await runtime.description.getDescriptionFromContract(address, accountId);
+    const identityId = '0x000000000000000000000000000000000000beef';
+    const description = await runtime.description.getDescriptionFromContract(address, identityId);
     console.dir(description);
     // Output:
-    // { public: 
+    // { public:
     //    { name: 'DBCP sample greeter',
     //      description: 'smart contract with a greeting message and a data property',
     //      author: 'dbcp test',
@@ -348,7 +348,7 @@ setDescriptionToContract
 
 .. code-block:: javascript
 
-    description.setDescriptionToContract(contractAddress, envelope, accountId);
+    description.setDescriptionToContract(contractAddress, envelope, myIdentity);
 
 store description at contract
 
@@ -358,7 +358,7 @@ Parameters
 
 #. ``contractAddress`` - ``string``: The contract address where description will be stored
 #. ``envelope`` - ``Envelope``: description as an envelope
-#. ``accountId`` - ``string``: ETH account id
+#. ``encryptorAddress`` - ``string``: identity or account that is supposed to encrypt the description
 
 -------
 Returns
@@ -373,7 +373,7 @@ Example
 .. code-block:: javascript
 
     const address = '0x...';
-    const accountId = '0x...';
+    const myIdentity = '0x...';
     const description = {
       "public": {
         "name": "DBCP sample contract",
@@ -387,7 +387,7 @@ Example
         "dbcpVersion": 2
       }
     };
-    await runtime.description.setDescriptionToContract(address, description, accountId);
+    await runtime.description.setDescriptionToContract(address, description, myIdentity);
 
 ------------------------------------------------------------------------------
 
@@ -433,7 +433,7 @@ Example
     const description = await runtime.description.getDescriptionFromContract(address, accountId);
     console.dir(description);
     // Output:
-    // { public: 
+    // { public:
     //    { name: 'DBCP sample greeter',
     //      description: 'smart contract with a greeting message and a data property',
     //      author: 'dbcp test',
@@ -461,7 +461,7 @@ Parameters
 
 #. ``contractAddress`` - ``string``: The ens address where description will be stored
 #. ``envelope`` - ``Envelope``: description as an envelope
-#. ``accountId`` - ``string``: ETH account id
+#. ``accountId`` - ``string``: identity or account that is supposed to encrypt the description
 
 -------
 Returns

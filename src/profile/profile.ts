@@ -597,8 +597,8 @@ export class Profile extends Logger {
   }
 
   /**
-   * load profile for given account from global profile contract, if a tree is given, load that tree
-   * from ipld as well
+   * load profile for given identity or account from global profile contract, if a tree is given,
+   * load that tree from ipld as well
    *
    * @param      {string}         tree    tree to load ('bookmarkedDapps', 'contracts', ...)
    * @return     {Promise<void>}  resolved when done
@@ -697,7 +697,7 @@ export class Profile extends Logger {
   /**
    * remove a contact from bookmarkedDapps
    *
-   * @param      {string}         address  account key of the contact
+   * @param      {string}         address  identity or account of the contact
    * @return     {Promise<void>}  resolved when done
    */
   public async removeContact(address: string): Promise<void> {
@@ -812,16 +812,16 @@ export class Profile extends Logger {
   /**
    * store given state for this account
    *
-   * @param      {string}         accountId     account id of a contact
-   * @param      {boolean}        contactKnown  true if known, false if not
+   * @param      {string}         contactAddress identity or account of a contact
+   * @param      {boolean}        contactKnown   true if known, false if not
    * @return     {Promise<void>}  resolved when done
    */
-  public async setContactKnownState(accountId: string, contactKnown: boolean): Promise<void> {
+  public async setContactKnownState(contactAddress: string, contactKnown: boolean): Promise<void> {
     this.throwIfNotOwner('set a contact known state');
     await this.dataContract.setMappingValue(
       this.profileContract,
       'contacts',
-      accountId,
+      contactAddress,
       `0x${(contactKnown ? '1' : '0').padStart(64, '0')}`, // cast bool to bytes32
       this.activeAccount,
       false,
@@ -915,7 +915,8 @@ export class Profile extends Logger {
    * stores profile tree or given hash to global profile contract
    *
    * @param      {string}   tree      tree to store ('bookmarkedDapps', 'contracts', ...)
-   * @param      {string}   ipldHash  store this hash instead of the current tree for account
+   * @param      {string}   ipldHash  store this hash instead of the current tree for the profile's
+   *                                  identity or account
    * @return     {Promise}  resolved when done
    */
   public async storeForAccount(tree: string, ipldHash?: string): Promise<void> {
@@ -961,7 +962,7 @@ export class Profile extends Logger {
   }
 
   /**
-   * Throws an exception if a profile was loaded for another account.
+   * Throws an exception if a profile was loaded for another identity or account.
    *
    * @param      {string}  action  description of the action that should be performed
    */

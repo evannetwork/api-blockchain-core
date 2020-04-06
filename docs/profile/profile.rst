@@ -2,7 +2,7 @@
 Profile
 ================================================================================
 
-.. list-table:: 
+.. list-table::
    :widths: auto
    :stub-columns: 1
 
@@ -98,7 +98,7 @@ Example
 -------
 
 .. code-block:: typescript
-  
+
   const profile = new Profile({
     accountId: accounts[0],
     contractLoader,
@@ -324,7 +324,7 @@ setContactKnownState
 
 .. code-block:: typescript
 
-  profile.setContactKnownState(accountId, contactKnown);
+  profile.setContactKnownState(contactAddress, contactKnown);
 
 Store given state for this account.
 
@@ -332,7 +332,7 @@ Store given state for this account.
 Parameters
 ----------
 
-#. ``accountId`` - ``string``: account id of a contact
+#. ``contactAddress`` - ``string``: contact identity or account
 #. ``contactKnown`` - ``boolean``: true if known, false if not
 
 -------
@@ -347,8 +347,8 @@ Example
 
 .. code-block:: typescript
 
-  // mark accountId as a known contact
-  profile.setContactKnownState(accountId, true);
+  // mark contact1 as a known contact
+  profile.setContactKnownState(contact1, true);
 
 
 ------------------------------------------------------------------------------
@@ -459,7 +459,7 @@ Parameters
 ----------
 
 #. ``tree`` - ``string``: tree to store ('bookmarkedDapps', 'contracts', ...)
-#. ``ipldHash`` - ``string`` (optional): store this hash instead of the current tree for account
+#. ``ipldHash`` - ``string`` (optional): store this hash instead of the current tree for the profile's identity or account
 
 -------
 Returns
@@ -896,7 +896,7 @@ Remove a contact from bookmarkedDapps.
 Parameters
 ----------
 
-#. ``address`` - ``string``: account key of the contact
+#. ``address`` - ``string``: identity or account of the contact
 
 -------
 Returns
@@ -1540,7 +1540,7 @@ Save set of plugins to profile.
 Parameters
 ----------
 
-#. ``plugins`` - ``any``: entire collections of plugins to store in profile 
+#. ``plugins`` - ``any``: entire collections of plugins to store in profile
 
 -------
 Returns
