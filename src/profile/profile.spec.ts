@@ -90,7 +90,7 @@ describe('Profile helper', function test() {
     await profile.setIdentityAccess(identities[1], 'key 0x01_b');
     await profile.storeForAccount(profile.treeLabels.addressBook);
     await profile.loadForAccount(profile.treeLabels.addressBook);
-    
+
     const beforeSettingList = await profile.getIdentityAccessList();
     expect(beforeSettingList[identities[1]]).to.be.eq('key 0x01_b');
 
@@ -99,18 +99,6 @@ describe('Profile helper', function test() {
     await profile.loadForAccount(profile.treeLabels.addressBook);
     const afterRemovingList = await profile.getIdentityAccessList();
     expect(afterRemovingList).to.not.include(identities[1]);
-  });
-
-  it('should remove an identity', async () => {
-    await profile.addDappBookmark('sample1.test', sampleDesc);
-    await profile.addDappBookmark('sample2.test', sampleDesc);
-
-    expect(await profile.getDappBookmark('sample1.test')).to.be.ok;
-    expect(await profile.getDappBookmark('sample2.test')).to.be.ok;
-
-    await profile.removeDappBookmark('sample1.test');
-    expect(await profile.getDappBookmark('sample1.test')).not.to.be.ok;
-    expect(await profile.getDappBookmark('sample2.test')).to.be.ok;
   });
 
   it('should be able to store data container plugins', async () => {
