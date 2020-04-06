@@ -711,7 +711,7 @@ getIdentityAccessList
 
 Function description
 
-Gets a list of identities that have access from address book. Keep in mind address book needs to be loaded beforehand using the :ref:`loadForAccount` API.
+Gets a list of identities, where the profile identity has access to, from address book. Keep in mind address book needs to be loaded beforehand using the :ref:`loadForAccount` API.
 
 ----------
 Parameters
