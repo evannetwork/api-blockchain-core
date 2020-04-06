@@ -90,7 +90,7 @@ describe('Profile helper', function test() {
     await profile.setIdentityAccess(identities[1], 'key 0x01_b');
     await profile.storeForAccount(profile.treeLabels.addressBook);
     await profile.loadForAccount(profile.treeLabels.addressBook);
-    
+
     const beforeSettingList = await profile.getIdentityAccessList();
     expect(beforeSettingList[identities[1]]).to.be.eq('key 0x01_b');
 

@@ -29,8 +29,8 @@ import {
   SignerInternal,
   Unencrypted,
 } from '@evan.network/dbcp';
-
 import { cloneDeep } from 'lodash';
+
 import { Aes } from './encryption/aes';
 import { AesBlob } from './encryption/aes-blob';
 import { AesEcb } from './encryption/aes-ecb';
@@ -43,6 +43,7 @@ import { Description } from './shared-description';
 import { Did } from './did/did';
 import { EncryptionWrapper } from './encryption/encryption-wrapper';
 import { getEnvironment } from './common/utils';
+import { Identity } from './identity/identity';
 import { Ipfs } from './dfs/ipfs';
 import { IpfsLib } from './dfs/ipfs-lib';
 import { Ipld } from './dfs/ipld';
@@ -56,8 +57,8 @@ import { RightsAndRoles } from './contracts/rights-and-roles';
 import { ServiceContract } from './contracts/service-contract/service-contract';
 import { Sharing } from './contracts/sharing';
 import { SignerIdentity } from './contracts/signer-identity';
-import { Verifications } from './verifications/verifications';
 import { Vc } from './vc/vc';
+import { Verifications } from './verifications/verifications';
 import { Votings } from './votings/votings';
 
 /**
@@ -80,6 +81,7 @@ export interface Runtime {
   environment?: string;
   eventHub?: EventHub;
   executor?: Executor;
+  identity?: Identity;
   ipld?: Ipld;
   keyExchange?: KeyExchange;
   keyProvider?: KeyProvider;
@@ -495,6 +497,7 @@ export async function createDefaultRuntime(
 
   let did: Did;
   let vc: Vc;
+  let identity;
   if (runtimeConfig.useIdentity) {
     did = new Did({
       accountStore,
@@ -521,6 +524,20 @@ export async function createDefaultRuntime(
       },
       { credentialStatusEndpoint: config.smartAgents.didAndVc.vcRevokationStatusEndpoint },
     );
+    identity = new Identity({
+      activeIdentity,
+      config,
+      contractLoader,
+      did,
+      executor,
+      mailbox,
+      nameResolver,
+      profile,
+      runtimeConfig,
+      underlyingAccount,
+      verifications,
+      web3,
+    });
     verifications.updateConfig({ did, vc }, { activeIdentity, underlyingAccount });
   }
 
@@ -589,6 +606,7 @@ export async function createDefaultRuntime(
     environment,
     eventHub,
     executor,
+    identity,
     ipld,
     keyExchange,
     keyProvider,
