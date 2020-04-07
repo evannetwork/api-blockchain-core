@@ -644,6 +644,7 @@ export async function getRuntimeForIdentity(existingRuntime: Runtime,
 
   // check if identity is defined in the runtimeConfig
   clonedRuntimeConfig.identity = identity;
+  clonedRuntimeConfig.useIdentity = true;
 
   // hash and add key to clonedRuntimeConfig keyConfig
   const sha3Identity = existingRuntime.web3.utils.soliditySha3(identity);

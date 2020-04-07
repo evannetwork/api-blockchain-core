@@ -71,13 +71,16 @@ describe('Runtime', function test() {
     expect(runtime).to.be.ok;
     expect(switchedRuntime).to.be.ok;
     expect(switchedRuntime.profile).to.exist;
-    expect(switchedRuntime.activeIdentity).to.be.eq(identities[1]);
+    const tempRuntime = await TestUtils.getRuntime(identities[1], null, { useIdentity });
+    expect(switchedRuntime.activeIdentity).to.be.eq(tempRuntime.activeIdentity);
   });
 
   it('should create a new runtime and parse accountid and password in keyConfig', async () => {
-    const expectedKeyNum = useIdentity ? 16 : 3;
-    const tmpRuntimeConfig = runtimeConfig;
-    tmpRuntimeConfig.keyConfig[accounts[0]] = 'Test1234';
+    const expectedKeyNum = 14;
+    const tmpRuntimeConfig = JSON.parse(JSON.stringify(runtimeConfig));
+    tmpRuntimeConfig.keyConfig = {
+      [accounts[0]]: 'Test1234',
+    };
     const runtime = await createDefaultRuntime(web3, dfs, runtimeConfig);
     expect(runtime).to.be.ok;
     expect(Object.keys(runtime.keyProvider.keys).length).to.eq(expectedKeyNum);
@@ -93,7 +96,7 @@ describe('Runtime', function test() {
   });
 
   it('should create a new and valid runtime with a mnemonic and a password and merge with given accounts', async () => {
-    const expectedKeyNum = useIdentity ? 18 : 5;
+    const expectedKeyNum = useIdentity ? 18 : 16;
     const tmpRuntimeConfig = runtimeConfig;
     tmpRuntimeConfig.keyConfig[accounts[0]] = 'Test1234';
     tmpRuntimeConfig.mnemonic = 'annual lyrics orbit slight object space jeans ethics broccoli umbrella entry couch';
