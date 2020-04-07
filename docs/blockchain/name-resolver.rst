@@ -2,7 +2,7 @@
 Name Resolver
 ================================================================================
 
-.. list-table:: 
+.. list-table::
    :widths: auto
    :stub-columns: 1
 
@@ -15,7 +15,7 @@ Name Resolver
    * - Examples
      - `name-resolver.spec.ts <https://github.com/evannetwork/dbcp/tree/master/src/name-resolver.spec.ts>`_
 
-The `NameResolver <https://github.com/evannetwork/dbcp/tree/master/src/name-resolver.ts>`_ is a collection of helper functions, that can be used for ENS interaction. These include: 
+The `NameResolver <https://github.com/evannetwork/dbcp/tree/master/src/name-resolver.ts>`_ is a collection of helper functions, that can be used for ENS interaction. These include:
 
 - setting and getting ENS addresses
 - setting and getting ENS content flags, which is used when setting data in distributed file system, especially in case of setting a description for an `ENS` address
@@ -56,7 +56,7 @@ Example
 -------
 
 .. code-block:: typescript
-  
+
   const nameResolver = new NameResolver({
       cryptoProvider,
       dfs,
@@ -313,7 +313,7 @@ claimAddress
 
 .. code-block:: typescript
 
-  nameResolver.claimAddress(name, accountId[, domainOwnerId, price]);
+  nameResolver.claimAddress(name, executingAddress[, domainOwnerId, price]);
 
 Tries to claim node ownership from parent nodes owner, this assumes, that the parent node owner is a registar, that supports claiming address from it (FIFS registrar or PayableRegistrar).
 
@@ -322,8 +322,8 @@ Parameters
 ----------
 
 #. ``name`` - ``string``: domain name to set (plain text)
-#. ``accountId`` - ``string``: account, that executes the transaction
-#. ``domainOwnerId`` - ``string`` (optional): owner of the new domain, defaults to ``accountId``
+#. ``executingAddress`` - ``string``: identity or account executing the transaction
+#. ``domainOwnerId`` - ``string`` (optional): owner of the new domain, defaults to ``executingAddress``
 #. ``value`` - ``string|number`` (optional): value to send (if registrar is payable)
 
 -------
@@ -338,14 +338,14 @@ Example
 
 .. code-block:: typescript
 
-  // claim '123test.fifs.registrar.test.evan' with account[0] for account[1] from FIFS registrar
+  // claim '123test.fifs.registrar.test.evan' with identities[0] for identities[1] from FIFS registrar
   const domain = '123test.fifs.registrar.test.evan';
-  await nameResolver.claimAddress(domain, accounts[0], accounts[1]);
+  await nameResolver.claimAddress(domain, identities[0], identities[1]);
 
-  // claim '123test.payable.registrar.test.evan' with account[0] for account[1] from payable registrar
+  // claim '123test.payable.registrar.test.evan' with identities[0] for identities[1] from payable registrar
   const domain = '123test.fifs.registrar.test.evan';
   const price = await nameResolver.getPrice(domain);
-  await nameResolver.claimAddress(domain, accounts[0], accounts[1], price);
+  await nameResolver.claimAddress(domain, identities[0], identities[1], price);
 
 
 
@@ -358,7 +358,7 @@ claimPermanentAddress
 
 .. code-block:: typescript
 
-  nameResolver.claimPermanentAddress(name, accountId[, domainOwnerId]);
+  nameResolver.claimPermanentAddress(name, executingAddress[, domainOwnerId]);
 
 Registers a permanent domain via registrar, can only be done by registrar owner.
 
@@ -367,8 +367,8 @@ Parameters
 ----------
 
 #. ``name`` - ``string``: domain name to set (plain text)
-#. ``accountId`` - ``string``: account, that executes the transaction, has to be registrar owner
-#. ``domainOwnerId`` - ``string`` (optional): owner of the new domain, defaults to ``accountId``
+#. ``executingAddress`` - ``string``: identity or account, that executes the transaction, has to be registrar owner
+#. ``domainOwnerId`` - ``string`` (optional): owner of the new domain, defaults to ``executingAddress``
 
 -------
 Returns
@@ -382,9 +382,9 @@ Example
 
 .. code-block:: typescript
 
-  // claim '123sample.evan' with account[0] for account[1] from registrar
+  // claim '123sample.evan' with identities[0] for identities[1] from registrar
   const domain = '123sample.evan';
-  await nameResolver.claimPermanentAddress(domain, accounts[0], accounts[1]);
+  await nameResolver.claimPermanentAddress(domain, identities[0], identities[1]);
 
 
 
@@ -397,7 +397,7 @@ setPrice
 
 .. code-block:: typescript
 
-  nameResolver.setPrice(name, accountId, newPrice);
+  nameResolver.setPrice(name, executingAddress, newPrice);
 
 Set price for a registrar at a domain.
 
@@ -406,7 +406,7 @@ Parameters
 ----------
 
 #. ``name`` - ``string``: ENS address of a domain owned by a registrar (e.g. 'sample.payable.test.evan')
-#. ``accountId`` - ``string``: account that performs the action (needs proper permisions for registrar)
+#. ``executingAddress`` - ``string``: identity or account that performs the action (needs proper permisions for registrar)
 #. ``newPrice`` - ``number|string`` (optional): new price in Wei
 
 -------
@@ -475,7 +475,7 @@ setValidUntil
 
 .. code-block:: typescript
 
-  nameResolver.setValidUntil(name, accountId, newPrice);
+  nameResolver.setValidUntil(name, executingAddress, newPrice);
 
 Set duration, that an address is valid; resolval stops after this, depending on configuration of the ENS an extra period, where owner is still available, can be granted; notice that this can only be done by parent owner of given domain.
 
@@ -484,7 +484,7 @@ Parameters
 ----------
 
 #. ``name`` - ``string``: ENS address of a domain owned by a registrar (e.g. 'sample.payable.test.evan')
-#. ``accountId`` - ``string``: account that performs the action; must be parent owner of given domain
+#. ``executingAddress`` - ``string``: identity or account that performs the action; must be parent owner of given domain
 #. ``validUntil`` - ``number|string``: js timestamp, when name resolution stops
 
 -------
@@ -553,7 +553,7 @@ claimFunds
 
 .. code-block:: typescript
 
-  namerResolver.claimFunds(name, accountId);
+  namerResolver.claimFunds(name, executingAddress);
 
 Verification funds for domain.
 
@@ -562,7 +562,7 @@ Parameters
 ----------
 
 #. ``name`` - ``string``: ENS address of a domain owned by a registrar (e.g. 'sample.payable.test.evan')
-#. ``accountId`` - ``string``: account that performs the action (needs proper permisions for registrar)
+#. ``executingAddress`` - ``string``: identity or account that performs the action (needs proper permisions for registrar)
 
 -------
 Returns
@@ -634,7 +634,7 @@ builds full domain name based on the provided domain config a module initalizati
 Parameters
 ----------
 
-#. ``domainConfig`` - ``string[] | string``: The domain configuration 
+#. ``domainConfig`` - ``string[] | string``: The domain configuration
 #. ``...subLabels`` - ``string[]``: array of domain elements to be looked up and added at the lefthand
 
 -------

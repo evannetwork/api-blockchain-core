@@ -346,17 +346,18 @@ export class Payments extends Logger {
    * Tries to use eth_signTypedData (from EIP712), tries to use personal sign
    * if it fails.
    *
-   * @param proof  Balance proof to be signed
+   * @param signerId  ID of the identity or account which should sign the closing
+   *                 signature (mostly the current active identity/account)
    * @returns  Promise to signature
    */
-  public async getClosingSig(account: string): Promise<string> {
+  public async getClosingSig(signerId: string): Promise<string> {
     if (!this.isChannelValid()) {
       throw new Error('No valid channelInfo');
     }
 
     const params = this.getClosingProofSignatureParams();
     let sig: string;
-    let signAccount = account;
+    let signAccount = signerId;
     if (signAccount === this.options.executor.signer.activeIdentity) {
       signAccount = this.options.executor.signer.underlyingAccount;
     }
@@ -446,21 +447,21 @@ export class Payments extends Logger {
    * channel was found an error is thrown. Additionally, a starting block can be provided to avoid
    * starting from block 0 when looking for payment channels.
    *
-   * @param      {string}  account     Sender/client's account address
+   * @param      {string}  sender     Address of either the Sender/client's identity or account
    * @param      {string}  receiver    Receiver/server's account address
    * @param      {Number}  startBlock  block to start scanning for transactions, defaults to 0
    * @return     {Promise<MicroChannel>}  channel info, if a channel was found
    */
   public async loadChannelFromBlockchain(
-    account: string,
+    sender: string,
     receiver: string,
     startBlock = 0,
   ): Promise<MicroChannel> {
     let channelAccount;
-    if (account === this.options.executor.signer.activeIdentity) {
+    if (sender === this.options.executor.signer.activeIdentity) {
       channelAccount = this.options.executor.signer.underlyingAccount;
     } else {
-      channelAccount = account;
+      channelAccount = sender;
     }
 
     const openEvents = await this.channelManager.getPastEvents('ChannelCreated', {
@@ -544,13 +545,13 @@ export class Payments extends Logger {
    *
    * Replaces current channel data
    *
-   * @param account  Sender/client's account address
+   * @param sender  Address of the Sender/client's identity or account
    * @param receiver  Receiver/server's account address
    * @param deposit  Tokens to be initially deposited in the channel (in Wei)
    * @returns  Promise to MicroChannel info object
    */
   public async openChannel(
-    account: string,
+    sender: string,
     receiver: string,
     deposit: BigNumber|string,
   ): Promise<MicroChannel> {
@@ -563,10 +564,10 @@ export class Payments extends Logger {
     }
 
     let channelAccount;
-    if (account === this.options.executor.signer.activeIdentity) {
+    if (sender === this.options.executor.signer.activeIdentity) {
       channelAccount = this.options.executor.signer.underlyingAccount;
     } else {
-      channelAccount = account;
+      channelAccount = sender;
     }
 
 

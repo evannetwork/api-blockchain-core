@@ -78,7 +78,7 @@ createContract
 
 .. code-block:: typescript
 
-  votings.createContract(accountId, votingsContractOptions);
+  votings.createContract(creator, votingsContractOptions);
 
 Create new voting contract instance.
 
@@ -86,7 +86,7 @@ Create new voting contract instance.
 Parameters
 ----------
 
-#. ``accountId`` - ``string``: account that performs the action
+#. ``creator`` - ``string``: identity or account that should create and own the contract
 #. ``votingsContractOptions`` - |source votingscontractoptions|_: additional options for votings contract
 
 -------
@@ -133,8 +133,8 @@ Parameters
 ----------
 
 #. ``contract`` - ``string|any``: web3 voting contract instance or contract address
-#. ``accountId`` - ``string``: account that performs the action
-#. ``targetAccount`` - ``string``: account to add to votings contract
+#. ``executingAddress`` - ``string``: identity or account that performs the action (usually the voting owner)
+#. ``invitee`` - ``string``: identity or account to add to votings contract
 #. ``memberOptions`` - |source memberoptions|_: options for new member
 
 -------
@@ -176,8 +176,8 @@ Parameters
 ----------
 
 #. ``contract`` - ``string|any``: web3 voting contract instance or contract address
-#. ``accountId`` - ``string``: account that performs the action
-#. ``targetAccount`` - ``string``: account to remove from votings contract
+#. ``remover`` - ``string``: identity or account that performs the action
+#. ``removee`` - ``string``: identity or account to remove from votings contract
 
 -------
 Returns
@@ -208,7 +208,7 @@ getMemberInfo
 
 .. code-block:: typescript
 
-  votings.getMemberInfo(votingsContract, accountId);
+  votings.getMemberInfo(votingsContract, target);
 
 Get info of a member.
 
@@ -217,7 +217,7 @@ Parameters
 ----------
 
 #. ``contract`` - ``string|any``: web3 voting contract instance or contract address
-#. ``targetAccount`` - ``string``: account to get info for
+#. ``target`` - ``string``: identity or account to get info for
 
 -------
 Returns
@@ -253,16 +253,16 @@ isMember
 
 .. code-block:: typescript
 
-  votings.isMember(votingsContract, accountId);
+  votings.isMember(votingsContract, target);
 
-Checks if a given account is member in voting contract.
+Checks if a given identity or account is member in voting contract.
 
 ----------
 Parameters
 ----------
 
 #. ``contract`` - ``string|any``: web3 voting contract instance or contract address
-#. ``targetAccount`` - ``string``: account to get info for
+#. ``target`` - ``string``: identity or account to get info for
 
 -------
 Returns
@@ -297,7 +297,7 @@ createProposal
 
 .. code-block:: typescript
 
-  votings.createProposal(votingsContract, accountId, proposalOptions);
+  votings.createProposal(votingsContract, proposalCreator, proposalOptions);
 
 Create a new proposal in votings contract.
 
@@ -306,7 +306,7 @@ Parameters
 ----------
 
 #. ``contract`` - ``string|any``: web3 voting contract instance or contract address
-#. ``accountId`` - ``string``: account that performs the action
+#. ``proposalCreator`` - ``string``: identity or account to create the proposal
 #. ``proposalOptions`` - |source proposaloptions|_: options for proposal
 
 -------
@@ -507,7 +507,7 @@ vote
 
 .. code-block:: typescript
 
-  votings.vote(votingsContract, accountId, proposal, accept[, comment]);
+  votings.vote(votingsContract, voter, proposal, accept[, comment]);
 
 Vote for a proposal.
 
@@ -516,7 +516,7 @@ Parameters
 ----------
 
 #. ``contract`` - ``string|any``: web3 voting contract instance or contract address
-#. ``accountId`` - ``string``: account that performs the action
+#. ``voter`` - ``string``: identity or account that performs the action
 #. ``proposal`` - ``string``: id of proposal to vote for
 #. ``accept`` - ``boolean``: accept proposal or not
 #. ``comment`` - ``string`` (optional): comment for vote, left empty if omitted
@@ -551,7 +551,7 @@ execute
 
 .. code-block:: typescript
 
-  votings.execute(votingsContract, accountId, proposal[, data]);
+  votings.execute(votingsContract, proposalExecutor, proposal[, data]);
 
 Execute a proposal.
 
@@ -560,7 +560,7 @@ Parameters
 ----------
 
 #. ``contract`` - ``string|any``: web3 voting contract instance or contract address
-#. ``accountId`` - ``string``: account that performs the action
+#. ``proposalExecutor`` - ``string``: identity or account to execute the proposal
 #. ``proposal`` - ``string``: id of proposal to vote for
 #. ``data`` - ``string`` (optional): transaction input bytes as string (`0x${functionhash}${argumentsData}`), defaults to ``0x``
 
@@ -608,7 +608,7 @@ Interfaces
 MemberInfo
 ----------
 
-#. ``address`` - ``string``: accountId of member
+#. ``address`` - ``string``: member's identity or account
 #. ``name`` - ``string``: description text of member
 #. ``memberSince`` - ``string``: date of joining votings contract
 
@@ -637,7 +637,7 @@ ProposalInfo
 #. ``numberOfVotes`` - ``number``: number of submitted votes
 #. ``proposalHash`` - ``string``: checksum of proposal: keccak256(beneficiary, weiAmount, transactionBytecode)
 #. ``proposalPassed`` - ``boolean``: true if executed and proposal passed
-#. ``to`` - ``string``: target of proposal (contract/account to send transaction to)
+#. ``to`` - ``string``: target of proposal (contract/identity/account to send transaction to)
 #. ``value`` - ``string``: amount of Wei to send to target
 
 

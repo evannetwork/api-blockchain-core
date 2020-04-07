@@ -86,7 +86,7 @@ create and initialize new contract
 Parameters
 ----------
 
-#. ``accountId`` - ``string``: owner of the new contract and transaction executor
+#. ``accountId`` - ``string``: owner(identity or account) of the new contract and transaction executor
 #. ``businessCenterDomain`` - ``string``: ENS domain name of the business center
 #. ``service`` - ``any``: service definition
 #. ``descriptionHash`` - ``string`` (optional): bytes2 hash of DBCP description, defaults to ``0x0000000000000000000000000000000000000000000000000000000000000000``
@@ -138,7 +138,7 @@ Parameters
 ----------
 
 #. ``contract`` - ``any|string``: smart contract instance or contract ID
-#. ``accountId`` - ``string``: Ethereum account ID
+#. ``accountId`` - ``string``: identity or account
 #. ``service`` - ``any``: service to set
 #. ``businessCenterDomain`` - ``string``: domain of the business the service contract belongs to
 #. ``skipValidation`` - ``bool`` (optional): skip validation of service definition, validation is enabled by default
@@ -175,7 +175,7 @@ Parameters
 ----------
 
 #. ``contract`` - ``any|string``: smart contract instance or contract ID
-#. ``accountId`` - ``string``: Ethereum account ID
+#. ``accountId`` - ``string``: identity or account
 
 -------
 Returns
@@ -226,7 +226,7 @@ Parameters
 ----------
 
 #. ``contract`` - ``any|string``: smart contract instance or contract ID
-#. ``accountId`` - ``string``: Ethereum account ID
+#. ``accountId`` - ``string``: identity or account
 #. ``call`` - ``any``: call to send
 
 -------
@@ -263,7 +263,7 @@ Parameters
 ----------
 
 #. ``contract`` - ``any|string``: smart contract instance or contract ID
-#. ``accountId`` - ``string``: Ethereum account ID
+#. ``accountId`` - ``string``: identity or account
 #. ``count`` - ``number`` (optional): number of elments to retrieve, defaults to ``10``
 #. ``offset`` - ``number`` (optional): skip this many elements, defaults to ``0``
 #. ``reverse`` - ``boolean`` (optional): retrieve last elements first, defaults to ``false``
@@ -303,7 +303,7 @@ Parameters
 ----------
 
 #. ``contract`` - ``any|string``: smart contract instance or contract ID
-#. ``accountId`` - ``string``: Ethereum account ID
+#. ``accountId`` - ``string``: identity or account
 #. ``callId`` - ``number``: index of the call to retrieve
 
 -------
@@ -421,7 +421,7 @@ Parameters
 ----------
 
 #. ``contract`` - ``any|string``: smart contract instance or contract ID
-#. ``accountId`` - ``string``: Ethereum account ID
+#. ``accountId`` - ``string``: identity or account
 #. ``callId`` - ``number``: id of the call to retrieve
 #. ``to`` - ``string[]``: accountIds, to add sharings for
 #. ``hashKey`` - ``string`` (optional): hash key to share, if omitted, key is retrieved with ``accountId``
@@ -480,7 +480,7 @@ Parameters
 ----------
 
 #. ``contract`` - ``any|string``: smart contract instance or contract ID
-#. ``accountId`` - ``string``: Ethereum account ID
+#. ``accountId`` - ``string``: identity or account
 #. ``answer`` - ``any``: answer to send
 #. ``callId`` - ``number``: index of the call to which the answer was created
 #. ``callAuthor`` - ``string``: Ethereum account ID of the creator of the initial call
@@ -564,7 +564,7 @@ Parameters
 ----------
 
 #. ``contract`` - ``any|string``: smart contract instance or contract ID
-#. ``accountId`` - ``string``: Ethereum account ID
+#. ``accountId`` - ``string``: identity or account
 #. ``callId`` - ``number``: index of the call to which the answer was created
 #. ``answerIndex`` - ``number``: index of the answer to retrieve
 

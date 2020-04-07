@@ -72,8 +72,9 @@ export class Sharing extends Logger {
    * add a sharing to a contract or an ENS address
    *
    * @param      {string}         address     contract address or ENS address
-   * @param      {string}         originator  Ethereum account id of the sharing user
-   * @param      {string}         partner     Ethereum account id for which key shall be added
+   * @param      {string}         originator  identity or account of the sharing user
+   * @param      {string}         partner     identity or account
+   *                                          for which key shall be added
    * @param      {string}         section     data section the key is intended for or '*'
    * @param      {number|string}  block       starting with this block, the key is valid
    * @param      {string}         sharingKey  key to share
@@ -230,11 +231,12 @@ export class Sharing extends Logger {
   }
 
   /**
-   * give hash key "hashKey" to account "partner", if this account does not have a hash key already
+   * give hash key "hashKey" to identity or account "partner", if this account
+   * or identity does not have a hash key already
    *
    * @param      {string}         address     contract adress
-   * @param      {string}         originator  executing users account id
-   * @param      {string}         partner     account id of a contract participant
+   * @param      {string}         originator  executing users identity or account
+   * @param      {string}         partner     identity or account of a contract participant
    * @param      {string}         hashKey     key for DFS hashes
    * @param      {string}         context     (optional) context for encryption
    * @param      {string}         sharingId   id of a sharing (when multi-sharings is used)
@@ -260,8 +262,9 @@ export class Sharing extends Logger {
    * perform a transaction on its own
    *
    * @param      {any}            sharings    a sharings info
-   * @param      {string}         originator  Ethereum account id of the sharing user
-   * @param      {string}         partner     Ethereum account id for which key shall be added
+   * @param      {string}         originator  identity or account of the sharing user
+   * @param      {string}         partner     identity or account
+   *                                          for which key shall be added
    * @param      {string}         section     data section the key is intended for or '*'
    * @param      {number|string}  block       starting with this block, the key is valid
    * @param      {string}         sharingKey  key to share
@@ -305,10 +308,11 @@ export class Sharing extends Logger {
   }
 
   /**
-   * returns an accounts key for file hashes
+   * returns an identity or account key for file hashes
    *
    * @param      {string}           address    contract address or ENS address
-   * @param      {string}           partner    Ethereum account id for which key shall be retrieved
+   * @param      {string}           partner    identity or account
+   *                                           for which key shall be retrieved
    * @param      {string}           sharingId  id of a sharing (when multi-sharings is used)
    * @return     {Promise<string>}  matching key
    */
@@ -324,7 +328,8 @@ export class Sharing extends Logger {
    * get sharing from a contract, if _partner, _section, _block matches
    *
    * @param      {string}        address   address of a contract or an ENS address
-   * @param      {string}        _partner  Ethereum account id for which key shall be retrieved
+   * @param      {string}        _partner  identity or account
+   *                                       for which key shall be retrieved
    * @param      {string}        _section  data section the key is intended for or '*'
    * @param      {number}        _block    starting with this block, the key is valid
    * @return     {Promise<any>}  sharings as an object.
@@ -405,7 +410,8 @@ export class Sharing extends Logger {
    * get a content key from the sharing of a contract
    *
    * @param      {string}           address    contract address or ENS address
-   * @param      {string}           partner    Ethereum account id for which key shall be retrieved
+   * @param      {string}           partner    identity or account
+   *                                           for which key shall be retrieved
    * @param      {string}           section    data section the key is intended for or '*'
    * @param      {number|string}    block      starting with this block, the key is valid
    * @param      {string}           sharingId  id of a sharing (when multi-sharings is used)
@@ -469,10 +475,11 @@ export class Sharing extends Logger {
   }
 
   /**
-   * get history of keys for an account and a section
+   * get history of keys for an identity or account and a section
    *
    * @param      {string}        address    contract address or ENS address
-   * @param      {string}        partner    Ethereum account id for which key shall be retrieved
+   * @param      {string}        partner    identity or account
+   *                                        for which key shall be retrieved
    * @param      {string}        section    data section the key is intended for or '*'
    * @param      {string}        sharingId  id of a sharing (when multi-sharings is used)
    * @return     {Promise<any>}  object with key: blockNr, value: key
@@ -496,8 +503,9 @@ export class Sharing extends Logger {
    * remove a sharing key from a contract with sharing info
    *
    * @param      {string}         address     contract address or ENS address
-   * @param      {string}         originator  Ethereum account id of the sharing user
-   * @param      {string}         partner     Ethereum account id for which key shall be removed
+   * @param      {string}         originator  identity or account of the sharing user
+   * @param      {string}         partner     identity or account for which
+   *                                          key shall be removed
    * @param      {string}         section     data section of the key
    * @param      {string}         sharingId   id of a sharing (when multi-sharings is used)
    * @return     {Promise<void>}  resolved when done
@@ -579,7 +587,7 @@ export class Sharing extends Logger {
    *
    * @param      {string|any}     contract    contract address or instance
    * @param      {any}            sharings    sharings object with encrypted keys
-   * @param      {string}         originator  Ethereum account id of the sharing user
+   * @param      {string}         originator  identity or account of the sharing user
    * @param      {string}         sharingId   id of a sharing (when multi-sharings is used)
    * @return     {Promise<void>}  resolved when done
    */
@@ -650,11 +658,11 @@ export class Sharing extends Logger {
    * Removes properties from given sharing. If a block is given, the specific blocks key is removed,
    * if no block is given, all keys for this section are removed. The same goes for section and
    * partner. Note that only the last properties can be omitted and not properties in between can be
-   * set to null. So for example it is not possible to remove the same field for all accounts by
-   * just setting partner to null.
+   * set to null. So for example it is not possible to remove the same field for all identities or
+   * accounts by just setting partner to null.
    *
    * @param      {any}           sharings  sharings to trim
-   * @param      {string}        partner   Ethereum account id to remove keys for
+   * @param      {string}        partner   identity or account to remove keys for
    * @param      {string}        section   data section to remove keys for
    * @param      {numberstring}  block     block to remove keys for
    */
