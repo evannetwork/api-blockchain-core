@@ -92,7 +92,7 @@ describe('Profile helper', function test() {
     await profile.loadForAccount(profile.treeLabels.addressBook);
 
     const beforeSettingList = await profile.getIdentityAccessList();
-    expect(beforeSettingList[identities[1]]).to.be.eq('key 0x01_b');
+    expect(beforeSettingList[identities[1]].identityAccess).to.be.eq('key 0x01_b');
 
     await profile.removeIdentityAccess(identities[1]);
     await profile.storeForAccount(profile.treeLabels.addressBook);

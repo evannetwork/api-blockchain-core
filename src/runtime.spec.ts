@@ -76,7 +76,7 @@ describe('Runtime', function test() {
   });
 
   it('should create a new runtime and parse accountid and password in keyConfig', async () => {
-    const expectedKeyNum = 14;
+    const expectedKeyNum = useIdentity ? 15 : 15;
     const tmpRuntimeConfig = JSON.parse(JSON.stringify(runtimeConfig));
     tmpRuntimeConfig.keyConfig = {
       [accounts[0]]: 'Test1234',
@@ -96,7 +96,7 @@ describe('Runtime', function test() {
   });
 
   it('should create a new and valid runtime with a mnemonic and a password and merge with given accounts', async () => {
-    const expectedKeyNum = useIdentity ? 18 : 16;
+    const expectedKeyNum = useIdentity ? 19 : 17;
     const tmpRuntimeConfig = runtimeConfig;
     tmpRuntimeConfig.keyConfig[accounts[0]] = 'Test1234';
     tmpRuntimeConfig.mnemonic = 'annual lyrics orbit slight object space jeans ethics broccoli umbrella entry couch';
