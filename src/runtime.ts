@@ -662,6 +662,7 @@ export async function getRuntimeForIdentity(existingRuntime: Runtime,
 
   // check if identity is defined in the runtimeConfig
   clonedRuntimeConfig.identity = identity;
+  clonedRuntimeConfig.useIdentity = true;
 
   // hash and add key to clonedRuntimeConfig keyConfig
   const sha3Identity = existingRuntime.web3.utils.soliditySha3(identity);
@@ -672,5 +673,5 @@ export async function getRuntimeForIdentity(existingRuntime: Runtime,
   const dfs = new Ipfs({ dfsConfig: (existingRuntime.dfs as any).dfsConfig });
 
   // introduce hashing?
-  return this.createDefaultRuntime(existingRuntime.web3, dfs, clonedRuntimeConfig);
+  return createDefaultRuntime(existingRuntime.web3, dfs, clonedRuntimeConfig);
 }

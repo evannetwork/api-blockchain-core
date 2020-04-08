@@ -493,8 +493,6 @@ export class Profile extends Logger {
 
 
   /**
-   * The adress book needs to be loaded beforehand
-   * using loadForAccount API.
    * Gets the identity list from loaded address book.
    * @return     {any}     identity list from address book
    */

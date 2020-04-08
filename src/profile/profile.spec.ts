@@ -77,7 +77,7 @@ describe('Profile helper', function test() {
     await profile.loadForAccount(profile.treeLabels.addressBook);
     await profile.setIdentityAccess(identities[0], 'key 0x01_a');
     const list = await profile.getIdentityAccessList();
-    expect(list).to.be.not.empty;
+    expect(list[identities[0]].identityAccess).to.be.eq('key 0x01_a');
 
     await profile.storeForAccount(profile.treeLabels.addressBook);
     await profile.loadForAccount(profile.treeLabels.addressBook);
@@ -92,13 +92,13 @@ describe('Profile helper', function test() {
     await profile.loadForAccount(profile.treeLabels.addressBook);
 
     const beforeSettingList = await profile.getIdentityAccessList();
-    expect(beforeSettingList[identities[1]]).to.be.eq('key 0x01_b');
+    expect(beforeSettingList[identities[1]].identityAccess).to.be.eq('key 0x01_b');
 
     await profile.removeIdentityAccess(identities[1]);
     await profile.storeForAccount(profile.treeLabels.addressBook);
     await profile.loadForAccount(profile.treeLabels.addressBook);
     const afterRemovingList = await profile.getIdentityAccessList();
-    expect(afterRemovingList).to.not.include(identities[1]);
+    expect(afterRemovingList).to.not.have.any.keys(identities[1]);
   });
 
   it('should be able to store data container plugins', async () => {
