@@ -86,7 +86,7 @@ getRuntimeForIdentity
 
   getRuntimeForIdentity(existingRuntime, identity)
 
-Creates a runtime for a specific identity, based on another runtime. The context of this runtime needs a profile with the corresponding encryptionKeys saved using `setIdentityAccess` or the correct set encrytionKey within the `runtime.keyConfig`.
+Creates a runtime for a specific identity, based on another runtime. The context of this runtime needs a profile with the corresponding encryptionKeys saved using `setIdentityAccess` or the correct set encryptionKey within the `runtime.keyConfig`.
 
 ----------
 Parameters
