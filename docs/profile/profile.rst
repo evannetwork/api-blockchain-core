@@ -731,15 +731,17 @@ Example
   await profile.loadForAccount(profile.treeLabels.addressBook);
   // identities[0] does not have an alias, adding identity to address book
   await profile.setIdentityAccess(identities[0], 'key 0x01_a');
-  // identities[1] does not have an alias, adding identity to address book
+  // identities[1] has an alias, adding identity to address book
   await profile.setIdentityAccess(identities[1], 'key 0x01_b');
   // get list of identities
   await profile.getIdentityAccessList();
 
   Output:
-  { 'sha3(identities[1])': { identityAccess: 'key 0x01_b', alias: 'test account' },
+  { 
+  'sha3(identities[1])': { identityAccess: 'key 0x01_b', alias: 'test account' },
   'sha3(identities[0])': { identityAccess: 'key 0x01_a' },
-  'identities[1]': { identityAccess: 'key 0x01_b', alias: 'test account' } }
+  'identities[1]': { identityAccess: 'key 0x01_b', alias: 'test account' } 
+  }
 
 
 
