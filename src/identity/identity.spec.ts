@@ -67,6 +67,8 @@ describe('identity handling', function test() {
 
   it.only('grant read access to identity', async () => {
     const bmailContent = getBMailContent();
+    // remove access before, it would not send a bmail, if the user was added before
+    await runtime0.identity.removeAccess(identities[1], 'readWrite');
     await runtime0.identity.grantAccess(
       identities[1],
       'read',
@@ -75,7 +77,7 @@ describe('identity handling', function test() {
     );
 
     // get all the bmails
-    const { mails } = await runtime1.mailbox.getReceivedMails(20, 0);
+    const { mails } = await runtime1.mailbox.getReceivedMails(5, 0);
     const foundMailAddress = Object.keys(mails).find(
       (mailAddress: string) => mails[mailAddress]?.content?.title === bmailContent.title,
     );
@@ -86,16 +88,16 @@ describe('identity handling', function test() {
 
     // check if the bmail was received and if the user has get the correct encryptionKey
     const identity0Sha3 = runtime0.web3.utils.soliditySha3(identities[0]);
-    const expectedEncryptionKey = runtime0.config.keyConfig[identity0Sha3];
+    const expectedEncryptionKey = runtime0.runtimeConfig.keyConfig[identity0Sha3];
     expect(encryptionKey).to.be.eq(expectedEncryptionKey);
 
     // check everything can be stored in the profile
-    runtime1.profile.loadForAccount();
+    await runtime1.profile.loadForAccount();
     await runtime1.profile.setIdentityAccess(identities[0], encryptionKey);
     await runtime1.profile.storeForAccount(runtime1.profile.treeLabels.addressBook);
     await runtime1.profile.loadForAccount(runtime1.profile.treeLabels.addressBook);
     const accessList = await runtime1.profile.getIdentityAccessList();
-    expect(accessList[identities[0]]).to.be.eq(encryptionKey);
+    expect(accessList[identities[0]].identityAccess).to.be.eq(encryptionKey);
 
     // check if the user can read on behalf of
     const runtime1For0 = await getRuntimeForIdentity(runtime1, identities[0]);

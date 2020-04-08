@@ -97,12 +97,10 @@ export class Identity extends Logger {
     type: string,
     bmailContent: IdentityBMailContent,
     note?: string,
-  ) {
+  ): Promise<void> {
     const {
       activeIdentity,
-      config,
       mailbox,
-      nameResolver,
       profile,
       runtimeConfig,
       web3,
@@ -114,6 +112,10 @@ export class Identity extends Logger {
     if (type !== 'read' && type !== 'readWrite') {
       throw new Error(`Unknown access type passed to "identity.grantAccess(${identity}, ${type}, ${note})"`);
     }
+
+    // load addressbook to check for changes
+    const addressbook = await profile.getAddressBook();
+    const originContact = { ...addressbook.profile[identity] };
 
     // save information into the current profile about the grant status
     await Promise.all([
@@ -128,34 +130,32 @@ export class Identity extends Logger {
       profile.storeForAccount(profile.treeLabels.addressBook),
     ];
 
-    // send a b-mail including the activeIdentity encryptionKey to the target identity
-    const ensRoot = nameResolver.getDomainName(config.nameResolver.domains.root);
-    promises.push(mailbox.sendMail(
-      {
-        content: {
-          from: activeIdentity,
-          fromAlias: bmailContent.fromAlias,
-          title: bmailContent.title,
-          body: bmailContent.body,
-          attachments: [
-            {
-              fullPath: `/dashboard.vue.${ensRoot}/settings.${ensRoot}`,
-              type: 'url',
-            },
-            {
-              encryptionKey: runtimeConfig.keyConfig[web3.utils.soliditySha3(activeIdentity)],
-              permission: type,
-              type: 'identityAccess',
-            },
-          ],
+    // only send bmail, if the permissions have changed
+    if (!originContact || originContact.hasIdentityAccess !== type) {
+      // send a b-mail including the activeIdentity encryptionKey to the target identity
+      promises.push(mailbox.sendMail(
+        {
+          content: {
+            from: activeIdentity,
+            fromAlias: bmailContent.fromAlias,
+            title: bmailContent.title,
+            body: bmailContent.body,
+            attachments: [
+              {
+                encryptionKey: runtimeConfig.keyConfig[web3.utils.soliditySha3(activeIdentity)],
+                permission: type,
+                type: 'identityAccess',
+              },
+            ],
+          },
         },
-      },
-      activeIdentity,
-      identity,
-    ));
+        activeIdentity,
+        identity,
+      ));
+    }
 
-    // grant access to act on behalf of the identity
-    if (type === 'readWrite') {
+    // grant access to act on behalf of the identity (only if the permission wasn't added before)
+    if (type === 'readWrite' && originContact.hasIdentityAccess !== type) {
       promises.push(this.grantWriteAccess(identity));
     }
 
@@ -164,8 +164,8 @@ export class Identity extends Logger {
   }
 
   /**
-   * Adds a identity to the did (delegate + authorization) and adds the identity to the current
-   * activeIdentities keyholder
+   * Adds a identity to the did (pubKey + authorization) and adds the identity to the current
+   * activeIdentities keyholder.
    *
    * @param      {string}  identity  identity to give write access to.
    */
@@ -192,7 +192,7 @@ export class Identity extends Logger {
       ethereumAddress: identity,
     });
     didDocumentToUpdate.authentication.push(`${didDocumentToUpdate.id}#${identity}`);
-    await did.setDidDocument(activeIdentity, didDocumentToUpdate);
+    await did.setDidDocument(activeDidAddress, didDocumentToUpdate);
 
     // apply the identity as key to the keyHolder contract
     const keyHolderContract = await contractLoader.loadContract('KeyHolder', activeIdentity);
@@ -204,6 +204,136 @@ export class Identity extends Logger {
       1,
       1,
     );
+  }
+
+  /**
+   * Removes the access, to act on behalf of the activeIdentity, for another identity. When removing
+   * read access, a bmail is sent, so the identity gets a notification with a attachment, which
+   * permisssion was removed.
+   *
+   * @param      {string}                identity      identity to remove the access for
+   * @param      {string}                type          read, write, readWrite
+   * @param      {IdentityBMailContent}  bmailContent  optional bmail content to inform the identity
+   */
+  public async removeAccess(
+    identity: string,
+    type: string,
+    bmailContent?: IdentityBMailContent,
+  ): Promise<void> {
+    const {
+      activeIdentity,
+      mailbox,
+      profile,
+    } = this.options;
+    // prevent old profiles and ensure, that only the owner is running this function
+    await this.ensureOwnerAndIdentityProfile();
+
+    // prevent wrong sharing types
+    if (type !== 'read' && type !== 'write' && type !== 'readWrite') {
+      throw new Error(`Unknown access type passed to "identity.removeAccess(${identity}, ${type})"`);
+    }
+
+    if (type.startsWith('read')) {
+      // save information into the current profile about the grant status
+      const addressBook = await profile.getAddressBook();
+      if (addressBook.profile[identity]) {
+        delete addressBook.profile[identity].hasIdentityAccess;
+        delete addressBook.profile[identity].identityAccessGranted;
+        delete addressBook.profile[identity].identityAccessNote;
+      }
+    } else {
+      // save information into the current profile about the grant status
+      await Promise.all([
+        profile.addProfileKey(identity, 'hasIdentityAccess', type),
+        profile.addProfileKey(identity, 'identityAccessGranted', Date.now().toString()),
+      ]);
+    }
+
+    // stack the promises, so we can Promise.all them at the end
+    const promises = [
+      // store the newly added / updated profile keys
+      profile.storeForAccount(profile.treeLabels.addressBook),
+    ];
+
+    if (bmailContent) {
+      // only send bmail, if the permissions have changed
+      promises.push(mailbox.sendMail(
+        {
+          content: {
+            from: activeIdentity,
+            fromAlias: bmailContent.fromAlias,
+            title: bmailContent.title,
+            body: bmailContent.body,
+            attachments: [
+              {
+                permission: type,
+                type: 'identityAccessRemove',
+              },
+            ],
+          },
+        },
+        activeIdentity,
+        identity,
+      ));
+    }
+
+    // grant access to act on behalf of the identity (only if the permission wasn't added before)
+    if (type === 'readWrite' || type === 'write') {
+      promises.push(this.removeWriteAccess(identity));
+    }
+
+    // wait until everything is saved to the chain
+    await Promise.all(promises);
+  }
+
+  /**
+   * Remove a identity from the activeIdentity did (pubKey + authenticiaton) and removes the
+   * identity key from the keyholder.
+   *
+   * @param      {string}  identity  identity to remove write access for
+   */
+  public async removeWriteAccess(identity: string) {
+    await this.ensureOwnerAndIdentityProfile();
+
+    const {
+      activeIdentity,
+      contractLoader,
+      did,
+      executor,
+      nameResolver,
+      underlyingAccount,
+    } = this.options;
+
+    // get the did for the current activeIdentity
+    const activeDidAddress = await did.convertIdentityToDid(activeIdentity);
+    const didDocumentToUpdate = await did.getDidDocument(activeDidAddress);
+    // add the new identity to the did document
+    didDocumentToUpdate.publicKey = didDocumentToUpdate.publicKey.filter(
+      (pubKey: any) => pubKey.ethereumAddress !== identity,
+    );
+    didDocumentToUpdate.authentication = didDocumentToUpdate.authentication.filter(
+      (authKey) => authKey !== `${didDocumentToUpdate.id}#${identity}`,
+    );
+    await did.setDidDocument(activeDidAddress, didDocumentToUpdate);
+
+    // apply the identity as key to the keyHolder contract
+    const keyHolderContract = await contractLoader.loadContract('KeyHolder', activeIdentity);
+    const existingKey = await executor.executeContractTransaction(
+      keyHolderContract,
+      'getKey',
+      { from: underlyingAccount },
+      nameResolver.soliditySha3(identity),
+    );
+    // only remove, when the key wasn't added before, else we will get an error
+    if (existingKey) {
+      await executor.executeContractTransaction(
+        keyHolderContract,
+        'removeKey',
+        { from: underlyingAccount },
+        nameResolver.soliditySha3(identity),
+        1,
+      );
+    }
   }
 
   /**
