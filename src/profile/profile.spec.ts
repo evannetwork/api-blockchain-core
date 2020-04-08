@@ -98,7 +98,7 @@ describe('Profile helper', function test() {
     await profile.storeForAccount(profile.treeLabels.addressBook);
     await profile.loadForAccount(profile.treeLabels.addressBook);
     const afterRemovingList = await profile.getIdentityAccessList();
-    expect(afterRemovingList).to.not.include(identities[1]);
+    expect(afterRemovingList).to.not.have.any.keys(identities[1]);
   });
 
   it('should be able to store data container plugins', async () => {
