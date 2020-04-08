@@ -317,20 +317,21 @@ export class Identity extends Logger {
     await did.setDidDocument(activeDidAddress, didDocumentToUpdate);
 
     // apply the identity as key to the keyHolder contract
+    const sha3Identity = nameResolver.soliditySha3(identity);
     const keyHolderContract = await contractLoader.loadContract('KeyHolder', activeIdentity);
-    const existingKey = await executor.executeContractTransaction(
+    const hasPurpose = await executor.executeContractCall(
       keyHolderContract,
-      'getKey',
-      { from: underlyingAccount },
-      nameResolver.soliditySha3(identity),
+      'keyHasPurpose',
+      sha3Identity,
+      '1',
     );
     // only remove, when the key wasn't added before, else we will get an error
-    if (existingKey) {
+    if (hasPurpose) {
       await executor.executeContractTransaction(
         keyHolderContract,
         'removeKey',
         { from: underlyingAccount },
-        nameResolver.soliditySha3(identity),
+        sha3Identity,
         1,
       );
     }
@@ -347,6 +348,7 @@ export class Identity extends Logger {
     }
 
     const owner = await verifications.getOwnerAddressForIdentity(activeIdentity);
+
     if (underlyingAccount !== owner) {
       throw new Error('Granting write permissions to identity is only allowed by the identity owner.');
     }
