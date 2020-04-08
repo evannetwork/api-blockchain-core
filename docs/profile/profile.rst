@@ -635,9 +635,7 @@ setIdentityAccess
 
   profile.setIdentityAccess(address, key);
 
-Function description
-
-Add identity key to address book
+Add identity key to address book, so a `getRuntimeForIdentity` can be used without specifying the encryptionKey in the keyConfig.
 
 ----------
 Parameters
@@ -672,8 +670,6 @@ removeIdentityAccess
 .. code-block:: typescript
 
   profile.removeIdentityAccess(address);
-
-Function description
 
 Remove identity key from address book
 

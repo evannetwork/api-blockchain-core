@@ -107,4 +107,4 @@ Example
 
 .. code-block:: typescript
 
-  await await getRuntimeForIdentity(runtime, identities[1]);
+  await getRuntimeForIdentity(runtime, identities[1]);

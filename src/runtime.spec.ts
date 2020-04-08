@@ -76,7 +76,7 @@ describe('Runtime', function test() {
   });
 
   it('should create a new runtime and parse accountid and password in keyConfig', async () => {
-    const expectedKeyNum = useIdentity ? 15 : 15;
+    const expectedKeyNum = 15;
     const tmpRuntimeConfig = JSON.parse(JSON.stringify(runtimeConfig));
     tmpRuntimeConfig.keyConfig = {
       [accounts[0]]: 'Test1234',
