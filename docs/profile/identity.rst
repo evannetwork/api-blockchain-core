@@ -21,7 +21,7 @@ Each account that is registered on the evan.network, has a identity with a assig
 
 --------------------------------------------------------------------------------
 
-.. _mailbox_constructor:
+.. _identity_constructor:
 
 constructor
 ================================================================================
