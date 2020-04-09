@@ -15,7 +15,7 @@ Identity
    * - Examples
      - `identity.spec.ts <https://github.com/evannetwork/api-blockchain-core/tree/master/src/identity/identity.spec.ts>`_
 
-Each account that is registered on the evan.network, has a identity with a assigned profile contract. Each identity can be permitted to act on behalf of another identity. This identity library helps to grant / remove read or write permissions to act on behalf of a identity and also to manage identities where a identity was invitited to.
+Each account that is registered on the evan.network has an identity with an assigned profile contract. Each identity can be permitted to act on behalf of another identity. This identity library helps to grant / remove read or write permissions to act on behalf of an identity and also to manage identities an identity was invitited to.
 
 
 
