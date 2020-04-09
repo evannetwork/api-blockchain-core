@@ -71,3 +71,40 @@ Identity based profiles are the entities which act on behalf of an account. All 
     init();
 
 Now you can use an a `runtime` object which uses an identity as an execution point to interact with the evan.network blockchain. Remember to use `runtime.activeIdentity` when you want to specify who is doing an an action when using the API.
+
+
+------------------------------------------------------------------------------
+
+
+
+.. _Identity_Based_Profile_getRuntimeForIdentity:
+
+getRuntimeForIdentity
+================================================================================
+
+.. code-block:: typescript
+
+  getRuntimeForIdentity(existingRuntime, identity)
+
+Creates a runtime for a specific identity, based on another runtime. The context of this runtime needs a profile with the corresponding encryptionKeys saved using `setIdentityAccess` or the correct set encryptionKey within the `runtime.keyConfig`.
+
+----------
+Parameters
+----------
+
+#. ``existingRuntime`` - ``Runtime``: existing runtime instance
+#. ``identity`` - ``string``: identity address
+
+-------
+Returns
+-------
+
+``Promise`` returns ``Runtime``: runtime instance for identity
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await getRuntimeForIdentity(runtime, identities[1]);

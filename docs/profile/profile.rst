@@ -624,6 +624,127 @@ Example
 
 
 
+==============================================================================
+
+.. _profile_setIdentityAccess:
+
+setIdentityAccess
+================================================================================
+
+.. code-block:: typescript
+
+  profile.setIdentityAccess(address, key);
+
+Add identity key to address book, so a `getRuntimeForIdentity` can be used without specifying the encryptionKey in the keyConfig.
+
+----------
+Parameters
+----------
+
+#. ``address`` - ``string``: identity address
+#. ``key`` - ``string``: identity datakey
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await profile.setIdentityAccess(identities[0], 'key 0x01_b');
+
+
+
+==============================================================================
+
+.. _profile_removeIdentityAccess:
+
+removeIdentityAccess
+================================================================================
+
+.. code-block:: typescript
+
+  profile.removeIdentityAccess(address);
+
+Remove identity key from address book
+
+----------
+Parameters
+----------
+
+#. ``address`` - ``string``: identity address to be removed
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  await profile.removeIdentityAccess(identities[0]);
+
+
+==============================================================================
+
+.. _profile_getIdentityAccessList:
+
+getIdentityAccessList
+================================================================================
+
+.. code-block:: typescript
+
+  profile.getIdentityAccessList();
+
+Function description
+
+Gets a list of identities, where the profile identity has access to, from address book. Keep in mind address book needs to be loaded beforehand using the :ref:`loadForAccount` API. The result will be an object containing identity addresses mapped to their encryption keys and sha3 addresses mapped to their identity address. Those identity addresses which have an alias will also return the alias.
+
+----------
+Parameters
+----------
+
+(none)
+
+-------
+Returns
+-------
+
+``any``: identity list from address loaded book
+
+-------
+Example
+-------
+
+.. code-block:: typescript
+
+  // load address book
+  await profile.loadForAccount(profile.treeLabels.addressBook);
+  // identities[0] does not have an alias, adding identity to address book
+  await profile.setIdentityAccess(identities[0], 'key 0x01_a');
+  // identities[1] has an alias, adding identity to address book
+  await profile.setIdentityAccess(identities[1], 'key 0x01_b');
+  // get list of identities
+  await profile.getIdentityAccessList();
+
+  Output:
+  { 
+  'sha3(identities[1])': { identityAccess: 'key 0x01_b', alias: 'test account' },
+  'sha3(identities[0])': { identityAccess: 'key 0x01_a' },
+  'identities[1]': { identityAccess: 'key 0x01_b', alias: 'test account' } 
+  }
+
+
+
 ------------------------------------------------------------------------------
 
 .. _profile_getAddressBookAddress:

@@ -248,6 +248,19 @@ export class Profile extends Logger {
   }
 
   /**
+   * Sets an identity to address book.
+   *
+   * @param      {string}  address  identity address
+   * @param      {string}  key    identity datakey
+   * @return     {Promise<void>}  resolved when done
+   */
+  public async setIdentityAccess(address: string, key: string): Promise<void> {
+    this.throwIfNotOwner('add identity Key');
+    const context = 'identityAccess';
+    await this.addContactKey(address, context, key);
+  }
+
+  /**
    * add a profile value to an account
    *
    * @param      {string}         address  account key of the contact
@@ -478,6 +491,38 @@ export class Profile extends Logger {
     );
   }
 
+
+  /**
+   * Gets the identity list from loaded address book.
+   * @return     {any}     identity list from address book
+   */
+  public async getIdentityAccessList(): Promise<any> {
+    const addressBook = await this.getAddressBook();
+    const { keys } = addressBook;
+    // filter key list by hashes with identity access and assign it to result
+    const result = {};
+    for (const sha9Hash of Object.keys(keys)) {
+      if (keys[sha9Hash].identityAccess) {
+        result[sha9Hash] = { identityAccess: keys[sha9Hash].identityAccess };
+      }
+    }
+    const profiles = Object.keys(addressBook.profile);
+    const activeIdentityHash = this.options.nameResolver.soliditySha3(this.activeAccount);
+    for (const id of profiles) {
+      const sha9Hash = this.options.nameResolver.soliditySha3(
+        ...[
+          this.options.nameResolver.soliditySha3(id),
+          activeIdentityHash,
+        ].sort(),
+      );
+      if (result[sha9Hash]) {
+        result[sha9Hash].alias = addressBook.profile[id].alias;
+        result[id] = result[sha9Hash];
+      }
+    }
+    return result;
+  }
+
   /**
    * Return the saved profile information according to the specified profile type. No type directly
    * uses "user" type.
@@ -679,6 +724,25 @@ export class Profile extends Logger {
     }
     this.ensureTree('bookmarkedDapps');
     await this.ipld.remove(this.trees.bookmarkedDapps, `bookmarkedDapps/${address}`);
+  }
+
+
+  /**
+   * Removes an identity access from address book.
+   *
+   * @param      {string}  address  identity address
+   * @return     {Promise<void>} resolved when done
+   */
+  public async removeIdentityAccess(address: string): Promise<void> {
+    this.throwIfNotOwner('remove identity key');
+    const addressHash = this.nameResolver.soliditySha3(
+      ...[
+        this.nameResolver.soliditySha3(address),
+        this.nameResolver.soliditySha3(this.activeAccount),
+      ].sort(),
+    );
+    const addressBook = await this.getAddressBook();
+    delete (addressBook.keys[addressHash].identityAccess);
   }
 
   /**

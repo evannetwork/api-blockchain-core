@@ -30,6 +30,7 @@ import {
   Unencrypted,
 } from '@evan.network/dbcp';
 
+import { cloneDeep } from 'lodash';
 import { Aes } from './encryption/aes';
 import { AesBlob } from './encryption/aes-blob';
 import { AesEcb } from './encryption/aes-ecb';
@@ -302,7 +303,16 @@ export async function createDefaultRuntime(
   let underlyingAccount: string;
   if (runtimeConfig.useIdentity) {
     try {
-      activeIdentity = await verifications.getIdentityForAccount(activeAccount, true);
+      if (runtimeConfig.identity) {
+        const sha3Identity = web3.utils.soliditySha3(runtimeConfig.identity);
+        if (!runtimeConfig.keyConfig[sha3Identity]) {
+          throw new Error('identity key not set');
+        }
+        activeIdentity = runtimeConfig.identity;
+      } else {
+        activeIdentity = await verifications.getIdentityForAccount(activeAccount, true);
+      }
+
       underlyingAccount = activeAccount;
       signer.updateConfig(
         { verifications },
@@ -446,6 +456,7 @@ export async function createDefaultRuntime(
     rightsAndRoles,
     sharing,
   });
+
   // this key provider is linked to profile for key retrieval
   // keyProviderOwn is not linked to profile to prevent profile key lookups
   keyProvider.init(profile);
@@ -601,4 +612,47 @@ export async function createDefaultRuntime(
     ...(vc && { vc }),
     ...(underlyingAccount && { underlyingAccount }),
   };
+}
+
+/**
+ * Creates and switches to a new runtime for identity.
+ *
+ * @param      {Runtime}  existingRuntime  existing runtime instance
+ * @param      {string}   identity         identity address
+ * @return     {Promise<Runtime>}  runtime instance
+ */
+export async function getRuntimeForIdentity(existingRuntime: Runtime,
+  identity: string): Promise<Runtime> {
+  const identityList = await existingRuntime.profile.getIdentityAccessList();
+  let key = identityList[identity]?.identityAccess;
+  // check if identityList contains the idenitity, if not throw an error.
+  if (!key) {
+    const addressHash = existingRuntime.nameResolver.soliditySha3(
+      ...[
+        existingRuntime.nameResolver.soliditySha3(identity),
+        existingRuntime.nameResolver.soliditySha3(existingRuntime.activeIdentity),
+      ].sort(),
+    );
+    key = identityList[addressHash]?.identityAccess;
+    if (!key) {
+      throw new Error('Access to identity is not permitted');
+    }
+  }
+
+  // clone the runtimeConfig from existingRuntime
+  const clonedRuntimeConfig = cloneDeep(existingRuntime.runtimeConfig);
+
+  // check if identity is defined in the runtimeConfig
+  clonedRuntimeConfig.identity = identity;
+  clonedRuntimeConfig.useIdentity = true;
+
+  // hash and add key to clonedRuntimeConfig keyConfig
+  const sha3Identity = existingRuntime.web3.utils.soliditySha3(identity);
+  const sha9Identity = existingRuntime.web3.utils.soliditySha3(sha3Identity, sha3Identity);
+  clonedRuntimeConfig.keyConfig[sha3Identity] = key;
+  clonedRuntimeConfig.keyConfig[sha9Identity] = key;
+  // create new dfs
+  const dfs = new Ipfs({ dfsConfig: (existingRuntime.dfs as any).dfsConfig });
+
+  return createDefaultRuntime(existingRuntime.web3, dfs, clonedRuntimeConfig);
 }

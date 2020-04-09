@@ -117,10 +117,11 @@ describe('Onboarding helper', function test() {
   });
 
   it('should be able to create an offline profile', async () => {
-    const accountToUse = runtime.underlyingAccount;
-    const identity = await runtime.verifications.getIdentityForAccount(accountToUse, true);
+    const tempRuntime = await TestUtils.getRuntime(accounts[2], null, { useIdentity });
+    const accountToUse = tempRuntime.underlyingAccount;
+    const identity = await tempRuntime.verifications.getIdentityForAccount(accountToUse, true);
     const port = 42069;
-    const pKey = await runtime.accountStore.getPrivateKey(accountToUse);
+    const pKey = await tempRuntime.accountStore.getPrivateKey(accountToUse);
     const accessToken = 'randomToken';
     const contractId = '0x1234random';
 
@@ -133,7 +134,7 @@ describe('Onboarding helper', function test() {
         try {
           expect(req.body).to.have.property('accountId').that.equals(accountToUse);
           expect(req.body).to.have.property('signature');
-          expect(runtime.web3.eth.accounts.recover(
+          expect(tempRuntime.web3.eth.accounts.recover(
             'Gimme Gimme Gimme!', req.body.signature,
           )).to.equal(accountToUse);
           res.send({
@@ -160,7 +161,7 @@ describe('Onboarding helper', function test() {
             expect(req.body).to.have.nested.property('didTransaction.sourceIdentity').that.equals(identity);
           }
           expect(req.body).to.have.property('signature');
-          expect(runtime.web3.eth.accounts.recover(
+          expect(tempRuntime.web3.eth.accounts.recover(
             'Gimme Gimme Gimme!', req.body.signature,
           )).to.equal(accountToUse);
           res.send({});
@@ -174,13 +175,13 @@ describe('Onboarding helper', function test() {
 
       // Client side -- Initiate onboarding
       Onboarding.createOfflineProfile(
-        runtime,
+        tempRuntime,
         {
           accountDetails: {
             accountName: 'Test',
           },
         },
-        accounts[0],
+        accounts[2],
         pKey,
         '',
         '',

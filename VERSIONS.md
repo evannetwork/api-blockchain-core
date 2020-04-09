@@ -2,6 +2,8 @@
 
 ## Next Version
 ### Features
+- add method `getRuntimeForIdentity` to create a runtime for a specific identity
+- add methods `setIdentityAccess`, `removeIdentityAccess` and `getIdentityAccessList` for managing access to identities
 - A DID document's `@context` and `controller` properties can now also be arrays
 - ensure support for `Runtime`s `useIdentity` flag in entire library
 - update following modules for `useIdentity` support

@@ -12,7 +12,7 @@ Welcome to blockchain-core's documentation!
 
   getting-started
   identity_based_profile
-  
+
 .. toctree::
   :maxdepth: 2
   :glob:

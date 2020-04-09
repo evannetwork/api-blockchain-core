@@ -21,9 +21,11 @@ import 'mocha';
 import { expect, use } from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
 
-import { createDefaultRuntime } from './runtime';
+import { createDefaultRuntime, getRuntimeForIdentity } from './runtime';
 import { TestUtils } from './test/test-utils';
-import { accountMap, accounts, useIdentity } from './test/accounts';
+import {
+  accountMap, accounts, useIdentity, identities, dataKeys,
+} from './test/accounts';
 
 use(chaiAsPromised);
 
@@ -40,9 +42,7 @@ describe('Runtime', function test() {
 
     runtimeConfig = {
       accountMap,
-      keyConfig: {
-        [web3.utils.soliditySha3(accounts[1])]: '0030c5e7394585400b1f00d1267b27c3a80080f9000000000000000000000012',
-      },
+      keyConfig: dataKeys,
       useIdentity,
     };
   });
@@ -52,10 +52,35 @@ describe('Runtime', function test() {
     expect(runtime).to.be.ok;
   });
 
+  it('should switch the runtime for identity', async () => {
+    const runtime = await createDefaultRuntime(web3, dfs, {
+      ...runtimeConfig,
+      identity: identities[0],
+    });
+    await runtime.profile.loadForAccount(runtime.profile.treeLabels.addressBook);
+    await runtime.profile.getIdentityAccessList();
+    await runtime.profile.setIdentityAccess(
+      identities[1],
+      dataKeys[web3.utils.sha3(identities[1])],
+    );
+
+    await runtime.profile.storeForAccount(runtime.profile.treeLabels.addressBook);
+    await runtime.profile.loadForAccount(runtime.profile.treeLabels.addressBook);
+
+    const switchedRuntime = await getRuntimeForIdentity(runtime, identities[1]);
+    expect(runtime).to.be.ok;
+    expect(switchedRuntime).to.be.ok;
+    expect(switchedRuntime.profile).to.exist;
+    const tempRuntime = await TestUtils.getRuntime(identities[1], null, { useIdentity });
+    expect(switchedRuntime.activeIdentity).to.be.eq(tempRuntime.activeIdentity);
+  });
+
   it('should create a new runtime and parse accountid and password in keyConfig', async () => {
-    const expectedKeyNum = useIdentity ? 5 : 3;
-    const tmpRuntimeConfig = runtimeConfig;
-    tmpRuntimeConfig.keyConfig[accounts[0]] = 'Test1234';
+    const expectedKeyNum = 15;
+    const tmpRuntimeConfig = JSON.parse(JSON.stringify(runtimeConfig));
+    tmpRuntimeConfig.keyConfig = {
+      [accounts[0]]: 'Test1234',
+    };
     const runtime = await createDefaultRuntime(web3, dfs, runtimeConfig);
     expect(runtime).to.be.ok;
     expect(Object.keys(runtime.keyProvider.keys).length).to.eq(expectedKeyNum);
@@ -71,7 +96,7 @@ describe('Runtime', function test() {
   });
 
   it('should create a new and valid runtime with a mnemonic and a password and merge with given accounts', async () => {
-    const expectedKeyNum = useIdentity ? 7 : 5;
+    const expectedKeyNum = useIdentity ? 19 : 17;
     const tmpRuntimeConfig = runtimeConfig;
     tmpRuntimeConfig.keyConfig[accounts[0]] = 'Test1234';
     tmpRuntimeConfig.mnemonic = 'annual lyrics orbit slight object space jeans ethics broccoli umbrella entry couch';
