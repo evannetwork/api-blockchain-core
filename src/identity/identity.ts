@@ -50,7 +50,7 @@ export interface IdentityOptions extends LoggerOptions {
 
 /**
  * Options that can be passed to the `grantAccess` function, so the logic can track permitted users
- * and there metadata in the addressbook.
+ * and their metadata in the addressbook.
  */
 export interface IdentityAccessPayload {
   hasIdentityAccess: string;
