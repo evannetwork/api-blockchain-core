@@ -83,7 +83,7 @@ export class Identity extends Logger {
   }
 
   /**
-   * Grants access to the current active identity to the passed identity, depending on the passed
+   * Grants the current active identity access to the passed identity, depending on the passed
    * type (read / readWrite).
    *
    * @param      {string}  identity  identity to give access
