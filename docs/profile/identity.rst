@@ -36,7 +36,7 @@ Creates a new identity instance with a specific identity / underlying address co
 Parameters
 ----------
 
-#. ``options`` - ``MailboxOptions``: options for Mailbox constructor.
+#. ``options`` - ``IdentityOptions``: options for Identity constructor.
     * ``activeIdentity`` - |source activeIdentity|_: identity address to manage
     * ``contractLoader`` - |source contractLoader|_: |source contractLoader|_ instance
     * ``did`` - |source did|_: |source did|_ instance
