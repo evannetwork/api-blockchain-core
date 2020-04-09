@@ -31,7 +31,7 @@ import { Did } from '../did/did';
 import { Verifications } from '../verifications/verifications';
 
 /**
- * parameters for KeyExchange constructor
+ * parameters for Identity constructor
  */
 export interface IdentityOptions extends LoggerOptions {
   activeIdentity: string;
