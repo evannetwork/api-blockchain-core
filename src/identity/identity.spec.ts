@@ -21,7 +21,7 @@ import 'mocha';
 import { expect, use } from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
 
-import { accounts, identities } from '../test/accounts';
+import { accounts, identities, useIdentity } from '../test/accounts';
 import { Identity, IdentityOptions, IdentityBMailContent } from './identity';
 import { Runtime, getRuntimeForIdentity } from '../runtime';
 import { Mailbox, Mail } from '../mailbox';
@@ -96,7 +96,7 @@ describe('identity handling', function test() {
     runtime1 = await TestUtils.getRuntime(accounts[1], null, { useIdentity: true });
   });
 
-  describe('ensure correct function usage', () => {
+  describe('useIdentity false', () => {
     it('runtime should not have identity instance for old profiles', async () => {
       const oldRuntime0 = await TestUtils.getRuntime(accounts[0], null, { useIdentity: false });
       expect(oldRuntime0.identity).to.be.eq(undefined);
@@ -108,110 +108,114 @@ describe('identity handling', function test() {
       const grantAccessP = identity0Inst.grantAccess(identities[1], 'read', getBMailContent());
       await expect(grantAccessP).to.be.rejectedWith('"grantAccess" is only supported for identity based profiles.');
     });
-
-    it('only grant access of type read / readWrite', async () => {
-      const grantAccessP = runtime0.identity.grantAccess(identities[1], 'gnarf', getBMailContent());
-      await expect(grantAccessP).to.be.rejectedWith(`Unknown access type passed to "identity.grantAccess(${identities[1]}, gnarf, undefined)`);
-    });
-
-    it('only remove access of type read / write / readWrite', async () => {
-      const grantAccessP = runtime0.identity.removeAccess(identities[1], 'gnarf', getBMailContent());
-      await expect(grantAccessP).to.be.rejectedWith(`Unknown access type passed to "identity.removeAccess(${identities[1]}, gnarf)`);
-    });
-
-    it('only owner can grant access to an identity', async () => {
-      const { bmailContent } = await grantAccess0To1('readWrite');
-
-      const runtime1For0 = await getRuntimeForIdentity(runtime1, identities[0]);
-      // grant access
-      const grantAccessP = runtime1For0.identity.grantAccess(identities[2], 'readWrite', bmailContent);
-      expect(grantAccessP).to.be.rejectedWith('Granting write permissions to identity is only allowed by the identity owner.');
-    });
   });
 
-  describe('grant / remove permissions', () => {
-    it('grant read access to identity', async () => {
-      const { encryptionKey } = await grantAccess0To1('read');
+  (useIdentity ? describe : describe.skip)('useIdentity true', () => {
+    describe('ensure correct function usage', () => {
+      it('only grant access of type read / readWrite', async () => {
+        const grantAccessP = runtime0.identity.grantAccess(identities[1], 'gnarf', getBMailContent());
+        await expect(grantAccessP).to.be.rejectedWith(`Unknown access type passed to "identity.grantAccess(${identities[1]}, gnarf, undefined)`);
+      });
 
-      const accessList = await runtime1.profile.getIdentityAccessList();
-      const identity0EdgeHash = runtime0.nameResolver.soliditySha3(
-        ...[
-          runtime0.nameResolver.soliditySha3(identities[0]),
-          runtime0.nameResolver.soliditySha3(identities[1]),
-        ].sort(),
-      );
-      expect(accessList[identity0EdgeHash].identityAccess).to.be.eq(encryptionKey);
+      it('only remove access of type read / write / readWrite', async () => {
+        const grantAccessP = runtime0.identity.removeAccess(identities[1], 'gnarf', getBMailContent());
+        await expect(grantAccessP).to.be.rejectedWith(`Unknown access type passed to "identity.removeAccess(${identities[1]}, gnarf)`);
+      });
 
-      // check if the user can read on behalf of
-      const runtime1For0 = await getRuntimeForIdentity(runtime1, identities[0]);
-      const addressBook = await runtime1For0.profile.getAddressBook();
-      expect(addressBook.profile[identities[1]].hasIdentityAccess).to.be.eq('read');
+      it('only owner can grant access to an identity', async () => {
+        const { bmailContent } = await grantAccess0To1('readWrite');
+
+        const runtime1For0 = await getRuntimeForIdentity(runtime1, identities[0]);
+        // grant access
+        const grantAccessP = runtime1For0.identity.grantAccess(identities[2], 'readWrite', bmailContent);
+        expect(grantAccessP).to.be.rejectedWith('Granting write permissions to identity is only allowed by the identity owner.');
+      });
     });
 
-    it('grant write access to identity', async () => {
-      await grantAccess0To1('readWrite');
+    describe('grant / remove permissions', () => {
+      it('grant read access to identity', async () => {
+        const { encryptionKey } = await grantAccess0To1('read');
 
-      const runtime1For0 = await getRuntimeForIdentity(runtime1, identities[0]);
-      await expect(runtime1For0.profile.addProfileKey(
-        identities[1],
-        'identityAccessNote', 'More awesome, than you thought!',
-      )).to.be.ok;
-      await expect(runtime1For0.profile.storeForAccount(
-        runtime1.profile.treeLabels.addressBook,
-      )).to.be.ok;
+        const accessList = await runtime1.profile.getIdentityAccessList();
+        const identity0EdgeHash = runtime0.nameResolver.soliditySha3(
+          ...[
+            runtime0.nameResolver.soliditySha3(identities[0]),
+            runtime0.nameResolver.soliditySha3(identities[1]),
+          ].sort(),
+        );
+        expect(accessList[identity0EdgeHash].identityAccess).to.be.eq(encryptionKey);
 
-      await runtime0.profile.loadForAccount(runtime1.profile.treeLabels.addressBook);
-      const addressBook = await runtime1For0.profile.getAddressBook();
-      expect(addressBook.profile[identities[1]].identityAccessNote).to.be.eq('More awesome, than you thought!');
-    });
+        // check if the user can read on behalf of
+        const runtime1For0 = await getRuntimeForIdentity(runtime1, identities[0]);
+        const addressBook = await runtime1For0.profile.getAddressBook();
+        expect(addressBook.profile[identities[1]].hasIdentityAccess).to.be.eq('read');
+      });
 
-    it('should be able to remove write permissions', async () => {
-      await grantAccess0To1('read');
+      it('grant write access to identity', async () => {
+        await grantAccess0To1('readWrite');
 
-      const runtime1For0 = await getRuntimeForIdentity(runtime1, identities[0]);
-      await runtime1For0.profile.addProfileKey(
-        identities[1],
-        'identityAccessNote',
-        'More awesome, than you thought!',
-      );
+        const runtime1For0 = await getRuntimeForIdentity(runtime1, identities[0]);
+        await expect(runtime1For0.profile.addProfileKey(
+          identities[1],
+          'identityAccessNote', 'More awesome, than you thought!',
+        )).to.be.ok;
+        await expect(runtime1For0.profile.storeForAccount(
+          runtime1.profile.treeLabels.addressBook,
+        )).to.be.ok;
 
-      await runtime0.profile.loadForAccount(runtime1.profile.treeLabels.addressBook);
-      const addressBook = await runtime1For0.profile.getAddressBook();
-      expect(addressBook.profile[identities[1]].identityAccessNote).to.be.eq('More awesome, than you thought!');
+        await runtime0.profile.loadForAccount(runtime1.profile.treeLabels.addressBook);
+        const addressBook = await runtime1For0.profile.getAddressBook();
+        expect(addressBook.profile[identities[1]].identityAccessNote).to.be.eq('More awesome, than you thought!');
+      });
 
-      await runtime0.identity.removeAccess(identities[1], 'write');
+      it('should be able to remove write permissions', async () => {
+        await grantAccess0To1('read');
 
-      await runtime1For0.profile.addProfileKey(
-        identities[1],
-        'identityAccessNote',
-        'Much more awesome, than you thought!',
-      );
-      await expect(runtime1For0.profile.storeForAccount(
-        runtime1.profile.treeLabels.addressBook,
-      )).to.be.rejectedWith(new RegExp('executeOnIdentity failed', 'i'));
-    });
+        const runtime1For0 = await getRuntimeForIdentity(runtime1, identities[0]);
+        await runtime1For0.profile.addProfileKey(
+          identities[1],
+          'identityAccessNote',
+          'More awesome, than you thought!',
+        );
 
-    it('should reject when having no write permissions', async () => {
-      await grantAccess0To1('read');
+        await runtime0.profile.loadForAccount(runtime1.profile.treeLabels.addressBook);
+        const addressBook = await runtime1For0.profile.getAddressBook();
+        expect(addressBook.profile[identities[1]].identityAccessNote).to.be.eq('More awesome, than you thought!');
 
-      const runtime1For0 = await getRuntimeForIdentity(runtime1, identities[0]);
-      await runtime1For0.profile.addProfileKey(
-        identities[1],
-        'identityAccessNote',
-        'More awesome, than you thought!',
-      );
-      await expect(runtime1For0.profile.storeForAccount(
-        runtime1.profile.treeLabels.addressBook,
-      )).to.be.rejectedWith(new RegExp('executeOnIdentity failed', 'i'));
-    });
+        await runtime0.identity.removeAccess(identities[1], 'write');
 
-    it('should send bmail when removing access', async () => {
-      await grantAccess0To1('read');
+        await runtime1For0.profile.addProfileKey(
+          identities[1],
+          'identityAccessNote',
+          'Much more awesome, than you thought!',
+        );
+        await expect(runtime1For0.profile.storeForAccount(
+          runtime1.profile.treeLabels.addressBook,
+        )).to.be.rejectedWith(new RegExp('executeOnIdentity failed', 'i'));
+      });
 
-      const removeBmail = getBMailContent();
-      await runtime0.identity.removeAccess(identities[1], 'readWrite', removeBmail);
-      const accessMail = await getBmailWithTitle(runtime1.mailbox, removeBmail.title);
-      expect(accessMail.content.attachments[0].type).to.be.eq('identityAccessRemove');
+      it('should reject when having no write permissions', async () => {
+        await grantAccess0To1('read');
+
+        const runtime1For0 = await getRuntimeForIdentity(runtime1, identities[0]);
+        await runtime1For0.profile.addProfileKey(
+          identities[1],
+          'identityAccessNote',
+          'More awesome, than you thought!',
+        );
+        await expect(runtime1For0.profile.storeForAccount(
+          runtime1.profile.treeLabels.addressBook,
+        )).to.be.rejectedWith(new RegExp('executeOnIdentity failed', 'i'));
+      });
+
+      it('should send bmail when removing access', async () => {
+        await grantAccess0To1('read');
+
+        const removeBmail = getBMailContent();
+        await runtime0.identity.removeAccess(identities[1], 'readWrite', removeBmail);
+        const accessMail = await getBmailWithTitle(runtime1.mailbox, removeBmail.title);
+        expect(accessMail.content.attachments[0].type).to.be.eq('identityAccessRemove');
+      });
     });
   });
 });
