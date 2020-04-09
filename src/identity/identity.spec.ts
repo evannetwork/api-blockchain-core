@@ -38,7 +38,7 @@ describe('identity handling', function test() {
   const getBMailContent = (): IdentityBMailContent => ({
     body: 'shared identity',
     fromAlias: 'bcc_test',
-    title: `Identity acces ${Date.now() + Math.random()}`,
+    title: `Identity access ${Date.now() + Math.random()}`,
   });
 
   /**

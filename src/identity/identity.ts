@@ -68,11 +68,11 @@ export interface IdentityBMailContent {
 }
 
 /**
- * The KeyExchange module is used to exchange communication keys between two parties, assuming that
- * both have created a profile and public have a public facing partial Diffie Hellman key part (the
- * combination of their own secret and the shared secret)
+ * Each identity can be permitted to act on behalf of another identity. This identity
+ * library helps to grant / remove read or write permissions to act on behalf of an identity and
+ * also to manage identities an identity was invitited to.
  *
- * @class      KeyExchange (name)
+ * @class      Identity (name)
  */
 export class Identity extends Logger {
   options: IdentityOptions;
@@ -83,13 +83,16 @@ export class Identity extends Logger {
   }
 
   /**
-   * Grants the current active identity access to the passed identity, depending on the passed
-   * type (read / readWrite).
+   * Grants the current active identity access to the passed identity, depending on the passed type
+   * (read / readWrite). Sends the identities encryption key via bmail and uses ``grantWriteAccess``
+   * internally to grant ``write`` permission.
    *
-   * @param      {string}  identity  identity to give access
-   * @param      {string}  type      read / readWrite
-   * @param      {string}  note      Optional note that should be saved for this identity. (role in
-   *                                 a company, name, ...)
+   * @param      {string}                identity      identity to give access
+   * @param      {string}                type          read / readWrite
+   * @param      {IdentityBMailContent}  bmailContent  content that should be passed as
+   *                                                   bmail.content
+   * @param      {string}                note          Optional note that should be saved for this
+   *                                                   identity. (role in a company, name, ...)
    */
   public async grantAccess(
     identity: string,
@@ -163,8 +166,8 @@ export class Identity extends Logger {
   }
 
   /**
-   * Adds a identity to the did (pubKey + authorization) and adds the identity to the current
-   * activeIdentities keyholder.
+   * Adds a identity to the identity did document (pubKey + authorization) and adds the identity to
+   * the current activeIdentities keyholder.
    *
    * @param      {string}  identity  identity to give write access to.
    */
@@ -178,6 +181,7 @@ export class Identity extends Logger {
       executor,
       nameResolver,
       underlyingAccount,
+      verifications,
     } = this.options;
 
     // get the did for the current activeIdentity
@@ -187,8 +191,8 @@ export class Identity extends Logger {
     didDocumentToUpdate.publicKey.push({
       id: `${didDocumentToUpdate.id}#${identity}`,
       type: 'Secp256k1VerificationKey2018',
-      controller: didDocumentToUpdate.id,
-      ethereumAddress: identity,
+      controller: await did.convertIdentityToDid(identity),
+      ethereumAddress: await verifications.getOwnerAddressForIdentity(identity),
     });
     didDocumentToUpdate.authentication.push(`${didDocumentToUpdate.id}#${identity}`);
     await did.setDidDocument(activeDidAddress, didDocumentToUpdate);
@@ -207,8 +211,8 @@ export class Identity extends Logger {
 
   /**
    * Removes the access, to act on behalf of the activeIdentity, for another identity. When removing
-   * read access, a bmail is sent, so the identity gets a notification with a attachment, which
-   * permisssion was removed.
+   * read access, a bmail is sent, so the identity gets a notification with a attachment, with a
+   * ``identityAccessRemove`` attachment.
    *
    * @param      {string}                identity      identity to remove the access for
    * @param      {string}                type          read, write, readWrite
@@ -243,7 +247,7 @@ export class Identity extends Logger {
     } else {
       // save information into the current profile about the grant status
       await Promise.all([
-        profile.addProfileKey(identity, 'hasIdentityAccess', type),
+        profile.addProfileKey(identity, 'hasIdentityAccess', 'read'),
         profile.addProfileKey(identity, 'identityAccessGranted', Date.now().toString()),
       ]);
     }
@@ -342,12 +346,12 @@ export class Identity extends Logger {
    */
   private async ensureOwnerAndIdentityProfile() {
     const { activeIdentity, underlyingAccount, verifications } = this.options;
+
     if (underlyingAccount === activeIdentity) {
       throw new Error('"grantAccess" is only supported for identity based profiles.');
     }
 
     const owner = await verifications.getOwnerAddressForIdentity(activeIdentity);
-
     if (underlyingAccount !== owner) {
       throw new Error('Granting write permissions to identity is only allowed by the identity owner.');
     }
