@@ -671,6 +671,5 @@ export async function getRuntimeForIdentity(existingRuntime: Runtime,
   // create new dfs
   const dfs = new Ipfs({ dfsConfig: (existingRuntime.dfs as any).dfsConfig });
 
-  // introduce hashing?
   return createDefaultRuntime(existingRuntime.web3, dfs, clonedRuntimeConfig);
 }

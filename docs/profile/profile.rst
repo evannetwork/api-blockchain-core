@@ -707,7 +707,7 @@ getIdentityAccessList
 
 Function description
 
-Gets a list of identities, where the profile identity has access to, from address book. Keep in mind address book needs to be loaded beforehand using the :ref:`loadForAccount` API.
+Gets a list of identities, where the profile identity has access to, from address book. Keep in mind address book needs to be loaded beforehand using the :ref:`loadForAccount` API. The result will be an object containing identity addresses mapped to their encryption keys and sha3 addresses mapped to their identity address. Those identity addresses which have an alias will also return the alias.
 
 ----------
 Parameters
@@ -727,7 +727,21 @@ Example
 
 .. code-block:: typescript
 
+  // load address book
+  await profile.loadForAccount(profile.treeLabels.addressBook);
+  // identities[0] does not have an alias, adding identity to address book
+  await profile.setIdentityAccess(identities[0], 'key 0x01_a');
+  // identities[1] has an alias, adding identity to address book
+  await profile.setIdentityAccess(identities[1], 'key 0x01_b');
+  // get list of identities
   await profile.getIdentityAccessList();
+
+  Output:
+  { 
+  'sha3(identities[1])': { identityAccess: 'key 0x01_b', alias: 'test account' },
+  'sha3(identities[0])': { identityAccess: 'key 0x01_a' },
+  'identities[1]': { identityAccess: 'key 0x01_b', alias: 'test account' } 
+  }
 
 
 

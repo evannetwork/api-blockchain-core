@@ -77,7 +77,13 @@ describe('Profile helper', function test() {
     await profile.loadForAccount(profile.treeLabels.addressBook);
     await profile.setIdentityAccess(identities[0], 'key 0x01_a');
     const list = await profile.getIdentityAccessList();
-    expect(list[identities[0]].identityAccess).to.be.eq('key 0x01_a');
+    const addressHash = profile.nameResolver.soliditySha3(
+      ...[
+        profile.nameResolver.soliditySha3(identities[0]),
+        profile.nameResolver.soliditySha3(profile.activeAccount),
+      ].sort(),
+    );
+    expect(list[addressHash].identityAccess).to.be.eq('key 0x01_a');
 
     await profile.storeForAccount(profile.treeLabels.addressBook);
     await profile.loadForAccount(profile.treeLabels.addressBook);
