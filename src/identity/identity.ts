@@ -276,7 +276,7 @@ export class Identity extends Logger {
       ));
     }
 
-    // grant access to act on behalf of the identity (only if the permission wasn't added before)
+    // remove access to act on behalf of the identity (only if the permission wasn't added before)
     if (type === 'readWrite' || type === 'write') {
       promises.push(this.removeWriteAccess(identity));
     }
