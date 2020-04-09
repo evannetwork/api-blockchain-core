@@ -35,7 +35,6 @@ import { Verifications } from '../verifications/verifications';
  */
 export interface IdentityOptions extends LoggerOptions {
   activeIdentity: string;
-  config: any;
   contractLoader: ContractLoader;
   did: Did;
   executor: Executor;

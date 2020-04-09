@@ -526,7 +526,6 @@ export async function createDefaultRuntime(
     );
     identity = new Identity({
       activeIdentity,
-      config,
       contractLoader,
       did,
       executor,
