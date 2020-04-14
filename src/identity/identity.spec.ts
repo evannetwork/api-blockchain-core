@@ -128,7 +128,7 @@ describe('identity handling', function test() {
         const runtime1For0 = await getRuntimeForIdentity(runtime1, identities[0]);
         // grant access
         const grantAccessP = runtime1For0.identity.grantAccess(identities[2], 'readWrite', bmailContent);
-        expect(grantAccessP).to.be.rejectedWith('Granting write permissions to identity is only allowed by the identity owner.');
+        await expect(grantAccessP).to.be.rejectedWith('Granting write permissions to identity is only allowed by the identity owner.');
       });
     });
 
@@ -158,10 +158,10 @@ describe('identity handling', function test() {
         await expect(runtime1For0.profile.addProfileKey(
           identities[1],
           'identityAccessNote', 'More awesome, than you thought!',
-        )).to.be.ok;
+        )).not.to.be.rejected;
         await expect(runtime1For0.profile.storeForAccount(
           runtime1.profile.treeLabels.addressBook,
-        )).to.be.ok;
+        )).not.to.be.rejected;
 
         await runtime0.profile.loadForAccount(runtime1.profile.treeLabels.addressBook);
         const addressBook = await runtime1For0.profile.getAddressBook();

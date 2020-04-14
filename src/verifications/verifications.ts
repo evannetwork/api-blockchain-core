@@ -755,6 +755,10 @@ export class Verifications extends Logger {
     const userIdentity = sourceIdentity
       ? this.options.contractLoader.loadContract('VerificationHolder', sourceIdentity)
       : await this.getIdentityForAccount(accountId);
+    const logData = {
+      accountId, userIdentity: userIdentity.options.address, to, data,
+    };
+    this.log(`submitting identity tx ${JSON.stringify(logData)}"`, 'debug');
 
     // convert bigNumbers to numbers
     let sendingValue = value;
@@ -1368,13 +1372,17 @@ export class Verifications extends Logger {
 
     const value = options.value || 0;
 
-    return {
+    const txInfo = {
       sourceIdentity,
       to,
       value,
       input,
       nonce,
     };
+
+    this.log(`prepared identity tx ${JSON.stringify({ ...txInfo, functionName })}"`, 'debug');
+
+    return txInfo;
   }
 
 
