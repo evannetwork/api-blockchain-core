@@ -219,7 +219,7 @@ export class Identity extends Logger {
         id: newId,
         type: 'Secp256k1VerificationKey2018',
         controller: await did.convertIdentityToDid(identity),
-        ethereumAddress: accountId,
+        ethereumAddress: accountId.toLowerCase(),
       });
       didDocumentToUpdate.authentication.push(newId);
       await did.setDidDocument(activeDidAddress, didDocumentToUpdate);
@@ -349,10 +349,11 @@ export class Identity extends Logger {
     const activeDidAddress = await did.convertIdentityToDid(activeIdentity);
     const didDocumentToUpdate = await did.getDidDocument(activeDidAddress);
     // remove public key from DID document
+    const accountIdLowerCase = accountId.toLowerCase();
     let removedKey;
     didDocumentToUpdate.publicKey = didDocumentToUpdate.publicKey.filter(
       (pubKey: any) => {
-        if (pubKey.ethereumAddress === accountId) {
+        if (pubKey.ethereumAddress === accountIdLowerCase) {
           removedKey = pubKey.id;
           return false;
         }
