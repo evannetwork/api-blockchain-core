@@ -199,27 +199,29 @@ export class Identity extends Logger {
     const activeDidAddress = await did.convertIdentityToDid(activeIdentity);
     const didDocumentToUpdate = await did.getDidDocument(activeDidAddress);
     // add the new identity to the did document
-    let updated;
     const hasPublicKey = didDocumentToUpdate.publicKey.some(
       (pubKey: any) => pubKey.ethereumAddress === accountId,
     );
     if (!hasPublicKey) {
+      // find last key id, increase by 1 for new id
+      const defaultKeyPattern = new RegExp(`${didDocumentToUpdate.id}#key-\\d+`);
+      const publicKeysMatchingPattern = didDocumentToUpdate.publicKey.filter(
+        (publicKey) => defaultKeyPattern.test(publicKey.id),
+      );
+      const oldNumberSuffix = publicKeysMatchingPattern.length
+        ? parseInt(
+          publicKeysMatchingPattern[publicKeysMatchingPattern.length - 1].id.split('-')[1],
+          10,
+        )
+        : 0;
+      const newId = `${didDocumentToUpdate.id}#key-${oldNumberSuffix + 1}`;
       didDocumentToUpdate.publicKey.push({
-        id: `${didDocumentToUpdate.id}#${identity}`,
+        id: newId,
         type: 'Secp256k1VerificationKey2018',
         controller: await did.convertIdentityToDid(identity),
         ethereumAddress: accountId,
       });
-      updated = true;
-    }
-    const hasAuthentication = didDocumentToUpdate.authentication.some(
-      (authKey) => authKey === `${didDocumentToUpdate.id}#${identity}`,
-    );
-    if (!hasAuthentication) {
-      didDocumentToUpdate.authentication.push(`${didDocumentToUpdate.id}#${identity}`);
-      updated = true;
-    }
-    if (updated) {
+      didDocumentToUpdate.authentication.push(newId);
       await did.setDidDocument(activeDidAddress, didDocumentToUpdate);
     }
 
@@ -346,28 +348,26 @@ export class Identity extends Logger {
     // get the did for the current activeIdentity
     const activeDidAddress = await did.convertIdentityToDid(activeIdentity);
     const didDocumentToUpdate = await did.getDidDocument(activeDidAddress);
-    const publicKeyId = `${didDocumentToUpdate.id}#${identity}`;
-    // add the new identity to the did document
-    let updated;
+    // remove public key from DID document
+    let removedKey;
     didDocumentToUpdate.publicKey = didDocumentToUpdate.publicKey.filter(
       (pubKey: any) => {
-        if (pubKey.id !== publicKeyId) {
-          updated = true;
-          return true;
+        if (pubKey.ethereumAddress === accountId) {
+          removedKey = pubKey.id;
+          return false;
         }
-        return false;
+        return true;
       },
     );
     didDocumentToUpdate.authentication = didDocumentToUpdate.authentication.filter(
       (authKey) => {
-        if (authKey !== publicKeyId) {
-          updated = true;
-          return true;
+        if (authKey === removedKey) {
+          return false;
         }
-        return false;
+        return true;
       },
     );
-    if (updated) {
+    if (removedKey) {
       await did.setDidDocument(activeDidAddress, didDocumentToUpdate);
     }
 
