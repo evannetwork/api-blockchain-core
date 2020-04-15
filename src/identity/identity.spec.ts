@@ -189,9 +189,11 @@ describe('identity handling', function test() {
           'identityAccessNote',
           'Much more awesome, than you thought!',
         );
+        const expectedInnerError = `setEntry failed: Error: account "${accounts[1]}" is not`
+          + ` allowed to perform transactions on identity "${identities[0]}"`;
         await expect(runtime1For0.profile.storeForAccount(
           runtime1.profile.treeLabels.addressBook,
-        )).to.be.rejectedWith(new RegExp('executeOnIdentity failed', 'i'));
+        )).to.be.rejectedWith(new RegExp(expectedInnerError));
       });
 
       it('should reject when having no write permissions', async () => {
@@ -203,9 +205,11 @@ describe('identity handling', function test() {
           'identityAccessNote',
           'More awesome, than you thought!',
         );
+        const expectedInnerError = `setEntry failed: Error: account "${accounts[1]}" is not`
+          + ` allowed to perform transactions on identity "${identities[0]}"`;
         await expect(runtime1For0.profile.storeForAccount(
           runtime1.profile.treeLabels.addressBook,
-        )).to.be.rejectedWith(new RegExp('executeOnIdentity failed', 'i'));
+        )).to.be.rejectedWith(new RegExp(expectedInnerError));
       });
 
       it('should send bmail when removing access', async () => {

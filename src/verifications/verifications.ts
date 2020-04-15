@@ -756,9 +756,24 @@ export class Verifications extends Logger {
       ? this.options.contractLoader.loadContract('VerificationHolder', sourceIdentity)
       : await this.getIdentityForAccount(accountId);
     const logData = {
-      accountId, userIdentity: userIdentity.options.address, to, data,
+      accountId, userIdentity: userIdentity.options.address, to, data, sourceIdentity,
     };
     this.log(`submitting identity tx ${JSON.stringify(logData)}"`, 'debug');
+
+    // when signing with account, check if given accountId is allowed to perform tx on identity
+    if (!signedTransactionInfo) {
+      const sha3AccountId = this.options.nameResolver.soliditySha3(accountId);
+      const hasPurpose = await this.options.executor.executeContractCall(
+        userIdentity,
+        'keyHasPurpose',
+        sha3AccountId,
+        '1',
+      );
+      if (!hasPurpose) {
+        throw new Error(`account "${accountId}" is not allowed to perform transactions on identity `
+           + `"${userIdentity.options.address}"`);
+      }
+    }
 
     // convert bigNumbers to numbers
     let sendingValue = value;
@@ -1356,7 +1371,8 @@ export class Verifications extends Logger {
     ...args
   ): Promise<VerificationsDelegationInfo> {
     // sign arguments for on-chain check
-    const sourceIdentity = await this.getIdentityForAccount(options.from, true);
+    const sourceIdentity = options.sourceIdentity
+      || await this.getIdentityForAccount(options.from, true);
 
     // fetch nonce as late as possible
     const nonce = (typeof options.nonce !== 'undefined' && options.nonce !== -1)

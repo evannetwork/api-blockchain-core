@@ -24,11 +24,12 @@ import {
   LoggerOptions,
 } from '@evan.network/dbcp';
 
+import { Did } from '../did/did';
 import { Mailbox } from '../mailbox';
 import { NameResolver } from '../name-resolver';
 import { Profile } from '../profile/profile';
-import { Did } from '../did/did';
 import { Verifications } from '../verifications/verifications';
+import { nullAddress } from '../common/utils';
 
 /**
  * parameters for Identity constructor
@@ -107,6 +108,7 @@ export class Identity extends Logger {
       runtimeConfig,
       web3,
     } = this.options;
+    this.log(`granting identity "${identity}" ${type} access to "${activeIdentity}"`, 'debug');
     // prevent old profiles and ensure, that only the owner is running this function
     await this.ensureOwnerAndIdentityProfile();
 
@@ -184,18 +186,42 @@ export class Identity extends Logger {
       verifications,
     } = this.options;
 
+    const accountId = await verifications.getOwnerAddressForIdentity(identity);
+    if (accountId === nullAddress) {
+      throw new Error(
+        'identity does not seem to be a user identity, '
+          + 'granting write access is currently only supported for user identities',
+      );
+    }
+    this.log(`granting identity "${identity}", account "${accountId}", write access to "${activeIdentity}"`, 'debug');
+
     // get the did for the current activeIdentity
     const activeDidAddress = await did.convertIdentityToDid(activeIdentity);
     const didDocumentToUpdate = await did.getDidDocument(activeDidAddress);
     // add the new identity to the did document
-    didDocumentToUpdate.publicKey.push({
-      id: `${didDocumentToUpdate.id}#${identity}`,
-      type: 'Secp256k1VerificationKey2018',
-      controller: await did.convertIdentityToDid(identity),
-      ethereumAddress: await verifications.getOwnerAddressForIdentity(identity),
-    });
-    didDocumentToUpdate.authentication.push(`${didDocumentToUpdate.id}#${identity}`);
-    await did.setDidDocument(activeDidAddress, didDocumentToUpdate);
+    let updated;
+    const hasPublicKey = didDocumentToUpdate.publicKey.some(
+      (pubKey: any) => pubKey.ethereumAddress === accountId,
+    );
+    if (!hasPublicKey) {
+      didDocumentToUpdate.publicKey.push({
+        id: `${didDocumentToUpdate.id}#${identity}`,
+        type: 'Secp256k1VerificationKey2018',
+        controller: await did.convertIdentityToDid(identity),
+        ethereumAddress: accountId,
+      });
+      updated = true;
+    }
+    const hasAuthentication = didDocumentToUpdate.authentication.some(
+      (authKey) => authKey === `${didDocumentToUpdate.id}#${identity}`,
+    );
+    if (!hasAuthentication) {
+      didDocumentToUpdate.authentication.push(`${didDocumentToUpdate.id}#${identity}`);
+      updated = true;
+    }
+    if (updated) {
+      await did.setDidDocument(activeDidAddress, didDocumentToUpdate);
+    }
 
     // apply the identity as key to the keyHolder contract
     const keyHolderContract = await contractLoader.loadContract('KeyHolder', activeIdentity);
@@ -203,7 +229,7 @@ export class Identity extends Logger {
       keyHolderContract,
       'addKey',
       { from: underlyingAccount },
-      nameResolver.soliditySha3(identity),
+      nameResolver.soliditySha3(accountId),
       1,
       1,
     );
@@ -228,6 +254,7 @@ export class Identity extends Logger {
       mailbox,
       profile,
     } = this.options;
+    this.log(`revoking ${type} access on "${activeIdentity}" for account "${identity}"`, 'debug');
     // prevent old profiles and ensure, that only the owner is running this function
     await this.ensureOwnerAndIdentityProfile();
 
@@ -307,20 +334,45 @@ export class Identity extends Logger {
       underlyingAccount,
     } = this.options;
 
+    const accountId = await this.options.verifications.getOwnerAddressForIdentity(identity);
+    if (accountId === nullAddress) {
+      throw new Error(
+        'identity does not seem to be a user identity, '
+          + 'revoking write access is currently only supported for user identities',
+      );
+    }
+    this.log(`revoking write access on "${activeIdentity}" for account "${identity}"`, 'debug');
+
     // get the did for the current activeIdentity
     const activeDidAddress = await did.convertIdentityToDid(activeIdentity);
     const didDocumentToUpdate = await did.getDidDocument(activeDidAddress);
+    const publicKeyId = `${didDocumentToUpdate.id}#${identity}`;
     // add the new identity to the did document
+    let updated;
     didDocumentToUpdate.publicKey = didDocumentToUpdate.publicKey.filter(
-      (pubKey: any) => pubKey.ethereumAddress !== identity,
+      (pubKey: any) => {
+        if (pubKey.id !== publicKeyId) {
+          updated = true;
+          return true;
+        }
+        return false;
+      },
     );
     didDocumentToUpdate.authentication = didDocumentToUpdate.authentication.filter(
-      (authKey) => authKey !== `${didDocumentToUpdate.id}#${identity}`,
+      (authKey) => {
+        if (authKey !== publicKeyId) {
+          updated = true;
+          return true;
+        }
+        return false;
+      },
     );
-    await did.setDidDocument(activeDidAddress, didDocumentToUpdate);
+    if (updated) {
+      await did.setDidDocument(activeDidAddress, didDocumentToUpdate);
+    }
 
     // apply the identity as key to the keyHolder contract
-    const sha3Identity = nameResolver.soliditySha3(identity);
+    const sha3Identity = nameResolver.soliditySha3(accountId);
     const keyHolderContract = await contractLoader.loadContract('KeyHolder', activeIdentity);
     const hasPurpose = await executor.executeContractCall(
       keyHolderContract,
