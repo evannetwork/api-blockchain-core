@@ -299,7 +299,7 @@ export class SignerIdentity extends Logger implements SignerInterface {
   ): Promise<any> {
     this.log(
       `signer-identity tx "${functionName}" with "${this.underlyingAccount}" via `
-        + `"${this.activeIdentity}" towards "${contract.options.address}"`,
+        + `"${this.activeIdentity}" towards "${contract?.options?.address}"`,
       'debug',
     );
 
