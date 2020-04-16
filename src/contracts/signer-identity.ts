@@ -297,9 +297,16 @@ export class SignerIdentity extends Logger implements SignerInterface {
     functionArguments: any[],
     options: any,
   ): Promise<any> {
+    this.log(
+      `signer-identity tx "${functionName}" with "${this.underlyingAccount}" via `
+        + `"${this.activeIdentity}" towards "${contract?.options?.address}"`,
+      'debug',
+    );
+
     // replace tx origin with underlying account
     const optionsClone = { ...options };
     optionsClone.from = this.underlyingAccount;
+    optionsClone.sourceIdentity = options.from;
 
     // sign identity tx for this account
     const txInfo = await this.options.verifications.getTransactionInfo(
