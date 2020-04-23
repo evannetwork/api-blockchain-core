@@ -35,6 +35,36 @@ describe('Runtime', function test() {
   let web3;
   let dfs;
   let runtimeConfig;
+  let mnemonicAndPasswords;
+
+  if (useIdentity) {
+    mnemonicAndPasswords = [
+      // use an mnemonic with accountId encryption salting
+      {
+        accountId: '0xE88eC34914f423761073458DcA3F16d6d7E8c6Cf',
+        identity: '0x617Cbb36a12ab15e83Cca471D4008E55A411c6aD',
+        mnemonic: 'retire plunge spring current album shiver network bicycle equal burden able code',
+        password: 'Test1234',
+      },
+      // use an mnemonic with identity address encryption salting
+      {
+        accountId: '0xb6D7f0C3A88dDfF426cdcF6cE1666978844b9ba1',
+        identity: '0x82c436230BfBE4D9F88d20d2E1F5C697E9dC4091',
+        mnemonic: 'window ivory shoe toward mammal link lecture cliff shadow holiday force view',
+        password: 'Test1234',
+      },
+    ];
+  } else {
+    // use an mnemonic for an old account
+    mnemonicAndPasswords = [
+      {
+        mnemonic: 'annual lyrics orbit slight object space jeans ethics broccoli umbrella entry couch',
+        password: 'Test1234',
+        accountId: '0x1cf81039Cd6dFbeD999586Ac3B21963C0275E6D7',
+        identity: '0x1cf81039Cd6dFbeD999586Ac3B21963C0275E6D7',
+      },
+    ];
+  }
 
   before(async () => {
     web3 = TestUtils.getWeb3();
@@ -50,6 +80,7 @@ describe('Runtime', function test() {
   it('should create a new runtime for a given config', async () => {
     const runtime = await createDefaultRuntime(web3, dfs, runtimeConfig);
     expect(runtime).to.be.ok;
+    expect(runtime.profile).to.be.not.null;
   });
 
   it('should switch the runtime for identity', async () => {
@@ -73,37 +104,66 @@ describe('Runtime', function test() {
     expect(switchedRuntime.profile).to.exist;
     const tempRuntime = await TestUtils.getRuntime(identities[1], null, { useIdentity });
     expect(switchedRuntime.activeIdentity).to.be.eq(tempRuntime.activeIdentity);
+    expect(switchedRuntime.profile).to.be.not.null;
+  });
+
+  it('should create a new runtime and parse accountid and password in accountMap', async () => {
+    for (const loginData of mnemonicAndPasswords) {
+      const tmpRuntimeConfig = JSON.parse(JSON.stringify(runtimeConfig));
+      tmpRuntimeConfig.accountMap = {
+        [loginData.account]: loginData.password,
+      };
+      const runtime = await createDefaultRuntime(web3, dfs, tmpRuntimeConfig);
+      expect(runtime).to.be.ok;
+      expect(runtime.profile).to.be.not.null;
+      expect(runtime.profile.activeAccount).to.be
+        .eq(useIdentity ? loginData.identity : loginData.account);
+      expect(runtime.activeIdentity).to.be.eq(identities[0]);
+    }
   });
 
   it('should create a new runtime and parse accountid and password in keyConfig', async () => {
-    const expectedKeyNum = 15;
-    const tmpRuntimeConfig = JSON.parse(JSON.stringify(runtimeConfig));
-    tmpRuntimeConfig.keyConfig = {
-      [accounts[0]]: 'Test1234',
-    };
-    const runtime = await createDefaultRuntime(web3, dfs, runtimeConfig);
-    expect(runtime).to.be.ok;
-    expect(Object.keys(runtime.keyProvider.keys).length).to.eq(expectedKeyNum);
+    for (const loginData of mnemonicAndPasswords) {
+      const tmpRuntimeConfig = JSON.parse(JSON.stringify(runtimeConfig));
+      tmpRuntimeConfig.keyConfig = {
+        [loginData.account]: loginData.password,
+      };
+      const runtime = await createDefaultRuntime(web3, dfs, tmpRuntimeConfig);
+      expect(runtime).to.be.ok;
+      expect(runtime.profile).to.be.not.null;
+      expect(runtime.profile.activeAccount).to.be
+        .eq(useIdentity ? loginData.identity : loginData.account);
+      expect(runtime.activeIdentity).to.be.eq(identities[0]);
+    }
   });
 
   it('should create a new and valid runtime with a mnemonic and a password', async () => {
-    const runtime = await createDefaultRuntime(web3, dfs, {
-      mnemonic: 'annual lyrics orbit slight object space jeans ethics broccoli umbrella entry couch',
-      password: 'Test1234',
-    });
-    expect(runtime).to.be.ok;
-    expect(Object.keys(runtime.keyProvider.keys).length).to.eq(2);
+    for (const loginData of mnemonicAndPasswords) {
+      const runtime = await createDefaultRuntime(web3, dfs, {
+        mnemonic: loginData.mnemonic,
+        password: loginData.password,
+        useIdentity,
+      });
+      expect(runtime).to.be.ok;
+      expect(runtime.profile).to.be.not.null;
+      expect(runtime.profile.activeAccount).to.be
+        .eq(useIdentity ? loginData.identity : loginData.account);
+    }
   });
 
   it('should create a new and valid runtime with a mnemonic and a password and merge with given accounts', async () => {
-    const expectedKeyNum = useIdentity ? 19 : 17;
-    const tmpRuntimeConfig = runtimeConfig;
-    tmpRuntimeConfig.keyConfig[accounts[0]] = 'Test1234';
-    tmpRuntimeConfig.mnemonic = 'annual lyrics orbit slight object space jeans ethics broccoli umbrella entry couch';
-    tmpRuntimeConfig.password = 'Test1234';
-    const runtime = await createDefaultRuntime(web3, dfs, tmpRuntimeConfig);
-    expect(runtime).to.be.ok;
-    expect(Object.keys(runtime.keyProvider.keys).length).to.eq(expectedKeyNum);
+    for (const loginData of mnemonicAndPasswords) {
+      const expectedKeyNum = useIdentity ? 18 : 17;
+      const tmpRuntimeConfig = runtimeConfig;
+      tmpRuntimeConfig.mnemonic = loginData.mnemonic;
+      tmpRuntimeConfig.password = loginData.password;
+      const runtime = await createDefaultRuntime(web3, dfs, tmpRuntimeConfig);
+      expect(runtime).to.be.ok;
+      expect(runtime.profile).to.be.not.null;
+      expect(runtime.profile.activeAccount).to.be
+        .eq(useIdentity ? loginData.identity : loginData.account);
+      expect(Object.keys(runtime.keyProvider.keys).length).to.eq(expectedKeyNum);
+    }
   });
 
   it('should NOT create a new and valid runtime with only passing mnemonic and empty account map', async () => {
