@@ -101,11 +101,11 @@ export class Onboarding extends Logger {
     if (!password) {
       throw new Error('password is a required parameter!');
     }
-
-    const runtimeConfig: any = await Onboarding.generateRuntimeConfig(
-      mnemonic, password, runtime.web3,
-    );
-    const runtimeNew = await createDefaultRuntime(runtime.web3, runtime.dfs, runtimeConfig);
+    const runtimeNew = await createDefaultRuntime(runtime.web3, runtime.dfs, {
+      mnemonic,
+      password,
+      useIdentity: runtime.runtimeConfig.useIdentity,
+    });
 
     // check if the source runtime has enough funds
     const profileCost = runtime.web3.utils.toWei('1.0097');
@@ -135,7 +135,7 @@ export class Onboarding extends Logger {
     return {
       mnemonic,
       password,
-      runtimeConfig,
+      runtimeConfig: runtimeNew.runtimeConfig,
     };
   }
 
