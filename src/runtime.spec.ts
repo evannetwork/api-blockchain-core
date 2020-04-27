@@ -192,6 +192,14 @@ describe('Runtime', function test() {
     );
   });
 
+  it('use fallback encryptionKey salting for non initialized identities', async () => {
+    const runtimePromise = createDefaultRuntime(web3, dfs, {
+      mnemonic: 'annual lyrics orbit slight object space jeans ethics broccoli umbrella entry couch',
+      accountMap: { },
+    });
+    await expect(runtimePromise).to.be.rejected;
+  });
+
   it('should NOT create a new and valid runtime with only passing mnemonic and empty account map', async () => {
     const runtimePromise = createDefaultRuntime(web3, dfs, {
       mnemonic: 'annual lyrics orbit slight object space jeans ethics broccoli umbrella entry couch',

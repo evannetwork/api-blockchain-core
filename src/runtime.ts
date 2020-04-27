@@ -597,6 +597,7 @@ export async function createDefaultRuntime(
   web3: any, dfs: DfsInterface, orgRuntimeConfig: any, options: Runtime = { },
 ): Promise<Runtime> {
   const runtimeConfig = cloneDeep(orgRuntimeConfig);
+  const logger = options.logger || (new Logger());
   let contextLessRuntime;
 
   // check if mnemonic and password are given
@@ -634,6 +635,7 @@ export async function createDefaultRuntime(
       // check if the key is a valid accountId
       if (accountId.length === 42) {
         let dataKey;
+        let useDefaultDatakey = !runtimeConfig.useIdentity;
         const sha3Account = web3.utils.soliditySha3(accountId);
         const sha9Account = web3.utils.soliditySha3(sha3Account, sha3Account);
 
@@ -655,37 +657,53 @@ export async function createDefaultRuntime(
 
           // try out several dataKey encryption salting methods and check if, generated dataKeys are
           // correct
-          const identity = await (await contextLessRuntime).verifications
-            .getIdentityForAccount(accountId, true);
-          const encryptionSalts = [identity, accountId].filter((salt) => salt !== nullAddress);
-          // eslint-disable-next-line guard-for-in
-          for (const encryptionSalt of encryptionSalts) {
-            const saltedDataKey = web3.utils
-              .keccak256(encryptionSalt + runtimeConfig.keyConfig[accountId])
-              .replace(/0x/g, '');
-            const tempRuntime = await createRuntime(web3, dfs, {
-              accountMap: {
-                [accountId]: runtimeConfig.accountMap[accountId],
-              },
-              keyConfig: {
-                [sha3Account]: saltedDataKey,
-                [sha9Account]: saltedDataKey,
-              },
-              useIdentity: runtimeConfig.useIdentity,
-            });
+          let identity = nullAddress;
+          try {
+            identity = await (await contextLessRuntime).verifications
+              .getIdentityForAccount(accountId, true);
+          } catch (ex) {
+            // when no identity for a account could be found, it's a uninitialized account, so we
+            // should use default data key
+            useDefaultDatakey = true;
+            logger.log(`Could not find identity for account ${accountId} during keyConfig resolve.`
+              + ' Using default data key.', 'warning');
+          }
 
-            if (tempRuntime.profile) {
-              dataKey = saltedDataKey;
-              break;
+          if (identity !== nullAddress) {
+            const encryptionSalts = [identity, accountId];
+            // eslint-disable-next-line guard-for-in
+            for (const encryptionSalt of encryptionSalts) {
+              const saltedDataKey = web3.utils
+                .keccak256(encryptionSalt + runtimeConfig.keyConfig[accountId])
+                .replace(/0x/g, '');
+              const tempRuntime = await createRuntime(web3, dfs, {
+                accountMap: {
+                  [accountId]: runtimeConfig.accountMap[accountId],
+                },
+                keyConfig: {
+                  [sha3Account]: saltedDataKey,
+                  [sha9Account]: saltedDataKey,
+                },
+                useIdentity: runtimeConfig.useIdentity,
+              });
+
+              if (tempRuntime.profile) {
+                dataKey = saltedDataKey;
+                logger.log(`Using encryptionSalt "${encryptionSalt}" for`
+                  + ` generating dataKey in keyConfig for account "${accountId}".`, 'debug');
+                break;
+              }
             }
           }
-        } else {
+        }
+
+        if (useDefaultDatakey) {
           dataKey = web3.utils
             .keccak256(accountId + runtimeConfig.keyConfig[accountId])
             .replace(/0x/g, '');
-        }
-
-        if (!dataKey) {
+          logger.log('Using default encryptionSalt for generating dataKey'
+            + ` in keyConfig for account "${accountId}".`, 'debug');
+        } else if (!dataKey) {
           throw new Error(`incorrect password for ${accountId} passed to keyConfig`);
         }
 
