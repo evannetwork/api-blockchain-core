@@ -401,6 +401,7 @@ export class Onboarding extends Logger {
 
     const requestedProfile = await new Promise((resolve, reject) => {
       const requestProfilePayload = JSON.stringify({
+        companyProfile: profileData.accountDetails.profileType === 'company',
         accountId,
         signature,
         captchaToken: recaptchaToken,
@@ -438,6 +439,51 @@ export class Onboarding extends Logger {
       reqProfileReq.write(requestProfilePayload);
       reqProfileReq.end();
     });
+
+    if (profileData.accountDetails.profileType === 'company') {
+      await this.fillProfile(
+        (requestedProfile as any).user,
+        creationRuntime,
+        // profile,
+        accountId,
+        password,
+        profileData,
+        network,
+        signature,
+      );
+      await this.fillProfile(
+        (requestedProfile as any).company,
+        creationRuntime,
+        // profile,
+        accountId,
+        password,
+        profileData,
+        network,
+        signature,
+      );
+    } else {
+      await this.fillProfile(
+        requestedProfile,
+        creationRuntime,
+        // profile,
+        accountId,
+        password,
+        profileData,
+        network,
+        signature,
+      );
+    }
+  }
+
+  private static async fillProfile(
+    requestedProfile: any,
+    creationRuntime: any,
+    accountId: string,
+    password: string,
+    profileData: any,
+    network = 'testcore',
+    signature: any,
+  ) {
     const newIdentity = (requestedProfile as any).identity;
     const accountHash = creationRuntime.web3.utils.soliditySha3(accountId);
     const identityHash = creationRuntime.web3.utils.soliditySha3(newIdentity);
@@ -448,6 +494,7 @@ export class Onboarding extends Logger {
     // generate the encryption key with the provided password and the target account
     const dataKey = creationRuntime.web3.utils.sha3(targetAccount + password).replace(/0x/g, '');
 
+    const { profile } = creationRuntime;
     profile.ipld.originator = creationRuntime.web3.utils.soliditySha3(targetAccount);
     profile.activeAccount = targetAccount;
     profile.profileOwner = targetAccount;
@@ -576,6 +623,7 @@ export class Onboarding extends Logger {
 
     // re-enable pinning
     profile.ipld.ipfs.disablePin = false;
+    const requestMode = process.env.TEST_ONBOARDING ? http : https;
 
     const jsonPayload = JSON.stringify(data);
     const options = {
