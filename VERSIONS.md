@@ -2,6 +2,8 @@
 
 ## Next Version
 ### Features
+- add check in `createOfflineProfile` for company profile type to create two profiles otherwise only create one
+- add method `fillProfile` to fill empty profile
 - add method `getRuntimeForIdentity` to create a runtime for a specific identity
 - add methods `setIdentityAccess`, `removeIdentityAccess` and `getIdentityAccessList` for managing access to identities
 - A DID document's `@context` and `controller` properties can now also be arrays
