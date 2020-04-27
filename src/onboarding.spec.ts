@@ -188,4 +188,86 @@ describe('Onboarding helper', function test() {
       ).then(() => resolve());
     });
   });
+
+  it('should be able to create offline profiles for company', async () => {
+    const tempRuntime = await TestUtils.getRuntime(accounts[2], null, { useIdentity });
+    const accountToUse = tempRuntime.underlyingAccount;
+    const identity = await tempRuntime.verifications.getIdentityForAccount(accountToUse, true);
+    const port = 42069;
+    const pKey = await tempRuntime.accountStore.getPrivateKey(accountToUse);
+    const accessToken = 'randomToken';
+    const contractId = '0x1234random';
+
+    await new Promise((resolve, reject) => {
+      const app = express();
+      app.use(bodyParser.json());
+
+      // Serverside -- Step 1 of offline profile creation
+      app.post('/api/smart-agents/profile/create', (req, res) => {
+        try {
+          expect(req.body).to.have.property('accountId').that.equals(accountToUse);
+          expect(req.body).to.have.property('signature');
+          expect(req.body).to.have.property('companyProfile');
+          expect(tempRuntime.web3.eth.accounts.recover(
+            'Gimme Gimme Gimme!', req.body.signature,
+          )).to.equal(accountToUse);
+          res.send({
+            user: {
+              accessToken,
+              contractId,
+              identity,
+            },
+            company: {
+              accessToken,
+              contractId,
+              identity,
+            },
+          });
+        } catch (e) {
+          reject(e);
+        }
+      });
+
+      // Serverside -- Step 2 of offline profile creation
+      app.post('/api/smart-agents/profile/fill', (req, res) => {
+        try {
+          expect(req.body).to.have.property('accountId').that.equals(accountToUse);
+          if (useIdentity) {
+            expect(req.body).to.have.property('identityId').that.equals(identity);
+          }
+          expect(req.body).to.have.property('accessToken').that.equals(accessToken);
+          expect(req.body).to.have.property('profileInfo');
+          expect(req.body).to.have.property('contractId').that.equals(contractId);
+          if (useIdentity) {
+            expect(req.body).to.have.nested.property('didTransaction.sourceIdentity').that.equals(identity);
+          }
+          expect(req.body).to.have.property('signature');
+          expect(tempRuntime.web3.eth.accounts.recover(
+            'Gimme Gimme Gimme!', req.body.signature,
+          )).to.equal(accountToUse);
+          res.send({});
+        } catch (e) {
+          reject(e);
+        }
+      });
+
+      app.listen(port);
+      process.env.TEST_ONBOARDING = `{"port": ${port}}`;
+
+      // Client side -- Initiate onboarding
+      Onboarding.createOfflineProfile(
+        tempRuntime,
+        {
+          accountDetails: {
+            accountName: 'Test',
+            profileType: 'company',
+          },
+        },
+        accounts[2],
+        pKey,
+        '',
+        '',
+      ).then(() => resolve());
+    });
+  });
 });
