@@ -158,7 +158,7 @@ describe('Runtime', function test() {
 
 
   it('should create a new and valid runtime with a mnemonic and a password and merge with given accounts', async () => {
-    const expectedKeyNum = useIdentity ? 18 : 17;
+    const expectedKeyNum = useIdentity ? 18 : 16;
     for (const loginData of mnemonicAndPasswords) {
       const runtime = await createDefaultRuntime(web3, dfs, {
         mnemonic: loginData.mnemonic,
@@ -180,7 +180,7 @@ describe('Runtime', function test() {
     }
   });
 
-  it('should throw an error by passing a invalid password', async () => {
+  (useIdentity ? it : it.skip)('should throw an error by passing a invalid password', async () => {
     const runtimePromise = createDefaultRuntime(web3, dfs, {
       mnemonic: mnemonicAndPasswords[0].mnemonic,
       password: 'this is a wrong password',
