@@ -283,6 +283,7 @@ async function createRuntime(
       activeIdentity = activeAccount;
       underlyingAccount = activeIdentity;
       signer = signerInternal;
+      executor.signer = signerInternal;
     }
   } else {
     activeIdentity = activeAccount;
@@ -623,6 +624,9 @@ export async function createDefaultRuntime(
     Object.assign(runtimeConfig.keyConfig, {
       [runtimeConfig.account]: runtimeConfig.password,
     });
+    // cleanup runtime
+    delete runtimeConfig.mnemonic;
+    delete runtimeConfig.password;
   } else if (!runtimeConfig.accountMap
        || !(Object.keys(runtimeConfig.accountMap).length)) {
     throw new Error('accountMap invalid');

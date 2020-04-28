@@ -26,6 +26,7 @@
 - use `useIdentity` flag for `createOfflineProfile`
 - pass `password` to `createOfflineProfile` to enable dataKey generation based on the users identity
 - checked node 13 compatibility
+- reset executor signer for runtime initialization with account that has no identity
 
 ### Deprecations
 

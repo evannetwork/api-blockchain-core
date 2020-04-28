@@ -88,7 +88,8 @@ describe('Onboarding helper', function test() {
       },
     });
     expect(newProfile).to.be.exist;
-    expect(newProfile.runtimeConfig).to.be.deep.eq(runtimeConfig);
+    expect(newProfile.runtimeConfig.accountMap).to.be.deep.eq(runtimeConfig.accountMap);
+    expect(newProfile.runtimeConfig.keyConfig).to.be.deep.eq(runtimeConfig.keyConfig);
   });
 
   it('should create a new profile from a different account', async () => {
@@ -103,7 +104,8 @@ describe('Onboarding helper', function test() {
       },
     });
 
-    expect(newProfile.runtimeConfig).to.be.deep.eq(runtimeConfig);
+    expect(newProfile.runtimeConfig.accountMap).to.be.deep.eq(runtimeConfig.accountMap);
+    expect(newProfile.runtimeConfig.keyConfig).to.be.deep.eq(runtimeConfig.keyConfig);
   });
 
   it.skip('should be able to send an invitation via smart agent', async () => {
