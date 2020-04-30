@@ -434,7 +434,7 @@ export class Onboarding extends Logger {
 
         res.on('end', () => {
           const body = Buffer.concat(chunks);
-          resolve(JSON.parse(body.toString()));
+          resolve(JSON.parse(body.toString()).result);
         });
       });
       reqProfileReq.write(requestProfilePayload);
