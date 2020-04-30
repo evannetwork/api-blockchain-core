@@ -679,7 +679,7 @@ export async function createDefaultRuntime(
             for (const encryptionSalt of encryptionSalts) {
               const saltedDataKey = web3.utils
                 .keccak256(encryptionSalt + runtimeConfig.keyConfig[accountId])
-                .replace(/0x/g, '');
+                .replace(/^0x/, '');
               const tempRuntime = await createRuntime(web3, dfs, {
                 accountMap: {
                   [accountId]: runtimeConfig.accountMap[accountId],
