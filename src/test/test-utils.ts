@@ -181,7 +181,7 @@ export class TestUtils {
   public static async getRuntime(accountId, requestedKeys?, customConfig = {}): Promise<Runtime> {
     let keys;
     if (!requestedKeys) {
-      keys = dataKeys;
+      keys = JSON.parse(JSON.stringify(dataKeys));
     } else {
       keys = {};
       requestedKeys.forEach((key) => {
