@@ -481,7 +481,7 @@ export class Onboarding extends Logger {
           { address: userAccount, context: 'commKey', key: commKey },
         ],
         profileKeys: [
-          { address: userAccount, key: 'alias', value: profileData.accountDetails.alias },
+          { address: userAccount, key: 'alias', value: profileData.accountDetails.accountName },
           { address: userAccount, key: 'hasIdentityAccess', value: 'readWrite' },
           { address: userAccount, key: 'identityAccessGranted', value: Date.now().toString() },
           { address: userAccount, key: 'identityAccessNote', value: 'company owner' },
@@ -627,7 +627,12 @@ export class Onboarding extends Logger {
     const dataContentKeys = await Promise.all(profileKeys.map(() => cryptorAes.generateKey()));
     for (let i = 0; i < profileKeys.length; i += 1) {
       await creationRuntime.sharing.extendSharings(
-        sharings, targetAccount, targetAccount, profileKeys[i], blockNr, dataContentKeys[i],
+        sharings,
+        targetAccount,
+        targetAccount,
+        profileKeys[i],
+        blockNr,
+        dataContentKeys[i],
       );
     }
 
@@ -636,8 +641,12 @@ export class Onboarding extends Logger {
       for (let i = 0; i < profileKeys.length; i += 1) {
         for (const shareWith of additionalKeys.shareWith) {
           await creationRuntime.sharing.extendSharings(
-            sharings, targetAccount, shareWith,
-            profileKeys[i], blockNr, dataContentKeys[i],
+            sharings,
+            targetAccount,
+            shareWith,
+            profileKeys[i],
+            blockNr,
+            dataContentKeys[i],
           );
         }
       }
