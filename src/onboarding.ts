@@ -450,29 +450,58 @@ export class Onboarding extends Logger {
         registration: profileData.registration,
         contact: profileData.contact,
       };
-      let newIdentity = (requestedProfile as any).company.identity;
-      const company = newIdentity;
-      let accountHash = creationRuntime.web3.utils.soliditySha3(accountId);
-      let identityHash = creationRuntime.web3.utils.soliditySha3(newIdentity);
-      let targetAccount = creationRuntime.runtimeConfig.useIdentity ? newIdentity : accountId;
-      let targetAccountHash = creationRuntime.runtimeConfig.useIdentity ? identityHash
+      // company data
+      const companyIdentity = (requestedProfile as any).company.identity;
+      const accountHash = creationRuntime.web3.utils.soliditySha3(accountId);
+      const companyIdentityHash = creationRuntime.web3.utils.soliditySha3(companyIdentity);
+      const companyAccount = creationRuntime.runtimeConfig.useIdentity
+        ? companyIdentity : accountId;
+      const companyAccountHash = creationRuntime.runtimeConfig.useIdentity ? companyIdentityHash
         : accountHash;
+
+      // user data
+      const userIdentity = (requestedProfile as any).user.identity;
+      const userIdentityHash = creationRuntime.web3.utils.soliditySha3(userIdentity);
+      const userAccount = creationRuntime.runtimeConfig.useIdentity ? userIdentity : accountId;
+      const userAccountHash = creationRuntime.runtimeConfig.useIdentity ? userIdentityHash
+        : accountHash;
+
       const aes = new Aes();
       const key = await aes.generateKey();
       // eslint-disable-next-line
-      creationRuntime.keyProvider.keys[targetAccountHash] = key;
+      creationRuntime.keyProvider.keys[companyAccountHash] = key;
       // eslint-disable-next-line
-      creationRuntime.keyProvider.keys[creationRuntime.web3.utils.soliditySha3(targetAccountHash, targetAccountHash)] = key;
+      creationRuntime.keyProvider.keys[creationRuntime.web3.utils.soliditySha3(companyAccountHash, companyAccountHash)] = key;
+
+      // generate the communication key
+      const commKey = await creationRuntime.keyExchange.generateCommKey();
+      let additionalKeys = {};
+      additionalKeys = {
+        contactKeys: [
+          { address: userAccount, context: 'commKey', key: commKey },
+        ],
+        profileKeys: [
+          { address: userAccount, key: 'alias', value: profileData.accountDetails.alias },
+          { address: userAccount, key: 'hasIdentityAccess', value: 'readWrite' },
+          { address: userAccount, key: 'identityAccessGranted', value: Date.now().toString() },
+          { address: userAccount, key: 'identityAccessNote', value: 'company owner' },
+        ],
+        shareWith: [
+          userAccount,
+        ],
+      };
+
       await this.fillProfile(
         (requestedProfile as any).company,
-        newIdentity,
-        targetAccount,
+        companyIdentity,
+        companyAccount,
         creationRuntime,
         accountId,
         key,
         companyDataToFill,
         network,
         signature,
+        additionalKeys,
       );
 
       const userDataToFill = {
@@ -481,23 +510,30 @@ export class Onboarding extends Logger {
           profileType: 'user',
         },
       };
-      newIdentity = (requestedProfile as any).user.identity;
-      accountHash = creationRuntime.web3.utils.soliditySha3(accountId);
-      identityHash = creationRuntime.web3.utils.soliditySha3(newIdentity);
-      targetAccount = creationRuntime.runtimeConfig.useIdentity ? newIdentity : accountId;
-      targetAccountHash = creationRuntime.runtimeConfig.useIdentity ? identityHash
-        : accountHash;
+
       // generate the encryption key with the provided password and the target account
-      const dataKey = creationRuntime.web3.utils.sha3(targetAccount + password).replace(/0x/g, '');
+      const dataKey = creationRuntime.web3.utils.sha3(userAccount + password).replace(/0x/g, '');
       // eslint-disable-next-line
-      creationRuntime.keyProvider.keys[targetAccountHash] = dataKey;
+      creationRuntime.keyProvider.keys[userAccountHash] = dataKey;
       // eslint-disable-next-line
-      creationRuntime.keyProvider.keys[creationRuntime.web3.utils.soliditySha3(targetAccountHash, targetAccountHash)] = dataKey;
-      const additionalKeys = { [company]: key };
+      creationRuntime.keyProvider.keys[creationRuntime.web3.utils.soliditySha3(userAccountHash, userAccountHash)] = dataKey;
+      additionalKeys = {
+        contactKeys: [
+          { address: companyAccount, context: 'commKey', key: commKey },
+          { address: companyAccount, context: 'identityAccess', key },
+        ],
+        profileKeys: [
+          { address: companyAccount, key: 'alias', value: profileData.accountDetails.companyAlias },
+        ],
+        shareWith: [
+          companyAccount,
+        ],
+      };
+
       await this.fillProfile(
         (requestedProfile as any).user,
-        newIdentity,
-        targetAccount,
+        userIdentity,
+        userAccount,
         creationRuntime,
         accountId,
         dataKey,
@@ -557,10 +593,12 @@ export class Onboarding extends Logger {
     await profile.addProfileKey(targetAccount, 'alias', profileData.accountDetails.accountName);
     await profile.addPublicKey(dhKeys.publicKey.toString('hex'));
 
-    // set identity access for user to company profile
     if (additionalKeys) {
-      for (const key of Object.keys(additionalKeys)) {
-        await profile.setIdentityAccess(key, additionalKeys[key]);
+      for (const { address, context, key } of additionalKeys.contactKeys) {
+        await profile.addContactKey(address, context, key);
+      }
+      for (const { address, key, value } of additionalKeys.profileKeys) {
+        await profile.addProfileKey(address, key, value);
       }
     }
 
@@ -591,6 +629,18 @@ export class Onboarding extends Logger {
       await creationRuntime.sharing.extendSharings(
         sharings, targetAccount, targetAccount, profileKeys[i], blockNr, dataContentKeys[i],
       );
+    }
+
+    // extend sharing for profile data with company profile
+    if (additionalKeys.shareWith) {
+      for (let i = 0; i < profileKeys.length; i += 1) {
+        for (const shareWith of additionalKeys.shareWith) {
+          await creationRuntime.sharing.extendSharings(
+            sharings, targetAccount, shareWith,
+            profileKeys[i], blockNr, dataContentKeys[i],
+          );
+        }
+      }
     }
     // upload sharings
     const sharingsHash = await creationRuntime.dfs.add(
