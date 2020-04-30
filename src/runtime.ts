@@ -611,11 +611,9 @@ export async function createDefaultRuntime(
     // eslint-disable-next-line prefer-destructuring
     runtimeConfig.account = Object.keys(tempConfig.accountMap)[0];
     if (!runtimeConfig.accountMap) {
-      // eslint-disable-next-line no-param-reassign
       (runtimeConfig as any).accountMap = {};
     }
     if (!runtimeConfig.keyConfig) {
-      // eslint-disable-next-line no-param-reassign
       (runtimeConfig as any).keyConfig = {};
     }
     Object.assign(runtimeConfig.accountMap, tempConfig.accountMap);
@@ -637,86 +635,88 @@ export async function createDefaultRuntime(
     const accountIds = Object.keys(runtimeConfig.keyConfig);
     await Promise.all(accountIds.map(async (accountId: string) => {
       // check if the key is a valid accountId
-      if (accountId.length === 42) {
-        let dataKey;
-        let useDefaultDatakey = !runtimeConfig.useIdentity;
-        const sha3Account = web3.utils.soliditySha3(accountId);
-        const sha9Account = web3.utils.soliditySha3(sha3Account, sha3Account);
+      if (accountId.length !== 42) {
+        return;
+      }
 
-        // if useIdentity is specified, try to generate dataKeys with identity
-        if (runtimeConfig.useIdentity) {
-          if (!contextLessRuntime) {
-            // create a runtime without account relation, just for accesing some bcc class instances
-            contextLessRuntime = createRuntime(
-              web3,
-              dfs,
-              {
-                accountMap: {
-                  [nullAddress]: 'no-private-key-here',
-                },
+      let dataKey;
+      let useDefaultDatakey = !runtimeConfig.useIdentity;
+      const sha3Account = web3.utils.soliditySha3(accountId);
+      const sha9Account = web3.utils.soliditySha3(sha3Account, sha3Account);
+
+      // if useIdentity is specified, try to generate dataKeys with identity
+      if (runtimeConfig.useIdentity) {
+        if (!contextLessRuntime) {
+          // create a runtime without account relation, just for accesing some bcc class instances
+          contextLessRuntime = createRuntime(
+            web3,
+            dfs,
+            {
+              accountMap: {
+                [nullAddress]: 'no-private-key-here',
               },
-              options,
-            );
-          }
+            },
+            options,
+          );
+        }
 
-          // try out several dataKey encryption salting methods and check if, generated dataKeys are
-          // correct
-          let identity = nullAddress;
-          try {
-            identity = await (await contextLessRuntime).verifications
-              .getIdentityForAccount(accountId, true);
-          } catch (ex) {
-            // when no identity for a account could be found, it's a uninitialized account, so we
-            // should use default data key
-            useDefaultDatakey = true;
-            logger.log(`Could not find identity for account ${accountId} during keyConfig resolve.`
-              + ' Using default data key.', 'warning');
-          }
+        // try out several dataKey encryption salting methods and check if, generated dataKeys are
+        // correct
+        let identity = nullAddress;
+        try {
+          identity = await (await contextLessRuntime).verifications
+            .getIdentityForAccount(accountId, true);
+        } catch (ex) {
+          // when no identity for a account could be found, it's a uninitialized account, so we
+          // should use default data key
+          useDefaultDatakey = true;
+          logger.log(`Could not find identity for account ${accountId} during keyConfig resolve.`
+            + ' Using default data key.', 'warning');
+        }
 
-          if (identity !== nullAddress) {
-            const encryptionSalts = [identity, accountId];
-            // eslint-disable-next-line guard-for-in
-            for (const encryptionSalt of encryptionSalts) {
-              const saltedDataKey = web3.utils
-                .keccak256(encryptionSalt + runtimeConfig.keyConfig[accountId])
-                .replace(/0x/g, '');
-              const tempRuntime = await createRuntime(web3, dfs, {
-                accountMap: {
-                  [accountId]: runtimeConfig.accountMap[accountId],
-                },
-                keyConfig: {
-                  [sha3Account]: saltedDataKey,
-                  [sha9Account]: saltedDataKey,
-                },
-                useIdentity: runtimeConfig.useIdentity,
-              });
+        if (identity !== nullAddress) {
+          const encryptionSalts = [identity, accountId];
+          // eslint-disable-next-line guard-for-in
+          for (const encryptionSalt of encryptionSalts) {
+            const saltedDataKey = web3.utils
+              .keccak256(encryptionSalt + runtimeConfig.keyConfig[accountId])
+              .replace(/0x/g, '');
+            const tempRuntime = await createRuntime(web3, dfs, {
+              accountMap: {
+                [accountId]: runtimeConfig.accountMap[accountId],
+              },
+              keyConfig: {
+                [sha3Account]: saltedDataKey,
+                [sha9Account]: saltedDataKey,
+              },
+              useIdentity: runtimeConfig.useIdentity,
+            });
 
-              if (tempRuntime.profile) {
-                dataKey = saltedDataKey;
-                logger.log(`Using encryptionSalt "${encryptionSalt}" for`
-                  + ` generating dataKey in keyConfig for account "${accountId}".`, 'debug');
-                break;
-              }
+            if (tempRuntime.profile) {
+              dataKey = saltedDataKey;
+              logger.log(`Using encryptionSalt "${encryptionSalt}" for`
+                + ` generating dataKey in keyConfig for account "${accountId}".`, 'debug');
+              break;
             }
           }
         }
-
-        if (useDefaultDatakey) {
-          dataKey = web3.utils
-            .keccak256(accountId + runtimeConfig.keyConfig[accountId])
-            .replace(/0x/g, '');
-          logger.log('Using default encryptionSalt for generating dataKey'
-            + ` in keyConfig for account "${accountId}".`, 'debug');
-        } else if (!dataKey) {
-          throw new Error(`incorrect password for ${accountId} passed to keyConfig`);
-        }
-
-        // now add the different hashed accountids and datakeys to the runtimeconfig, if the
-        // dataKey was correct
-        runtimeConfig.keyConfig[sha3Account] = dataKey;
-        runtimeConfig.keyConfig[sha9Account] = dataKey;
-        delete runtimeConfig.keyConfig[accountId];
       }
+
+      if (useDefaultDatakey) {
+        dataKey = web3.utils
+          .keccak256(accountId + runtimeConfig.keyConfig[accountId])
+          .replace(/0x/g, '');
+        logger.log('Using default encryptionSalt for generating dataKey'
+          + ` in keyConfig for account "${accountId}".`, 'debug');
+      } else if (!dataKey) {
+        throw new Error(`incorrect password for ${accountId} passed to keyConfig`);
+      }
+
+      // now add the different hashed accountids and datakeys to the runtimeconfig, if the
+      // dataKey was correct
+      runtimeConfig.keyConfig[sha3Account] = dataKey;
+      runtimeConfig.keyConfig[sha9Account] = dataKey;
+      delete runtimeConfig.keyConfig[accountId];
     }));
   }
 
