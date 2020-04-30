@@ -300,7 +300,7 @@ export class Onboarding extends Logger {
   }
 
   /**
-   * generates a runtime config for a given mneomic and password
+   * generates a runtime config for a given mnemonic and password
    *
    * @param      {string}  mnemonic         specified mnemonic
    * @param      {string}  password         given password
