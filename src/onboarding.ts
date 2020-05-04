@@ -638,8 +638,12 @@ export class Onboarding extends Logger {
 
     // extend sharing for profile data with company profile
     if (additionalKeys.shareWith) {
-      for (let i = 0; i < profileKeys.length; i += 1) {
-        for (const shareWith of additionalKeys.shareWith) {
+      for (const shareWith of additionalKeys.shareWith) {
+        await creationRuntime.sharing.extendSharings(
+          sharings, targetAccount, shareWith, '*', 'hashKey', hashKey,
+        );
+
+        for (let i = 0; i < profileKeys.length; i += 1) {
           await creationRuntime.sharing.extendSharings(
             sharings,
             targetAccount,
