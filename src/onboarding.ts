@@ -434,7 +434,7 @@ export class Onboarding extends Logger {
 
         res.on('end', () => {
           const body = Buffer.concat(chunks);
-          resolve(JSON.parse(body.toString()).result);
+          resolve(JSON.parse(body.toString()));
         });
       });
       reqProfileReq.write(requestProfilePayload);
@@ -637,7 +637,7 @@ export class Onboarding extends Logger {
     }
 
     // extend sharing for profile data with company profile
-    if (additionalKeys.shareWith) {
+    if (additionalKeys?.shareWith) {
       for (const shareWith of additionalKeys.shareWith) {
         await creationRuntime.sharing.extendSharings(
           sharings, targetAccount, shareWith, '*', 'hashKey', hashKey,
