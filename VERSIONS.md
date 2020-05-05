@@ -14,6 +14,7 @@
   + `Votings`
 - addded `EvanIdentity` as authorization parameter to result of `utils.getSmartAgentAuthHeaders` (for usage sample have a look to [edge-server-seed](https://github.com/evannetwork/edge-server-seed/tree/develop#auth-middleware))
 - add `Identity` class and add functions for grant / remove access to act on behalf of identity
+- support identity salting for encryptionKey generation for `createDefaultRuntime`
 
 ### Fixes
 - Fixed bug where a new DID document proof would incorporate the old proof and thus would make the document increasingly larger
@@ -25,6 +26,7 @@
 - use `useIdentity` flag for `createOfflineProfile`
 - pass `password` to `createOfflineProfile` to enable dataKey generation based on the users identity
 - checked node 13 compatibility
+- reset executor signer for runtime initialization with account that has no identity
 
 ### Deprecations
 

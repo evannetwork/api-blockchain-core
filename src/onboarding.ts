@@ -101,11 +101,11 @@ export class Onboarding extends Logger {
     if (!password) {
       throw new Error('password is a required parameter!');
     }
-
-    const runtimeConfig: any = await Onboarding.generateRuntimeConfig(
-      mnemonic, password, runtime.web3,
-    );
-    const runtimeNew = await createDefaultRuntime(runtime.web3, runtime.dfs, runtimeConfig);
+    const runtimeNew = await createDefaultRuntime(runtime.web3, runtime.dfs, {
+      mnemonic,
+      password,
+      useIdentity: runtime.runtimeConfig.useIdentity,
+    });
 
     // check if the source runtime has enough funds
     const profileCost = runtime.web3.utils.toWei('1.0097');
@@ -135,7 +135,7 @@ export class Onboarding extends Logger {
     return {
       mnemonic,
       password,
-      runtimeConfig,
+      runtimeConfig: runtimeNew.runtimeConfig,
     };
   }
 
@@ -300,13 +300,20 @@ export class Onboarding extends Logger {
   }
 
   /**
-   * generates a runtime config for a given mneomic and password
+   * generates a runtime config for a given mnemonic and password
    *
-   * @param      {string}  mnemonic  specified mnemonic
-   * @param      {string}  password  given password
-   * @param      {any}     web3      web3 instance
+   * @param      {string}  mnemonic         specified mnemonic
+   * @param      {string}  password         given password
+   * @param      {any}     web3             web3 instance
+   * @param      {string}  passwordSalting  string that should be used for encryptionKey salting
+   *                                        instead of account id (e.g. identity)
    */
-  public static async generateRuntimeConfig(mnemonic: string, password: string, web3: any) {
+  public static async generateRuntimeConfig(
+    mnemonic: string,
+    password: string,
+    web3: any,
+    passwordSalting?: string,
+  ) {
     // generate a new vault from the mnemnonic and the password
     const vault: any = await new Promise((res) => {
       KeyStore.createVault({
@@ -331,7 +338,7 @@ export class Onboarding extends Logger {
       [web3.utils.soliditySha3(accountId), web3.utils.soliditySha3(accountId)].sort());
     const sha3Account = web3.utils.soliditySha3(accountId);
     const dataKey = web3.utils
-      .keccak256(accountId + password)
+      .keccak256((passwordSalting || accountId) + password)
       .replace(/0x/g, '');
     const runtimeConfig = {
       accountMap: {
