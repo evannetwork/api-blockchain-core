@@ -197,6 +197,81 @@ Example
           accountName: 'test account'
       }});
 
+
+
+--------------------------------------------------------------------------------
+
+.. _onboarding_createOfflineProfile:
+
+createOfflineProfile
+================================================================================
+
+.. code-block:: typescript
+
+  Onboarding.createNewProfile(mnemnonic, password, profileProperties);
+
+(static class function)
+
+
+Creates a new empty profile offline and emits it to a given smart agent. The profile is created in two steps. First, an empty profile is created then the empty profile is filled and returned. In the case of a company profile two empty profiles are created and then both are filled and each are given access to both profiles.
+
+----------
+Parameters
+----------
+
+#. ``runtime`` - ``any``: initialized runtime
+#. ``profileData`` - ``any``: object that included profile data (accountDetails, registration, contact, ...)
+#. ``accountId`` - ``string``: accountId of the private key
+#. ``pKey`` - ``string``: private key
+#. ``password`` - ``string``: password of the new created profile
+#. ``recaptchaToken`` - ``string``: recaptcha token
+#. ``network`` - ``string``: selected network (testcore/core) - defaults to testcore
+
+-------
+Returns
+-------
+
+``Promise`` returns ``void``: resolved when done
+
+-------
+Example
+-------
+
+
+.. code-block:: typescript
+
+    // For creating a user profile offline
+    const tempRuntime = await TestUtils.getRuntime(accounts[2], null, { useIdentity });
+    Onboarding.createOfflineProfile(
+      tempRuntime,
+      {
+        accountDetails: {
+          accountName: 'Test',
+        },
+      },
+      accounts[2],
+      pKey,
+      '',
+      '')
+
+    // For creating a company profile offline
+    const tempRuntime = await TestUtils.getRuntime(accounts[2], null, { useIdentity });
+    Onboarding.createOfflineProfile(
+      tempRuntime,
+      {
+        accountDetails: {
+          accountName: 'Test',
+          profileType: 'company',
+          companyAlias: 'Evan',
+        },
+        registration: 'Germany',
+        contact: 'anyone',
+      },
+      accounts[2],
+      pKey,
+      '',
+      '')
+
 .. required for building markup
 
 .. |source executor| replace:: ``Executor``
