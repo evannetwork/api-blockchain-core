@@ -2,6 +2,7 @@
 
 ## Next Version
 ### Features
+- add `sourceIdentity` as optional parameter for `setDidDocumentOffline` to explicitly parse the signing identity
 - add check in `createOfflineProfile` for company profile type to create two profiles otherwise only create one
 - add method `fillProfile` to fill empty profile
 - add method `getRuntimeForIdentity` to create a runtime for a specific identity
