@@ -442,6 +442,7 @@ export class Onboarding extends Logger {
     });
 
     if (profileData.accountDetails.profileType === 'company') {
+      // company profile data to fill
       const companyDataToFill = {
         accountDetails: {
           accountName: profileData.accountDetails.companyAlias,
@@ -459,6 +460,13 @@ export class Onboarding extends Logger {
       const companyAccountHash = creationRuntime.runtimeConfig.useIdentity ? companyIdentityHash
         : accountHash;
 
+      // user profile data to fill
+      const userDataToFill = {
+        accountDetails: {
+          accountName: profileData.accountDetails.accountName,
+          profileType: 'user',
+        },
+      };
       // user data
       const userIdentity = (requestedProfile as any).user.identity;
       const userIdentityHash = creationRuntime.web3.utils.soliditySha3(userIdentity);
@@ -466,6 +474,7 @@ export class Onboarding extends Logger {
       const userAccountHash = creationRuntime.runtimeConfig.useIdentity ? userIdentityHash
         : accountHash;
 
+      // Generate company encryption key
       const aes = new Aes();
       const key = await aes.generateKey();
       // eslint-disable-next-line
@@ -473,10 +482,18 @@ export class Onboarding extends Logger {
       // eslint-disable-next-line
       creationRuntime.keyProvider.keys[creationRuntime.web3.utils.soliditySha3(companyAccountHash, companyAccountHash)] = key;
 
+      // generate the encryption key with the provided password and the target account
+      const dataKey = creationRuntime.web3.utils.sha3(userAccount + password).replace(/0x/g, '');
+      // eslint-disable-next-line
+      creationRuntime.keyProvider.keys[userAccountHash] = dataKey;
+      // eslint-disable-next-line
+      creationRuntime.keyProvider.keys[creationRuntime.web3.utils.soliditySha3(userAccountHash, userAccountHash)] = dataKey;
+
       // generate the communication key
       const commKey = await creationRuntime.keyExchange.generateCommKey();
-      let additionalKeys = {};
-      additionalKeys = {
+
+      // additionalKeys for company
+      const additionalKeysCompany = {
         contactKeys: [
           { address: userAccount, context: 'commKey', key: commKey },
         ],
@@ -491,33 +508,8 @@ export class Onboarding extends Logger {
         ],
       };
 
-      await this.fillProfile(
-        (requestedProfile as any).company,
-        companyIdentity,
-        companyAccount,
-        creationRuntime,
-        accountId,
-        key,
-        companyDataToFill,
-        network,
-        signature,
-        additionalKeys,
-      );
-
-      const userDataToFill = {
-        accountDetails: {
-          accountName: profileData.accountDetails.accountName,
-          profileType: 'user',
-        },
-      };
-
-      // generate the encryption key with the provided password and the target account
-      const dataKey = creationRuntime.web3.utils.sha3(userAccount + password).replace(/0x/g, '');
-      // eslint-disable-next-line
-      creationRuntime.keyProvider.keys[userAccountHash] = dataKey;
-      // eslint-disable-next-line
-      creationRuntime.keyProvider.keys[creationRuntime.web3.utils.soliditySha3(userAccountHash, userAccountHash)] = dataKey;
-      additionalKeys = {
+      // additionalKeys for user
+      const additionalKeysUser = {
         contactKeys: [
           { address: companyAccount, context: 'commKey', key: commKey },
           { address: companyAccount, context: 'identityAccess', key },
@@ -530,18 +522,31 @@ export class Onboarding extends Logger {
         ],
       };
 
-      await this.fillProfile(
-        (requestedProfile as any).user,
-        userIdentity,
-        userAccount,
-        creationRuntime,
-        accountId,
-        dataKey,
-        userDataToFill,
-        network,
-        signature,
-        additionalKeys,
-      );
+      await Promise.all([
+        this.fillProfile(
+          (requestedProfile as any).company,
+          companyIdentity,
+          companyAccount,
+          creationRuntime,
+          accountId,
+          key,
+          companyDataToFill,
+          network,
+          signature,
+          additionalKeysCompany,
+        ),
+        this.fillProfile(
+          (requestedProfile as any).user,
+          userIdentity,
+          userAccount,
+          creationRuntime,
+          accountId,
+          dataKey,
+          userDataToFill,
+          network,
+          signature,
+          additionalKeysUser,
+        )]);
     } else {
       const newIdentity = (requestedProfile as any).identity;
       const accountHash = creationRuntime.web3.utils.soliditySha3(accountId);
