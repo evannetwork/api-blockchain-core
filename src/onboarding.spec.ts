@@ -233,27 +233,24 @@ describe('Onboarding helper', function test() {
       });
 
       // Serverside -- Step 2 of offline profile creation
-      let companyHasBeenCreated = false;
       app.post('/api/smart-agents/profile/fill', (req, res) => {
         try {
           expect(req.body).to.have.property('accountId').that.equals(accountToUse);
-          if (!companyHasBeenCreated) {
+          expect(req.body).to.have.property('profileInfo');
+          if (req.body.profileInfo.properties.entries.contact) {
             if (useIdentity) {
               expect(req.body).to.have.property('identityId').that.equals('0x0000000000000000000000000000000000000002');
             }
             expect(req.body).to.have.property('accessToken').that.equals('randomToken2');
-            expect(req.body).to.have.property('profileInfo');
             expect(req.body).to.have.property('contractId').that.equals('0x0000000000000000000000000000000000000001');
             if (useIdentity) {
               expect(req.body).to.have.nested.property('didTransaction.sourceIdentity').that.equals('0x0000000000000000000000000000000000000002');
             }
-            companyHasBeenCreated = true;
           } else {
             if (useIdentity) {
               expect(req.body).to.have.property('identityId').that.equals(identity);
             }
             expect(req.body).to.have.property('accessToken').that.equals(accessToken);
-            expect(req.body).to.have.property('profileInfo');
             expect(req.body).to.have.property('contractId').that.equals(contractId);
             if (useIdentity) {
               expect(req.body).to.have.nested.property('didTransaction.sourceIdentity').that.equals(identity);
