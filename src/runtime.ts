@@ -42,7 +42,7 @@ import { DataContract } from './contracts/data-contract/data-contract';
 import { Description } from './shared-description';
 import { Did } from './did/did';
 import { EncryptionWrapper } from './encryption/encryption-wrapper';
-import { getEnvironment } from './common/utils';
+import { getEnvironment, nullAddress } from './common/utils';
 import { Identity } from './identity/identity';
 import { Ipfs } from './dfs/ipfs';
 import { IpfsLib } from './dfs/ipfs-lib';
@@ -111,7 +111,7 @@ export interface Runtime {
  * @param      {any}               runtimeConfig  configuration values
  * @return     {Promise<Runtime>}  runtime instance
  */
-export async function createDefaultRuntime(
+async function createRuntime(
   web3: any, dfs: DfsInterface, runtimeConfig: any, options: Runtime = { },
 ): Promise<Runtime> {
   // determine chain this runtime is created for
@@ -160,30 +160,7 @@ export async function createDefaultRuntime(
   }
 
   // web3 contract interfaces
-  const contractLoader = options.contractLoader
-    || new ContractLoader({ contracts, log, web3 });
-
-  // check if mnemonic and password are given
-  if (runtimeConfig.mnemonic && runtimeConfig.password) {
-    const tempConfig: any = await Onboarding.generateRuntimeConfig(
-      runtimeConfig.mnemonic,
-      runtimeConfig.password,
-      web3,
-    );
-    if (!runtimeConfig.accountMap) {
-      // eslint-disable-next-line no-param-reassign
-      (runtimeConfig as any).accountMap = {};
-    }
-    if (!runtimeConfig.keyConfig) {
-      // eslint-disable-next-line no-param-reassign
-      (runtimeConfig as any).keyConfig = {};
-    }
-    Object.assign(runtimeConfig.accountMap, tempConfig.accountMap);
-    Object.assign(runtimeConfig.keyConfig, tempConfig.keyConfig);
-  } else if (!runtimeConfig.accountMap
-       || !(Object.keys(runtimeConfig.accountMap).length)) {
-    throw new Error('accountMap invalid');
-  }
+  const contractLoader = options.contractLoader || new ContractLoader({ contracts, log, web3 });
 
   // executor
   const accountStore = options.accountStore
@@ -249,30 +226,7 @@ export async function createDefaultRuntime(
   (cryptoConfig as any).aesEcb = new AesEcb({ log });
   const cryptoProvider = new CryptoProvider(cryptoConfig);
 
-  // check and modify if any accountid with password is provided
-  if (runtimeConfig.keyConfig) {
-    for (const accountId in runtimeConfig.keyConfig) {
-      // check if the key is a valid accountId
-      if (accountId.length === 42) {
-        const sha3Account = web3.utils.soliditySha3(accountId);
-        const sha9Account = web3.utils.soliditySha3(sha3Account, sha3Account);
-        const dataKey = web3.utils
-          .keccak256(accountId + runtimeConfig.keyConfig[accountId])
-          .replace(/0x/g, '');
-        // now add the different hashed accountids and datakeys to the runtimeconfig
-        // eslint-disable-next-line no-param-reassign
-        runtimeConfig.keyConfig[sha3Account] = dataKey;
-        // eslint-disable-next-line no-param-reassign
-        runtimeConfig.keyConfig[sha9Account] = dataKey;
-
-        // at least delete the old key
-        // eslint-disable-next-line no-param-reassign
-        delete runtimeConfig.keyConfig[accountId];
-      }
-    }
-  }
-
-  const activeAccount = Object.keys(runtimeConfig.accountMap)[0];
+  const activeAccount = runtimeConfig.account || Object.keys(runtimeConfig.accountMap)[0];
   const keyProvider = options.keyProvider
     || new KeyProvider({ keys: runtimeConfig.keyConfig, log });
   keyProvider.currentAccountHash = nameResolver.soliditySha3(activeAccount);
@@ -329,6 +283,7 @@ export async function createDefaultRuntime(
       activeIdentity = activeAccount;
       underlyingAccount = activeIdentity;
       signer = signerInternal;
+      executor.signer = signerInternal;
     }
   } else {
     activeIdentity = activeAccount;
@@ -629,6 +584,143 @@ export async function createDefaultRuntime(
     ...(vc && { vc }),
     ...(underlyingAccount && { underlyingAccount }),
   };
+}
+
+/**
+ * create new runtime instance
+ *
+ * @param      {any}               web3           connected web3 instance
+ * @param      {DfsInterface}      dfs            interface for retrieving file from dfs
+ * @param      {any}               runtimeConfig  configuration values
+ * @return     {Promise<Runtime>}  runtime instance
+ */
+export async function createDefaultRuntime(
+  web3: any, dfs: DfsInterface, orgRuntimeConfig: any, options: Runtime = { },
+): Promise<Runtime> {
+  const runtimeConfig = cloneDeep(orgRuntimeConfig);
+  const logger = options.logger || (new Logger());
+  let contextLessRuntime;
+
+  // check if mnemonic and password are given
+  if (runtimeConfig.mnemonic && runtimeConfig.password) {
+    const tempConfig: any = await Onboarding.generateRuntimeConfig(
+      runtimeConfig.mnemonic,
+      runtimeConfig.password,
+      web3,
+    );
+    // eslint-disable-next-line prefer-destructuring
+    runtimeConfig.account = Object.keys(tempConfig.accountMap)[0];
+    if (!runtimeConfig.accountMap) {
+      (runtimeConfig as any).accountMap = {};
+    }
+    if (!runtimeConfig.keyConfig) {
+      (runtimeConfig as any).keyConfig = {};
+    }
+    Object.assign(runtimeConfig.accountMap, tempConfig.accountMap);
+    // do not apply the encryption key directly, will be handled by keyConfig account + password
+    // handling
+    Object.assign(runtimeConfig.keyConfig, {
+      [runtimeConfig.account]: runtimeConfig.password,
+    });
+    // cleanup runtime
+    delete runtimeConfig.mnemonic;
+    delete runtimeConfig.password;
+  } else if (!runtimeConfig.accountMap
+       || !(Object.keys(runtimeConfig.accountMap).length)) {
+    throw new Error('accountMap invalid');
+  }
+
+  // check and modify if any accountid with password is provided
+  if (runtimeConfig.keyConfig) {
+    const accountIds = Object.keys(runtimeConfig.keyConfig);
+    await Promise.all(accountIds.map(async (accountId: string) => {
+      // check if the key is a valid accountId
+      if (accountId.length !== 42) {
+        return;
+      }
+
+      let dataKey;
+      let useDefaultDatakey = !runtimeConfig.useIdentity;
+      const sha3Account = web3.utils.soliditySha3(accountId);
+      const sha9Account = web3.utils.soliditySha3(sha3Account, sha3Account);
+
+      // if useIdentity is specified, try to generate dataKeys with identity
+      if (runtimeConfig.useIdentity) {
+        if (!contextLessRuntime) {
+          // create a runtime without account relation, just for accesing some bcc class instances
+          contextLessRuntime = createRuntime(
+            web3,
+            dfs,
+            {
+              accountMap: {
+                [nullAddress]: 'no-private-key-here',
+              },
+            },
+            options,
+          );
+        }
+
+        // try out several dataKey encryption salting methods and check if, generated dataKeys are
+        // correct
+        let identity = nullAddress;
+        try {
+          identity = await (await contextLessRuntime).verifications
+            .getIdentityForAccount(accountId, true);
+        } catch (ex) {
+          // when no identity for a account could be found, it's a uninitialized account, so we
+          // should use default data key
+          useDefaultDatakey = true;
+          logger.log(`Could not find identity for account ${accountId} during keyConfig resolve.`
+            + ' Using default data key.', 'warning');
+        }
+
+        if (identity !== nullAddress) {
+          const encryptionSalts = [identity, accountId];
+          // eslint-disable-next-line guard-for-in
+          for (const encryptionSalt of encryptionSalts) {
+            const saltedDataKey = web3.utils
+              .keccak256(encryptionSalt + runtimeConfig.keyConfig[accountId])
+              .replace(/^0x/, '');
+            const tempRuntime = await createRuntime(web3, dfs, {
+              accountMap: {
+                [accountId]: runtimeConfig.accountMap[accountId],
+              },
+              keyConfig: {
+                [sha3Account]: saltedDataKey,
+                [sha9Account]: saltedDataKey,
+              },
+              useIdentity: runtimeConfig.useIdentity,
+            });
+
+            if (tempRuntime.profile) {
+              dataKey = saltedDataKey;
+              logger.log(`Using encryptionSalt "${encryptionSalt}" for`
+                + ` generating dataKey in keyConfig for account "${accountId}".`, 'debug');
+              break;
+            }
+          }
+        }
+      }
+
+      if (useDefaultDatakey) {
+        dataKey = web3.utils
+          .keccak256(accountId + runtimeConfig.keyConfig[accountId])
+          .replace(/0x/g, '');
+        logger.log('Using default encryptionSalt for generating dataKey'
+          + ` in keyConfig for account "${accountId}".`, 'debug');
+      } else if (!dataKey) {
+        throw new Error(`incorrect password for ${accountId} passed to keyConfig`);
+      }
+
+      // now add the different hashed accountids and datakeys to the runtimeconfig, if the
+      // dataKey was correct
+      runtimeConfig.keyConfig[sha3Account] = dataKey;
+      runtimeConfig.keyConfig[sha9Account] = dataKey;
+      delete runtimeConfig.keyConfig[accountId];
+    }));
+  }
+
+  return createRuntime(web3, dfs, runtimeConfig, options);
 }
 
 /**
