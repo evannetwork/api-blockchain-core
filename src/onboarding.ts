@@ -400,7 +400,7 @@ export class Onboarding extends Logger {
 
     const requestMode = process.env.TEST_ONBOARDING ? http : https;
 
-    const requestedProfile = await new Promise((resolve, reject) => {
+    const requestedProfile: any = await new Promise((resolve, reject) => {
       const requestProfilePayload = JSON.stringify({
         companyProfile: profileData.accountDetails.profileType === 'company',
         accountId,
@@ -452,7 +452,7 @@ export class Onboarding extends Logger {
         contact: profileData.contact,
       };
       // company data
-      const companyIdentity = (requestedProfile as any).company.identity;
+      const companyIdentity = requestedProfile.company.identity;
       const accountHash = creationRuntime.web3.utils.soliditySha3(accountId);
       const companyIdentityHash = creationRuntime.web3.utils.soliditySha3(companyIdentity);
       const companyAccount = creationRuntime.runtimeConfig.useIdentity
@@ -468,7 +468,7 @@ export class Onboarding extends Logger {
         },
       };
       // user data
-      const userIdentity = (requestedProfile as any).user.identity;
+      const userIdentity = requestedProfile.user.identity;
       const userIdentityHash = creationRuntime.web3.utils.soliditySha3(userIdentity);
       const userAccount = creationRuntime.runtimeConfig.useIdentity ? userIdentity : accountId;
       const userAccountHash = creationRuntime.runtimeConfig.useIdentity ? userIdentityHash
@@ -524,7 +524,7 @@ export class Onboarding extends Logger {
 
       await Promise.all([
         this.fillProfile(
-          (requestedProfile as any).company,
+          requestedProfile.company,
           companyIdentity,
           companyAccount,
           creationRuntime,
@@ -536,7 +536,7 @@ export class Onboarding extends Logger {
           additionalKeysCompany,
         ),
         this.fillProfile(
-          (requestedProfile as any).user,
+          requestedProfile.user,
           userIdentity,
           userAccount,
           creationRuntime,
@@ -548,7 +548,7 @@ export class Onboarding extends Logger {
           additionalKeysUser,
         )]);
     } else {
-      const newIdentity = (requestedProfile as any).identity;
+      const newIdentity = requestedProfile.user.identity;
       const accountHash = creationRuntime.web3.utils.soliditySha3(accountId);
       const identityHash = creationRuntime.web3.utils.soliditySha3(newIdentity);
       const targetAccount = creationRuntime.runtimeConfig.useIdentity ? newIdentity : accountId;
@@ -561,7 +561,7 @@ export class Onboarding extends Logger {
       // eslint-disable-next-line
       creationRuntime.keyProvider.keys[creationRuntime.web3.utils.soliditySha3(targetAccountHash, targetAccountHash)] = dataKey;      
       await this.fillProfile(
-        requestedProfile,
+        requestedProfile.user,
         newIdentity,
         targetAccount,
         creationRuntime,
@@ -677,7 +677,7 @@ export class Onboarding extends Logger {
       const envelope = {
         private: encrypted.toString('hex'),
         cryptoInfo: cryptorAes.getCryptoInfo(
-          creationRuntime.nameResolver.soliditySha3((requestedProfile as any).contractId),
+          creationRuntime.nameResolver.soliditySha3(requestedProfile.contractId),
         ),
       };
       const ipfsHash = await creationRuntime.dfs.add(key, Buffer.from(JSON.stringify(envelope)));
@@ -727,14 +727,14 @@ export class Onboarding extends Logger {
       identityId: creationRuntime.runtimeConfig.useIdentity ? newIdentity : undefined,
       signature,
       profileInfo: fileHashes,
-      accessToken: (requestedProfile as any).accessToken,
-      contractId: (requestedProfile as any).contractId,
+      accessToken: requestedProfile.accessToken,
+      contractId: requestedProfile.contractId,
     } as any;
 
     // TODO if statement can be removed after account/identity switch is done
     if (creationRuntime.runtimeConfig.useIdentity) {
       const didTransactionTuple = await this.createOfflineDidTransaction(creationRuntime,
-        accountId, (requestedProfile as any).identity);
+        accountId, requestedProfile.identity);
       const didTransaction = didTransactionTuple[0];
       const documentHash = didTransactionTuple[1];
       data.didTransaction = didTransaction;
