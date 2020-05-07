@@ -634,12 +634,8 @@ export class Onboarding extends Logger {
     const cryptor = creationRuntime.cryptoProvider.getCryptorByCryptoAlgo('aesEcb');
     const fileHashes: any = {};
 
-    const cryptorAes = creationRuntime.cryptoProvider.getCryptorByCryptoAlgo(
-      creationRuntime.dataContract.options.defaultCryptoAlgo,
-    );
-    const hashCryptor = creationRuntime.cryptoProvider.getCryptorByCryptoAlgo(
-      creationRuntime.dataContract.cryptoAlgorithHashes,
-    );
+    const cryptorAes = creationRuntime.cryptoProvider.getCryptorByCryptoAlgo('aes');
+    const hashCryptor = creationRuntime.cryptoProvider.getCryptorByCryptoAlgo('aesEcb');
     const [hashKey, blockNr] = await Promise.all([
       hashCryptor.generateKey(),
       creationRuntime.web3.eth.getBlockNumber(),
@@ -685,7 +681,8 @@ export class Onboarding extends Logger {
     }
     // upload sharings
     const sharingsHash = await creationRuntime.dfs.add(
-      'sharing', Buffer.from(JSON.stringify(sharings), creationRuntime.dataContract.encodingUnencrypted),
+      'sharing',
+      Buffer.from(JSON.stringify(sharings), 'utf-8'),
     );
 
     // used to exclude encrypted hashes from fileHashes.ipfsHashes
@@ -703,7 +700,10 @@ export class Onboarding extends Logger {
           creationRuntime.nameResolver.soliditySha3(requestedProfile.contractId),
         ),
       };
-      const ipfsHash = await creationRuntime.dfs.add(key, Buffer.from(JSON.stringify(envelope)));
+      const ipfsHash: any = await creationRuntime.dfs.add(
+        key,
+        Buffer.from(JSON.stringify(envelope))
+      );
       profile.ipld.hashLog.push(`${ipfsHash.toString('hex')}`);
 
       fileHashes.properties.entries[key] = await cryptor.encrypt(
