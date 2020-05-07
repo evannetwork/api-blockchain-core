@@ -702,7 +702,7 @@ export class Onboarding extends Logger {
       };
       const ipfsHash: any = await creationRuntime.dfs.add(
         key,
-        Buffer.from(JSON.stringify(envelope))
+        Buffer.from(JSON.stringify(envelope)),
       );
       profile.ipld.hashLog.push(`${ipfsHash.toString('hex')}`);
 
