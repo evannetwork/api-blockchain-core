@@ -483,18 +483,16 @@ export class Onboarding extends Logger {
 
       // Generate company encryption key
       const aes = new Aes();
-      const key = await aes.generateKey();
-      // eslint-disable-next-line
-      creationRuntime.keyProvider.keys[companyAccountHash] = key;
-      // eslint-disable-next-line
-      creationRuntime.keyProvider.keys[creationRuntime.web3.utils.soliditySha3(companyAccountHash, companyAccountHash)] = key;
+      const companyDataKey = await aes.generateKey();
+      creationRuntime.keyProvider.keys[companyAccountHash] = companyDataKey;
+      creationRuntime.keyProvider.keys[creationRuntime.web3.utils
+        .soliditySha3(companyAccountHash, companyAccountHash)] = companyDataKey;
 
       // generate the encryption key with the provided password and the target account
-      const dataKey = creationRuntime.web3.utils.sha3(userAccount + password).replace(/0x/g, '');
-      // eslint-disable-next-line
-      creationRuntime.keyProvider.keys[userAccountHash] = dataKey;
-      // eslint-disable-next-line
-      creationRuntime.keyProvider.keys[creationRuntime.web3.utils.soliditySha3(userAccountHash, userAccountHash)] = dataKey;
+      const userDataKey = creationRuntime.web3.utils.sha3(userAccount + password).replace(/0x/g, '');
+      creationRuntime.keyProvider.keys[userAccountHash] = userDataKey;
+      creationRuntime.keyProvider.keys[
+        creationRuntime.web3.utils.soliditySha3(userAccountHash, userAccountHash)] = userDataKey;
 
       // generate the communication key
       const commKey = await creationRuntime.keyExchange.generateCommKey();
@@ -519,7 +517,7 @@ export class Onboarding extends Logger {
       const additionalKeysUser = {
         contactKeys: [
           { address: companyAccount, context: 'commKey', key: commKey },
-          { address: companyAccount, context: 'identityAccess', key },
+          { address: companyAccount, context: 'identityAccess', key: companyDataKey },
         ],
         profileKeys: [
           { address: companyAccount, key: 'alias', value: profileData.accountDetails.companyAlias },
@@ -531,25 +529,21 @@ export class Onboarding extends Logger {
 
       await Promise.all([
         this.fillProfile(
-          requestedProfile.company,
-          companyIdentity,
-          companyAccount,
-          creationRuntime,
           accountId,
-          key,
+          companyAccount,
+          requestedProfile.company,
           companyDataToFill,
+          creationRuntime,
           network,
           signature,
           additionalKeysCompany,
         ),
         this.fillProfile(
-          requestedProfile.user,
-          userIdentity,
-          userAccount,
-          creationRuntime,
           accountId,
-          dataKey,
+          userAccount,
+          requestedProfile.user,
           userDataToFill,
+          creationRuntime,
           network,
           signature,
           additionalKeysUser,
@@ -568,47 +562,46 @@ export class Onboarding extends Logger {
       // eslint-disable-next-line
       creationRuntime.keyProvider.keys[creationRuntime.web3.utils.soliditySha3(targetAccountHash, targetAccountHash)] = dataKey;      
       await this.fillProfile(
-        requestedProfile.user,
-        newIdentity,
-        targetAccount,
-        creationRuntime,
         accountId,
-        password,
+        targetAccount,
+        requestedProfile.user,
         profileData,
+        creationRuntime,
         network,
         signature,
       );
     }
   }
 
+  /**
+   * Takes a empty profile contract, adds hash keys and data keys and uses the smart-agent-faucet
+   * '/api/smart-agents/profile/fill' endpoint to write this data to the profile contract.
+   *
+   * @param      {string}         accountId         account / identity that
+   * @param      {string}         targetAccount     underlying account (mnemonic public key)
+   * @param      {any}            requestedProfile  profile contract
+   * @param      {any}            profileData       profile data that should be filled into the
+   *                                                profile container contract
+   * @param      {any}            creationRuntime   basic runtime that can be used to generate keys,
+   *                                                fill profile, data, ...
+   * @param      {any}            network           network id to send to the agent
+   * @param      {any}            signature         signate that should be sent to the agent
+   * @param      {any}            additionalKeys    keys that should be dynamically added to
+   *                                                contactKeys, profileKeys and is possible to
+   *                                                share all container entries with the specified
+   *                                                addresses within the shareWith property
+   * @return     {Promise<void>}  resolved when done.
+   */
   private static async fillProfile(
-    requestedProfile: any,
-    newIdentity: string,
-    targetAccount: string,
-    passedRuntime: any,
     accountId: string,
-    keys: any,
+    targetAccount: string,
+    requestedProfile: any,
     profileData: any,
+    creationRuntime: any,
     network = 'testcore',
     signature: any,
     additionalKeys?: any,
   ) {
-    const sha3Account = passedRuntime.web3.utils.sha3(accountId);
-    const sha3Identity = passedRuntime.web3.utils.sha3(newIdentity);
-    const sha9Identity = passedRuntime.web3.utils.sha3(sha3Identity, sha3Identity);
-    const creationRuntime = await createDefaultRuntime(
-      passedRuntime.web3,
-      passedRuntime.dfs,
-      {
-        ...passedRuntime.runtimeConfig,
-        identity: newIdentity,
-        keyConfig: {
-          [sha3Identity]: passedRuntime[sha3Account],
-          [sha9Identity]: passedRuntime[sha3Account],
-          ...passedRuntime.runtimeConfig.keyConfig,
-        },
-      },
-    );
     const { profile } = creationRuntime;
     profile.ipld.originator = creationRuntime.web3.utils.soliditySha3(targetAccount);
     profile.activeAccount = targetAccount;
@@ -634,8 +627,12 @@ export class Onboarding extends Logger {
     const cryptor = creationRuntime.cryptoProvider.getCryptorByCryptoAlgo('aesEcb');
     const fileHashes: any = {};
 
-    const cryptorAes = creationRuntime.cryptoProvider.getCryptorByCryptoAlgo('aes');
-    const hashCryptor = creationRuntime.cryptoProvider.getCryptorByCryptoAlgo('aesEcb');
+    const cryptorAes = creationRuntime.cryptoProvider.getCryptorByCryptoAlgo(
+      creationRuntime.dataContract.options.defaultCryptoAlgo,
+    );
+    const hashCryptor = creationRuntime.cryptoProvider.getCryptorByCryptoAlgo(
+      creationRuntime.dataContract.cryptoAlgorithHashes,
+    );
     const [hashKey, blockNr] = await Promise.all([
       hashCryptor.generateKey(),
       creationRuntime.web3.eth.getBlockNumber(),
@@ -681,8 +678,7 @@ export class Onboarding extends Logger {
     }
     // upload sharings
     const sharingsHash = await creationRuntime.dfs.add(
-      'sharing',
-      Buffer.from(JSON.stringify(sharings), 'utf-8'),
+      'sharing', Buffer.from(JSON.stringify(sharings), creationRuntime.dataContract.encodingUnencrypted),
     );
 
     // used to exclude encrypted hashes from fileHashes.ipfsHashes
@@ -700,10 +696,7 @@ export class Onboarding extends Logger {
           creationRuntime.nameResolver.soliditySha3(requestedProfile.contractId),
         ),
       };
-      const ipfsHash: any = await creationRuntime.dfs.add(
-        key,
-        Buffer.from(JSON.stringify(envelope)),
-      );
+      const ipfsHash = await creationRuntime.dfs.add(key, Buffer.from(JSON.stringify(envelope)));
       profile.ipld.hashLog.push(`${ipfsHash.toString('hex')}`);
 
       fileHashes.properties.entries[key] = await cryptor.encrypt(
@@ -747,7 +740,7 @@ export class Onboarding extends Logger {
 
     const data = {
       accountId,
-      identityId: creationRuntime.runtimeConfig.useIdentity ? newIdentity : undefined,
+      identityId: creationRuntime.runtimeConfig.useIdentity ? targetAccount : undefined,
       signature,
       profileInfo: fileHashes,
       accessToken: requestedProfile.accessToken,
@@ -831,6 +824,8 @@ export class Onboarding extends Logger {
         activeIdentity: identity,
         underlyingAccount: account,
       };
+      // eslint-disable-next-line no-param-reassign
+      runtime.verifications.options.executor.signer = signer;
       runtime.verifications.options.executor.signer.updateConfig({
         verifications: runtime.verifications,
       }, {

@@ -140,9 +140,11 @@ describe('Onboarding helper', function test() {
             'Gimme Gimme Gimme!', req.body.signature,
           )).to.equal(accountToUse);
           res.send({
-            accessToken,
-            contractId,
-            identity,
+            user: {
+              accessToken,
+              contractId,
+              identity,
+            },
           });
         } catch (e) {
           reject(e);
