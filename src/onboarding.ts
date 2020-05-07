@@ -585,7 +585,7 @@ export class Onboarding extends Logger {
     requestedProfile: any,
     newIdentity: string,
     targetAccount: string,
-    creationRuntime: any,
+    passedRuntime: any,
     accountId: string,
     keys: any,
     profileData: any,
@@ -593,6 +593,22 @@ export class Onboarding extends Logger {
     signature: any,
     additionalKeys?: any,
   ) {
+    const sha3Account = passedRuntime.web3.utils.sha3(accountId);
+    const sha3Identity = passedRuntime.web3.utils.sha3(newIdentity);
+    const sha9Identity = passedRuntime.web3.utils.sha3(sha3Identity, sha3Identity);
+    const creationRuntime = await createDefaultRuntime(
+      passedRuntime.web3,
+      passedRuntime.dfs,
+      {
+        ...passedRuntime.runtimeConfig,
+        identity: newIdentity,
+        keyConfig: {
+          [sha3Identity]: passedRuntime[sha3Account],
+          [sha9Identity]: passedRuntime[sha3Account],
+          ...passedRuntime.runtimeConfig.keyConfig,
+        },
+      },
+    );
     const { profile } = creationRuntime;
     profile.ipld.originator = creationRuntime.web3.utils.soliditySha3(targetAccount);
     profile.activeAccount = targetAccount;
