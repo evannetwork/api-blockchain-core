@@ -2,6 +2,14 @@
 
 ## Next Version
 ### Features
+
+### Fixes
+
+### Deprecations
+
+
+## Version 2.19.0
+### Features
 - add `sourceIdentity` as optional parameter for `setDidDocumentOffline` to explicitly parse the signing identity
 - add check in `createOfflineProfile` for company profile type to create two profiles otherwise only create one
 - add method `fillProfile` to fill empty profile
@@ -30,8 +38,6 @@
 - pass `password` to `createOfflineProfile` to enable dataKey generation based on the users identity
 - checked node 13 compatibility
 - reset executor signer for runtime initialization with account that has no identity
-
-### Deprecations
 
 
 ## Version 2.18.0
