@@ -91,5 +91,5 @@
     "testunitcoverage": "env-cmd --fallback -f ./.env.local npm run build && nyc -r lcov -e .ts -x \"**/*.spec.ts\" -x \"lib\" mocha --exit -r ts-node/register $TESTSPECS && nyc report --reporter=json > coverage/coverage.json"
   },
   "types": "./dist/index.d.ts",
-  "version": "2.18.0"
+  "version": "2.19.0"
 }
