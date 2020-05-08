@@ -26,7 +26,11 @@ import {
 } from '@evan.network/dbcp';
 
 import * as BigNumber from 'bignumber.js';
+
 import {
+  // disable next line eslint, tree shaking of browserified version will remove it from the built
+  // and recoverTypedSignatureLegacy will not work
+  concatSig, // eslint-disable-line
   recoverTypedSignatureLegacy,
   signTypedDataLegacy,
   typedSignatureHash,
