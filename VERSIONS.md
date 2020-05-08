@@ -8,6 +8,38 @@
 ### Deprecations
 
 
+## Version 2.19.0
+### Features
+- add `sourceIdentity` as optional parameter for `setDidDocumentOffline` to explicitly parse the signing identity
+- add check in `createOfflineProfile` for company profile type to create two profiles otherwise only create one
+- add method `fillProfile` to fill empty profile
+- add method `getRuntimeForIdentity` to create a runtime for a specific identity
+- add methods `setIdentityAccess`, `removeIdentityAccess` and `getIdentityAccessList` for managing access to identities
+- A DID document's `@context` and `controller` properties can now also be arrays
+- ensure support for `Runtime`s `useIdentity` flag in entire library
+- update following modules for `useIdentity` support
+  + `DigitalTwin`
+  + `Onboarding`
+  + `Payments` (limited, will undergo further changes in future)
+  + `Verifications`
+  + `Votings`
+- addded `EvanIdentity` as authorization parameter to result of `utils.getSmartAgentAuthHeaders` (for usage sample have a look to [edge-server-seed](https://github.com/evannetwork/edge-server-seed/tree/develop#auth-middleware))
+- add `Identity` class and add functions for grant / remove access to act on behalf of identity
+- support identity salting for encryptionKey generation for `createDefaultRuntime`
+
+### Fixes
+- Fixed bug where a new DID document proof would incorporate the old proof and thus would make the document increasingly larger
+- Fixed bug for default DID documents that had a checksum case `ethereumAddress` property which made the proof validating mechanism fail
+- add `startBlock` argument to `loadChannelFromBlockchain` in `Payments` to avoid long running function calls
+- update tests to allow running tests via identity
+- include identity tests to automatic test runs
+- throw correct error message when running `setVerificationAndVc` without useIdentity runtime 
+- use `useIdentity` flag for `createOfflineProfile`
+- pass `password` to `createOfflineProfile` to enable dataKey generation based on the users identity
+- checked node 13 compatibility
+- reset executor signer for runtime initialization with account that has no identity
+
+
 ## Version 2.18.0
 ### Features
 - add methods `deactivateDidDocument` and `didIsDeactivated` to check and handle DID deactivation status
@@ -60,7 +92,7 @@
 ### Features
 - add `getPublicKey` implementation to `SignerIdentity`
 - add `Did` module for managing DID documents
-- add possiblity to instantiate a new `SignerIdentity` in two steps
+- add possibility to instantiate a new `SignerIdentity` in two steps
   - can be used to create circular structures if required
   - first call constructor, you can omit `config` argument
   - when rest (e.g. verifications) has been set up you can call `updateConfig` to finalize `SignerIdenty` instantiation
@@ -107,7 +139,7 @@
 ### Features
 - use container logic for profile management
 - update onboarding logic to fit current profile setup
-- add more clearnup and hardening to `unshareProperties` for `Container` API
+- add more cleanup and hardening to `unshareProperties` for `Container` API
 - add support to remove sharings to `Sharings` API
 - improve support for working with profiles of other users via `Profile` API
 
@@ -135,7 +167,7 @@
 ## Version 2.11.0
 ### Features
 - update versions of dependencies
-- improve performance of (digital twin) container reation process
+- improve performance of (digital twin) container creation process
 - add helper for creating smart agent auth headers
 
 ### Fixes
@@ -211,7 +243,7 @@
 
 ### Fixes
 - add correct loadForAccount logic to `DataContainer` plugins
-- move `DataContainer` plugin saving to seperated profile space
+- move `DataContainer` plugin saving to separated profile space
 
 
 ## Version 2.4.1
@@ -260,7 +292,7 @@
 ## Version 2.3.0
 ### Features
 - add profile creation in one line of code to Onboarding
-- add the ability to initialize the runtime with a mnemnoic and password
+- add the ability to initialize the runtime with a mnemonic and password
 
 ### Fixes
 - use lodash for cloning `Container` templates
@@ -396,8 +428,8 @@
 ### Features
 - add `getKeyHistory` to `sharings` to retrieve all keys for an account and a section
 - add `bumpSharings` to `sharings`, that adds a new key for all given accounts for given section
-- add `removeBcContract` to `profile` to remove profile entries that were writte using `addBcContract`
-- export `crypto` library, `DBCP Vaildator`, `DBCP Envelop`
+- add `removeBcContract` to `profile` to remove profile entries that were written using `addBcContract`
+- export `crypto` library, `DBCP Validator`, `DBCP Envelop`
 - export `createDefaultRuntime` within the `bcc frontend bundle` + adjust it for frontend smartcontracts usage
 
 ### Fixes
@@ -466,7 +498,7 @@
 - add docu for rights-and-roles.ts, ipld.ts
 - use @evan.network for package name and dependencies scopes
 - add .npmignore
-- (deprecation) rights-and-roles.ts:hasUserRole second argument "accountId" will be dropped, as it isnt' required anymore
+- (deprecation) rights-and-roles.ts:hasUserRole second argument "accountId" will be dropped, as it isn't required anymore
 - rename *contractus* variables to *evan*
 - rename bcc-core bundle to bcc
   - rename BCCCore to CoreRuntime
@@ -475,7 +507,7 @@
 - allow overwriting runtimes nameResolver with runtimeConfig
 - fix unbound entry retrieval in DataContract.getListEntries by adding paging to it
 - add `removeAccountFromRole` and `transferOwnership` to `RightsAndRoles` for better permission management
-- make `extendSharings` publicly accessible for adding properties to sharings withou saving them
+- make `extendSharings` publicly accessible for adding properties to sharings without saving them
 - add `createSharing` to `DataContract` and accept a sharings hash in `createContract` , which allows to decouple sharing creation and contract creation
 - accept ipld hashes in `storeForAccount` in `Profile` to decouple tree encryption and property storing
 - add support for multi-sharings to `Sharings` module

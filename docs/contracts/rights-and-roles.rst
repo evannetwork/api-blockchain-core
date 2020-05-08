@@ -91,17 +91,17 @@ addAccountToRole
 
   rightsAndRoles.addAccountToRole(contract, accountId, targetAccountId, role);
 
-Adds the traget account to a specific role.
+Adds the target identity or account to a specific role.
 
-The main principle is that accounts can be assigned to roles and those roles can be granted capabilities. :ref:`Function Permissions <rights-and-roles_setFunctionPermission>` are basically the capability to call specific functions if the calling account belongs to a certain role. To add an account to the role 'member'.
+The main principle is that an identity or account can be assigned to roles and those roles can be granted capabilities. :ref:`Function Permissions <rights-and-roles_setFunctionPermission>` are basically the capability to call specific functions if the calling identity or account belongs to a certain role. To add an identity or account to the role 'member'.
 
 ----------
 Parameters
 ----------
 
 #. ``contract`` - ``string|any``: contractId or contract instance
-#. ``accountId`` - ``string``: executing accountId
-#. ``targetAccountId`` - ``string``: target accountId
+#. ``accountId`` - ``string``: executing identity or account
+#. ``targetAccountId`` - ``string``: target identity or account
 #. ``role`` - ``number``: roleId
 
 -------
@@ -138,15 +138,15 @@ removeAccountFromRole
 
   rightsAndRoles.removeAccountFromRole(contract, accountId, targetAccountId, role);
 
-Removes target account from a specific role.
+Removes target identity or account from a specific role.
 
 ----------
 Parameters
 ----------
 
 #. ``contract`` - ``string|any``: contractId or contract instance
-#. ``accountId`` - ``string``: executing accountId
-#. ``targetAccountId`` - ``string``: target accountId
+#. ``accountId`` - ``string``: executing identity or account
+#. ``targetAccountId`` - ``string``: target identity or account
 #. ``role`` - ``number``: roleId
 
 -------
@@ -218,7 +218,7 @@ Example
   //   ]
   // }
 
-The contract from this example has an owner (``0x0000000000000000000000000000000000000001``) and a member (``0x0000000000000000000000000000000000000002``). As the owner account has the member role as well, it is listed among the members.
+The contract from this example has an owner (``0x0000000000000000000000000000000000000001``) and a member (``0x0000000000000000000000000000000000000002``). As the owner identity or account has the member role as well, it is listed among the members.
 
 
 ------------------------------------------------------------------------------
@@ -232,7 +232,7 @@ setFunctionPermission
 
   rightsAndRoles.setFunctionPermission(contract, accountId, role, functionSignature, allow);
 
-Allows or denies contract function for the accountId.
+Allows or denies contract function for the identity or account.
 
 "Function permissions" are granted or denied by allowing a certain role to execute a specific function. The function is specified as the unhashed `function selector <http://solidity.readthedocs.io/en/latest/abi-spec.html#function-selector>`_ and must follow its guidelines (no spaces, property typenames, etc.) for the function to be able to generate valid hashes for later validations. E.g. to grant the role "member" the permission to use the function `addListEntries`, that has two arguments (a ``bytes32`` array and a ``bytes32`` value), the function permission for ``addListEntries(bytes32[],bytes32[])`` has to be granted.
 
@@ -241,7 +241,7 @@ Parameters
 ----------
 
 #. ``contract`` - ``string|any``: contractId or contract instance
-#. ``accountId`` - ``string``: executing accountId
+#. ``accountId`` - ``string``: executing identity or account
 #. ``role`` - ``number``: role id
 #. ``functionSignature`` - ``string``: 4 Bytes function signature
 #. ``allow`` - ``boolean``: allow or deny function
@@ -298,7 +298,7 @@ Parameters
 ----------
 
 #. ``contract`` - ``string|any``: contractId or contract instance
-#. ``accountId`` - ``string``: executing accountId
+#. ``accountId`` - ``string``: executing identity or account
 #. ``role`` - ``number``: roleId
 #. ``propertyName`` - ``string``: target property name
 #. ``propertyType`` - ``PropertyType``: list or entry
@@ -343,7 +343,7 @@ hasUserRole
 
   rightsAndRoles.hasUserRole(contract, accountId, targetAccountId, role);
 
-Returns true or false, depending on if the account has the specific role.
+Returns true or false, depending on if the identity or account has the specific role.
 
 ----------
 Parameters
@@ -393,8 +393,8 @@ Parameters
 ----------
 
 #. ``contract`` - ``string|any``: contractId or contract instance
-#. ``accountId`` - ``string``: executing accountId
-#. ``targetAccountId`` - ``string``: target accountId
+#. ``accountId`` - ``string``: executing identity or account
+#. ``targetAccountId`` - ``string``: target identity or account
 
 -------
 Returns

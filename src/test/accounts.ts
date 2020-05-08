@@ -18,6 +18,7 @@
 */
 import * as Web3 from 'web3';
 
+// eslint-disable-next-line import/no-mutable-exports
 let useIdentity = false;
 try {
   useIdentity = JSON.parse(process.env.USE_IDENTITY);
@@ -35,10 +36,12 @@ if (process.env.ACCOUNT_MAP) {
     ...(useIdentity
       // accounts with identity based profiles
       ? {
-        '0x94BfC9A95d6D18775bDd4035631D6706E3d14661':
-          'fcb9c75848b5147f6d1800a200abb0705973cceb374280b22e0132ba061a27c2',
-        '0x5d0B79bB17a23251223443fA0457cdf5AB03558f':
-          '40274623153d131d27a81871af0c438eac2d391388267860a48a6e02a4e35739',
+        '0xcd5e1dBb5552C2bAa1943E6B5f66D22107E9C05c':
+          'dfcdcb6d5d09411ae9cbe1b0fd9751ba8803dd4b276d5bf9488ae4ede2669106',
+        '0x0F491D449EAAb6b40273eDBdFd01DB7EBD81B464':
+          '16bd56948ba09a626551b3f39093da305b347ef4ef2182b2e667dfa5aaa0d4cd',
+        '0xd2787429c2a5D88662a8c4af690A4479E0199C5E':
+            '30d446cc76b19c6eacad89237d021eb2c85144b61d63cb852aee09179f460920',
       }
       // accounts without identity based profiles
       : {
@@ -61,8 +64,9 @@ const accounts = Object.keys(accountMap);
 let letIdentities;
 if (useIdentity) {
   letIdentities = [
-    '0x3Ff56cE81A229762A50917965aA4BC23C8b3C736',
-    '0xF07bA7B336ebf3b3B5d0761f192DEb55C31BAeE9',
+    '0x0d87204C3957D73b68AE28d0AF961d3c72403906',
+    '0xC88D707c2436FA3ce4A1e52D751469ACAe689FDB',
+    '0x6240CEdFc840579B7FDcD686Bdc65A9A8c42dea6',
     '0x00D1267B27C3A80080f9E1B6Ba01DE313b53Ab58',
     '0x0ab4F29ef71E591e209b1386CaDFc5B7CCB5102A',
   ];
@@ -97,10 +101,12 @@ const dataKeys = {
 };
 // current identity tests use different keys
 if (useIdentity) {
-  dataKeys[sha3(identities[0])] = 'd387345c149bdad709bdb928b89e7037b94f2637b7cbc227fbbcdfa723a6c7ee';
-  dataKeys[sha3(identities[1])] = '8e198c1e308cafabaa88926949f9d5aedf793879bb2ea37f427bdb9c29d9ec44';
-  dataKeys[sha9(identities[0], identities[0])] = 'd387345c149bdad709bdb928b89e7037b94f2637b7cbc227fbbcdfa723a6c7ee';
-  dataKeys[sha9(identities[1], identities[1])] = '8e198c1e308cafabaa88926949f9d5aedf793879bb2ea37f427bdb9c29d9ec44';
+  dataKeys[sha3(identities[0])] = 'a809051c9c6bfce42453364182d9768df31be44d4ead178a7621a00ebb0bdeca';
+  dataKeys[sha3(identities[1])] = 'dabb3d3ddd277f4a699ff608b10135c01efa1df766db4798a4d8bf6e8ba76ac3';
+  dataKeys[sha3(identities[2])] = '3d4803b18ef1c900a45f64d420d0ed03f7252eb290ed8db8ced8791710ee090f';
+  dataKeys[sha9(identities[0], identities[0])] = 'a809051c9c6bfce42453364182d9768df31be44d4ead178a7621a00ebb0bdeca';
+  dataKeys[sha9(identities[1], identities[1])] = 'dabb3d3ddd277f4a699ff608b10135c01efa1df766db4798a4d8bf6e8ba76ac3';
+  dataKeys[sha9(identities[2], identities[2])] = '3d4803b18ef1c900a45f64d420d0ed03f7252eb290ed8db8ced8791710ee090f';
 }
 
 export {
@@ -108,4 +114,5 @@ export {
   accountMap,
   identities,
   dataKeys,
+  useIdentity,
 };

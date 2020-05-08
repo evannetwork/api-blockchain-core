@@ -248,6 +248,19 @@ export class Profile extends Logger {
   }
 
   /**
+   * Sets an identity to address book.
+   *
+   * @param      {string}  address  identity address
+   * @param      {string}  key    identity datakey
+   * @return     {Promise<void>}  resolved when done
+   */
+  public async setIdentityAccess(address: string, key: string): Promise<void> {
+    this.throwIfNotOwner('add identity Key');
+    const context = 'identityAccess';
+    await this.addContactKey(address, context, key);
+  }
+
+  /**
    * add a profile value to an account
    *
    * @param      {string}         address  account key of the contact
@@ -478,6 +491,38 @@ export class Profile extends Logger {
     );
   }
 
+
+  /**
+   * Gets the identity list from loaded address book.
+   * @return     {any}     identity list from address book
+   */
+  public async getIdentityAccessList(): Promise<any> {
+    const addressBook = await this.getAddressBook();
+    const { keys } = addressBook;
+    // filter key list by hashes with identity access and assign it to result
+    const result = {};
+    for (const sha9Hash of Object.keys(keys)) {
+      if (keys[sha9Hash].identityAccess) {
+        result[sha9Hash] = { identityAccess: keys[sha9Hash].identityAccess };
+      }
+    }
+    const profiles = Object.keys(addressBook.profile);
+    const activeIdentityHash = this.options.nameResolver.soliditySha3(this.activeAccount);
+    for (const id of profiles) {
+      const sha9Hash = this.options.nameResolver.soliditySha3(
+        ...[
+          this.options.nameResolver.soliditySha3(id),
+          activeIdentityHash,
+        ].sort(),
+      );
+      if (result[sha9Hash]) {
+        result[sha9Hash].alias = addressBook.profile[id].alias;
+        result[id] = result[sha9Hash];
+      }
+    }
+    return result;
+  }
+
   /**
    * Return the saved profile information according to the specified profile type. No type directly
    * uses "user" type.
@@ -550,8 +595,8 @@ export class Profile extends Logger {
   }
 
   /**
-   * load profile for given account from global profile contract, if a tree is given, load that tree
-   * from ipld as well
+   * load profile for given identity or account from global profile contract, if a tree is given,
+   * load that tree from ipld as well
    *
    * @param      {string}         tree    tree to load ('bookmarkedDapps', 'contracts', ...)
    * @return     {Promise<void>}  resolved when done
@@ -650,7 +695,7 @@ export class Profile extends Logger {
   /**
    * remove a contact from bookmarkedDapps
    *
-   * @param      {string}         address  account key of the contact
+   * @param      {string}         address  identity or account of the contact
    * @return     {Promise<void>}  resolved when done
    */
   public async removeContact(address: string): Promise<void> {
@@ -679,6 +724,25 @@ export class Profile extends Logger {
     }
     this.ensureTree('bookmarkedDapps');
     await this.ipld.remove(this.trees.bookmarkedDapps, `bookmarkedDapps/${address}`);
+  }
+
+
+  /**
+   * Removes an identity access from address book.
+   *
+   * @param      {string}  address  identity address
+   * @return     {Promise<void>} resolved when done
+   */
+  public async removeIdentityAccess(address: string): Promise<void> {
+    this.throwIfNotOwner('remove identity key');
+    const addressHash = this.nameResolver.soliditySha3(
+      ...[
+        this.nameResolver.soliditySha3(address),
+        this.nameResolver.soliditySha3(this.activeAccount),
+      ].sort(),
+    );
+    const addressBook = await this.getAddressBook();
+    delete (addressBook.keys[addressHash].identityAccess);
   }
 
   /**
@@ -746,16 +810,16 @@ export class Profile extends Logger {
   /**
    * store given state for this account
    *
-   * @param      {string}         accountId     account id of a contact
-   * @param      {boolean}        contactKnown  true if known, false if not
+   * @param      {string}         contactAddress identity or account of a contact
+   * @param      {boolean}        contactKnown   true if known, false if not
    * @return     {Promise<void>}  resolved when done
    */
-  public async setContactKnownState(accountId: string, contactKnown: boolean): Promise<void> {
+  public async setContactKnownState(contactAddress: string, contactKnown: boolean): Promise<void> {
     this.throwIfNotOwner('set a contact known state');
     await this.dataContract.setMappingValue(
       this.profileContract,
       'contacts',
-      accountId,
+      contactAddress,
       `0x${(contactKnown ? '1' : '0').padStart(64, '0')}`, // cast bool to bytes32
       this.activeAccount,
       false,
@@ -849,7 +913,8 @@ export class Profile extends Logger {
    * stores profile tree or given hash to global profile contract
    *
    * @param      {string}   tree      tree to store ('bookmarkedDapps', 'contracts', ...)
-   * @param      {string}   ipldHash  store this hash instead of the current tree for account
+   * @param      {string}   ipldHash  store this hash instead of the current tree for the profile's
+   *                                  identity or account
    * @return     {Promise}  resolved when done
    */
   public async storeForAccount(tree: string, ipldHash?: string): Promise<void> {
@@ -895,7 +960,7 @@ export class Profile extends Logger {
   }
 
   /**
-   * Throws an exception if a profile was loaded for another account.
+   * Throws an exception if a profile was loaded for another identity or account.
    *
    * @param      {string}  action  description of the action that should be performed
    */

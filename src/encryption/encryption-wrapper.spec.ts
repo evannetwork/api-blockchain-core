@@ -23,9 +23,8 @@ import { expect } from 'chai';
 import { promisify } from 'util';
 import { readFile } from 'fs';
 
-import { accounts } from '../test/accounts';
+import { accounts, useIdentity } from '../test/accounts';
 import { CryptoProvider } from './crypto-provider';
-import { Sharing } from '../contracts/sharing';
 import { TestUtils } from '../test/test-utils';
 import {
   EncryptionWrapper,
@@ -39,28 +38,14 @@ describe('Encryption Wrapper', function test() {
   let cryptoProvider: CryptoProvider;
   let encryptionWrapper: EncryptionWrapper;
   let executor: Executor;
-  let sharing0: Sharing;
+  let identity: string;
 
   before(async () => {
-    const web3 = TestUtils.getWeb3();
-    // data sharing sha3 self key and edges to self and other accounts
-    const sha3 = (...args) => web3.utils.soliditySha3(...args);
-    const sha9 = (accountId1, accountId2) => sha3(...[sha3(accountId1), sha3(accountId2)].sort());
-    const getKeys = (
-      ownAccount, partnerAccount,
-    ) => [sha3(ownAccount), ...[ownAccount, partnerAccount].map(
-      (partner) => sha9(ownAccount, partner),
-    )];
-    const dfs = await TestUtils.getIpfs();
-    cryptoProvider = TestUtils.getCryptoProvider(dfs);
-    executor = await TestUtils.getExecutor(web3);
-    sharing0 = await TestUtils.getSharing(web3, dfs, getKeys(accounts[0], accounts[1]));
+    const runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
+    identity = runtime.activeIdentity;
+    ({ cryptoProvider, executor } = runtime);
     encryptionWrapper = new EncryptionWrapper({
-      cryptoProvider,
-      nameResolver: await TestUtils.getNameResolver(web3),
-      profile: await TestUtils.getProfile(web3, dfs),
-      sharing: sharing0,
-      web3,
+      ...(runtime as any),
     });
   });
 
@@ -138,7 +123,7 @@ describe('Encryption Wrapper', function test() {
 
     before(async () => {
       const contract = await executor.createContract(
-        'MultiShared', [], { from: accounts[0], gas: 500000 },
+        'MultiShared', [], { from: identity, gas: 500000 },
       );
       multiSharingAddress = contract.options.address;
     });
@@ -169,7 +154,7 @@ describe('Encryption Wrapper', function test() {
 
       // generate and store new key for crypto info
       const encryptionArtifacts = {
-        accountId: accounts[0],
+        accountId: identity,
         propertyName: '*',
       };
       const key = await encryptionWrapper.generateKey(cryptoInfo);
@@ -203,7 +188,7 @@ describe('Encryption Wrapper', function test() {
 
       // generate and store new key for crypto info
       const encryptionArtifacts = {
-        accountId: accounts[0],
+        accountId: identity,
         propertyName: '*',
       };
       const key = await encryptionWrapper.generateKey(cryptoInfo);
@@ -226,7 +211,7 @@ describe('Encryption Wrapper', function test() {
 
     before(async () => {
       const contract = await executor.createContract(
-        'Shared', [], { from: accounts[0], gas: 500000 },
+        'Shared', [], { from: identity, gas: 500000 },
       );
       sharingAddress = contract.options.address;
     });
@@ -257,7 +242,7 @@ describe('Encryption Wrapper', function test() {
 
       // generate and store new key for crypto info
       const encryptionArtifacts = {
-        accountId: accounts[0],
+        accountId: identity,
         propertyName: '*',
       };
       const key = await encryptionWrapper.generateKey(cryptoInfo);
@@ -291,7 +276,7 @@ describe('Encryption Wrapper', function test() {
 
       // generate and store new key for crypto info
       const encryptionArtifacts = {
-        accountId: accounts[0],
+        accountId: identity,
         propertyName: '*',
       };
       const key = await encryptionWrapper.generateKey(cryptoInfo);

@@ -24,6 +24,8 @@ import { promisify } from 'util';
 
 import { AesBlob } from './aes-blob';
 import { TestUtils } from '../test/test-utils';
+import { accounts, useIdentity } from '../test/accounts';
+import { Ipfs } from '../dfs/ipfs';
 
 
 let sampleFile;
@@ -48,7 +50,7 @@ describe('Blob Encryption', function test() {
       fileType: 'image/jpeg',
       file: sampleFile,
     };
-    ipfs = await TestUtils.getIpfs();
+    ipfs = (await TestUtils.getRuntime(accounts[0], null, { useIdentity })).dfs as Ipfs;
   });
 
 

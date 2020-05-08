@@ -26,7 +26,9 @@ import {
   NameResolver,
 } from '@evan.network/dbcp';
 
-import { accountMap, accounts, identities } from '../test/accounts';
+import {
+  accounts, identities, useIdentity,
+} from '../test/accounts';
 
 import { configTestcore as config } from '../config-testcore';
 import { Runtime, createDefaultRuntime } from '../runtime';
@@ -35,22 +37,12 @@ import { Profile } from './profile';
 import { TestUtils } from '../test/test-utils';
 
 use(chaiAsPromised);
-let useIdentity = false;
-try {
-  useIdentity = JSON.parse(process.env.USE_IDENTITY);
-} catch (_) {
-  // silently continue
-}
-
 describe('Profile helper', function test() {
   this.timeout(600000);
   let ensName;
-  let ipfs;
-  let ipld;
   let nameResolver: NameResolver;
   let profile: Profile;
   let runtime: Runtime;
-  let web3;
   const sampleDesc = {
     title: 'sampleTest',
     description: 'desc',
@@ -65,10 +57,8 @@ describe('Profile helper', function test() {
   };
 
   before(async () => {
-    web3 = TestUtils.getWeb3();
-    ipfs = await TestUtils.getIpfs();
-    runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
-    ({ ipld, nameResolver, profile } = runtime);
+    runtime = await TestUtils.getRuntime(accounts[1], null, { useIdentity });
+    ({ nameResolver, profile } = runtime);
     ensName = nameResolver.getDomainName(config.nameResolver.domains.profile);
   });
 
@@ -83,17 +73,38 @@ describe('Profile helper', function test() {
     expect(await profile.getContactKey(identities[2], 'context a')).to.be.undefined;
   });
 
-  it('should be able to be add dapp bookmarks', async () => {
-    await profile.addDappBookmark('sample1.test', sampleDesc);
+  it('should be able to be add identity key', async () => {
+    await profile.loadForAccount(profile.treeLabels.addressBook);
+    await profile.setIdentityAccess(identities[0], 'key 0x01_a');
+    const list = await profile.getIdentityAccessList();
+    const addressHash = profile.nameResolver.soliditySha3(
+      ...[
+        profile.nameResolver.soliditySha3(identities[0]),
+        profile.nameResolver.soliditySha3(profile.activeAccount),
+      ].sort(),
+    );
+    expect(list[addressHash].identityAccess).to.be.eq('key 0x01_a');
 
-    expect(await profile.getDappBookmark('sample1.test')).to.be.ok;
-    expect((await profile.getDappBookmark('sample1.test')).title)
-      .to.eq('sampleTest');
+    await profile.storeForAccount(profile.treeLabels.addressBook);
+    await profile.loadForAccount(profile.treeLabels.addressBook);
+    const loadedList = await profile.getIdentityAccessList();
+    expect(loadedList).to.be.deep.eq(list);
+  });
 
-    // adding on existing
-    await profile.addDappBookmark('sample1.test', sampleUpdateDesc);
-    expect((await profile.getDappBookmark('sample1.test')).title)
-      .to.eq('sampleUpdateTest');
+  it('should remove an identity key', async () => {
+    await profile.loadForAccount(profile.treeLabels.addressBook);
+    await profile.setIdentityAccess(identities[1], 'key 0x01_b');
+    await profile.storeForAccount(profile.treeLabels.addressBook);
+    await profile.loadForAccount(profile.treeLabels.addressBook);
+
+    const beforeSettingList = await profile.getIdentityAccessList();
+    expect(beforeSettingList[identities[1]].identityAccess).to.be.eq('key 0x01_b');
+
+    await profile.removeIdentityAccess(identities[1]);
+    await profile.storeForAccount(profile.treeLabels.addressBook);
+    await profile.loadForAccount(profile.treeLabels.addressBook);
+    const afterRemovingList = await profile.getIdentityAccessList();
+    expect(afterRemovingList).to.not.have.any.keys(identities[1]);
   });
 
   it('should be able to store data container plugins', async () => {
@@ -124,7 +135,7 @@ describe('Profile helper', function test() {
     expect(ipldIpfsHash).not.to.be.undefined;
 
     // load it to new profile instance
-    const loadedProfile = await TestUtils.getProfile(web3, ipfs, ipld, identities[0]);
+    const loadedProfile = await TestUtils.getProfile(runtime);
     await loadedProfile.loadFromIpld(profile.treeLabels.addressBook, ipldIpfsHash);
 
     // test contacts
@@ -146,7 +157,7 @@ describe('Profile helper', function test() {
     const address = await nameResolver.getAddress(ensName);
     const contract = nameResolver.contractLoader.loadContract('ProfileIndexInterface', address);
     const valueToSet = '0x0000000000000000000000000000000000000004';
-    const from = Object.keys(accountMap)[0];
+    const from = runtime.activeIdentity;
     const hash = await nameResolver.executor.executeContractCall(contract, 'getProfile', from, { from });
     await nameResolver.executor.executeContractTransaction(
       contract,
@@ -164,7 +175,7 @@ describe('Profile helper', function test() {
     );
   });
 
-  (useIdentity ? it.skip : it)('should be able to set and load a profile for a given user from the blockchain shorthand', async () => {
+  it('should be able to set and load a profile for a given user from the blockchain shorthand', async () => {
     // create profile
     await Onboarding.createProfile(runtime, {
       accountDetails: {
@@ -182,10 +193,7 @@ describe('Profile helper', function test() {
     await profile.storeForAccount(profile.treeLabels.addressBook);
 
     // load
-    const {
-      profile: newProfile,
-    } = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
-
+    const newProfile = runtime.profile;
     // test contacts
     expect(await newProfile.getContactKey(identities[0], 'context a')).to.eq('key 0x01_a');
     expect(await newProfile.getContactKey(identities[1], 'context a')).to.eq('key 0x02_a');
@@ -199,7 +207,12 @@ describe('Profile helper', function test() {
   it('allow to check if a profile exists', async () => {
     expect(await profile.exists()).to.be.true;
 
-    const profile2 = await TestUtils.getProfile(web3, ipfs, ipld, '0x000000000000000000000000000000000000beef');
+    const profile2 = await TestUtils.getProfile(
+      runtime,
+      null,
+      null,
+      '0x000000000000000000000000000000000000beef',
+    );
     expect(await profile2.exists()).to.be.false;
   });
 
@@ -215,9 +228,8 @@ describe('Profile helper', function test() {
     expect(await profile.getDappBookmark('sample2.test')).to.be.ok;
   });
 
-  (useIdentity ? it.skip : it)('should read a public part of a profile (e.g. public key)', async () => {
-    const initRuntime = await TestUtils.getRuntime(identities[0]);
-    initRuntime.profile = await TestUtils.getProfile(web3, ipfs, ipld, identities[0]);
+  it('should read a public part of a profile (e.g. public key)', async () => {
+    const initRuntime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
     await Onboarding.createProfile(initRuntime, {
       accountDetails: {
         profileType: 'company',
@@ -226,11 +238,11 @@ describe('Profile helper', function test() {
     });
 
     // simulate a different account with a different keyStore
-    const originalKeyStore = ipld.keyProvider;
+    const originalKeyStore = runtime.ipld.keyProvider;
     const modifiedKeyStore = TestUtils.getKeyProvider(['mailboxKeyExchange']);
-    ipld.keyProvider = modifiedKeyStore;
+    runtime.ipld.keyProvider = modifiedKeyStore;
     // load
-    const newProfile = await TestUtils.getProfile(web3, ipfs, ipld, identities[0]);
+    const newProfile = await TestUtils.getProfile(runtime);
 
     const pubKey = await newProfile.getPublicKey();
     expect(pubKey).to.be.ok;
@@ -239,11 +251,11 @@ describe('Profile helper', function test() {
     expect(bookmarks).to.deep.eq({});
 
     // set original key provider back
-    ipld.keyProvider = originalKeyStore;
+    runtime.ipld.keyProvider = originalKeyStore;
   });
 
   it.skip('should be able to set a contact as known', async () => {
-    const initRuntime = await TestUtils.getRuntime(identities[0]);
+    const initRuntime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
     await Onboarding.createProfile(initRuntime, {
       accountDetails: {
         profileType: 'company',
@@ -258,7 +270,7 @@ describe('Profile helper', function test() {
   });
 
   it.skip('should be able to set a contact as unknown', async () => {
-    const initRuntime = await TestUtils.getRuntime(identities[0]);
+    const initRuntime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
     await Onboarding.createProfile(initRuntime, {
       accountDetails: {
         profileType: 'company',
@@ -315,21 +327,21 @@ describe('Profile helper', function test() {
      * @param      {string}  mnemonic  mnemonic to create the runtime with
      * @param      {string}  password  password to create the runtime with
      */
-    async function getProfileRuntime(mnemonic: string, password = 'Test1234') {
+    async function getProfileRuntime(mnemonic: string, password = 'Test1234', useIdentityFlag = false) {
       return createDefaultRuntime(
         await TestUtils.getWeb3(),
         await TestUtils.getIpfs(),
         {
           mnemonic,
           password,
-          useIdentity,
+          useIdentity: useIdentityFlag,
         },
       );
     }
 
-    (useIdentity ? it.skip : it)('can transform user profile to company profile', async () => {
+    it('can transform user profile to company profile', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      const initRuntime = await TestUtils.getRuntime(identities[0]);
+      const initRuntime = await TestUtils.getRuntime(accounts[0]);
 
       await Onboarding.createNewProfile(initRuntime, newMnemonic, 'Test1234', {
         accountDetails: {
@@ -349,10 +361,9 @@ describe('Profile helper', function test() {
       await expect(accountDetails.accountName).to.be.eq('New company');
     });
 
-    (useIdentity ? it.skip : it)('cannot transform specified profile to another profile type', async () => {
+    it('cannot transform specified profile to another profile type', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      const initRuntime = await TestUtils.getRuntime(identities[0]);
-
+      const initRuntime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
       await Onboarding.createNewProfile(initRuntime, newMnemonic, 'Test1234', {
         accountDetails: {
           profileType: 'user',
@@ -380,9 +391,9 @@ describe('Profile helper', function test() {
       await expect(promise).to.be.rejected;
     });
 
-    (useIdentity ? it.skip : it)('can transform user profile to device profile', async () => {
+    it('can transform user profile to device profile', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      const initRuntime = await TestUtils.getRuntime(identities[0]);
+      const initRuntime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
 
       await Onboarding.createNewProfile(initRuntime, newMnemonic, 'Test1234', {
         accountDetails: {
@@ -402,9 +413,9 @@ describe('Profile helper', function test() {
       await expect(accountDetails.accountName).to.be.eq('New device');
     });
 
-    (useIdentity ? it.skip : it)('can transform user profile to type that does not exists', async () => {
+    it('can transform user profile to type that does not exists', async () => {
       const newMnemonic = Onboarding.createMnemonic();
-      const initRuntime = await TestUtils.getRuntime(identities[0]);
+      const initRuntime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
 
       await Onboarding.createNewProfile(initRuntime, newMnemonic, 'Test1234', {
         accountDetails: {
@@ -425,7 +436,7 @@ describe('Profile helper', function test() {
     });
 
     it('can save company profile specific properties to a profile of type company', async () => {
-      const localRuntime = await getProfileRuntime(mnemonics.company);
+      const localRuntime = await getProfileRuntime(mnemonics.company, 'Test1234', useIdentity);
       await localRuntime.profile.setProfileProperties(companyProfileProperties);
       const [accountDetails, contact, registration] = await Promise.all(['accountDetails', 'contact', 'registration'].map(
         (p) => localRuntime.profile.getProfileProperty(p),

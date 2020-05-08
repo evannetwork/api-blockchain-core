@@ -187,7 +187,7 @@ createIdentity
 
 .. code-block:: typescript
 
-  verifications.createIdentity(accountId[, contractId, updateDescription]);
+  verifications.createIdentity(identity[, contractId, updateDescription]);
 
 Creates a new identity for account or contract and registers them on the storage. Returned identity is either a 20B contract address (for account identities) or a 32B identity hash contract identities.
 
@@ -195,8 +195,8 @@ Creates a new identity for account or contract and registers them on the storage
 Parameters
 ----------
 
-#. ``accountId`` - ``string``: account that runs transaction, receiver of identity when omitting the other arguments
-#. ``contractId`` - ``string``: (optional) contract address to create the identity for, creates account identity for ``accountId`` if omitted
+#. ``creator`` - ``string``: identity or account that runs transaction, receiver of identity when omitting the other arguments
+#. ``contractId`` - ``string``: (optional) contract address to create the identity for, creates account identity for ``creator`` if omitted
 #. ``updateDescription`` - ``boolean`` (optional): update description of contract, defaults to ``true``
 
 -------
@@ -272,7 +272,7 @@ getOwnerAddressForIdentity
 
   verifications.getOwnerAddressForIdentity(identityAddress);
 
-Gets an identity's owner's address. This can be either an account or an identity address.
+Gets an identity's owner's address. This can be either an identity or account address.
 
 
 ----------
@@ -893,7 +893,7 @@ Delete a verification. This requires the **accountId** to have permissions for t
 Parameters
 ----------
 
-#. ``accountid`` - ``string``: account, that performs the action
+#. ``deletor`` - ``string``: identity or account deleting the verification
 #. ``subject`` - ``string``: the subject of the verification
 #. ``verificationId`` - ``string``: id of a verification to delete
 #. ``isIdentity`` - ``bool`` (optional): ``true`` if given ``subject`` is an identity, defaults to ``false``
@@ -927,7 +927,7 @@ confirmVerification
 
 .. code-block:: typescript
 
-  verifications.confirmVerification(accountId, subject, verificationId[, isIdentity]);
+  verifications.confirmVerification(identity, subject, verificationId[, isIdentity]);
 
 Confirms a verification; this can be done, if a verification has been issued for a subject and the subject wants to confirm it.
 
@@ -935,7 +935,7 @@ Confirms a verification; this can be done, if a verification has been issued for
 Parameters
 ----------
 
-#. ``accountId`` - ``string``: account, that performs the action
+#. ``confirmer`` - ``string``: identity or account to confirm the verification
 #. ``subject`` - ``string``: verification subject
 #. ``verificationId`` - ``string``: id of a verification to confirm
 #. ``isIdentity`` - ``bool`` (optional): ``true`` if given ``subject`` is an identity, defaults to ``false``
@@ -952,8 +952,8 @@ Example
 
 .. code-block:: typescript
 
-  const newVerification = await verifications.setVerification(accounts[0], accounts[1], '/company');
-  await verifications.confirmVerification(accounts[0], accounts[1], newVerification);
+  const newVerification = await verifications.setVerification(identites[0], identites[1], '/company');
+  await verifications.confirmVerification(identites[0], identites[1], newVerification);
 
 
 
@@ -966,7 +966,7 @@ rejectVerification
 
 .. code-block:: typescript
 
-  verifications.rejectVerification(accountId, subject, verificationId[, rejectReason, isIdentity]);
+  verifications.rejectVerification(rejector, subject, verificationId[, rejectReason, isIdentity]);
 
 Reject a Verification. This verification will be marked as rejected but not deleted. This is important for tracking reasons. You can also optionally add a reject reason as JSON object to track additional informations about the rejection. Issuer and Subject can reject a special verification.
 
@@ -974,7 +974,7 @@ Reject a Verification. This verification will be marked as rejected but not dele
 Parameters
 ----------
 
-#. ``accountid`` - ``string``: account, that performs the action
+#. ``rejector`` - ``string``: identity or account rejecting the verification
 #. ``subject`` - ``string``: the subject of the verification
 #. ``verificationId`` - ``string``: id of a verification to delete
 #. ``rejectReason`` - ``object`` (optional): JSON Object of the rejection reason
@@ -992,8 +992,8 @@ Example
 
 .. code-block:: typescript
 
-  const verificationId = await verifications.setVerification(accounts[0], accounts[1], '/company');
-  await verifications.rejectVerification(accounts[0], accounts[1], verificationId, { rejected: "because not valid anymore"});
+  const verificationId = await verifications.setVerification(identities[0], identities[1], '/company');
+  await verifications.rejectVerification(identities[0], identities[1], verificationId, { rejected: "because not valid anymore"});
 
 
 
@@ -1057,7 +1057,7 @@ executeVerification
 
 .. code-block:: typescript
 
-  verifications.executeVerification(accountId, txInfo);
+  verifications.executeVerification(executorAddress, txInfo);
 
 Executes a pre-signed verification transaction with given account.
 This account will be the origin of the transaction and not of the verification.
@@ -1067,7 +1067,7 @@ Second argument is generated with ``signSetVerificationTransaction``.
 Parameters
 ----------
 
-#. ``accountId`` - ``string``: account, that submits the transaction
+#. ``executorAddress`` - ``string``: identity or account, that submits the transaction
 #. ``txInfo`` - ``VerificationsDelegationInfo``: information with verification tx data
 
 -------
@@ -1110,7 +1110,7 @@ Nonce is returned as ``string``. When using nonces for preparing multiple transa
 Parameters
 ----------
 
-#. ``issuer`` - ``string``: account or identity to get execution nonce for
+#. ``issuer`` - ``string``: identity or account to get execution nonce for
 #. ``isIdentity`` - ``boolean`` (optional): true if given issuer is an identity, defaults to ``false``
 
 -------
@@ -1201,7 +1201,7 @@ executeTransaction
 
 .. code-block:: typescript
 
-  verifications.executeTransaction(accountId, txInfo);
+  verifications.executeTransaction(executorAddress, txInfo);
 
 Executes a pre-signed transaction from ``signTransaction`` of an identity. This can be and usually is a transaction, that has been prepared by the identity owner and is now submitted to the chain and executed by another account.
 
@@ -1209,7 +1209,7 @@ Executes a pre-signed transaction from ``signTransaction`` of an identity. This 
 Parameters
 ----------
 
-#. ``accountId`` - ``string``: account, that sends transaction to the blockchain and pays for it
+#. ``executorAddress`` - ``string``: identity or account, that sends transaction to the blockchain and pays for it
 #. ``txInfo`` - ``VerificationsDelegationInfo``: details about the transaction
 #. ``partialOptions`` - ``any`` (optional): data for handling event triggered by this transaction
 
@@ -1227,19 +1227,19 @@ Example
 
   // create test contract
   const testContract = await executor.createContract(
-    'TestContract', ['old data'], { from: accounts[0], gas: 500000 });
+    'TestContract', ['old data'], { from: identities[0], gas: 500000 });
   let data = await executor.executeContractCall(testContract, 'data');
 
-  // on account[0]s side
+  // on identities[0]s side
   const txInfo = await verifications.signTransaction(
     testContract,
     'setData',
-    { from: accounts[0] },
+    { from: identities[0] },
     'new data',
   );
 
-  // on account[2]s side
-  await verifications.executeTransaction(accounts[2], txInfo);
+  // on identities[2]s side
+  await verifications.executeTransaction(identities[2], txInfo);
 
   // now check
   data = await executor.executeContractCall(testContract, 'data');
@@ -1311,7 +1311,7 @@ setVerificationDescription
 
 .. code-block:: typescript
 
-  verifications.setVerificationDescription(accountId, topic, domain, description);
+  verifications.setVerificationDescription(identity, topic, domain, description);
 
 Set description for a verification under a domain owned by given account. This sets the description at the ENS endpoint for a verification.
 
@@ -1331,7 +1331,7 @@ A description can be setup even after verifications have been issued. So it is r
 Parameters
 ----------
 
-#. ``accountId`` - ``string``: accountId, that performs the description update
+#. ``identityOrAccount`` - ``string``: identity or account, that performs the description update
 #. ``topic`` - ``string``: name of the verification (full path) to set description
 #. ``domain`` - ``string``: domain of the verification, this is a subdomain under 'verifications.evan', so passing 'example' will link verifications description to 'example.verifications.evan'
 #. ``description`` - ``string``: DBCP description of the verification; can be an Envelope but only public properties are used

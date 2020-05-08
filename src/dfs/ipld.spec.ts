@@ -20,9 +20,12 @@
 import 'mocha';
 import { expect } from 'chai';
 
+import { Ipfs } from '@evan.network/dbcp';
 import { CryptoProvider } from '../encryption/crypto-provider';
 import { Ipld } from './ipld';
 import { TestUtils } from '../test/test-utils';
+import { accounts, useIdentity } from '../test/accounts';
+import { Runtime } from '../runtime';
 
 
 describe('IPLD handler', function test() {
@@ -31,16 +34,18 @@ describe('IPLD handler', function test() {
   let ipfs;
   let cryptoProvider: CryptoProvider;
   const helperWeb3 = TestUtils.getWeb3();
+  let runtime: Runtime;
 
   before(async () => {
     // create new ipld handler on ipfs node
-    ipfs = await TestUtils.getIpfs();
-    cryptoProvider = TestUtils.getCryptoProvider();
+    runtime = await TestUtils.getRuntime(accounts[0], null, { useIdentity });
+    ipfs = runtime.dfs as Ipfs;
+    cryptoProvider = runtime.cryptoProvider;
   });
 
   beforeEach(async () => {
     // create new ipld handler on ipfs node
-    ipld = await TestUtils.getIpld(ipfs);
+    ipld = await TestUtils.getIpld(runtime, ipfs);
   });
 
   describe('when creating a graph', () => {
@@ -337,7 +342,7 @@ describe('IPLD handler', function test() {
       async () => {
         async function updateGraph() {
         // shadow ipld with a new one with another key
-          const localIpld = await TestUtils.getIpld(ipfs);
+          const localIpld = await TestUtils.getIpld(runtime, ipfs);
           const sampleObject = {
             personalInfo: {
               firstName: 'eris',

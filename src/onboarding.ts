@@ -33,6 +33,7 @@ import * as AccountType from './profile/types/types';
 import { SignerIdentity } from './contracts/signer-identity';
 import { Did } from './did/did';
 import { VerificationsDelegationInfo } from './verifications/verifications';
+import { Aes } from './encryption/aes';
 
 import KeyStore = require('../libs/eth-lightwallet/keystore');
 import https = require('https');
@@ -101,11 +102,11 @@ export class Onboarding extends Logger {
     if (!password) {
       throw new Error('password is a required parameter!');
     }
-
-    const runtimeConfig: any = await Onboarding.generateRuntimeConfig(
-      mnemonic, password, runtime.web3,
-    );
-    const runtimeNew = await createDefaultRuntime(runtime.web3, runtime.dfs, runtimeConfig);
+    const runtimeNew = await createDefaultRuntime(runtime.web3, runtime.dfs, {
+      mnemonic,
+      password,
+      useIdentity: runtime.runtimeConfig.useIdentity,
+    });
 
     // check if the source runtime has enough funds
     const profileCost = runtime.web3.utils.toWei('1.0097');
@@ -135,7 +136,7 @@ export class Onboarding extends Logger {
     return {
       mnemonic,
       password,
-      runtimeConfig,
+      runtimeConfig: runtimeNew.runtimeConfig,
     };
   }
 
@@ -188,13 +189,13 @@ export class Onboarding extends Logger {
       factory,
       'createContract',
       {
-        from: runtime.activeAccount,
+        from: runtime.activeIdentity,
         autoGas: 1.1,
         event: { target: 'BaseContractFactoryInterface', eventName: 'ContractCreated' },
         getEventResult: (event, args) => args.newAddress,
       },
       '0x'.padEnd(42, '0'),
-      runtime.activeAccount,
+      runtime.activeIdentity,
       descriptionHash,
       runtime.nameResolver.config.ensAddress,
       [...Object.values(runtime.profile.treeLabels), ...dataSchemaEntries]
@@ -211,7 +212,7 @@ export class Onboarding extends Logger {
     await runtime.executor.executeContractTransaction(
       contractInterface,
       'init',
-      { from: runtime.activeAccount, autoGas: 1.1 },
+      { from: runtime.activeIdentity, autoGas: 1.1 },
       rootDomain,
       false,
     );
@@ -232,15 +233,15 @@ export class Onboarding extends Logger {
     const profileKeys = Object.keys(profileData);
     // add hashKey
     await runtime.sharing.extendSharings(
-      sharings, runtime.activeAccount, runtime.activeAccount, '*', 'hashKey', hashKey,
+      sharings, runtime.activeIdentity, runtime.activeIdentity, '*', 'hashKey', hashKey,
     );
     // extend sharings for profile data
     const dataContentKeys = await Promise.all(profileKeys.map(() => cryptorAes.generateKey()));
     for (let i = 0; i < profileKeys.length; i += 1) {
       await runtime.sharing.extendSharings(
         sharings,
-        runtime.activeAccount,
-        runtime.activeAccount, profileKeys[i], blockNr, dataContentKeys[i],
+        runtime.activeIdentity,
+        runtime.activeIdentity, profileKeys[i], blockNr, dataContentKeys[i],
       );
     }
     // upload sharings
@@ -249,14 +250,14 @@ export class Onboarding extends Logger {
     );
 
     // eslint-disable-next-line no-param-reassign
-    runtime.profile.profileOwner = runtime.activeAccount;
+    runtime.profile.profileOwner = runtime.activeIdentity;
     // eslint-disable-next-line no-param-reassign
     runtime.profile.profileContract = runtime.contractLoader.loadContract('DataContract', contractId);
 
     await runtime.executor.executeContractTransaction(
       runtime.profile.profileContract,
       'setSharing',
-      { from: runtime.activeAccount, autoGas: 1.1 },
+      { from: runtime.activeIdentity, autoGas: 1.1 },
       sharingsHash,
     );
     const dhKeys = runtime.keyExchange.getDiffieHellmanKeys();
@@ -267,14 +268,14 @@ export class Onboarding extends Logger {
           runtime.profile.profileContract,
           entry,
           profileData[entry],
-          runtime.activeAccount,
+          runtime.activeIdentity,
         ))
       ),
       (async () => {
         await runtime.profile.addContactKey(
           runtime.activeAccount, 'dataKey', dhKeys.privateKey.toString('hex'),
         );
-        await runtime.profile.addProfileKey(runtime.activeAccount, 'alias', profileData.accountDetails.accountName);
+        await runtime.profile.addProfileKey(runtime.activeIdentity, 'alias', profileData.accountDetails.accountName);
         await runtime.profile.addPublicKey(dhKeys.publicKey.toString('hex'));
         await runtime.profile.storeForAccount(runtime.profile.treeLabels.addressBook);
         await runtime.profile.storeForAccount(runtime.profile.treeLabels.publicKey);
@@ -292,7 +293,7 @@ export class Onboarding extends Logger {
         await runtime.executor.executeContractTransaction(
           profileIndexContract,
           'setMyProfile',
-          { from: runtime.activeAccount, autoGas: 1.1 },
+          { from: runtime.activeIdentity, autoGas: 1.1 },
           runtime.profile.profileContract.options.address,
         );
       })(),
@@ -300,13 +301,20 @@ export class Onboarding extends Logger {
   }
 
   /**
-   * generates a runtime config for a given mneomic and password
+   * generates a runtime config for a given mnemonic and password
    *
-   * @param      {string}  mnemonic  specified mnemonic
-   * @param      {string}  password  given password
-   * @param      {any}     web3      web3 instance
+   * @param      {string}  mnemonic         specified mnemonic
+   * @param      {string}  password         given password
+   * @param      {any}     web3             web3 instance
+   * @param      {string}  passwordSalting  string that should be used for encryptionKey salting
+   *                                        instead of account id (e.g. identity)
    */
-  public static async generateRuntimeConfig(mnemonic: string, password: string, web3: any) {
+  public static async generateRuntimeConfig(
+    mnemonic: string,
+    password: string,
+    web3: any,
+    passwordSalting?: string,
+  ) {
     // generate a new vault from the mnemnonic and the password
     const vault: any = await new Promise((res) => {
       KeyStore.createVault({
@@ -331,7 +339,7 @@ export class Onboarding extends Logger {
       [web3.utils.soliditySha3(accountId), web3.utils.soliditySha3(accountId)].sort());
     const sha3Account = web3.utils.soliditySha3(accountId);
     const dataKey = web3.utils
-      .keccak256(accountId + password)
+      .keccak256((passwordSalting || accountId) + password)
       .replace(/0x/g, '');
     const runtimeConfig = {
       accountMap: {
@@ -363,12 +371,13 @@ export class Onboarding extends Logger {
     accountId: string,
     pKey: string,
     recaptchaToken: string,
+    password: string,
     network = 'testcore',
   ) {
-    // ensure to set activeIdentity to 0x0..., when use identity is enabled
+    // ensure to set activeIdentity to 0x0..., when use identity is disabled
     const creationRuntime = {
       ...runtime,
-      activeIdentity: runtime.runtimeConfig.useIdentity ? nullAddress : runtime.activeIdentity,
+      activeIdentity: nullAddress,
     };
     // check for correct profile data
     if (!profileData || !profileData.accountDetails || !profileData.accountDetails.accountName) {
@@ -398,8 +407,9 @@ export class Onboarding extends Logger {
 
     const requestMode = process.env.TEST_ONBOARDING ? http : https;
 
-    const requestedProfile = await new Promise((resolve, reject) => {
+    const requestedProfile: any = await new Promise((resolve, reject) => {
       const requestProfilePayload = JSON.stringify({
+        companyProfile: profileData.accountDetails.profileType === 'company',
         accountId,
         signature,
         captchaToken: recaptchaToken,
@@ -437,24 +447,165 @@ export class Onboarding extends Logger {
       reqProfileReq.write(requestProfilePayload);
       reqProfileReq.end();
     });
-    const newIdentity = (requestedProfile as any).identity;
-    const accountHash = creationRuntime.web3.utils.soliditySha3(accountId);
-    const identityHash = creationRuntime.web3.utils.soliditySha3(newIdentity);
-    const targetAccount = creationRuntime.activeIdentity !== accountId ? newIdentity : accountId;
-    const targetAccountHash = creationRuntime.activeIdentity !== accountId ? identityHash
-      : accountHash;
 
-    // TODO: Use identity encryption key here!
-    const dataKey = creationRuntime.keyProvider.keys[accountHash];
+    if (profileData.accountDetails.profileType === 'company') {
+      // company profile data to fill
+      const companyDataToFill = {
+        accountDetails: {
+          accountName: profileData.accountDetails.companyAlias,
+          profileType: 'company',
+        },
+        registration: profileData.registration,
+        contact: profileData.contact,
+      };
+      // company data
+      const companyIdentity = requestedProfile.company.identity;
+      const accountHash = creationRuntime.web3.utils.soliditySha3(accountId);
+      const companyIdentityHash = creationRuntime.web3.utils.soliditySha3(companyIdentity);
+      const companyAccount = creationRuntime.runtimeConfig.useIdentity
+        ? companyIdentity : accountId;
+      const companyAccountHash = creationRuntime.runtimeConfig.useIdentity ? companyIdentityHash
+        : accountHash;
 
+      // user profile data to fill
+      const userDataToFill = {
+        accountDetails: {
+          accountName: profileData.accountDetails.accountName,
+          profileType: 'user',
+        },
+      };
+      // user data
+      const userIdentity = requestedProfile.user.identity;
+      const userIdentityHash = creationRuntime.web3.utils.soliditySha3(userIdentity);
+      const userAccount = creationRuntime.runtimeConfig.useIdentity ? userIdentity : accountId;
+      const userAccountHash = creationRuntime.runtimeConfig.useIdentity ? userIdentityHash
+        : accountHash;
+
+      // Generate company encryption key
+      const aes = new Aes();
+      const companyDataKey = await aes.generateKey();
+      creationRuntime.keyProvider.keys[companyAccountHash] = companyDataKey;
+      creationRuntime.keyProvider.keys[creationRuntime.web3.utils
+        .soliditySha3(companyAccountHash, companyAccountHash)] = companyDataKey;
+
+      // generate the encryption key with the provided password and the target account
+      const userDataKey = creationRuntime.web3.utils.sha3(userAccount + password).replace(/0x/g, '');
+      creationRuntime.keyProvider.keys[userAccountHash] = userDataKey;
+      creationRuntime.keyProvider.keys[
+        creationRuntime.web3.utils.soliditySha3(userAccountHash, userAccountHash)] = userDataKey;
+
+      // generate the communication key
+      const commKey = await creationRuntime.keyExchange.generateCommKey();
+
+      // additionalKeys for company
+      const additionalKeysCompany = {
+        contactKeys: [
+          { address: userAccount, context: 'commKey', key: commKey },
+        ],
+        profileKeys: [
+          { address: userAccount, key: 'alias', value: profileData.accountDetails.accountName },
+          { address: userAccount, key: 'hasIdentityAccess', value: 'readWrite' },
+          { address: userAccount, key: 'identityAccessGranted', value: Date.now().toString() },
+          { address: userAccount, key: 'identityAccessNote', value: 'company owner' },
+        ],
+        shareWith: [
+          userAccount,
+        ],
+      };
+
+      // additionalKeys for user
+      const additionalKeysUser = {
+        contactKeys: [
+          { address: companyAccount, context: 'commKey', key: commKey },
+          { address: companyAccount, context: 'identityAccess', key: companyDataKey },
+        ],
+        profileKeys: [
+          { address: companyAccount, key: 'alias', value: profileData.accountDetails.companyAlias },
+        ],
+        shareWith: [
+          companyAccount,
+        ],
+      };
+
+      await Promise.all([
+        this.fillProfile(
+          accountId,
+          companyAccount,
+          requestedProfile.company,
+          companyDataToFill,
+          creationRuntime,
+          network,
+          signature,
+          additionalKeysCompany,
+        ),
+        this.fillProfile(
+          accountId,
+          userAccount,
+          requestedProfile.user,
+          userDataToFill,
+          creationRuntime,
+          network,
+          signature,
+          additionalKeysUser,
+        )]);
+    } else {
+      const newIdentity = requestedProfile.user.identity;
+      const accountHash = creationRuntime.web3.utils.soliditySha3(accountId);
+      const identityHash = creationRuntime.web3.utils.soliditySha3(newIdentity);
+      const targetAccount = creationRuntime.runtimeConfig.useIdentity ? newIdentity : accountId;
+      const targetAccountHash = creationRuntime.runtimeConfig.useIdentity ? identityHash
+        : accountHash;
+      // generate the encryption key with the provided password and the target account
+      const dataKey = creationRuntime.web3.utils.sha3(targetAccount + password).replace(/0x/g, '');
+      // eslint-disable-next-line
+      creationRuntime.keyProvider.keys[targetAccountHash] = dataKey;
+      // eslint-disable-next-line
+      creationRuntime.keyProvider.keys[creationRuntime.web3.utils.soliditySha3(targetAccountHash, targetAccountHash)] = dataKey;      
+      await this.fillProfile(
+        accountId,
+        targetAccount,
+        requestedProfile.user,
+        profileData,
+        creationRuntime,
+        network,
+        signature,
+      );
+    }
+  }
+
+  /**
+   * Takes a empty profile contract, adds hash keys and data keys and uses the smart-agent-faucet
+   * '/api/smart-agents/profile/fill' endpoint to write this data to the profile contract.
+   *
+   * @param      {string}         accountId         account / identity that
+   * @param      {string}         targetAccount     underlying account (mnemonic public key)
+   * @param      {any}            requestedProfile  profile contract
+   * @param      {any}            profileData       profile data that should be filled into the
+   *                                                profile container contract
+   * @param      {any}            creationRuntime   basic runtime that can be used to generate keys,
+   *                                                fill profile, data, ...
+   * @param      {any}            network           network id to send to the agent
+   * @param      {any}            signature         signate that should be sent to the agent
+   * @param      {any}            additionalKeys    keys that should be dynamically added to
+   *                                                contactKeys, profileKeys and is possible to
+   *                                                share all container entries with the specified
+   *                                                addresses within the shareWith property
+   * @return     {Promise<void>}  resolved when done.
+   */
+  private static async fillProfile(
+    accountId: string,
+    targetAccount: string,
+    requestedProfile: any,
+    profileData: any,
+    creationRuntime: any,
+    network = 'testcore',
+    signature: any,
+    additionalKeys?: any,
+  ) {
+    const { profile } = creationRuntime;
     profile.ipld.originator = creationRuntime.web3.utils.soliditySha3(targetAccount);
     profile.activeAccount = targetAccount;
     profile.profileOwner = targetAccount;
-
-    // eslint-disable-next-line
-    creationRuntime.keyProvider.keys[targetAccountHash] = dataKey;
-    // eslint-disable-next-line
-    creationRuntime.keyProvider.keys[creationRuntime.web3.utils.soliditySha3(targetAccountHash, targetAccountHash)] = dataKey;
 
     const dhKeys = creationRuntime.keyExchange.getDiffieHellmanKeys();
     await profile.addContactKey(
@@ -462,6 +613,15 @@ export class Onboarding extends Logger {
     );
     await profile.addProfileKey(targetAccount, 'alias', profileData.accountDetails.accountName);
     await profile.addPublicKey(dhKeys.publicKey.toString('hex'));
+
+    if (additionalKeys) {
+      for (const { address, context, key } of additionalKeys.contactKeys) {
+        await profile.addContactKey(address, context, key);
+      }
+      for (const { address, key, value } of additionalKeys.profileKeys) {
+        await profile.addProfileKey(address, key, value);
+      }
+    }
 
     // set initial structure by creating addressbook structure and saving it to ipfs
     const cryptor = creationRuntime.cryptoProvider.getCryptorByCryptoAlgo('aesEcb');
@@ -481,7 +641,6 @@ export class Onboarding extends Logger {
     // setup sharings for new profile
     const sharings = {};
     const profileKeys = Object.keys(profileData);
-    // add hashKey
     await creationRuntime.sharing.extendSharings(
       sharings, targetAccount, targetAccount, '*', 'hashKey', hashKey,
     );
@@ -489,8 +648,33 @@ export class Onboarding extends Logger {
     const dataContentKeys = await Promise.all(profileKeys.map(() => cryptorAes.generateKey()));
     for (let i = 0; i < profileKeys.length; i += 1) {
       await creationRuntime.sharing.extendSharings(
-        sharings, targetAccount, targetAccount, profileKeys[i], blockNr, dataContentKeys[i],
+        sharings,
+        targetAccount,
+        targetAccount,
+        profileKeys[i],
+        blockNr,
+        dataContentKeys[i],
       );
+    }
+
+    // extend sharing for profile data with company profile
+    if (additionalKeys?.shareWith) {
+      for (const shareWith of additionalKeys.shareWith) {
+        await creationRuntime.sharing.extendSharings(
+          sharings, targetAccount, shareWith, '*', 'hashKey', hashKey,
+        );
+
+        for (let i = 0; i < profileKeys.length; i += 1) {
+          await creationRuntime.sharing.extendSharings(
+            sharings,
+            targetAccount,
+            shareWith,
+            profileKeys[i],
+            blockNr,
+            dataContentKeys[i],
+          );
+        }
+      }
     }
     // upload sharings
     const sharingsHash = await creationRuntime.dfs.add(
@@ -509,7 +693,7 @@ export class Onboarding extends Logger {
       const envelope = {
         private: encrypted.toString('hex'),
         cryptoInfo: cryptorAes.getCryptoInfo(
-          creationRuntime.nameResolver.soliditySha3((requestedProfile as any).contractId),
+          creationRuntime.nameResolver.soliditySha3(requestedProfile.contractId),
         ),
       };
       const ipfsHash = await creationRuntime.dfs.add(key, Buffer.from(JSON.stringify(envelope)));
@@ -556,17 +740,17 @@ export class Onboarding extends Logger {
 
     const data = {
       accountId,
-      identityId: creationRuntime.activeIdentity !== accountId ? newIdentity : undefined,
+      identityId: creationRuntime.runtimeConfig.useIdentity ? targetAccount : undefined,
       signature,
       profileInfo: fileHashes,
-      accessToken: (requestedProfile as any).accessToken,
-      contractId: (requestedProfile as any).contractId,
+      accessToken: requestedProfile.accessToken,
+      contractId: requestedProfile.contractId,
     } as any;
 
     // TODO if statement can be removed after account/identity switch is done
-    if ((requestedProfile as any).identity) {
+    if (creationRuntime.runtimeConfig.useIdentity) {
       const didTransactionTuple = await this.createOfflineDidTransaction(creationRuntime,
-        accountId, (requestedProfile as any).identity);
+        accountId, requestedProfile.identity);
       const didTransaction = didTransactionTuple[0];
       const documentHash = didTransactionTuple[1];
       data.didTransaction = didTransaction;
@@ -575,6 +759,7 @@ export class Onboarding extends Logger {
 
     // re-enable pinning
     profile.ipld.ipfs.disablePin = false;
+    const requestMode = process.env.TEST_ONBOARDING ? http : https;
 
     const jsonPayload = JSON.stringify(data);
     const options = {
@@ -639,6 +824,8 @@ export class Onboarding extends Logger {
         activeIdentity: identity,
         underlyingAccount: account,
       };
+      // eslint-disable-next-line no-param-reassign
+      runtime.verifications.options.executor.signer = signer;
       runtime.verifications.options.executor.signer.updateConfig({
         verifications: runtime.verifications,
       }, {
@@ -661,7 +848,7 @@ export class Onboarding extends Logger {
 
     const doc = await did.getDidDocumentTemplate();
     const identityDid = await did.convertIdentityToDid(identity);
-    const [txInfo, documentHash] = await did.setDidDocumentOffline(identityDid, doc);
+    const [txInfo, documentHash] = await did.setDidDocumentOffline(identityDid, doc, identity);
 
     return [txInfo, documentHash];
   }

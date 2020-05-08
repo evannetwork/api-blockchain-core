@@ -37,12 +37,14 @@ export class Description extends Dbcp.Description {
   /**
    * loads description envelope from contract
    *
-   * @param      {string}    ensAddress  The ens address where the description is stored
+   * @param      {string}  contractAddress  The contract address where the description is stored
+   * @param      {string}  readerAddress    identity or account of the identity or the account that
+   *                                        is allowed to read the description
    * @return     {Envelope}  description as an Envelope
    */
   public async getDescriptionFromContract(
     contractAddress: string,
-    accountId: string,
+    readerAddress: string,
   ): Promise<Dbcp.Envelope> {
     let result = null;
     const contract = this.contractLoader.loadContract('Described', contractAddress);
@@ -55,7 +57,7 @@ export class Description extends Dbcp.Description {
           try {
             const cryptor = this.cryptoProvider.getCryptorByCryptoInfo(result.cryptoInfo);
             const sharingKey = await this.sharing.getKey(
-              contractAddress, accountId, '*', result.cryptoInfo.block,
+              contractAddress, readerAddress, '*', result.cryptoInfo.block,
             );
             const key = sharingKey;
             const privateData = await cryptor.decrypt(
@@ -77,17 +79,19 @@ export class Description extends Dbcp.Description {
   /**
    * store description at contract
    *
-   * @param      {string}           contractAddress  The contract address where description will be
-   *                                                 stored
-   * @param      {Envelope|string}  envelope         description as an envelope or a presaved
-   *                                                 description hash
-   * @param      {string}           accountId        ETH account id
+   * @param      {string}           contractAddress   The contract address where description will be
+   *                                                  stored
+   * @param      {Envelope|string}  envelope          description as an envelope or a presaved
+   *                                                  description hash
+   * @param      {string}           encryptorAddress  identity or account of either an account or an
+   *                                                  identity that is supposed to encrypt the
+   *                                                  description
    * @return     {Promise}  resolved when done
    */
   public async setDescriptionToContract(
     contractAddress: string,
     envelope: Dbcp.Envelope|string,
-    accountId: string,
+    encryptorAddress: string,
   ): Promise<void> {
     let hash;
     if (typeof envelope === 'string') {
@@ -106,7 +110,7 @@ export class Description extends Dbcp.Description {
       if (content.private && content.cryptoInfo) {
         const cryptor = this.cryptoProvider.getCryptorByCryptoInfo(content.cryptoInfo);
         const blockNr = await this.web3.eth.getBlockNumber();
-        const sharingKey = await this.sharing.getKey(contractAddress, accountId, '*', blockNr);
+        const sharingKey = await this.sharing.getKey(contractAddress, encryptorAddress, '*', blockNr);
         const key = sharingKey;
         const encrypted = await cryptor.encrypt(content.private, { key });
         content.private = encrypted.toString(this.encodingEncrypted);
@@ -119,7 +123,7 @@ export class Description extends Dbcp.Description {
     }
     const contract = this.contractLoader.loadContract('Described', contractAddress);
     await this.executor.executeContractTransaction(
-      contract, 'setContractDescription', { from: accountId, gas: 200000 }, hash,
+      contract, 'setContractDescription', { from: encryptorAddress, gas: 200000 }, hash,
     );
   }
 }

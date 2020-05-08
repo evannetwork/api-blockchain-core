@@ -215,7 +215,7 @@ getClosingSig
 
 .. code-block:: typescript
 
-  payments.getClosingSig(account);
+  payments.getClosingSig(signerId);
 
 Get the closing balance signature signed from the defined account. This signature can be used to transfer it from the recevier to the sender when the sender wants to close the payment channel. Otherwise when the receiver wants to close the channel cooperative he uses the closign signature to close th channel directly.
 
@@ -223,7 +223,7 @@ Get the closing balance signature signed from the defined account. This signatur
 Parameters
 ----------
 
-#. ``account`` - ``string``: AccountId which should sign the closing signature (mostly the current active account)
+#. ``signerId`` - ``string``: identity or account which should sign the closing signature (mostly the current active identity/account)
 
 -------
 Returns
@@ -323,16 +323,17 @@ loadChannelFromBlockchain
 
 .. code-block:: typescript
 
-  payments.loadChannelFromBlockchain(account, receiver);
+  payments.loadChannelFromBlockchain(sender, receiver);
 
-Scan the blockchain for an open channel, and load it with 0 balance. The 0 balance may be overwritten with setBalance if server replies with a updated balance on first request. It should ask user for signing the zero-balance proof. Throws/reject if no open channel was found.
+Scan the blockchain for an open channel, and load it with 0 balance. The 0 balance may be overwritten with setBalance if server replies with a updated balance on first request. It should ask user for signing the zero-balance proof. Throws/reject if no open channel was found. Additionally a starting block can be provided to avoid starting from block 0 when looking for payment channels.
 
 ----------
 Parameters
 ----------
 
-#. ``account`` - ``string``: Sender/client's account address
+#. ``sender`` - ``string``: identity or account of sender/client
 #. ``receiver`` - ``string``: Receiver/server's account address
+#. ``startBlock`` - ``number`` (optional): block to start scanning for transactions, defaults to ``0``
 
 -------
 Returns
@@ -366,7 +367,7 @@ Open a channel for account to receiver, depositing some EVE on it. Replaces curr
 Parameters
 ----------
 
-#. ``account`` - ``string``: Sender/client's account address
+#. ``account`` - ``string``: Sender/client's identity or account
 #. ``receiver`` - ``string``: Receiver/server's account address
 #. ``deposit`` - ``BigNumber|string``: deposit in WEI
 

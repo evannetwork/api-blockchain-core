@@ -407,7 +407,7 @@ Some example here use ``Ipld.purgeCryptoInfo`` to cleanup the objects before log
 
   - The root node of a tree is "encrypted" with the encryption algorithm "unencrypted", resulting in the root node having its data stored as a Buffer. This is done to keep the root node in the same format as the other nodes, as:
   - Nodes in the Tree are encrypted. This encryption is specified in the constructor as `defaultCryptoAlgo`.
-  - All nodes are en- or decrypted with the same account or "originator". The originator, that is used, is specified in the constructor as "originator". This means, that the IPLD instance is account bound and a new instance has to be created if another account should be used.
+  - All nodes are en- or decrypted with the same identity or account or "originator". The originator, that is used, is specified in the constructor as "originator". This means, that the IPLD instance is identity or account bound and a new instance has to be created if another identity or account should be used.
 
 ----------
 Parameters

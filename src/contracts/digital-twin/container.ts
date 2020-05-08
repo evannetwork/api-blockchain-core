@@ -46,7 +46,7 @@ import { Verifications } from '../../verifications/verifications';
  * config properties, specific to `Container` instances
  */
 export interface ContainerConfig {
-  /** account id of user, that interacts with container */
+  /** identity or account of user, that interacts with container */
   accountId: string;
   /** address of a ``DataContract`` instance, can be ENS or contract address */
   address?: string;
@@ -90,7 +90,7 @@ export interface ContainerOptions extends LoggerOptions {
  * config for sharing multiple fields to one account (read and/or readWrite access)
  */
 export interface ContainerShareConfig {
-  /** account, that gets properties shared */
+  /** identity or account, that gets properties shared */
   accountId: string;
   /** list of properties, that are shared read-only */
   read?: string[];
@@ -104,7 +104,7 @@ export interface ContainerShareConfig {
  * config for unsharing multiple fields from one account (write and/or readWrite access)
  */
 export interface ContainerUnshareConfig {
-  /** account, that gets properties unshared */
+  /** identity or account, that gets properties unshared */
   accountId: string;
   /** list of properties, that are unshared (read and write permissions) */
   readWrite?: string[];
@@ -722,7 +722,7 @@ export class Container extends Logger {
   /**
    * Check permissions for given account and return them as ContainerShareConfig object.
    *
-   * @param      {string}  accountId  account to check permissions for
+   * @param      {string}  accountId  identity or account to check permissions for
    */
   public async getContainerShareConfigForAccount(accountId: string): Promise<ContainerShareConfig> {
     await this.ensureContract();
@@ -824,7 +824,7 @@ export class Container extends Logger {
    */
   public async removeEntries(entries: string|string[]) {
     // only allowed by owner, will be enforced by the unshareProperties function
-    // load accounts that are permitted to this contract
+    // load identities or accounts that are permitted to this contract
     await this.ensureContract();
     const roleMap = await this.options.rightsAndRoles.getMembers(this.contract);
     const unique = Array.from(new Set([].concat(...Object.values(roleMap))));
@@ -840,7 +840,7 @@ export class Container extends Logger {
     const schemaProperties = (await this.toPlugin(false)).template.properties;
     const listEntries = entriesParameter.filter((entry) => schemaProperties[entry].type === 'list');
 
-    // unshare all accounts from the specific roles
+    // unshare all identities or accounts from the specific roles
     await this.unshareProperties(unique.map((accountId) => ({
       accountId,
       readWrite: entriesParameter as string[],
@@ -852,9 +852,10 @@ export class Container extends Logger {
   }
 
   /**
-   * Takes a full share configuration for an accountId (or a list of them), share newly added
-   * properties and unshare removed properties from the container. Also accepts a list / instance of
-   * the original sharing configurations, so that duplicate loading can be avoided.
+   * Takes a full share configuration for an accountId or identity (or a list of them),
+   * share newly added properties and unshare removed properties from the container.
+   * Also accepts a list / instance of the original sharing configurations,
+   * so that duplicate loading can be avoided.
    *
    * @param      {ContainerShareConfig[]}  newConfigs       sharing configurations that should be
    *                                                        persisted
@@ -1030,7 +1031,7 @@ export class Container extends Logger {
       if (!read.includes('type')) {
         read.push('type');
       }
-      // ensure that roles for fields exist and that accounts have permissions
+      // ensure that roles for fields exist and that identities or accounts have permissions
       let accessPromises = readWrite.map((property, index) => async () => {
         // get permissions from contract
         const hash = this.options.rightsAndRoles.getOperationCapabilityHash(
@@ -1066,7 +1067,7 @@ export class Container extends Logger {
           );
         }
 
-        // ensure that account has role
+        // ensure that identity or account has role
         const hasRole = await this.options.executor.executeContractCall(
           authority, 'hasUserRole', accountId, permittedRole,
         );
@@ -1119,7 +1120,7 @@ export class Container extends Logger {
           );
         }
 
-        // ensure that account has role
+        // ensure that identity or account has role
         const hasRole = await this.options.executor.executeContractCall(
           authority, 'hasUserRole', accountId, permittedRole,
         );
@@ -1141,7 +1142,7 @@ export class Container extends Logger {
         // checkout sharings
         const sharings = await this.options.sharing.getSharingsFromContract(this.contract);
 
-        // check if account already has a hash key
+        // check if identity or account already has a hash key
         const sha3 = (...args) => this.options.nameResolver.soliditySha3(...args);
         const isShared = (section, block?) => {
           if (!sharings[sha3(accountId)]
@@ -1308,8 +1309,8 @@ export class Container extends Logger {
    * Remove keys and/or permissions for a user; this also handles role permissions, role
    * memberships.
    *
-   * @param      {ContainerUnshareConfig[]}  unshareConfigs  list of account-field setups to remove
-   *                                                         permissions/keys for
+   * @param      {ContainerUnshareConfig[]}  unshareConfigs  list of identity/account-field
+   *                                                         setups to remove permissions/keys for
    */
   public async unshareProperties(unshareConfigs: ContainerUnshareConfig[]): Promise<void> {
     await this.ensureContract();
@@ -1397,7 +1398,7 @@ export class Container extends Logger {
           // if not found or included in reserved roles, exit
           this.log(`can not find a role that has write permissions for property ${property}`);
         } else {
-          // remove account from role
+          // remove identity or account from role
           const hasRole = await this.options.executor.executeContractCall(
             authority, 'hasUserRole', accountId, permittedRole,
           );
@@ -1433,7 +1434,7 @@ export class Container extends Logger {
           authority, property, propertyType, ModificationType.Remove,
         );
 
-        // remove account from role
+        // remove identity or account from role
         const hasRole = await this.options.executor.executeContractCall(
           authority, 'hasUserRole', accountId, permittedRole,
         );
@@ -1488,7 +1489,7 @@ export class Container extends Logger {
         // checkout sharings
         const sharings = await this.options.sharing.getSharingsFromContract(this.contract);
 
-        // check if account already has a hash key
+        // check if identity or account already has a hash key
         const sha3 = (...args) => this.options.nameResolver.soliditySha3(...args);
         const isShared = (section, block?) => {
           if (!sharings[sha3(accountId)]
@@ -1511,7 +1512,7 @@ export class Container extends Logger {
         }
         // cleanup sharings, this relies on a few conditions,
         // that are met, when sharings are managed by Container API
-        if (sharings[sha3(accountId)] // account has any sharing
+        if (sharings[sha3(accountId)] // identity or account has any sharing
           && Object.keys(sharings[sha3(accountId)]).length === 2 // only 2 sections remain
           && sharings[sha3(accountId)][sha3('*')] // * section remains
           && Object.keys(sharings[sha3(accountId)][sha3('*')]).length === 1 // only 1 entry in *
@@ -1551,7 +1552,7 @@ export class Container extends Logger {
         });
       });
 
-      // ////////////////////////////////////////////// remove account from member role if required
+      // ///////////////////////////////// remove identity or account from member role if required
       shareConfig = await this.getContainerShareConfigForAccount(accountId);
       remainingFields = Array.from(new Set([
         ...(shareConfig.read ? shareConfig.read : []),
@@ -1731,7 +1732,7 @@ export class Container extends Logger {
   }
 
   /**
-   * ensure that current account has a key for given entry in sharings
+   * ensure that current identity or account has a key for given entry in sharings
    *
    * @param      {string}  entryName  name of an entry to ensure a key for
    */
@@ -1760,10 +1761,10 @@ export class Container extends Logger {
 
   /**
    * ensure, that current user has permission to set values on given property; note that this
-   * function is for internal use in `Container` and skips a check to verify, that given account is
-   * in specified role; used out of context, this may check check if an account has permissions on a
-   * field and add then adds this account to an unrelated role, therefore not granting permissions
-   * on checked field
+   * function is for internal use in `Container` and skips a check to verify, that given
+   * identity/account is in specified role; used out of context, this may check check if an
+   * identity/account has permissions on a field and add then adds this identity/account to
+   * an unrelated role, therefore not granting permission on checked field
    *
    * @param      {string}  name       name of the property to ensure permission for
    * @param      {string}  type       type of property ('entry'/'list')
@@ -2071,7 +2072,7 @@ function checkConfigProperties(config: ContainerConfig, properties: string[]): v
  *
  * @param      {any}       runtime          initialized runtime
  * @param      {string}    contractAddress  contract to generate sharings for
- * @param      {string}    accountId        executing account (contract owner)
+ * @param      {string}    accountId        executing identity or account (contract owner)
  * @param      {string[]}  fields           fields to generate keys for
  */
 async function generateSharings(

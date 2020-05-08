@@ -23,7 +23,17 @@ First you need to get blockchain core into your project. This can be done using 
 
 After that you need to create a blockchain core runtime with a predefined configuration.
 
-Node.js version >= 10 is supported. The framework has been tested with Node.js 10, 11 and 12.
+.. _compatiblity-blockchain-core:
+
+Node.js compatibility
+======================
+
+Supported and tested Node.js versions are:
+
+* Node.js 10.x
+* Node.js 11.x
+* Node.js 12.x
+* Node.js 13.x
 
 .. _configuring-and-initializing-blockchain-core:
 
@@ -112,6 +122,7 @@ That's it! Now you can use the ``runtime`` object and interact with the evan.net
 
 The blockchain-core api is a set of modules which can be plugged in individually. So the above ``runtime`` is a full blown entry point to the api. You can also plug your own runtime with needed modules together.
 
+
 Create a new profile on evan.network via API
 ============================================
 
@@ -196,16 +207,17 @@ The only thing that should be defined is a password and an alias for the profile
 When all functions have run successfully, a message like the following will be shown and you can then log in with the new mnemonic and password on the respective dashboard:
 
 .. code-block:: javascript
-Profile created successfully
-{ mnemonic:
-   'penalty end car fit figure spell hero over equip hill found cage',
-  password: 'CUSTOM_PASSWORD',
-  runtimeConfig:
-   { accountMap:
-      { '0x5163B751E6C06102B37234fe1c126542375dEa80':
-         'b92fe68e7cb5e697596bb979da5608b9b5c37b2062b36ef2219cf64fc52d11f9' },
-     keyConfig:
-      { '0x82a911d010ef625d05ff9212b599088425ba51adc6b8d383c13db17a029c7982':
-         'f312ee3cfd634969910642b3d3686858364bc48740d76b993187a225ce1e967e',
-        '0x402ed1f201d74382ad51a5ae45e5d6f0c76d037a1dc4e573bfe032f387d46860':
-         'f312ee3cfd634969910642b3d3686858364bc48740d76b993187a225ce1e967e' } } }
+
+    Profile created successfully
+    { mnemonic:
+       'penalty end car fit figure spell hero over equip hill found cage',
+      password: 'CUSTOM_PASSWORD',
+      runtimeConfig:
+       { accountMap:
+          { '0x5163B751E6C06102B37234fe1c126542375dEa80':
+             'b92fe68e7cb5e697596bb979da5608b9b5c37b2062b36ef2219cf64fc52d11f9' },
+         keyConfig:
+          { '0x82a911d010ef625d05ff9212b599088425ba51adc6b8d383c13db17a029c7982':
+             'f312ee3cfd634969910642b3d3686858364bc48740d76b993187a225ce1e967e',
+            '0x402ed1f201d74382ad51a5ae45e5d6f0c76d037a1dc4e573bfe032f387d46860':
+             'f312ee3cfd634969910642b3d3686858364bc48740d76b993187a225ce1e967e' } } }

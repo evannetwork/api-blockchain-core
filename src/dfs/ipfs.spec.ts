@@ -25,6 +25,7 @@ import { IpfsLib } from './ipfs-lib';
 import { Ipfs } from './ipfs';
 import { InMemoryCache } from './in-memory-cache';
 import { TestUtils } from '../test/test-utils';
+import { useIdentity, accounts } from '../test/accounts';
 
 use(chaiAsPromised);
 
@@ -35,7 +36,7 @@ describe('IPFS handler', function test() {
   this.timeout(300000);
 
   before(async () => {
-    ipfs = await TestUtils.getIpfs();
+    ipfs = (await TestUtils.getRuntime(accounts[0], null, { useIdentity })).dfs as Ipfs;
   });
 
   it('should add the auth header for every request', async () => {
@@ -71,7 +72,7 @@ describe('IPFS handler', function test() {
     const unkownHash = 'QmZYJJTAV8JgVoMggSuQSSdGU4PrZSvuuXckvqpnHfpR75';
     const unpinUnkown = ipfs.remove(unkownHash);
     await expect(unpinUnkown).to.be.rejectedWith('problem with IPFS request: tried to remove hash '
-      + `"${unkownHash}" for account "${ipfs.runtime.activeAccount}", but no matching `
+      + `"${unkownHash}" for account "${ipfs.runtime.underlyingAccount}", but no matching `
       + 'entries found in redis');
   });
 

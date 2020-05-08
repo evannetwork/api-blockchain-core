@@ -21,21 +21,24 @@ import 'mocha';
 import { expect } from 'chai';
 import * as BigNumber from 'bignumber.js';
 
-import { accounts } from './test/accounts';
-import { Ipfs } from './dfs/ipfs';
+import { accounts, useIdentity } from './test/accounts';
 import { Ipld } from './dfs/ipld';
 import { Mail, Mailbox } from './mailbox';
 import { TestUtils } from './test/test-utils';
+import { Runtime } from './runtime';
 
 describe('Mailbox class', function test() {
   this.timeout(600000);
-  let ipfs: Ipfs;
-  let mailbox: Mailbox;
-  let web3;
+  let mailbox0: Mailbox;
+  let mailbox1: Mailbox;
+  let identity0: string;
+  let identity1: string;
+  let runtimes: Runtime[];
+  let web3: any;
   const random = Math.random();
   const getTestMail = (to): Mail => ({
     content: {
-      from: accounts[0],
+      from: runtimes[0].activeIdentity,
       to,
       title: 'talking to myself',
       body: `hi, me. I like random numbers, for example ${random}`,
@@ -57,54 +60,50 @@ describe('Mailbox class', function test() {
   });
 
   before(async () => {
-    web3 = TestUtils.getWeb3();
-    ipfs = await TestUtils.getIpfs();
-    mailbox = new Mailbox({
-      mailboxOwner: accounts[0],
-      nameResolver: await TestUtils.getNameResolver(web3),
-      ipfs,
-      contractLoader: await TestUtils.getContractLoader(web3),
-      cryptoProvider: TestUtils.getCryptoProvider(),
-      keyProvider: TestUtils.getKeyProvider(),
-      defaultCryptoAlgo: 'aes',
-    });
+    runtimes = await Promise.all(
+      accounts.slice(0, 2).map(
+        (account) => TestUtils.getRuntime(account, null, { useIdentity }),
+      ),
+    );
+    ([{ activeIdentity: identity0, mailbox: mailbox0, web3 },
+      { activeIdentity: identity1, mailbox: mailbox1 }] = runtimes);
   });
 
   it('should be able to send a mail', async () => {
     const startTime = Date.now();
-    await mailbox.sendMail(getTestMail(accounts[0]), accounts[0], accounts[0]);
-    const result = await mailbox.getMails(1, 0);
+    await mailbox0.sendMail(getTestMail(identity0), identity0, identity0);
+    const result = await mailbox0.getMails(1, 0);
     const keys = Object.keys(result.mails);
     expect(keys.length).to.eq(1);
     expect(result.mails[keys[0]].content.sent).to.be.ok;
     expect(result.mails[keys[0]].content.sent).to.be.gt(startTime);
     expect(result.mails[keys[0]].content.sent).to.be.lt(Date.now());
     delete result.mails[keys[0]].content.sent;
-    expect(result.mails[keys[0]].content).to.deep.eq(getTestMail(accounts[0]).content);
+    expect(result.mails[keys[0]].content).to.deep.eq(getTestMail(identity0).content);
   });
 
   it('should be able to load anything', async () => {
-    const mails = await mailbox.getMails(1, 0);
+    const mails = await mailbox0.getMails(1, 0);
     expect(mails).not.to.be.undefined;
     expect(mails.totalResultCount).to.be.gte(0);
     expect(Object.keys(mails.mails).length).to.be.gte(0);
   });
 
   it('should be able to get a set amount of mails', async () => {
-    await mailbox.sendMail(getTestMail(accounts[0]), accounts[0], accounts[0]);
+    await mailbox0.sendMail(getTestMail(identity0), identity0, identity0);
     let mails;
-    mails = await mailbox.getMails(1);
+    mails = await mailbox0.getMails(1);
     expect(mails).not.to.be.undefined;
     expect(Object.keys(mails.mails).length).to.eq(1);
-    mails = await mailbox.getMails(2);
+    mails = await mailbox0.getMails(2);
     expect(mails).not.to.be.undefined;
     expect(Object.keys(mails.mails).length).to.eq(2);
   });
 
   it('should be able to load all mails in the correct order', async () => {
     // get last two mails
-    const mailSet1 = await mailbox.getMails(1, 0);
-    const mailSet2 = await mailbox.getMails(1, 1);
+    const mailSet1 = await mailbox0.getMails(1, 0);
+    const mailSet2 = await mailbox0.getMails(1, 1);
 
     // check that mails were returned in correct order
     const indexMail1 = parseInt(Object.keys(mailSet1.mails)[0], 16);
@@ -113,16 +112,16 @@ describe('Mailbox class', function test() {
   });
 
   it('should be able to send and retrieve answers', async () => {
-    await mailbox.sendMail(getTestMail(accounts[0]), accounts[0], accounts[0]);
-    let result = await mailbox.getMails(1, 0);
+    await mailbox0.sendMail(getTestMail(identity0), identity0, identity0);
+    let result = await mailbox0.getMails(1, 0);
     let keys = Object.keys(result.mails);
     expect(keys.length).to.eq(1);
     const initialMailId = keys[0];
     const answer = getTestAnswer(initialMailId);
-    [answer.content.from] = accounts;
-    await mailbox.sendAnswer({ ...answer }, accounts[0], accounts[0]);
+    answer.content.from = identity0;
+    await mailbox0.sendAnswer({ ...answer }, identity0, identity0);
 
-    result = await mailbox.getAnswersForMail(initialMailId);
+    result = await mailbox0.getAnswersForMail(initialMailId);
     expect(result).not.to.be.undefined;
     expect(result.totalResultCount).to.eq(1);
     keys = Object.keys(result.mails);
@@ -133,42 +132,29 @@ describe('Mailbox class', function test() {
   });
 
   it('should be able to read mails sent from another user', async () => {
-    const startTime = Date.now();
-    // mailbox user 2
-    const mailbox2 = new Mailbox({
-      mailboxOwner: accounts[1],
-      nameResolver: await TestUtils.getNameResolver(web3),
-      ipfs,
-      contractLoader: await TestUtils.getContractLoader(web3),
-      cryptoProvider: TestUtils.getCryptoProvider(),
-      keyProvider: TestUtils.getKeyProvider(),
-      defaultCryptoAlgo: 'aes',
-    });
+    await mailbox0.sendMail(getTestMail(identity1), identity0, identity1);
 
-    await mailbox.sendMail(getTestMail(accounts[1]), accounts[0], accounts[1]);
-
-    const result = await mailbox2.getMails(1, 0);
+    const result = await mailbox1.getMails(1, 0);
     const keys = Object.keys(result.mails);
     expect(keys.length).to.eq(1);
     expect(result.mails[keys[0]].content.sent).to.be.ok;
-    expect(result.mails[keys[0]].content.sent).to.be.gt(startTime);
     expect(result.mails[keys[0]].content.sent).to.be.lt(Date.now());
     delete result.mails[keys[0]].content.sent;
-    expect(result.mails[keys[0]].content).to.deep.eq(getTestMail(accounts[1]).content);
+    expect(result.mails[keys[0]].content).to.deep.eq(getTestMail(identity1).content);
   });
 
   it('should be able to send UTC tokens with a mail', async () => {
-    await mailbox.init();
+    await mailbox0.init();
     const balanceToSend = new BigNumber(web3.utils.toWei('1', 'kWei'));
-    const balanceBefore = new BigNumber(await web3.eth.getBalance(accounts[0]));
+    const balanceBefore = new BigNumber(await web3.eth.getBalance(runtimes[0].underlyingAccount));
     const mailboxBalanceBefore = new BigNumber(
-      await web3.eth.getBalance(mailbox.mailboxContract.options.address),
+      await web3.eth.getBalance(mailbox0.mailboxContract.options.address),
     );
-    await mailbox.sendMail(getTestMail(accounts[1]), accounts[0], accounts[1], `0x${balanceToSend.toString(16)}`);
+    await mailbox0.sendMail(getTestMail(identity1), identity0, identity1, `0x${balanceToSend.toString(16)}`);
     const mailboxBalanceAfter = new BigNumber(
-      await web3.eth.getBalance(mailbox.mailboxContract.options.address),
+      await web3.eth.getBalance(mailbox0.mailboxContract.options.address),
     );
-    const balanceAfter = new BigNumber(await web3.eth.getBalance(accounts[0]));
+    const balanceAfter = new BigNumber(await web3.eth.getBalance(runtimes[0].underlyingAccount));
     // before - cost = after + value // (sender pays cost)
     expect(balanceAfter.plus(balanceToSend).lte(balanceBefore)).to.be.true;
     // before + value = after
@@ -176,46 +162,28 @@ describe('Mailbox class', function test() {
   });
 
   it('should allow checking balance for a mail', async () => {
-    const mailbox2 = new Mailbox({
-      mailboxOwner: accounts[1],
-      nameResolver: await TestUtils.getNameResolver(web3),
-      ipfs,
-      contractLoader: await TestUtils.getContractLoader(web3),
-      cryptoProvider: TestUtils.getCryptoProvider(),
-      keyProvider: TestUtils.getKeyProvider(),
-      defaultCryptoAlgo: 'aes',
-    });
     const balanceToSend = new BigNumber(web3.utils.toWei('0.1', 'Ether'));
-    await mailbox.sendMail(getTestMail(accounts[1]), accounts[0], accounts[1], web3.utils.toWei('0.1', 'Ether'));
-    const result = await mailbox2.getMails(1, 0);
+    await mailbox0.sendMail(getTestMail(identity1), identity0, identity1, web3.utils.toWei('0.1', 'Ether'));
+    const result = await mailbox1.getMails(1, 0);
     const keys = Object.keys(result.mails);
-    const mailBalance = await mailbox2.getBalanceFromMail(keys[0]);
+    const mailBalance = await mailbox1.getBalanceFromMail(keys[0]);
     expect(balanceToSend.eq(mailBalance)).to.be.true;
   });
 
   it('should allow withdrawing UTC tokens for a mail', async () => {
-    const mailbox2 = new Mailbox({
-      mailboxOwner: accounts[1],
-      nameResolver: await TestUtils.getNameResolver(web3),
-      ipfs,
-      contractLoader: await TestUtils.getContractLoader(web3),
-      cryptoProvider: TestUtils.getCryptoProvider(),
-      keyProvider: TestUtils.getKeyProvider(),
-      defaultCryptoAlgo: 'aes',
-    });
     const balanceToSend = new BigNumber(web3.utils.toWei('0.1', 'Ether'));
-    await mailbox.sendMail(getTestMail(accounts[1]), accounts[0], accounts[1], web3.utils.toWei('0.1', 'Ether'));
-    const result = await mailbox2.getMails(1, 0);
+    await mailbox0.sendMail(getTestMail(identity1), identity0, identity1, web3.utils.toWei('0.1', 'Ether'));
+    const result = await mailbox1.getMails(1, 0);
     const keys = Object.keys(result.mails);
-    const balanceBefore = new BigNumber(await web3.eth.getBalance(accounts[1]));
+    const balanceBefore = new BigNumber(await web3.eth.getBalance(identity1));
     const mailboxBalanceBefore = new BigNumber(
-      await web3.eth.getBalance(mailbox.mailboxContract.options.address),
+      await web3.eth.getBalance(mailbox0.mailboxContract.options.address),
     );
-    await mailbox2.withdrawFromMail(keys[0], accounts[1]);
+    await mailbox1.withdrawFromMail(keys[0], identity1);
     const mailboxBalanceAfter = new BigNumber(
-      await web3.eth.getBalance(mailbox.mailboxContract.options.address),
+      await web3.eth.getBalance(mailbox0.mailboxContract.options.address),
     );
-    const balanceAfter = new BigNumber(await web3.eth.getBalance(accounts[1]));
+    const balanceAfter = new BigNumber(await web3.eth.getBalance(identity1));
     // before + value - cost = after // (withdrawer pays cost)
     expect(balanceBefore.plus(balanceToSend).gte(balanceAfter)).to.be.true;
     // before - value = after
