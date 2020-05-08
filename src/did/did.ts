@@ -331,9 +331,10 @@ export class Did extends Logger {
    *
    * @param did DID to set document for
    * @param document Document to store
+   * @param sourceIdentity identity used for signing
    * @returns Tuple of the signed transaction and the document's ipfs hash
    */
-  public async setDidDocumentOffline(did: string, document: DidDocument):
+  public async setDidDocumentOffline(did: string, document: DidDocument, sourceIdentity?: string):
   Promise<[VerificationsDelegationInfo, string]> {
     const identity = this.padIdentity(did
       ? await this.convertDidToIdentity(did)
@@ -346,10 +347,14 @@ export class Did extends Logger {
       Buffer.from(JSON.stringify(finalDoc), 'utf8'),
     );
 
+    const options = { from: this.options.signerIdentity.underlyingAccount } as any;
+    if (sourceIdentity) {
+      options.sourceIdentity = sourceIdentity;
+    }
     const txInfo = await this.options.verifications.signTransaction(
       await this.getRegistryContract(),
       'setDidDocument',
-      { from: this.options.signerIdentity.underlyingAccount },
+      options,
       identity,
       documentHash,
     );
