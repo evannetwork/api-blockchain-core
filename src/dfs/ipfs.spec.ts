@@ -25,6 +25,7 @@ import { IpfsLib } from './ipfs-lib';
 import { Ipfs } from './ipfs';
 import { InMemoryCache } from './in-memory-cache';
 import { TestUtils } from '../test/test-utils';
+import { nullBytes32 } from '../common/utils';
 import { useIdentity, accounts } from '../test/accounts';
 
 use(chaiAsPromised);
@@ -181,6 +182,78 @@ describe('IPFS handler', function test() {
       expect(hash).not.to.be.undefined;
       const fileContent = await ipfs.get(hash);
       expect(fileContent.toString(encoding)).to.eq(content);
+    });
+  });
+
+  describe.only('when using automatic hash removal', () => {
+    let lastRemovedHash;
+    let oldRemove;
+    let removalCount = 0;
+
+    before(async () => {
+      oldRemove = ipfs.remove;
+      ipfs.remove = async (hash) => { lastRemovedHash = hash; removalCount += 1; };
+    });
+
+    after(async () => {
+      ipfs.remove = oldRemove;
+    });
+
+    describe('when setting the new hash successfully', () => {
+      it('should remove old hashes, when successfully setting a new hash', async () => {
+        const oldRemovalCount = removalCount;
+        const oldHash = `old ${Math.random()}`;
+        const newHash = `new ${Math.random()}`;
+        await ipfs.handleHashUpdate('running tests', newHash, async () => oldHash, async () => {});
+        expect(removalCount).to.eq(oldRemovalCount + 1);
+        expect(lastRemovedHash).to.eq(oldHash);
+      });
+
+      it('should not old remove any hash, when setting the same hash', async () => {
+        const oldRemovalCount = removalCount;
+        const oldHash = `old ${Math.random()}`;
+        await ipfs.handleHashUpdate('running tests', oldHash, async () => oldHash, async () => {});
+        expect(removalCount).to.eq(oldRemovalCount);
+        expect(lastRemovedHash).not.to.eq(oldHash);
+      });
+
+      it('should not old remove any hash, when old hash is a null hash', async () => {
+        const oldRemovalCount = removalCount;
+        const oldHash = nullBytes32;
+        const newHash = `new ${Math.random()}`;
+        await ipfs.handleHashUpdate('running tests', newHash, async () => oldHash, async () => {});
+        expect(removalCount).to.eq(oldRemovalCount);
+        expect(lastRemovedHash).not.to.eq(oldHash);
+      });
+    });
+
+    describe('when setting the new hash fails', () => {
+      it('should remove new hashes, but keep old hashes', async () => {
+        const oldRemovalCount = removalCount;
+        const oldHash = `old ${Math.random()}`;
+        const newHash = `new ${Math.random()}`;
+        await ipfs.handleHashUpdate(
+          'running tests',
+          newHash,
+          async () => oldHash,
+          async () => { throw new Error('intended error during tests'); },
+        );
+        expect(removalCount).to.eq(oldRemovalCount + 1);
+        expect(lastRemovedHash).to.eq(newHash);
+      });
+
+      it('should not remove any hash when tryinng to set same hash', async () => {
+        const oldRemovalCount = removalCount;
+        const oldHash = `old ${Math.random()}`;
+        await ipfs.handleHashUpdate(
+          'running tests',
+          oldHash,
+          async () => oldHash,
+          async () => { throw new Error('intended error during tests'); },
+        );
+        expect(removalCount).to.eq(oldRemovalCount);
+        expect(lastRemovedHash).not.to.eq(oldHash);
+      });
     });
   });
 });

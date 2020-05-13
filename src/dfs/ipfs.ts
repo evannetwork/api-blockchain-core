@@ -40,6 +40,7 @@ import utils = require('./../common/utils');
 
 const IPFS_TIMEOUT = 120000;
 const requestWindowSize = 10;
+const { nullBytes32 } = utils;
 
 
 /**
@@ -234,6 +235,45 @@ export class Ipfs extends Logger implements DfsInterface {
       getRemoteHash,
       timeout,
     ]);
+  }
+
+  /**
+   * Tries to update `hash` with `setNewHash`. Will unpin old hashes and failed new hashes if
+   * `this.config.autoRemoveHashes` is enabled.
+   *
+   * @param      {string}                 task        name of the update, e.g. setting of new
+   *                                                  description for ens address "${ensAddress}"
+   * @param      {string}                 newHash     new 32B hash to set
+   * @param      {() => Promise<string>}  getOldHash  function to get old hash with
+   * @param      {() => Promise<void>}  setNewHash  function to set new hash with
+   */
+  public async handleHashUpdate(
+    task: string,
+    newHash: string,
+    getOldHash: () => Promise<string>,
+    setNewHash: () => Promise<void>,
+  ) {
+    let oldHash = nullBytes32;
+    let updated = false;
+    try {
+      oldHash = await getOldHash();
+      // skip setting and removing if hash is the same
+      if (oldHash !== newHash) {
+        await setNewHash();
+        updated = true;
+      }
+    } catch (ex) {
+      if (oldHash !== newHash) {
+        // if we tried to update the hash, remove new hash on failed attempt
+        this.log(`${task} failed, remvoving removing new hash ${newHash}; ${ex}`, 'error');
+        await this.remove(newHash);
+      }
+    }
+    if (updated && oldHash !== nullBytes32) {
+      // if update was successful, remove old hash
+      this.log(`${task} succeeded, remvoving removing old hash ${oldHash}`, 'debug');
+      await this.remove(oldHash);
+    }
   }
 
   /**
