@@ -4,6 +4,7 @@
 ### Features
 
 ### Fixes
+- use `activeIdentity` for `Onboarding.createProfile` dataKey save
 
 ### Deprecations
 
