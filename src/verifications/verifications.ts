@@ -763,12 +763,25 @@ export class Verifications extends Logger {
     // when signing with account, check if given accountId is allowed to perform tx on identity
     if (!signedTransactionInfo) {
       const sha3AccountId = this.options.nameResolver.soliditySha3(accountId);
-      const hasPurpose = await this.options.executor.executeContractCall(
-        userIdentity,
-        'keyHasPurpose',
-        sha3AccountId,
-        '1',
-      );
+      const version = await this.options.executor.executeContractCall(userIdentity, 'VERSION_ID');
+      let hasPurpose;
+      if (version === null) {
+        hasPurpose = await this.options.executor.executeContractCall(
+          userIdentity,
+          'keyHasPurpose',
+          sha3AccountId,
+          '1',
+        );
+      } else if (version.eq('1')) {
+        hasPurpose = await this.options.executor.executeContractCall(
+          userIdentity,
+          'keyHasPurpose',
+          sha3AccountId,
+          '2',
+        );
+      } else {
+        throw new Error(`invalid identity version: ${version}`);
+      }
       if (!hasPurpose) {
         throw new Error(`account "${accountId}" is not allowed to perform transactions on identity `
            + `"${userIdentity.options.address}"`);

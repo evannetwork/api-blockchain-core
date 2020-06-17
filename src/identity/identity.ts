@@ -227,14 +227,30 @@ export class Identity extends Logger {
 
     // apply the identity as key to the keyHolder contract
     const keyHolderContract = await contractLoader.loadContract('KeyHolder', activeIdentity);
-    await executor.executeContractTransaction(
-      keyHolderContract,
-      'addKey',
-      { from: underlyingAccount },
-      nameResolver.soliditySha3(accountId),
-      1,
-      1,
-    );
+    const version = await this.options.executor.executeContractCall(keyHolderContract, 'VERSION_ID');
+    if (version === null) {
+      // older identities only use purose 1 for granting access
+      await executor.executeContractTransaction(
+        keyHolderContract,
+        'addKey',
+        { from: underlyingAccount },
+        nameResolver.soliditySha3(accountId),
+        1,
+        1,
+      );
+    } else if (version.eq('1')) {
+      // new identities have split permissions into different purposes
+      await executor.executeContractTransaction(
+        keyHolderContract,
+        'addMultiPurposeKey',
+        { from: underlyingAccount },
+        nameResolver.soliditySha3(accountId),
+        [1, 2, 3],
+        1,
+      );
+    } else {
+      throw new Error(`invalid identity version: ${version}`);
+    }
   }
 
   /**
@@ -375,21 +391,36 @@ export class Identity extends Logger {
     // apply the identity as key to the keyHolder contract
     const sha3Identity = nameResolver.soliditySha3(accountId);
     const keyHolderContract = await contractLoader.loadContract('KeyHolder', activeIdentity);
-    const hasPurpose = await executor.executeContractCall(
+    const purposes = await executor.executeContractCall(
       keyHolderContract,
-      'keyHasPurpose',
+      'getKeyPurposes',
       sha3Identity,
-      '1',
     );
-    // only remove, when the key wasn't added before, else we will get an error
-    if (hasPurpose) {
-      await executor.executeContractTransaction(
+    if (purposes.length) {
+      const version = await this.options.executor.executeContractCall(
         keyHolderContract,
-        'removeKey',
-        { from: underlyingAccount },
-        sha3Identity,
-        1,
+        'VERSION_ID',
       );
+
+      if (version === null) {
+        await executor.executeContractTransaction(
+          keyHolderContract,
+          'removeKey',
+          { from: underlyingAccount },
+          sha3Identity,
+          1,
+        );
+      } else if (version.eq('1')) {
+        await executor.executeContractTransaction(
+          keyHolderContract,
+          'removeMultiPurposeKey',
+          { from: underlyingAccount },
+          sha3Identity,
+          purposes,
+        );
+      } else {
+        throw new Error(`invalid identity version: ${version}`);
+      }
     }
   }
 
