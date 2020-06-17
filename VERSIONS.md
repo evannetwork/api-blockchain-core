@@ -5,12 +5,10 @@
 - update identity contracts' purpose handling
   - to match updated purpose handling
   - `VERSION_ID` can be used to decide which version to use
-  - identities with version 1 now need
-    - purpose 2 for transactions
-    - purpose 3 for managing keys
-  - identities with version `null` only need purpose 1 for everything
   - newer identities will have version 1
   - keys can be added and removed with multiple purposes at once (`addMultiPurposeKey`, `removeMultiPurposeKey`)
+  - accounts with purpose 3 can only be removed by themselves
+  - only one account with purpose 3 is allowed per identity
 
 ### Fixes
 - use `activeIdentity` for `Onboarding.createProfile` dataKey save

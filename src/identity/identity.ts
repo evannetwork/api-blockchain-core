@@ -245,7 +245,7 @@ export class Identity extends Logger {
         'addMultiPurposeKey',
         { from: underlyingAccount },
         nameResolver.soliditySha3(accountId),
-        [1, 2, 3],
+        [1, 2],
         1,
       );
     } else {
