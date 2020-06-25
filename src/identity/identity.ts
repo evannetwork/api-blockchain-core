@@ -229,7 +229,7 @@ export class Identity extends Logger {
     const keyHolderContract = await contractLoader.loadContract('KeyHolder', activeIdentity);
     const version = await this.options.executor.executeContractCall(keyHolderContract, 'VERSION_ID');
     if (version === null) {
-      // older identities only use purose 1 for granting access
+      // older identities only use purpose 1 for granting access
       await executor.executeContractTransaction(
         keyHolderContract,
         'addKey',
