@@ -32,6 +32,26 @@ import { Verifications } from '../verifications/verifications';
 import { nullAddress } from '../common/utils';
 
 /**
+ * purpose of a key in an identity
+ */
+export enum IdentityKeyPurpose {
+  /**
+   * Management key holder are allowed to add an remove members of an identity.verifications.
+   * Identities with a version <1 they also are allowed to perform transactions on behalf
+   * of this identity.
+   */
+  Management = 1,
+  /** Action key holder allowed to perform transactions on behalf of this identity. */
+  Action = 2,
+  /**
+   * Recovery keys are available for identities with a version >= 1.
+   * Recovery key holder can't be removed by other users and every identity can only have up to
+   * one recovery key holder.
+   */
+  Recovery = 3,
+}
+
+/**
  * parameters for Identity constructor
  */
 export interface IdentityOptions extends LoggerOptions {
@@ -235,7 +255,7 @@ export class Identity extends Logger {
         'addKey',
         { from: underlyingAccount },
         nameResolver.soliditySha3(accountId),
-        1,
+        IdentityKeyPurpose.Management,
         1,
       );
     } else if (version.eq('1')) {
@@ -245,7 +265,7 @@ export class Identity extends Logger {
         'addMultiPurposeKey',
         { from: underlyingAccount },
         nameResolver.soliditySha3(accountId),
-        [1, 2],
+        [IdentityKeyPurpose.Management, IdentityKeyPurpose.Action],
         1,
       );
     } else {
@@ -408,7 +428,7 @@ export class Identity extends Logger {
           'removeKey',
           { from: underlyingAccount },
           sha3Identity,
-          1,
+          IdentityKeyPurpose.Management,
         );
       } else if (version.eq('1')) {
         await executor.executeContractTransaction(
