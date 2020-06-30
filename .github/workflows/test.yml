@@ -37,6 +37,7 @@ jobs:
             docker run -d -p 8546:8546 -p 8545:8545 -u root evannetwork/testcore-snapshot --chain evantestcore --jsonrpc-interface all --unsafe-expose
             npm i -g ganache-cli
             npm i
+            npm install https://github.com/evannetwork/smart-contracts-core.git --force
             ganache-cli --allowUnlimitedContractSize --gasLimit 0xE4E1C0 -p 7545 -f http://localhost:8545 > /dev/null &
       - run: npm run testunitcoverage
         env:
