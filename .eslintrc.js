@@ -28,5 +28,6 @@ module.exports =  {
     'import/no-cycle': ['off'],
     'no-await-in-loop': ['off'],
     'no-restricted-syntax': ['off'],
+    'no-multiple-empty-lines': ['off']
    },
 };

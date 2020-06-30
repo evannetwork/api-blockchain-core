@@ -39,6 +39,7 @@ import {
 
 import { Vc, VcDocumentTemplate, VcDocument } from '../vc/vc';
 import { Did } from '../did/did';
+import { IdentityKeyPurpose } from '../identity/identity';
 
 
 import crypto = require('crypto');
@@ -763,12 +764,25 @@ export class Verifications extends Logger {
     // when signing with account, check if given accountId is allowed to perform tx on identity
     if (!signedTransactionInfo) {
       const sha3AccountId = this.options.nameResolver.soliditySha3(accountId);
-      const hasPurpose = await this.options.executor.executeContractCall(
-        userIdentity,
-        'keyHasPurpose',
-        sha3AccountId,
-        '1',
-      );
+      const version = await this.options.executor.executeContractCall(userIdentity, 'VERSION_ID');
+      let hasPurpose;
+      if (version === null) {
+        hasPurpose = await this.options.executor.executeContractCall(
+          userIdentity,
+          'keyHasPurpose',
+          sha3AccountId,
+          IdentityKeyPurpose.Management,
+        );
+      } else if (version.eq('1')) {
+        hasPurpose = await this.options.executor.executeContractCall(
+          userIdentity,
+          'keyHasPurpose',
+          sha3AccountId,
+          IdentityKeyPurpose.Action,
+        );
+      } else {
+        throw new Error(`invalid identity version: ${version}`);
+      }
       if (!hasPurpose) {
         throw new Error(`account "${accountId}" is not allowed to perform transactions on identity `
            + `"${userIdentity.options.address}"`);
@@ -2088,7 +2102,7 @@ export class Verifications extends Logger {
       issuerContract,
       'keyHasPurpose',
       this.options.nameResolver.soliditySha3(recoveredAddress),
-      '1',
+      IdentityKeyPurpose.Management,
     );
     return keyHasPurpose;
   }
