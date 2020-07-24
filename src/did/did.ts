@@ -35,6 +35,7 @@ import {
   NameResolver,
   SignerIdentity,
 } from '../index';
+import { Vade } from '../../libs/vade/index.js';
 import { VerificationsDelegationInfo, Verifications } from '../verifications/verifications';
 
 
@@ -129,6 +130,8 @@ export class Did extends Logger {
 
   private options: DidOptions;
 
+  private vade: Vade;
+
   /**
    * Creates a new `Did` instance.
    *
@@ -140,6 +143,7 @@ export class Did extends Logger {
     this.options = options;
     this.config = config;
     this.cached = {};
+    this.vade = new Vade({ target: '127.0.0.1', signer: 'local' });
   }
 
   /**
@@ -216,20 +220,35 @@ export class Did extends Logger {
         : this.options.signerIdentity.activeIdentity,
     );
 
-    const documentHash = await this.options.executor.executeContractCall(
-      await this.getRegistryContract(),
-      'didDocuments',
-      identity,
-    );
-
-    if (documentHash === nullBytes32) {
-      return this.getDefaultDidDocument(did);
+    // first try vade for DID document
+    let didDocumentString;
+    try {
+      didDocumentString = await this.vade.didResolve(did);
+    } catch(ex) {
+      console.log(`could not get DID document for ${did} via vade, will try chain`, 'debug');
     }
-    result = JSON.parse(await this.options.dfs.get(documentHash) as any);
+    // now try evan.network DIDs
+    if (!didDocumentString) {
+      const documentHash = await this.options.executor.executeContractCall(
+        await this.getRegistryContract(),
+        'didDocuments',
+        identity,
+      );
+
+      if (documentHash === nullBytes32) {
+        console.log(`could not get DID document for ${did} via chain, using default doc`, 'debug');
+        return this.getDefaultDidDocument(did);
+      } else {
+        didDocumentString = await this.options.dfs.get(documentHash);
+      }
+    }
+
+    result = JSON.parse(didDocumentString as any);
 
     if (result.proof) {
       await this.validateProof(result);
     }
+
     return result;
   }
 
@@ -311,17 +330,30 @@ export class Did extends Logger {
       : this.options.signerIdentity.activeIdentity);
 
     const finalDoc = await this.setAdditionalProperties(document);
-    const documentHash = await this.options.dfs.add(
-      'did-document',
-      Buffer.from(JSON.stringify(finalDoc), 'utf8'),
-    );
+    console.dir(finalDoc)
 
-    await this.options.executor.executeContractTransaction(
-      await this.getRegistryContract(),
-      'setDidDocument',
-      { from: this.options.signerIdentity.activeIdentity },
-      identity,
-      documentHash,
+    // const documentHash = await this.options.dfs.add(
+    //   'did-document',
+    //   Buffer.from(JSON.stringify(finalDoc), 'utf8'),
+    // );
+
+    // await this.options.executor.executeContractTransaction(
+    //   await this.getRegistryContract(),
+    //   'setDidDocument',
+    //   { from: this.options.signerIdentity.activeIdentity },
+    //   identity,
+    //   documentHash,
+    // );
+
+    await this.vade.didUpdate(
+      did,
+      JSON.stringify({
+        privateKey: await this.options.accountStore.getPrivateKey(
+            this.options.signerIdentity.underlyingAccount),
+        identity: await this.convertIdentityToDid(this.options.signerIdentity.activeIdentity),
+        operation: 'setDidDocument',
+      }),
+      JSON.stringify(finalDoc),
     );
   }
 

@@ -25,17 +25,19 @@ import { expect, use } from 'chai';
 import { Did, DidProofType } from './did';
 import { SignerIdentity } from '../contracts/signer-identity';
 import { TestUtils } from '../test/test-utils';
-import { accounts, useIdentity } from '../test/accounts';
+import { accounts, accountMap, identities, useIdentity } from '../test/accounts';
 import {
   DigitalTwin,
   DigitalTwinOptions,
   Runtime,
 } from '../index';
 
+import { Vade } from '../../libs/vade/index.js';
+
 
 use(chaiAsPromised);
 
-(useIdentity ? describe : describe.skip)('DID Resolver', function test() {
+(useIdentity ? describe.only : describe.skip)('DID Resolver', function test() {
   this.timeout(600000);
   let accounts0Identity: string;
   let accounts0Did: string;
@@ -599,6 +601,126 @@ use(chaiAsPromised);
 
       const aliasIdentityDid = await runtimes[0].did.getDidDocument(did);
       expect(aliasIdentityDid).to.deep.eq(expectedDefaultDid);
+    });
+  });
+
+  describe.only('*excited vade noises*', async () => {
+    const signerIdentity = identities[0].replace('0x', 'did:evan:testcore:0x');
+    const signerPrivateKey = accountMap[accounts[0]];
+    const didToResolve = signerIdentity;
+    const didToWhitelist = signerIdentity;
+    let vade: Vade;
+
+    function getOptions(additionalOptions = {}) {
+      return JSON.stringify({
+          privateKey: signerPrivateKey,
+          identity: signerIdentity,
+          ...additionalOptions,
+        });
+    }
+
+    before(async () => {
+      vade = new Vade({ target: '127.0.0.1', signer: 'local' });
+      // await vade.setPanicHook();
+      // await vade.setLogLevel('trace');
+    });
+
+    it('can whitelist identities', async () => {
+      const whitelistPromise = vade.whitelistIdentity(
+        didToWhitelist,
+        signerPrivateKey,
+        signerIdentity,
+      );
+      await expect(whitelistPromise).not.to.be.rejected;
+    });
+
+    it('can get DID documents', async () => {
+      // console.time('safe');
+      // await Promise.all([...Array(100)].map(() => vade.didResolve(didToResolve)));
+      // console.timeEnd('safe');
+
+      // await vade.sharedInit({ target: '127.0.0.1', signer: 'local' });
+      // console.time('unsave');
+      // await Promise.all([...Array(100)].map(() => vade.sharedDidResolve(didToResolve)));
+      // console.timeEnd('unsave');
+
+      const didDocument = await vade.didResolve(didToResolve);
+      expect(didDocument).not.to.be.undefined;
+      expect(didDocument).not.to.be.empty;
+    });
+
+    it('can update DID documents', async () => {
+      const newPropertyName = `newPropery-${Math.random()}`;
+
+      const initialDidDocument = await vade.didResolve(didToResolve);
+      const didDocumentToSetWithProperty = JSON.parse(initialDidDocument);
+      didDocumentToSetWithProperty[newPropertyName] = 'test value';
+      await vade.didUpdate(
+        didToResolve,
+        getOptions({ operation: 'setDidDocument' }),
+        JSON.stringify(didDocumentToSetWithProperty),
+      );
+      const modifiedDidDocument = await vade.didResolve(didToResolve);
+      expect(didDocumentToSetWithProperty).to.deep.eq(JSON.parse(modifiedDidDocument));
+
+      const didDocumentToSetWithoutProperty = JSON.parse(modifiedDidDocument);
+      delete didDocumentToSetWithoutProperty[newPropertyName];
+      await vade.didUpdate(
+        didToResolve,
+        getOptions({ operation: 'setDidDocument' }),
+        JSON.stringify(didDocumentToSetWithoutProperty),
+      );
+
+      const restoredDidDocument = await vade.didResolve(didToResolve);
+      expect(didDocumentToSetWithoutProperty).to.deep.eq(JSON.parse(restoredDidDocument));
+      expect(didDocumentToSetWithoutProperty).to.deep.eq(JSON.parse(initialDidDocument));
+    });
+
+    it('can create new DIDs', async () => {
+      const didCreatePromise = vade.didCreate('did:evan:testcore', getOptions(), '');
+      await expect(didCreatePromise).not.to.be.rejected;
+
+      const newDid = await didCreatePromise;
+      expect(newDid).to.match(/^did:evan:testcore:0x[0-9a-f]{64}$/);
+    });
+
+    it('can write documents to new DIDs', async () => {
+      const newDid = await vade.didCreate('did:evan:testcore', getOptions(), '');
+
+      const initialResponsePromise = vade.didResolve(newDid);
+      await expect(initialResponsePromise).to.be.rejected;
+
+      const exampleDidDocument = `{ "id": "${newDid}"}`;
+      await vade.didUpdate(
+        newDid,
+        getOptions({ operation: 'setDidDocument' }),
+        exampleDidDocument,
+      );
+      const updatedDocument = await vade.didResolve(newDid);
+      expect(updatedDocument).to.eq(exampleDidDocument);
+    });
+
+    it('retrieves the same DID document with vade as with `getDidDocument`', async () => {
+      const didDocumentFromApi = await runtimes[0].did.getDidDocument(accounts0Did);
+      const didDocumentFromVade = await vade.didResolve(didDocumentFromApi.id);
+      expect(didDocumentFromApi).to.deep.eq(JSON.parse(didDocumentFromVade));
+    });
+
+    it.only('can update DID documents with API and get them with vade', async() => {
+      const didDocumentFromApi1 = await runtimes[0].did.getDidDocument(accounts0Did);
+      await runtimes[0].did.setDidDocument(accounts0Did, didDocumentFromApi1);
+
+      const didDocumentFromApi2 = await runtimes[0].did.getDidDocument(accounts0Did);
+      expect(didDocumentFromApi2.updated).to.not.eq(didDocumentFromApi1.updated);
+
+      const didDocumentFromVade = JSON.parse(await vade.didResolve(accounts0Did));
+
+      expect(didDocumentFromVade).to.deep.eq(didDocumentFromApi2);
+
+      // restore DID document
+      didDocumentFromApi1.updated = '2022-22-22T22:22:22.222Z';
+      delete didDocumentFromApi1.proof;
+      await runtimes[0].did.setDidDocument(accounts0Did, didDocumentFromApi1);
     });
   });
 });
