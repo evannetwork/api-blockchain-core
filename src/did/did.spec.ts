@@ -639,6 +639,15 @@ use(chaiAsPromised);
       await expect(whitelistPromise).not.to.be.rejected;
     });
 
+    it('can ensure identity whitelisting', async () => {
+      const ensureWhitelistedPromise = vade.ensureWhitelisted(
+        didToWhitelist,
+        signerPrivateKey,
+        signerIdentity,
+      );
+      await expect(ensureWhitelistedPromise).not.to.be.rejected;
+    });
+
     it('can get DID documents', async () => {
       // console.time('safe');
       // await Promise.all([...Array(100)].map(() => vade.didResolve(didToResolve)));

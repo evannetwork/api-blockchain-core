@@ -344,13 +344,23 @@ export class Did extends Logger {
     //   documentHash,
     // );
 
+    const signerIdentityDid = await this.convertIdentityToDid(this.options.signerIdentity.activeIdentity);
+    const privateKey = await this.options.accountStore.getPrivateKey(
+      this.options.signerIdentity.underlyingAccount,
+    );
+
+    // Make sure did is whitelisted
+    await this.vade.ensureWhitelisted(
+      did,
+      privateKey,
+      signerIdentityDid,
+    );
+
     await this.vade.didUpdate(
       did,
       JSON.stringify({
-        privateKey: await this.options.accountStore.getPrivateKey(
-          this.options.signerIdentity.underlyingAccount,
-        ),
-        identity: await this.convertIdentityToDid(this.options.signerIdentity.activeIdentity),
+        privateKey,
+        identity: signerIdentityDid,
         operation: 'setDidDocument',
       }),
       JSON.stringify(finalDoc),
