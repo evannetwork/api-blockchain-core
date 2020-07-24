@@ -25,14 +25,19 @@ import { expect, use } from 'chai';
 import { Did, DidProofType } from './did';
 import { SignerIdentity } from '../contracts/signer-identity';
 import { TestUtils } from '../test/test-utils';
-import { accounts, accountMap, identities, useIdentity } from '../test/accounts';
+import {
+  accounts,
+  accountMap,
+  identities,
+  useIdentity,
+} from '../test/accounts';
 import {
   DigitalTwin,
   DigitalTwinOptions,
   Runtime,
 } from '../index';
 
-import { Vade } from '../../libs/vade/index.js';
+import { Vade } from '../../libs/vade';
 
 
 use(chaiAsPromised);
@@ -613,10 +618,10 @@ use(chaiAsPromised);
 
     function getOptions(additionalOptions = {}) {
       return JSON.stringify({
-          privateKey: signerPrivateKey,
-          identity: signerIdentity,
-          ...additionalOptions,
-        });
+        privateKey: signerPrivateKey,
+        identity: signerIdentity,
+        ...additionalOptions,
+      });
     }
 
     before(async () => {
@@ -706,7 +711,7 @@ use(chaiAsPromised);
       expect(didDocumentFromApi).to.deep.eq(JSON.parse(didDocumentFromVade));
     });
 
-    it.only('can update DID documents with API and get them with vade', async() => {
+    it('can update DID documents with API and get them with vade', async () => {
       const didDocumentFromApi1 = await runtimes[0].did.getDidDocument(accounts0Did);
       await runtimes[0].did.setDidDocument(accounts0Did, didDocumentFromApi1);
 

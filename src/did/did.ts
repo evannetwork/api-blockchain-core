@@ -35,7 +35,7 @@ import {
   NameResolver,
   SignerIdentity,
 } from '../index';
-import { Vade } from '../../libs/vade/index.js';
+import { Vade } from '../../libs/vade';
 import { VerificationsDelegationInfo, Verifications } from '../verifications/verifications';
 
 
@@ -224,8 +224,8 @@ export class Did extends Logger {
     let didDocumentString;
     try {
       didDocumentString = await this.vade.didResolve(did);
-    } catch(ex) {
-      console.log(`could not get DID document for ${did} via vade, will try chain`, 'debug');
+    } catch (ex) {
+      this.log(`could not get DID document for ${did} via vade, will try chain`, 'debug');
     }
     // now try evan.network DIDs
     if (!didDocumentString) {
@@ -236,11 +236,11 @@ export class Did extends Logger {
       );
 
       if (documentHash === nullBytes32) {
-        console.log(`could not get DID document for ${did} via chain, using default doc`, 'debug');
+        this.log(`could not get DID document for ${did} via chain, using default doc`, 'debug');
         return this.getDefaultDidDocument(did);
-      } else {
-        didDocumentString = await this.options.dfs.get(documentHash);
       }
+
+      didDocumentString = await this.options.dfs.get(documentHash);
     }
 
     result = JSON.parse(didDocumentString as any);
@@ -325,12 +325,11 @@ export class Did extends Logger {
       throw Error('Cannot set document for deactivated DID');
     }
 
-    const identity = this.padIdentity(did
-      ? await this.convertDidToIdentity(did)
-      : this.options.signerIdentity.activeIdentity);
+    // const identity = this.padIdentity(did
+    //   ? await this.convertDidToIdentity(did)
+    //   : this.options.signerIdentity.activeIdentity);
 
     const finalDoc = await this.setAdditionalProperties(document);
-    console.dir(finalDoc)
 
     // const documentHash = await this.options.dfs.add(
     //   'did-document',
@@ -349,7 +348,8 @@ export class Did extends Logger {
       did,
       JSON.stringify({
         privateKey: await this.options.accountStore.getPrivateKey(
-            this.options.signerIdentity.underlyingAccount),
+          this.options.signerIdentity.underlyingAccount,
+        ),
         identity: await this.convertIdentityToDid(this.options.signerIdentity.activeIdentity),
         operation: 'setDidDocument',
       }),
