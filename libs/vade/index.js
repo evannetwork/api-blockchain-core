@@ -1,6 +1,6 @@
 const isBrowser = typeof window !== 'undefined';
-// const vade = require(`./pkg_${isBrowser ? 'browser' : 'nodejs'}`);
-const vade = require('../../../../../evan.network_rust/vade-tnt/pkg');
+const vade = require(`./pkg-${isBrowser ? 'browser' : 'nodejs'}`);
+// const vade = require('../../../../../evan.network_rust/vade-tnt/pkg');
 
 if (!isBrowser) {
   const fetch = require('node-fetch');
