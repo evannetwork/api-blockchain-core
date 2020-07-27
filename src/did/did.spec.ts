@@ -42,17 +42,19 @@ import { Vade } from '../../libs/vade';
 
 use(chaiAsPromised);
 
-(useIdentity ? describe.only : describe.skip)('DID Resolver', function test() {
-  this.timeout(600000);
+(useIdentity ? describe : describe.skip)('DID Resolver', function test() {
+  this.timeout(60_000);
   let accounts0Identity: string;
   let accounts0Did: string;
   let runtimes: Runtime[];
+  let vade: Vade;
+  const runtimeConfig = { useIdentity: true, vade: { target: '127.0.0.1', logLevel: 'error' } };
 
   before(async () => {
     runtimes = await Promise.all([
-      TestUtils.getRuntime(accounts[0], null, { useIdentity: true }),
-      TestUtils.getRuntime(accounts[1], null, { useIdentity: true }),
-      TestUtils.getRuntime(accounts[2], null, { useIdentity: true }),
+      TestUtils.getRuntime(accounts[0], null, runtimeConfig),
+      TestUtils.getRuntime(accounts[1], null, runtimeConfig),
+      TestUtils.getRuntime(accounts[2], null, runtimeConfig),
     ]);
     accounts0Identity = await runtimes[0].activeIdentity;
     accounts0Did = await runtimes[0].did.convertIdentityToDid(accounts0Identity);
@@ -67,6 +69,7 @@ use(chaiAsPromised);
       executor,
       nameResolver,
       signer,
+      vade: innerVade,
       verifications,
       web3,
     }) => ({
@@ -76,6 +79,7 @@ use(chaiAsPromised);
       executor,
       nameResolver,
       signerIdentity: signer as SignerIdentity,
+      vade: innerVade,
       verifications,
       web3,
     }))(runtimes[0]);
@@ -87,6 +91,7 @@ use(chaiAsPromised);
       executor,
       nameResolver,
       signer,
+      vade: innerVade,
       verifications,
       web3,
     }) => ({
@@ -96,10 +101,12 @@ use(chaiAsPromised);
       executor,
       nameResolver,
       signerIdentity: signer as SignerIdentity,
+      vade: innerVade,
       verifications,
       web3,
     }))(runtimes[1]);
     runtimes[1].did = new Did(options1, { registryAddress: registry.options.address });
+    vade = runtimes[0].vade;
   });
 
   describe('when using general did functionality', async () => {
@@ -141,7 +148,11 @@ use(chaiAsPromised);
       expect(retrieved.publicKey).to.deep.eq(document.publicKey);
     });
 
-    it('does not allow to store a DID document for another identity', async () => {
+    // eslint-disable-next-line func-names, consistent-return
+    it('does not allow to store a DID document for another identity', async function () {
+      if (vade) {
+        return this.skip();
+      }
       const document = await runtimes[0].did.getDidDocumentTemplate();
       const accounts1Identity = await runtimes[0].verifications.getIdentityForAccount(
         runtimes[1].underlyingAccount,
@@ -216,14 +227,27 @@ use(chaiAsPromised);
       // Set did document with invalid proof manually (the api wouldn't allow this)
       const identity = await runtimes[0].did.convertDidToIdentity(accounts0Did);
       const targetHash = await (runtimes[0].did as any).padIdentity(identity);
-      const documentHash = await runtimes[0].dfs.add('did', Buffer.from(JSON.stringify(documentToSave)));
-      await runtimes[0].executor.executeContractTransaction(
-        didContract,
-        'setDidDocument',
-        { from: runtimes[0].activeIdentity },
-        targetHash,
-        documentHash,
-      );
+
+      if (vade) {
+        await vade.didUpdate(
+          accounts0Did,
+          JSON.stringify({
+            privateKey: accountMap[accounts[0]],
+            identity: accounts0Did,
+            operation: 'setDidDocument',
+          }),
+          JSON.stringify(documentToSave),
+        );
+      } else {
+        const documentHash = await runtimes[0].dfs.add('did', Buffer.from(JSON.stringify(documentToSave)));
+        await runtimes[0].executor.executeContractTransaction(
+          didContract,
+          'setDidDocument',
+          { from: runtimes[0].activeIdentity },
+          targetHash,
+          documentHash,
+        );
+      }
 
       // Try to retrieve it
       await expect(runtimes[0].did.getDidDocument(accounts0Did)).to.be.rejectedWith('Invalid proof');
@@ -385,9 +409,13 @@ use(chaiAsPromised);
       await expect(promise).to.be.rejectedWith(/^You are not authorized to issue this Did/);
     });
 
-    it('allows to fetch a default DID document for newly created contract identities', async () => {
+    // eslint-disable-next-line func-names, consistent-return
+    it('allows to fetch a default DID document for newly created contract identities', async function () {
+      if (vade) {
+        return this.skip();
+      }
       const accountRuntime = await TestUtils.getRuntime(
-        runtimes[0].underlyingAccount, null, { useIdentity: true },
+        runtimes[0].underlyingAccount, null, runtimeConfig,
       );
       delete accountRuntime.did; // Do not create DID document
 
@@ -417,101 +445,110 @@ use(chaiAsPromised);
       await expect(defaultDidDoc).to.deep.eq(expectedDefaultDid);
     });
 
-    it('allows to deactivate a DID', async () => {
-      const twin = await DigitalTwin.create(
-        runtimes[0] as DigitalTwinOptions,
-        {
-          accountId: runtimes[0].activeAccount,
-          containerConfig: null,
-          description: twinDescription,
-        },
-      );
+    describe('when deactivating DIDs', () => {
+      // eslint-disable-next-line func-names, consistent-return
+      before(function () {
+        if (vade) {
+          return this.skip();
+        }
+      });
 
-      const twinIdentity = await runtimes[0].verifications.getIdentityForAccount(
-        await twin.getContractAddress(),
-        true,
-      );
-      const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);
-      await runtimes[0].did.deactivateDidDocument(twinDid);
+      it('allows to deactivate a DID', async () => {
+        const twin = await DigitalTwin.create(
+          runtimes[0] as DigitalTwinOptions,
+          {
+            accountId: runtimes[0].activeAccount,
+            containerConfig: null,
+            description: twinDescription,
+          },
+        );
 
-      const deactivated = await runtimes[0].did.didIsDeactivated(twinDid);
-      expect(deactivated).to.be.true;
-    });
+        const twinIdentity = await runtimes[0].verifications.getIdentityForAccount(
+          await twin.getContractAddress(),
+          true,
+        );
+        const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);
+        await runtimes[0].did.deactivateDidDocument(twinDid);
 
-    it('does not allow to deactivate someone else\'s DID', async () => {
-      const twin = await DigitalTwin.create(
-        runtimes[1] as DigitalTwinOptions,
-        {
-          accountId: runtimes[1].activeAccount,
-          containerConfig: null,
-          description: twinDescription,
-        },
-      );
+        const deactivated = await runtimes[0].did.didIsDeactivated(twinDid);
+        expect(deactivated).to.be.true;
+      });
 
-      const twinIdentity = await runtimes[0].verifications.getIdentityForAccount(
-        await twin.getContractAddress(),
-        true,
-      );
-      const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);
-      expect(
-        runtimes[0].did.deactivateDidDocument(twinDid),
-      ).to.eventually.be.rejectedWith('Deactivation failed');
-    });
+      it('does not allow to deactivate someone else\'s DID', async () => {
+        const twin = await DigitalTwin.create(
+          runtimes[1] as DigitalTwinOptions,
+          {
+            accountId: runtimes[1].activeAccount,
+            containerConfig: null,
+            description: twinDescription,
+          },
+        );
 
-    it('does not allow to deactivate a DID twice', async () => {
-      const twin = await DigitalTwin.create(
-        runtimes[0] as DigitalTwinOptions,
-        {
-          accountId: runtimes[0].activeAccount,
-          containerConfig: null,
-          description: twinDescription,
-        },
-      );
+        const twinIdentity = await runtimes[0].verifications.getIdentityForAccount(
+          await twin.getContractAddress(),
+          true,
+        );
+        const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);
+        expect(
+          runtimes[0].did.deactivateDidDocument(twinDid),
+        ).to.eventually.be.rejectedWith('Deactivation failed');
+      });
 
-      const twinIdentity = await runtimes[0].verifications.getIdentityForAccount(
-        await twin.getContractAddress(),
-        true,
-      );
-      const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);
-      await runtimes[0].did.deactivateDidDocument(twinDid);
-      expect(
-        runtimes[0].did.deactivateDidDocument(twinDid),
-      ).to.eventually.be.rejectedWith('Deactivation failed');
-    });
+      it('does not allow to deactivate a DID twice', async () => {
+        const twin = await DigitalTwin.create(
+          runtimes[0] as DigitalTwinOptions,
+          {
+            accountId: runtimes[0].activeAccount,
+            containerConfig: null,
+            description: twinDescription,
+          },
+        );
 
-    it('does not allow to set a DID after deactivating it', async () => {
-      const twin = await DigitalTwin.create(
-        runtimes[0] as DigitalTwinOptions,
-        {
-          accountId: runtimes[0].activeAccount,
-          containerConfig: null,
-          description: twinDescription,
-        },
-      );
+        const twinIdentity = await runtimes[0].verifications.getIdentityForAccount(
+          await twin.getContractAddress(),
+          true,
+        );
+        const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);
+        await runtimes[0].did.deactivateDidDocument(twinDid);
+        expect(
+          runtimes[0].did.deactivateDidDocument(twinDid),
+        ).to.eventually.be.rejectedWith('Deactivation failed');
+      });
 
-      const twinIdentity = await runtimes[0].verifications.getIdentityForAccount(
-        await twin.getContractAddress(),
-        true,
-      );
+      it('does not allow to set a DID after deactivating it', async () => {
+        const twin = await DigitalTwin.create(
+          runtimes[0] as DigitalTwinOptions,
+          {
+            accountId: runtimes[0].activeAccount,
+            containerConfig: null,
+            description: twinDescription,
+          },
+        );
 
-      const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);
-      await runtimes[0].did.deactivateDidDocument(twinDid);
-      const dummyDocument = await runtimes[0].did.getDidDocumentTemplate();
+        const twinIdentity = await runtimes[0].verifications.getIdentityForAccount(
+          await twin.getContractAddress(),
+          true,
+        );
 
-      const promise = runtimes[0].did.setDidDocument(twinDid, dummyDocument);
-      expect(promise).to.eventually.be.rejectedWith('Cannot set document for deactivated DID');
+        const twinDid = await runtimes[0].did.convertIdentityToDid(twinIdentity);
+        await runtimes[0].did.deactivateDidDocument(twinDid);
+        const dummyDocument = await runtimes[0].did.getDidDocumentTemplate();
 
-      // Also check on smart contract level
-      const didRegistryContract = await (runtimes[0].did as any).getRegistryContract();
+        const promise = runtimes[0].did.setDidDocument(twinDid, dummyDocument);
+        expect(promise).to.eventually.be.rejectedWith('Cannot set document for deactivated DID');
 
-      const contractPromise = runtimes[0].executor.executeContractTransaction(
-        didRegistryContract,
-        'setDidDocument',
-        { from: runtimes[0].activeIdentity },
-        twinIdentity,
-        TestUtils.getRandomBytes32(),
-      );
-      expect(contractPromise).to.eventually.be.rejected;
+        // Also check on smart contract level
+        const didRegistryContract = await (runtimes[0].did as any).getRegistryContract();
+
+        const contractPromise = runtimes[0].executor.executeContractTransaction(
+          didRegistryContract,
+          'setDidDocument',
+          { from: runtimes[0].activeIdentity },
+          twinIdentity,
+          TestUtils.getRandomBytes32(),
+        );
+        expect(contractPromise).to.eventually.be.rejected;
+      });
     });
   });
 
@@ -584,7 +621,11 @@ use(chaiAsPromised);
       expect(actualDocument).to.have.property('proof');
     });
 
-    it('can fetch did documents for alias identities that have not set a doc themselves yet', async () => {
+    // eslint-disable-next-line func-names, consistent-return
+    it('can fetch did documents for alias identities that have not set a doc themselves yet', async function () {
+      if (vade) {
+        return this.skip();
+      }
       const aliasHash = TestUtils.getRandomBytes32();
       const aliasIdentity = await runtimes[0].verifications.createIdentity(
         runtimes[0].underlyingAccount, aliasHash, false,
@@ -609,12 +650,11 @@ use(chaiAsPromised);
     });
   });
 
-  describe.only('*excited vade noises*', async () => {
+  describe('when testing vade calls directly', async () => {
     const signerIdentity = identities[0].replace('0x', 'did:evan:testcore:0x');
     const signerPrivateKey = accountMap[accounts[0]];
     const didToResolve = signerIdentity;
     const didToWhitelist = signerIdentity;
-    let vade: Vade;
 
     function getOptions(additionalOptions = {}) {
       return JSON.stringify({
@@ -626,8 +666,6 @@ use(chaiAsPromised);
 
     before(async () => {
       vade = new Vade({ target: '127.0.0.1', signer: 'local' });
-      // await vade.setPanicHook();
-      // await vade.setLogLevel('trace');
     });
 
     it('can whitelist identities', async () => {
