@@ -22,7 +22,7 @@ class Vade {
    * @param      {string}  config.target    (optional) substrate IP
    * @return     {Vade}   new `Vade` instance
    */
-  constructor(config) {
+  constructor(config = {}) {
     const functionConfig = {
       signer: config.signer || 'local',
       target: config.target || '13.69.59.185',

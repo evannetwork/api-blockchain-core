@@ -48,7 +48,8 @@ use(chaiAsPromised);
   let accounts0Did: string;
   let runtimes: Runtime[];
   let vade: Vade;
-  const runtimeConfig = { useIdentity: true, vade: { target: '127.0.0.1', logLevel: 'error' } };
+  const vadeConfig = {}; // use default config but enable vade
+  const runtimeConfig = { useIdentity: true, vade: vadeConfig };
 
   before(async () => {
     runtimes = await Promise.all([
@@ -665,7 +666,7 @@ use(chaiAsPromised);
     }
 
     before(async () => {
-      vade = new Vade({ target: '127.0.0.1', signer: 'local' });
+      vade = new Vade(vadeConfig);
     });
 
     it('can whitelist identities', async () => {
