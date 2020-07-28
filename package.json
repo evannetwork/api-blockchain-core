@@ -27,7 +27,6 @@
     "secp256k1": "^3.6.2",
     "small-request": "^2.1.0",
     "tweetnacl": "^1.0.1",
-    "vade-evan": "file:./libs/vade",
     "web3": "2.0.0-alpha",
     "web3-eth-abi": "2.0.0-alpha.1",
     "ws": "^7.3.1",
