@@ -656,6 +656,7 @@ use(chaiAsPromised);
     const signerPrivateKey = accountMap[accounts[0]];
     const didToResolve = signerIdentity;
     const didToWhitelist = signerIdentity;
+    let runtime0WithoutVade: Runtime;
 
     function getOptions(additionalOptions = {}) {
       return JSON.stringify({
@@ -666,6 +667,7 @@ use(chaiAsPromised);
     }
 
     before(async () => {
+      runtime0WithoutVade = await TestUtils.getRuntime(accounts[0], null, { useIdentity: true });
       vade = new Vade(vadeConfig);
     });
 
@@ -678,6 +680,43 @@ use(chaiAsPromised);
       await expect(whitelistPromise).not.to.be.rejected;
     });
 
+    it('can properly handling multiple requests with one of them failing', async () => {
+      const whitelists = [];
+
+      // fire first request, that will fail
+      whitelists.push(vade.whitelistIdentity(
+        identities[1].replace('0x', 'did:evan:testcore:0x'), // booom!
+        // didToWhitelist,
+        signerPrivateKey,
+        signerIdentity,
+      ));
+
+      // let's wait while we vade
+      await new Promise((s) => { setTimeout(s, 1_000); });
+
+      // fire a request, that will succeed
+      whitelists.push(vade.whitelistIdentity(
+        didToWhitelist,
+        signerPrivateKey,
+        signerIdentity,
+      ));
+
+      let lastFailed;
+      let lastSuccess;
+
+      await Promise.all(whitelists.map(async (promise, i) => {
+        try {
+          await promise;
+          lastSuccess = i;
+        } catch (_ex) {
+          lastFailed = i;
+        }
+      }));
+
+      expect(lastFailed).to.eq(0);
+      expect(lastSuccess).to.eq(1);
+    });
+
     it('can ensure identity whitelisting', async () => {
       const ensureWhitelistedPromise = vade.ensureWhitelisted(
         didToWhitelist,
@@ -685,6 +724,17 @@ use(chaiAsPromised);
         signerIdentity,
       );
       await expect(ensureWhitelistedPromise).not.to.be.rejected;
+    });
+
+    it('can set DID documents', async () => {
+      const didDocumentFromChain = await runtime0WithoutVade.did.getDidDocument(accounts0Did);
+      const updatePromise = vade.didUpdate(
+        didToResolve,
+        getOptions({ operation: 'setDidDocument' }),
+        JSON.stringify(didDocumentFromChain),
+      );
+
+      await expect(updatePromise).not.to.be.rejected;
     });
 
     it('can get DID documents', async () => {

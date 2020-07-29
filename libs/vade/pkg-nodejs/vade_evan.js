@@ -662,7 +662,7 @@ module.exports.__wbindgen_closure_wrapper609 = function(arg0, arg1, arg2) {
     return addHeapObject(ret);
 };
 
-module.exports.__wbindgen_closure_wrapper1853 = function(arg0, arg1, arg2) {
+module.exports.__wbindgen_closure_wrapper1855 = function(arg0, arg1, arg2) {
     var ret = makeMutClosure(arg0, arg1, 375, __wbg_adapter_34);
     return addHeapObject(ret);
 };
