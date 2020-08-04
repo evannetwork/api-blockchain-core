@@ -738,7 +738,6 @@ use(chaiAsPromised);
     });
 
     it('can get DID documents', async () => {
-
       const didDocument = await vade.didResolve(didToResolve);
       expect(didDocument).not.to.be.undefined;
       expect(didDocument).not.to.be.empty;
