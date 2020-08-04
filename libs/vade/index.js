@@ -45,8 +45,8 @@ class Vade {
     );
 
     if (config.logLevel) {
-        vade.set_panic_hook();
-        vade.set_log_level(config.logLevel);
+      vade.set_panic_hook();
+      vade.set_log_level(config.logLevel);
     }
 
     return proxy;
@@ -56,4 +56,3 @@ class Vade {
 module.exports = {
   Vade,
 };
-
