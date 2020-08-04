@@ -342,12 +342,6 @@ export class Did extends Logger {
         this.options.signerIdentity.underlyingAccount,
       );
 
-      // // Make sure did is whitelisted
-      // await this.vade.ensureWhitelisted(
-      //   did,
-      //   privateKey,
-      //   signerIdentityDid,
-      // );
 
       await this.vade.didUpdate(
         did,
