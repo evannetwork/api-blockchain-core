@@ -738,14 +738,6 @@ use(chaiAsPromised);
     });
 
     it('can get DID documents', async () => {
-      // console.time('safe');
-      // await Promise.all([...Array(100)].map(() => vade.didResolve(didToResolve)));
-      // console.timeEnd('safe');
-
-      // await vade.sharedInit({ target: '127.0.0.1', signer: 'local' });
-      // console.time('unsave');
-      // await Promise.all([...Array(100)].map(() => vade.sharedDidResolve(didToResolve)));
-      // console.timeEnd('unsave');
 
       const didDocument = await vade.didResolve(didToResolve);
       expect(didDocument).not.to.be.undefined;
