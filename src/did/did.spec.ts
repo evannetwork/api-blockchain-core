@@ -644,7 +644,7 @@ try {
     });
   });
 
-  describe('when testing vade calls directly', async () => {
+  (useVade ? describe : describe.skip)('when testing vade calls directly', async () => {
     const signerIdentity = identities[0].replace('0x', 'did:evan:testcore:0x');
     const signerPrivateKey = accountMap[accounts[0]];
     const didToResolve = signerIdentity;
