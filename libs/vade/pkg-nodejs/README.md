@@ -75,6 +75,58 @@ Errors can be signaled this way:
 }
 ```
 
+## Compiling vade-evan
+
+### "Regular" build
+
+No surprise here:
+
+```sh
+cargo build --release
+```
+
+### Default Features
+
+By default features `did`, `native`, and `vc-zkp` are used. So everything included and available for usage in other Rust libraries.
+
+Features can be omitted. This mostly concerns, the `vc-zkp` feature, as it can be dropped without affecting the `did` functionality. `did` can be omitted as well but will most probably limit usability `vc-zkp` functionalities as this relies on `did` logic for some parts of its logic.
+
+In short: Use either `did` and `vc-zkp` together (default) or just `did`.
+
+### Command Line Interface
+
+To enable the cli just add the feature `cli` to the feature set:
+
+```sh
+cargo build --release --features cli
+```
+
+You can now use the `vade-evan` cli. Get started by having a look at the help shown after calling it with:
+
+```sh
+./target/release/vade_evan_cli
+```
+
+### WASM
+
+To compile `vade-evan` for wasm, use wasm pack.
+
+You can specify to use only `did` feature or to use `did` and `vc-zkp`. The following examples will use both features.
+
+Also you have to specify whether to build a browser or a nodejs environment.
+
+nodejs:
+
+```sh
+wasm-pack build --release --target nodejs -- --no-default-features --features did,vc-zkp,wasm
+```
+
+browser:
+
+```sh
+wasm-pack build --release --target nodejs -- --no-default-features --features did,vc-zkp,wasm
+```
+
 [`did_create`]: https://docs.rs/vade_evan/*/vade_evan/resolver/struct.SubstrateDidResolverEvan.html#method.did_create
 [`did_resolve`]: https://docs.rs/vade_evan/*/vade_evan/resolver/struct.SubstrateDidResolverEvan.html#method.did_resolve
 [`did_update`]: https://docs.rs/vade_evan/*/vade_evan/resolver/struct.SubstrateDidResolverEvan.html#method.did_update
