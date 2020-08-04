@@ -39,8 +39,14 @@ import {
 
 import { Vade } from '../../libs/vade';
 
-
 use(chaiAsPromised);
+
+let useVade = false;
+try {
+  useVade = JSON.parse(process.env.USE_VADE);
+} catch (_ex) {
+  // silently continue
+}
 
 (useIdentity ? describe : describe.skip)('DID Resolver', function test() {
   this.timeout(60_000);
@@ -150,10 +156,7 @@ use(chaiAsPromised);
     });
 
     // eslint-disable-next-line func-names, consistent-return
-    it('does not allow to store a DID document for another identity', async function () {
-      if (vade) {
-        return this.skip();
-      }
+    (useVade ? it.skip : it)('does not allow to store a DID document for another identity', async () => {
       const document = await runtimes[0].did.getDidDocumentTemplate();
       const accounts1Identity = await runtimes[0].verifications.getIdentityForAccount(
         runtimes[1].underlyingAccount,
@@ -411,10 +414,7 @@ use(chaiAsPromised);
     });
 
     // eslint-disable-next-line func-names, consistent-return
-    it('allows to fetch a default DID document for newly created contract identities', async function () {
-      if (vade) {
-        return this.skip();
-      }
+    (useVade ? it.skip : it)('allows to fetch a default DID document for newly created contract identities', async () => {
       const accountRuntime = await TestUtils.getRuntime(
         runtimes[0].underlyingAccount, null, runtimeConfig,
       );
@@ -446,14 +446,7 @@ use(chaiAsPromised);
       await expect(defaultDidDoc).to.deep.eq(expectedDefaultDid);
     });
 
-    describe('when deactivating DIDs', () => {
-      // eslint-disable-next-line func-names, consistent-return
-      before(function () {
-        if (vade) {
-          return this.skip();
-        }
-      });
-
+    (useVade ? describe.skip : describe)('when deactivating DIDs', () => {
       it('allows to deactivate a DID', async () => {
         const twin = await DigitalTwin.create(
           runtimes[0] as DigitalTwinOptions,
@@ -623,10 +616,7 @@ use(chaiAsPromised);
     });
 
     // eslint-disable-next-line func-names, consistent-return
-    it('can fetch did documents for alias identities that have not set a doc themselves yet', async function () {
-      if (vade) {
-        return this.skip();
-      }
+    (useVade ? it.skip : it)('can fetch did documents for alias identities that have not set a doc themselves yet', async () => {
       const aliasHash = TestUtils.getRandomBytes32();
       const aliasIdentity = await runtimes[0].verifications.createIdentity(
         runtimes[0].underlyingAccount, aliasHash, false,

@@ -19,6 +19,10 @@ jobs:
           "false",
           "true"
         ]
+        vade: [
+          "false",
+          "true"
+        ]
     name: ${{ matrix.tests.name }} -> identity ${{ matrix.identity }}
     steps:
       - uses: actions/checkout@v2
@@ -43,5 +47,6 @@ jobs:
         env:
           TESTSPECS: ${{ matrix.tests.testpattern }}
           USE_IDENTITY: ${{ matrix.identity }}
+          USE_VADE: ${{ matrix.vade }}
           CHAIN_ENDPOINT: 'ws://localhost:7545'
       - run: bash <(curl -s https://codecov.io/bash) -cF javascript
