@@ -1,10 +1,10 @@
+const requiree = require;
 const isBrowser = typeof window !== 'undefined';
-const vade = require(`./pkg-${isBrowser ? 'browser' : 'nodejs'}`);
-// const vade = require('../../../../../evan.network_rust/vade-tnt/pkg');
+const vade = requiree(`./pkg-${isBrowser ? 'browser' : 'nodejs'}`);
 
 if (!isBrowser) {
-  const fetch = require('node-fetch');
-  const ws = require('ws');
+  const fetch = requiree('node-fetch');
+  const ws = requiree('ws');
   global.Headers = fetch.Headers;
   global.Request = fetch.Request;
   global.Response = fetch.Response;
@@ -17,7 +17,8 @@ class Vade {
   /**
    * Creates new `Vade` instance.
    *
-   * @param      {string}  config.logLevel  (optional) sets log level, if provided also enabled panic hook
+   * @param      {string}  config.logLevel  (optional) sets log level, if provided also enables
+   *                                        panic hook
    * @param      {string}  config.signer    (optional) signer to use, supports 'local' and 'remote'
    * @param      {string}  config.target    (optional) substrate IP
    * @return     {Vade}   new `Vade` instance
@@ -30,16 +31,16 @@ class Vade {
     const proxy = new Proxy(
       vade,
       {
-        get: function (target, prop, receiver) {
+        get: (target, prop, receiver) => {
           const rustProp = prop.replace(/([^A-Z])([A-Z])/g, '$1_$2').toLowerCase();
           const propValue = Reflect.get(target, rustProp, receiver);
           if (typeof propValue === 'function') {
             return (...args) => propValue(...args, functionConfig);
-          } else if (typeof propValue === 'undefined') {
-            throw new Error(`property "${prop}"/"${rustProp}" does not exist on vade`);
-          } else {
-            return propValue;
           }
+          if (typeof propValue === 'undefined') {
+            throw new Error(`property "${prop}"/"${rustProp}" does not exist on vade`);
+          }
+          return propValue;
         },
       },
     );
