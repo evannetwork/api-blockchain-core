@@ -55,7 +55,10 @@ try {
   let runtimes: Runtime[];
   let vade: Vade;
   const vadeConfig = {}; // use default config but enable vade
-  const runtimeConfig = { useIdentity: true, vade: vadeConfig };
+  const runtimeConfig = {
+    useIdentity: true,
+    ...(useVade && { vade: vadeConfig }),
+  };
 
   before(async () => {
     runtimes = await Promise.all([
