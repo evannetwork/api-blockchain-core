@@ -1044,7 +1044,8 @@ export class Verifications extends Logger {
             const linked = await this.options.executor.executeContractCall(
               this.contracts.registry, 'getLink', description.public.identity,
             );
-            if (!(new RegExp(`${subject.substr(2)}$`, 'i')).test(linked) && !(this.options.vade && linked === nullBytes32)) {
+            if (!(new RegExp(`${subject.substr(2)}$`, 'i')).test(linked)
+              && !(this.options.vade && linked === nullBytes32)) {
               const msg = `subject description of "${subject}" points to identity `
                 + `"${description.public.identity}", but this identity is linked to address `
                 + `"${linked}"`;
