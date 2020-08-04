@@ -23,7 +23,7 @@ jobs:
           "false",
           "true"
         ]
-    name: ${{ matrix.tests.name }} -> identity ${{ matrix.identity }}
+    name: ${{ matrix.tests.name }} -> identity ${{ matrix.identity }}, vade ${{ matrix.vade }}
     steps:
       - uses: actions/checkout@v2
       - name: Setup node
