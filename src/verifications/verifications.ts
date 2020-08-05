@@ -35,11 +35,13 @@ import {
 import {
   Description,
   Ipfs,
+  SignerIdentity,
 } from '../index';
 
 import { Vc, VcDocumentTemplate, VcDocument } from '../vc/vc';
 import { Did } from '../did/did';
 import { IdentityKeyPurpose } from '../identity/identity';
+import { Vade } from '../../libs/vade';
 
 
 import crypto = require('crypto');
@@ -286,7 +288,9 @@ export interface VerificationsOptions extends LoggerOptions {
   nameResolver: NameResolver;
   did?: Did;
   registry?: string;
+  signerIdentity?: SignerIdentity;
   storage?: string;
+  vade?: Vade;
   vc?: Vc;
 }
 
@@ -466,6 +470,9 @@ export class Verifications extends Logger {
     verificationId: string,
     isIdentity = false,
   ): Promise<void> {
+    if (this.options.vade && subject.length === 66) {
+      throw new Error('alias/contract DIDs on substrate currently do not support VCs');
+    }
     await this.executeOnIdentity(
       subject,
       isIdentity,
@@ -521,7 +528,18 @@ export class Verifications extends Logger {
       );
       identity = identityContract.options.address;
     } else {
-      if (creator === this.config.activeIdentity) {
+      if (this.options.vade) {
+        identity = (await this.options.vade.didCreate(
+          'did:evan:testcore',
+          JSON.stringify({
+            privateKey: await this.options.accountStore.getPrivateKey(
+              this.options.signerIdentity.underlyingAccount,
+            ),
+            identity: await this.options.did.convertIdentityToDid(this.config.activeIdentity),
+          }),
+          '',
+        )).replace(/^.*0x/, '0x');
+      } else if (creator === this.config.activeIdentity) {
         identity = await this.options.executor.executeContractTransaction(
           this.contracts.registry,
           'createIdentity',
@@ -552,7 +570,7 @@ export class Verifications extends Logger {
       }
 
       // link contract address to its identity in global registry?
-      if (linkContract) {
+      if (linkContract && !this.options.vade) {
         const link = `0x${contractId.substr(2).toLowerCase().padStart(64, '0')}`;
         if (creator === this.config.activeIdentity) {
           await this.options.executor.executeContractTransaction(
@@ -630,6 +648,9 @@ export class Verifications extends Logger {
     verificationId: string,
     isIdentity = false,
   ): Promise<void> {
+    if (this.options.vade && subject.length === 66) {
+      throw new Error('alias/contract DIDs on substrate currently do not support VCs');
+    }
     await this.executeOnIdentity(
       subject,
       isIdentity,
@@ -1023,7 +1044,8 @@ export class Verifications extends Logger {
             const linked = await this.options.executor.executeContractCall(
               this.contracts.registry, 'getLink', description.public.identity,
             );
-            if (!(new RegExp(`${subject.substr(2)}$`, 'i')).test(linked)) {
+            if (!(new RegExp(`${subject.substr(2)}$`, 'i')).test(linked)
+              && !(this.options.vade && linked === nullBytes32)) {
               const msg = `subject description of "${subject}" points to identity `
                 + `"${description.public.identity}", but this identity is linked to address `
                 + `"${linked}"`;
@@ -1117,6 +1139,9 @@ export class Verifications extends Logger {
    *   }
    */
   public async getNestedVerifications(subject: string, topic: string, isIdentity?: boolean) {
+    if (this.options.vade && subject.length === 66) {
+      throw new Error('alias/contract DIDs on substrate currently do not support VCs');
+    }
     // prepend starting slash if it does not exist
     if (topic.indexOf('/') !== 0) {
       // eslint-disable-next-line no-param-reassign
@@ -1453,6 +1478,9 @@ export class Verifications extends Logger {
     topic: string,
     isIdentity?: boolean,
   ): Promise<any[]> {
+    if (this.options.vade && subject.length === 66) {
+      throw new Error('alias/contract DIDs on substrate currently do not support VCs');
+    }
     const sha3VerificationName = this.options.nameResolver.soliditySha3(topic);
     const uint256VerificationName = new BigNumber(sha3VerificationName).toString(10);
     const verificationsForTopic = await this.callOnIdentity(
@@ -1629,6 +1657,9 @@ export class Verifications extends Logger {
     rejectReason?: any,
     isIdentity = false,
   ): Promise<void> {
+    if (this.options.vade && subject.length === 66) {
+      throw new Error('alias/contract DIDs on substrate currently do not support VCs');
+    }
     if (rejectReason) {
       try {
         const stringified = JSON.stringify(rejectReason);
@@ -1693,6 +1724,10 @@ export class Verifications extends Logger {
     isIdentity = false,
     uri = '',
   ): Promise<string> {
+    if (this.options.vade && subject.length === 66) {
+      throw new Error('alias/contract DIDs on substrate currently do not support VCs');
+    }
+
     await this.ensureStorage();
 
     const {
@@ -1781,6 +1816,9 @@ export class Verifications extends Logger {
     // early exit, when a runtime without useIdentity is used - did instance will be missing
     if (!this.options.did) {
       throw new Error(`Tried to create a vc without a useIdentity runtime for ${subject}.`);
+    }
+    if (this.options.vade && subject.length === 66) {
+      throw new Error('alias/contract DIDs on substrate currently do not support VCs');
     }
 
     const verificationId = await this.setVerification(
@@ -1911,6 +1949,9 @@ export class Verifications extends Logger {
     executionNonce: string | number = -1,
     uri = '',
   ): Promise<VerificationsDelegationInfo> {
+    if (this.options.vade && subject.length === 66) {
+      throw new Error('alias/contract DIDs on substrate currently do not support VCs');
+    }
     await this.ensureStorage();
     // get input arguments
     const {
@@ -2078,6 +2119,9 @@ export class Verifications extends Logger {
   public async validateVerification(
     subject: string, verificationId: string, isIdentity?: boolean,
   ): Promise<boolean> {
+    if (this.options.vade && subject.length === 66) {
+      throw new Error('alias/contract DIDs on substrate currently do not support VCs');
+    }
     await this.ensureStorage();
 
     const subjectIdentity = isIdentity ? subject : await this.getIdentityForAccount(subject, true);

@@ -35,6 +35,7 @@ import {
   NameResolver,
   SignerIdentity,
 } from '../index';
+import { Vade } from '../../libs/vade';
 import { VerificationsDelegationInfo, Verifications } from '../verifications/verifications';
 
 
@@ -115,6 +116,7 @@ export interface DidOptions extends LoggerOptions {
   signerIdentity: SignerIdentity;
   verifications: Verifications;
   web3: any;
+  vade?: Vade;
 }
 
 /**
@@ -129,6 +131,8 @@ export class Did extends Logger {
 
   private options: DidOptions;
 
+  private vade: Vade;
+
   /**
    * Creates a new `Did` instance.
    *
@@ -140,6 +144,7 @@ export class Did extends Logger {
     this.options = options;
     this.config = config;
     this.cached = {};
+    this.vade = options.vade;
   }
 
   /**
@@ -198,6 +203,7 @@ export class Did extends Logger {
 
   /**
    * Get DID document for given DID.
+   * If `vade` was given it will first try to read DID document with vade.
    *
    * @param      {string}  did     DID to fetch DID document for
    * @return     {Promise<DidDocument>}    a DID document.
@@ -216,20 +222,39 @@ export class Did extends Logger {
         : this.options.signerIdentity.activeIdentity,
     );
 
-    const documentHash = await this.options.executor.executeContractCall(
-      await this.getRegistryContract(),
-      'didDocuments',
-      identity,
-    );
+    let didDocumentString;
 
-    if (documentHash === nullBytes32) {
-      return this.getDefaultDidDocument(did);
+    // optionally try vade for DID document first
+    if (this.vade) {
+      try {
+        didDocumentString = await this.vade.didResolve(did);
+      } catch (ex) {
+        this.log(`could not get DID document for ${did} via vade, will try chain`, 'debug');
+      }
     }
-    result = JSON.parse(await this.options.dfs.get(documentHash) as any);
+
+    // now try evan.network DIDs
+    if (!didDocumentString) {
+      const documentHash = await this.options.executor.executeContractCall(
+        await this.getRegistryContract(),
+        'didDocuments',
+        identity,
+      );
+
+      if (documentHash === nullBytes32) {
+        this.log(`could not get DID document for ${did} via chain, using default doc`, 'debug');
+        return this.getDefaultDidDocument(did);
+      }
+
+      didDocumentString = await this.options.dfs.get(documentHash);
+    }
+
+    result = JSON.parse(didDocumentString as any);
 
     if (result.proof) {
       await this.validateProof(result);
     }
+
     return result;
   }
 
@@ -294,6 +319,7 @@ export class Did extends Logger {
 
   /**
    * Store given DID document for given DID.
+   * If `vade` it will store DID documents with vade.
    *
    * @param      {string}  did       DID to store DID document for
    * @param      {DidDocument}     document  DID document to store
@@ -306,28 +332,50 @@ export class Did extends Logger {
       throw Error('Cannot set document for deactivated DID');
     }
 
-    const identity = this.padIdentity(did
-      ? await this.convertDidToIdentity(did)
-      : this.options.signerIdentity.activeIdentity);
-
     const finalDoc = await this.setAdditionalProperties(document);
-    const documentHash = await this.options.dfs.add(
-      'did-document',
-      Buffer.from(JSON.stringify(finalDoc), 'utf8'),
-    );
 
-    await this.options.executor.executeContractTransaction(
-      await this.getRegistryContract(),
-      'setDidDocument',
-      { from: this.options.signerIdentity.activeIdentity },
-      identity,
-      documentHash,
-    );
+    if (this.vade) {
+      const signerIdentityDid = await this.convertIdentityToDid(
+        this.options.signerIdentity.activeIdentity,
+      );
+      const privateKey = await this.options.accountStore.getPrivateKey(
+        this.options.signerIdentity.underlyingAccount,
+      );
+
+
+      await this.vade.didUpdate(
+        did,
+        JSON.stringify({
+          privateKey,
+          identity: signerIdentityDid,
+          operation: 'setDidDocument',
+        }),
+        JSON.stringify(finalDoc),
+      );
+    } else {
+      const identity = this.padIdentity(did
+        ? await this.convertDidToIdentity(did)
+        : this.options.signerIdentity.activeIdentity);
+
+      const documentHash = await this.options.dfs.add(
+        'did-document',
+        Buffer.from(JSON.stringify(finalDoc), 'utf8'),
+      );
+
+      await this.options.executor.executeContractTransaction(
+        await this.getRegistryContract(),
+        'setDidDocument',
+        { from: this.options.signerIdentity.activeIdentity },
+        identity,
+        documentHash,
+      );
+    }
   }
 
   /**
    * Creates a transaction for setting a DID document and returns the signed transaction,
-   * as well as the document's associated ipfs hash
+   * as well as the document's associated ipfs hash.
+   * This function is NOT compatibel with `vade` option flag.
    *
    * @param did DID to set document for
    * @param document Document to store
@@ -336,6 +384,10 @@ export class Did extends Logger {
    */
   public async setDidDocumentOffline(did: string, document: DidDocument, sourceIdentity?: string):
   Promise<[VerificationsDelegationInfo, string]> {
+    if (this.vade) {
+      throw new Error(`cannot set DID offline with vade enabled, did: ${did}`);
+    }
+
     const identity = this.padIdentity(did
       ? await this.convertDidToIdentity(did)
       : this.options.signerIdentity.activeIdentity);

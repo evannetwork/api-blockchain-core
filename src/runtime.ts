@@ -57,6 +57,7 @@ import { RightsAndRoles } from './contracts/rights-and-roles';
 import { ServiceContract } from './contracts/service-contract/service-contract';
 import { Sharing } from './contracts/sharing';
 import { SignerIdentity } from './contracts/signer-identity';
+import { Vade } from '../libs/vade';
 import { Vc } from './vc/vc';
 import { Verifications } from './verifications/verifications';
 import { Votings } from './votings/votings';
@@ -97,6 +98,7 @@ export interface Runtime {
   sharing?: Sharing;
   signer?: SignerInterface;
   underlyingAccount?: string;
+  vade?: Vade;
   vc?: Vc;
   verifications?: Verifications;
   votings?: Votings;
@@ -450,6 +452,11 @@ async function createRuntime(
     log,
   });
 
+  let vade;
+  if (runtimeConfig.vade) {
+    vade = new Vade(runtimeConfig.vade);
+  }
+
   let did: Did;
   let vc: Vc;
   let identity;
@@ -462,6 +469,7 @@ async function createRuntime(
       nameResolver,
       signerIdentity: signer,
       verifications,
+      vade,
       web3,
     });
     vc = new Vc(
@@ -492,7 +500,15 @@ async function createRuntime(
       verifications,
       web3,
     });
-    verifications.updateConfig({ did, vc }, { activeIdentity, underlyingAccount });
+    verifications.updateConfig(
+      {
+        did,
+        vade,
+        vc,
+        ...(runtimeConfig.useIdentity && { signerIdentity: signer }),
+      },
+      { activeIdentity, underlyingAccount },
+    );
   }
 
   if (await profile.exists()) {
@@ -581,8 +597,9 @@ async function createRuntime(
     // optional properties
     ...(activeIdentity && { activeIdentity }),
     ...(did && { did }),
-    ...(vc && { vc }),
     ...(underlyingAccount && { underlyingAccount }),
+    ...(vade && { vade }),
+    ...(vc && { vc }),
   };
 }
 
