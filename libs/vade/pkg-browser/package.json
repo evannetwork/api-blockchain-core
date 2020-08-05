@@ -1,0 +1,15 @@
+{
+  "name": "vade-evan",
+  "collaborators": [
+    "Philip Kaiser <philip.kaiser@evan.team>"
+  ],
+  "version": "0.0.1",
+  "files": [
+    "vade_evan_bg.wasm",
+    "vade_evan.js",
+    "vade_evan.d.ts"
+  ],
+  "module": "vade_evan.js",
+  "types": "vade_evan.d.ts",
+  "sideEffects": false
+}

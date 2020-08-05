@@ -19,7 +19,11 @@ jobs:
           "false",
           "true"
         ]
-    name: ${{ matrix.tests.name }} -> identity ${{ matrix.identity }}
+        vade: [
+          "false",
+          "true"
+        ]
+    name: ${{ matrix.tests.name }} -> identity ${{ matrix.identity }}, vade ${{ matrix.vade }}
     steps:
       - uses: actions/checkout@v2
       - name: Setup node
@@ -37,10 +41,12 @@ jobs:
             docker run -d -p 8546:8546 -p 8545:8545 -u root evannetwork/testcore-snapshot --chain evantestcore --jsonrpc-interface all --unsafe-expose
             npm i -g ganache-cli
             npm i
+            npm install https://github.com/evannetwork/smart-contracts-core.git#develop --force
             ganache-cli --allowUnlimitedContractSize --gasLimit 0xE4E1C0 -p 7545 -f http://localhost:8545 > /dev/null &
       - run: npm run testunitcoverage
         env:
           TESTSPECS: ${{ matrix.tests.testpattern }}
           USE_IDENTITY: ${{ matrix.identity }}
+          USE_VADE: ${{ matrix.vade }}
           CHAIN_ENDPOINT: 'ws://localhost:7545'
       - run: bash <(curl -s https://codecov.io/bash) -cF javascript

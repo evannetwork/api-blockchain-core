@@ -5,3 +5,4 @@ docs
 libs
 node_modules
 scripts
+.eslintrc.js

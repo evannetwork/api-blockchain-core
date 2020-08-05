@@ -1,11 +1,26 @@
 # api-blockchain-core
 
+
 ## Next Version
 ### Features
 
 ### Fixes
 
 ### Deprecations
+
+## Version 2.20.0
+### Features
+- update identity contracts' purpose handling
+  - to match updated purpose handling
+  - `VERSION_ID` can be used to decide which version to use
+  - newer identities will have version 1
+  - keys can be added and removed with multiple purposes at once (`addMultiPurposeKey`, `removeMultiPurposeKey`)
+  - accounts with purpose 3 can only be removed by themselves
+  - only one account with purpose 3 is allowed per identity
+- add experimental support for identities on substrate via [`vade`](https://crates.io/crates/vade)
+
+### Fixes
+- use `activeIdentity` for `Onboarding.createProfile` dataKey save
 
 
 ## Version 2.19.0
@@ -23,7 +38,7 @@
   + `Payments` (limited, will undergo further changes in future)
   + `Verifications`
   + `Votings`
-- addded `EvanIdentity` as authorization parameter to result of `utils.getSmartAgentAuthHeaders` (for usage sample have a look to [edge-server-seed](https://github.com/evannetwork/edge-server-seed/tree/develop#auth-middleware))
+- added `EvanIdentity` as authorization parameter to result of `utils.getSmartAgentAuthHeaders` (for usage sample have a look to [edge-server-seed](https://github.com/evannetwork/edge-server-seed/tree/develop#auth-middleware))
 - add `Identity` class and add functions for grant / remove access to act on behalf of identity
 - support identity salting for encryptionKey generation for `createDefaultRuntime`
 

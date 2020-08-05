@@ -273,9 +273,11 @@ export class Onboarding extends Logger {
       ),
       (async () => {
         await runtime.profile.addContactKey(
-          runtime.activeAccount, 'dataKey', dhKeys.privateKey.toString('hex'),
+          runtime.activeIdentity, 'dataKey', dhKeys.privateKey.toString('hex'),
         );
-        await runtime.profile.addProfileKey(runtime.activeIdentity, 'alias', profileData.accountDetails.accountName);
+        await runtime.profile.addProfileKey(
+          runtime.activeIdentity, 'alias', profileData.accountDetails.accountName,
+        );
         await runtime.profile.addPublicKey(dhKeys.publicKey.toString('hex'));
         await runtime.profile.storeForAccount(runtime.profile.treeLabels.addressBook);
         await runtime.profile.storeForAccount(runtime.profile.treeLabels.publicKey);
@@ -560,7 +562,7 @@ export class Onboarding extends Logger {
       // eslint-disable-next-line
       creationRuntime.keyProvider.keys[targetAccountHash] = dataKey;
       // eslint-disable-next-line
-      creationRuntime.keyProvider.keys[creationRuntime.web3.utils.soliditySha3(targetAccountHash, targetAccountHash)] = dataKey;      
+      creationRuntime.keyProvider.keys[creationRuntime.web3.utils.soliditySha3(targetAccountHash, targetAccountHash)] = dataKey;
       await this.fillProfile(
         accountId,
         targetAccount,
