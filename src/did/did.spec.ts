@@ -676,35 +676,37 @@ try {
     it('can properly handling multiple requests with one of them failing', async () => {
       const whitelists = [];
 
-      // fire first request, that will fail
-      whitelists.push(vade.whitelistIdentity(
-        identities[1].replace('0x', 'did:evan:testcore:0x'), // booom!
-        // didToWhitelist,
-        signerPrivateKey,
-        signerIdentity,
-      ));
-
-      // let's wait while we vade
-      await new Promise((s) => { setTimeout(s, 1_000); });
-
-      // fire a request, that will succeed
-      whitelists.push(vade.whitelistIdentity(
-        didToWhitelist,
-        signerPrivateKey,
-        signerIdentity,
-      ));
-
       let lastFailed;
       let lastSuccess;
-
-      await Promise.all(whitelists.map(async (promise, i) => {
+      const trackStatus = async (i, promise) => {
         try {
           await promise;
           lastSuccess = i;
         } catch (_ex) {
           lastFailed = i;
         }
-      }));
+      };
+
+      // fire first request, that will fail
+      whitelists.push(trackStatus(0, vade.whitelistIdentity(
+        identities[1].replace('0x', 'did:evan:testcore:0x'), // will fail
+        signerPrivateKey,
+        signerIdentity,
+      )));
+
+
+      // let's wait while we vade
+      await new Promise((s) => { setTimeout(s, 1_000); });
+
+      // fire a request, that will succeed
+      whitelists.push(trackStatus(1, vade.whitelistIdentity(
+        didToWhitelist,
+        signerPrivateKey,
+        signerIdentity,
+      )));
+
+
+      await Promise.all(whitelists);
 
       expect(lastFailed).to.eq(0);
       expect(lastSuccess).to.eq(1);
