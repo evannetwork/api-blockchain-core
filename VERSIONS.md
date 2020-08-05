@@ -1,6 +1,14 @@
 # api-blockchain-core
 
+
 ## Next Version
+### Features
+
+### Fixes
+
+### Deprecations
+
+## Version 2.20.0
 ### Features
 - update identity contracts' purpose handling
   - to match updated purpose handling
@@ -13,8 +21,6 @@
 
 ### Fixes
 - use `activeIdentity` for `Onboarding.createProfile` dataKey save
-
-### Deprecations
 
 
 ## Version 2.19.0
