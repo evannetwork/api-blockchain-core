@@ -1,10 +1,10 @@
 # api-blockchain-core
 
-
 ## Next Version
 ### Features
 
 ### Fixes
+- add `ensureWhitelisted` to writing operations against `vade` to ensure account is allowed to do so 
 
 ### Deprecations
 
