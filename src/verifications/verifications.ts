@@ -529,13 +529,23 @@ export class Verifications extends Logger {
       identity = identityContract.options.address;
     } else {
       if (this.options.vade) {
+        const privateKey = await this.options.accountStore.getPrivateKey(
+          this.options.signerIdentity.underlyingAccount,
+        );
+        const activeIdentityDid = await this.options.did.convertIdentityToDid(
+          this.config.activeIdentity,
+        );
+        // ensure, executing identity is whitelisted
+        await this.options.vade.ensureWhitelisted(
+          activeIdentityDid,
+          privateKey,
+          this.config.activeIdentity.replace('0x', ''),
+        );
         identity = (await this.options.vade.didCreate(
           'did:evan:testcore',
           JSON.stringify({
-            privateKey: await this.options.accountStore.getPrivateKey(
-              this.options.signerIdentity.underlyingAccount,
-            ),
-            identity: await this.options.did.convertIdentityToDid(this.config.activeIdentity),
+            privateKey,
+            identity: activeIdentityDid,
           }),
           '',
         )).replace(/^.*0x/, '0x');

@@ -341,7 +341,12 @@ export class Did extends Logger {
       const privateKey = await this.options.accountStore.getPrivateKey(
         this.options.signerIdentity.underlyingAccount,
       );
-
+      // ensure, executing identity is whitelisted
+      await this.vade.ensureWhitelisted(
+        signerIdentityDid,
+        privateKey,
+        this.options.signerIdentity.activeIdentity.replace('0x', ''),
+      );
 
       await this.vade.didUpdate(
         did,
